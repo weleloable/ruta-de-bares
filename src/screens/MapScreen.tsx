@@ -1,16 +1,12 @@
+// Versión nativa (iOS/Android). En web, Metro usa MapScreen.web.tsx en su
+// lugar (por el sufijo .web.tsx) para que react-native-maps, que no tiene
+// build web, ni siquiera se importe en el bundle de navegador.
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useActiveRoute } from '../hooks/useActiveRoute';
 import { formatSchedule } from '../lib/format';
 import type { Bar } from '../types/domain';
-
-// react-native-maps no tiene soporte real en web (necesitaría un shim
-// aparte, ej. react-native-web-maps). En vez de crashear al montar
-// <MapView>, en web mostramos la lista de bares en orden: es la única
-// vista de este screen que tiene sentido probar desde un navegador; el
-// mapa en sí solo se puede validar en un dispositivo o Expo Go.
-const IS_WEB = Platform.OS === 'web';
 
 export default function MapScreen() {
   const { loading, error, route, bars, refresh } = useActiveRoute();
@@ -51,34 +47,6 @@ export default function MapScreen() {
     latitudeDelta: 0.02,
     longitudeDelta: 0.02,
   };
-
-  if (IS_WEB) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.webHeader}>
-          <Text style={styles.headerText}>{route.name}</Text>
-          <Text style={styles.webHint}>
-            El mapa interactivo solo se ve en un móvil (Expo Go) o build nativo. Aquí tienes la
-            ruta en orden.
-          </Text>
-        </View>
-        <FlatList
-          data={bars}
-          keyExtractor={(b) => b.id}
-          contentContainerStyle={styles.webList}
-          renderItem={({ item }) => (
-            <View style={styles.webRow}>
-              <Text style={styles.cardTitle}>
-                {item.orderIndex + 1}. {item.name}
-              </Text>
-              {item.address && <Text style={styles.cardAddress}>{item.address}</Text>}
-              <Text style={styles.cardSchedule}>{formatSchedule(item.startTime, item.endTime)}</Text>
-            </View>
-          )}
-        />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -143,16 +111,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   headerText: { fontWeight: '700', fontSize: 16 },
-  webHeader: { padding: 16, paddingTop: 24, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  webHint: { color: '#888', fontSize: 12, marginTop: 4 },
-  webList: { padding: 16 },
-  webRow: {
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 10,
-    marginBottom: 8,
-  },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   card: { backgroundColor: '#fff', padding: 20, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },

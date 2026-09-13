@@ -9,8 +9,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Marker, type MapPressEvent } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import CoordinatePicker, { type Coordinate } from '../../components/CoordinatePicker';
 import { adminCreateBar, adminDeleteBar, adminListBars } from '../../lib/api/bars';
 import { formatSchedule } from '../../lib/format';
 import type { AdminStackParamList } from '../../navigation/types';
@@ -18,7 +18,6 @@ import type { Bar } from '../../types/domain';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminBars'>;
 
-const DEFAULT_REGION = { latitude: 40.4168, longitude: -3.7038, latitudeDelta: 0.05, longitudeDelta: 0.05 };
 const MIN_BARS = 5;
 const MAX_BARS = 20;
 
@@ -33,7 +32,7 @@ export default function AdminBarsScreen({ route, navigation }: Props) {
   const [address, setAddress] = useState('');
   const [startTime, setStartTime] = useState('19:00');
   const [endTime, setEndTime] = useState('20:00');
-  const [coord, setCoord] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [coord, setCoord] = useState<Coordinate | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,10 +50,6 @@ export default function AdminBarsScreen({ route, navigation }: Props) {
     navigation.setOptions({ title: routeName });
     load();
   }, [load, navigation, routeName]);
-
-  function handleMapPress(e: MapPressEvent) {
-    setCoord(e.nativeEvent.coordinate);
-  }
 
   const atMax = bars.length >= MAX_BARS;
 
@@ -140,14 +135,7 @@ export default function AdminBarsScreen({ route, navigation }: Props) {
                   onChangeText={setEndTime}
                 />
               </View>
-              <Text style={styles.mapHint}>Toca el mapa para marcar dónde está el bar</Text>
-              <MapView
-                style={styles.map}
-                initialRegion={coord ? { ...coord, latitudeDelta: 0.02, longitudeDelta: 0.02 } : DEFAULT_REGION}
-                onPress={handleMapPress}
-              >
-                {coord && <Marker coordinate={coord} />}
-              </MapView>
+              <CoordinatePicker value={coord} onChange={setCoord} />
               <Pressable style={styles.addButton} onPress={handleAdd} disabled={saving}>
                 <Text style={styles.addButtonText}>{saving ? 'Guardando…' : 'Añadir bar'}</Text>
               </Pressable>
@@ -189,8 +177,6 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, fontSize: 15, marginBottom: 8 },
   row: { flexDirection: 'row', gap: 8 },
   timeInput: { flex: 1 },
-  mapHint: { color: '#888', fontSize: 12, marginBottom: 6 },
-  map: { height: 180, borderRadius: 10, marginBottom: 10 },
   addButton: { backgroundColor: '#b8860b', borderRadius: 8, padding: 12, alignItems: 'center' },
   addButtonText: { color: '#fff', fontWeight: '600' },
   error: { color: '#c00', marginTop: 8 },
