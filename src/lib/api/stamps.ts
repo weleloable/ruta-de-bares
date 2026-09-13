@@ -1,5 +1,4 @@
 import { supabase } from '../supabase';
-import type { StampPayload } from '../qr';
 import type { Seal } from '../../types/domain';
 
 interface SealRow {
@@ -28,28 +27,29 @@ export async function listRouteSeals(routeId: string): Promise<Seal[]> {
   return (data ?? []).map(mapSeal);
 }
 
-export async function listMySeals(routeId: string, userId: string): Promise<Seal[]> {
-  const all = await listRouteSeals(routeId);
-  return all.filter((s) => s.userId === userId);
-}
-
-export type RedeemStampResult =
+export type CheckInResult =
   | { ok: true; alreadySealed: boolean; barName: string }
-  | { ok: false; error: 'route_or_bar_not_found' | 'invalid_secret' };
+  | { ok: false; error: 'route_or_bar_not_found' | 'too_far' | 'outside_schedule'; distanceMeters?: number };
 
-/** Único camino para crear un sello: valida el secreto del QR en el
- * servidor (función redeem_stamp, security definer) y nunca inserta la
- * fila directamente desde el cliente. */
-export async function redeemStamp(payload: StampPayload): Promise<RedeemStampResult> {
-  const { data, error } = await supabase.rpc('redeem_stamp', {
-    p_route_id: payload.routeId,
-    p_bar_id: payload.barId,
-    p_secret: payload.secret,
+/** Único camino para crear un sello: el servidor recalcula la distancia con
+ * las coordenadas GPS enviadas y comprueba el horario del bar antes de
+ * sellar. Nunca se inserta la fila directamente desde el cliente. */
+export async function checkIn(params: {
+  routeId: string;
+  barId: string;
+  latitude: number;
+  longitude: number;
+}): Promise<CheckInResult> {
+  const { data, error } = await supabase.rpc('check_in', {
+    p_route_id: params.routeId,
+    p_bar_id: params.barId,
+    p_lat: params.latitude,
+    p_lng: params.longitude,
   });
   if (error) throw error;
 
   if (data.ok) {
     return { ok: true, alreadySealed: data.already_sealed, barName: data.bar_name };
   }
-  return { ok: false, error: data.error };
+  return { ok: false, error: data.error, distanceMeters: data.distance_m };
 }

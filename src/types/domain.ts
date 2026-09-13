@@ -34,11 +34,6 @@ export interface Bar {
   orderIndex: number;
 }
 
-/** Bar tal como lo ve un admin (incluye el secreto para pintar el QR). */
-export interface AdminBar extends Bar {
-  qrSecret: string;
-}
-
 export interface Seal {
   id: string;
   routeId: string;

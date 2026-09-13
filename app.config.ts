@@ -4,6 +4,9 @@ import type { ExpoConfig } from 'expo/config';
 // falta para inyectar la API key de Google Maps en Android (ver README ->
 // "Configurar Google Maps"). iOS usa Apple Maps por defecto y no necesita
 // ninguna key.
+const LOCATION_PERMISSION_TEXT =
+  'Se usa tu ubicación para sellar automáticamente los bares de la ruta cuando estás a menos de 10 metros de uno, dentro de su horario.';
+
 const config: ExpoConfig = {
   name: 'ruta-de-bares',
   slug: 'ruta-de-bares',
@@ -14,7 +17,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     infoPlist: {
-      NSCameraUsageDescription: 'Se usa la cámara para escanear el QR de cada bar y sellar tu compostelana.',
+      NSLocationWhenInUseUsageDescription: LOCATION_PERMISSION_TEXT,
     },
   },
   android: {
@@ -25,7 +28,7 @@ const config: ExpoConfig = {
       monochromeImage: './assets/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
-    permissions: ['CAMERA'],
+    permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION'],
     config: {
       googleMaps: {
         apiKey: process.env.GOOGLE_MAPS_API_KEY,
@@ -37,9 +40,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     [
-      'expo-camera',
+      'expo-location',
       {
-        cameraPermission: 'Se usa la cámara para escanear el QR de cada bar y sellar tu compostelana.',
+        locationWhenInUsePermission: LOCATION_PERMISSION_TEXT,
       },
     ],
   ],

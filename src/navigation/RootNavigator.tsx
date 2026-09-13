@@ -6,10 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
 import PassportScreen from '../screens/PassportScreen';
-import ScanScreen from '../screens/ScanScreen';
+import CheckInScreen from '../screens/CheckInScreen';
 import AdminRoutesScreen from '../screens/admin/AdminRoutesScreen';
 import AdminBarsScreen from '../screens/admin/AdminBarsScreen';
-import AdminBarQrScreen from '../screens/admin/AdminBarQrScreen';
 import type { AdminStackParamList, UserTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<UserTabParamList>();
@@ -20,7 +19,6 @@ function AdminNavigator() {
     <AdminStack.Navigator>
       <AdminStack.Screen name="AdminRoutes" component={AdminRoutesScreen} options={{ title: 'Rutas' }} />
       <AdminStack.Screen name="AdminBars" component={AdminBarsScreen} />
-      <AdminStack.Screen name="AdminBarQr" component={AdminBarQrScreen} />
     </AdminStack.Navigator>
   );
 }
@@ -39,9 +37,9 @@ function AppTabs() {
         options={{ title: 'Mapa', tabBarIcon: () => <TabIcon label="🗺️" /> }}
       />
       <Tab.Screen
-        name="Scan"
-        component={ScanScreen}
-        options={{ title: 'Sellar', tabBarIcon: () => <TabIcon label="📷" />, headerShown: false }}
+        name="CheckIn"
+        component={CheckInScreen}
+        options={{ title: 'Sellar', tabBarIcon: () => <TabIcon label="📍" /> }}
       />
       <Tab.Screen
         name="Passport"

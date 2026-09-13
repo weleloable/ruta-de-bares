@@ -20,7 +20,7 @@ propio progreso" y no da SQL para las consultas de progreso agregado.
 1. Crea un proyecto en [supabase.com](https://supabase.com/dashboard) (plan gratuito de sobra para esto).
 2. En **SQL Editor**, pega y ejecuta el contenido de
    [`migrations/0001_init.sql`](migrations/0001_init.sql). Crea las tablas,
-   las policies de RLS y la función `redeem_stamp`.
+   las policies de RLS y la función `check_in`.
 3. En **Project Settings → API**, copia `Project URL` y `anon public key` a
    tu `.env` (ver `.env.example` en la raíz del repo).
 4. En **Authentication → Providers**, deja Email activado (es el que usa la
@@ -43,38 +43,53 @@ la pestaña "Admin").
 ## Modelo de datos
 
 - `routes` — una fila por año. `is_active` marca la que ven los usuarios.
-- `bars` — bares de una ruta, con horario y posición. Solo los admins pueden
-  leer/escribir esta tabla directamente (tiene `qr_secret`). Los usuarios
-  normales leen `bars_public`, una vista sin esa columna.
+  Un trigger impide activarla con menos de 5 bares.
+- `bars` — entre 5 y 20 bares por ruta (un trigger impide superar 20), con
+  horario y posición GPS. Solo los admins pueden leer/escribir esta tabla
+  directamente (para poder montar rutas de años futuros sin activarlas).
+  Los usuarios normales leen `bars_public`.
 - `seals` — un sello por `(bar_id, user_id)`. Nadie inserta en esta tabla
-  directamente: todo pasa por `redeem_stamp(route_id, bar_id, secret)`, que
-  valida el secreto escaneado del QR en el servidor antes de sellar.
-- `profiles` / `profiles_public` — igual patrón: la tabla completa (con
-  email y rol) es privada; la vista pública solo expone el nombre, para que
-  el grupo pueda ver el progreso de los demás sin ver su email.
+  directamente: todo pasa por `check_in(route_id, bar_id, lat, lng)`, que
+  recalcula la distancia real en el servidor antes de sellar.
+- `profiles` / `profiles_public` — la tabla completa (con email y rol) es
+  privada; la vista pública solo expone el nombre, para que el grupo pueda
+  ver el progreso de los demás sin ver su email.
 
 Ver los comentarios en [`migrations/0001_init.sql`](migrations/0001_init.sql)
 para el razonamiento de cada policy.
 
-## Cómo se genera y valida un sello
+## Cómo se valida un sello (check-in por GPS)
 
-1. Un admin crea un bar en la app: se genera `qr_secret` automáticamente
-   (`gen_random_bytes(16)`).
-2. En la pantalla "QR" del admin, la app codifica
-   `{ v: 1, routeId, barId, secret }` en base64 y lo pinta como QR
-   (`src/screens/admin/AdminBarQrScreen.tsx`). Ese QR se imprime y se deja en
-   el bar.
-3. Un usuario escanea el QR con la pestaña "Sellar". La app decodifica el
-   payload (`src/lib/qr.ts`) y llama a `redeem_stamp`.
-4. `redeem_stamp` (SECURITY DEFINER) comprueba que el bar pertenece a la ruta
-   activa y que el secreto coincide, y si es así inserta el sello. Es
-   idempotente: escanear dos veces el mismo QR no falla ni duplica.
+1. Con la pestaña "Sellar" abierta, la app pide permiso de ubicación y
+   vigila la posición del móvil (`src/screens/CheckInScreen.tsx`).
+2. En cada actualización de posición, calcula la distancia a cada bar de la
+   ruta (`src/lib/geo.ts`) y si está dentro de su horario
+   (`src/lib/schedule.ts`). Esto es solo para pintar el feedback en
+   pantalla ("a 34m", "fuera de horario"): no basta para sellar.
+3. Cuando un bar está a &lt;=10m y dentro de su horario, la app llama a
+   `check_in(route_id, bar_id, lat, lng)` con las coordenadas que acaba de
+   leer del GPS.
+4. `check_in` (SECURITY DEFINER) **recalcula la distancia con sus propios
+   cálculos**, usando la posición del bar guardada en la base de datos y
+   las coordenadas recibidas — nunca confía en que el cliente diga "estoy
+   cerca". También comprueba la hora local (`Europe/Madrid`) contra el
+   horario del bar. Solo si ambas condiciones se cumplen, sella. Es
+   idempotente: entrar dos veces en el radio del mismo bar no duplica ni
+   falla.
 
-Si necesitas invalidar el QR de un bar (se ha filtrado o impreso mal),
-regenera el secreto a mano en el SQL Editor:
+**Límite conocido**: el servidor no puede verificar que las coordenadas que
+manda el móvil son reales — una app de ubicación falsa (mock location)
+podría saltarse el check. Es una limitación aceptada para una ruta de
+grupo, no un sistema anti-fraude; el check-in solo funciona con la app en
+primer plano (ver limitaciones de ubicación en segundo plano de Expo más
+abajo).
 
-```sql
-update public.bars set qr_secret = encode(gen_random_bytes(16), 'hex') where id = '<bar-id>';
-```
+## Por qué solo funciona en primer plano
 
-y vuelve a generar/imprimir su QR desde la app.
+El sellado por GPS necesita la pestaña "Sellar" abierta: Expo Go no permite
+registrar tareas de ubicación en segundo plano, y hacerlo en un build
+propio exigiría el permiso "ubicación todo el tiempo" (mucha fricción para
+los usuarios) y gastaría más batería. Si más adelante hace falta sellar con
+la app cerrada, la vía es un build nativo con EAS Build + `expo-task-manager`
++ `Location.startLocationUpdatesAsync`, y volver a evaluar el permiso con
+Julien antes de pedirlo.

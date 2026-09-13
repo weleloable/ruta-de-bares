@@ -14,15 +14,17 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { adminCreateBar, adminDeleteBar, adminListBars } from '../../lib/api/bars';
 import { formatSchedule } from '../../lib/format';
 import type { AdminStackParamList } from '../../navigation/types';
-import type { AdminBar } from '../../types/domain';
+import type { Bar } from '../../types/domain';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminBars'>;
 
 const DEFAULT_REGION = { latitude: 40.4168, longitude: -3.7038, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+const MIN_BARS = 5;
+const MAX_BARS = 20;
 
 export default function AdminBarsScreen({ route, navigation }: Props) {
   const { routeId, routeName } = route.params;
-  const [bars, setBars] = useState<AdminBar[]>([]);
+  const [bars, setBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -54,6 +56,8 @@ export default function AdminBarsScreen({ route, navigation }: Props) {
     setCoord(e.nativeEvent.coordinate);
   }
 
+  const atMax = bars.length >= MAX_BARS;
+
   async function handleAdd() {
     if (!name.trim() || !coord) {
       Alert.alert('Faltan datos', 'Ponle nombre al bar y toca el mapa para marcar dónde está.');
@@ -82,7 +86,7 @@ export default function AdminBarsScreen({ route, navigation }: Props) {
     }
   }
 
-  function handleDelete(bar: AdminBar) {
+  function handleDelete(bar: Bar) {
     Alert.alert('Eliminar bar', `¿Quitar "${bar.name}" de la ruta?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -103,41 +107,61 @@ export default function AdminBarsScreen({ route, navigation }: Props) {
       keyExtractor={(b) => b.id}
       ListHeaderComponent={
         <View>
-          <Text style={styles.sectionTitle}>Añadir bar</Text>
-          <TextInput style={styles.input} placeholder="Nombre del bar" value={name} onChangeText={setName} />
-          <TextInput
-            style={styles.input}
-            placeholder="Dirección (opcional)"
-            value={address}
-            onChangeText={setAddress}
-          />
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.timeInput]}
-              placeholder="Entrada 19:00"
-              value={startTime}
-              onChangeText={setStartTime}
-            />
-            <TextInput
-              style={[styles.input, styles.timeInput]}
-              placeholder="Salida 20:00"
-              value={endTime}
-              onChangeText={setEndTime}
-            />
-          </View>
-          <Text style={styles.mapHint}>Toca el mapa para marcar dónde está el bar</Text>
-          <MapView
-            style={styles.map}
-            initialRegion={coord ? { ...coord, latitudeDelta: 0.02, longitudeDelta: 0.02 } : DEFAULT_REGION}
-            onPress={handleMapPress}
-          >
-            {coord && <Marker coordinate={coord} />}
-          </MapView>
-          <Pressable style={styles.addButton} onPress={handleAdd} disabled={saving}>
-            <Text style={styles.addButtonText}>{saving ? 'Guardando…' : 'Añadir bar'}</Text>
-          </Pressable>
+          {atMax ? (
+            <Text style={styles.limitNotice}>
+              Esta ruta ya tiene el máximo de {MAX_BARS} bares.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.sectionTitle}>Añadir bar</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nombre del bar"
+                value={name}
+                onChangeText={setName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Dirección (opcional)"
+                value={address}
+                onChangeText={setAddress}
+              />
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, styles.timeInput]}
+                  placeholder="Entrada 19:00"
+                  value={startTime}
+                  onChangeText={setStartTime}
+                />
+                <TextInput
+                  style={[styles.input, styles.timeInput]}
+                  placeholder="Salida 20:00"
+                  value={endTime}
+                  onChangeText={setEndTime}
+                />
+              </View>
+              <Text style={styles.mapHint}>Toca el mapa para marcar dónde está el bar</Text>
+              <MapView
+                style={styles.map}
+                initialRegion={coord ? { ...coord, latitudeDelta: 0.02, longitudeDelta: 0.02 } : DEFAULT_REGION}
+                onPress={handleMapPress}
+              >
+                {coord && <Marker coordinate={coord} />}
+              </MapView>
+              <Pressable style={styles.addButton} onPress={handleAdd} disabled={saving}>
+                <Text style={styles.addButtonText}>{saving ? 'Guardando…' : 'Añadir bar'}</Text>
+              </Pressable>
+            </>
+          )}
           {error && <Text style={styles.error}>{error}</Text>}
-          <Text style={styles.sectionTitle}>Bares de la ruta ({bars.length})</Text>
+          <Text style={styles.sectionTitle}>
+            Bares de la ruta ({bars.length}/{MAX_BARS})
+          </Text>
+          {bars.length > 0 && bars.length < MIN_BARS && (
+            <Text style={styles.minNotice}>
+              Faltan {MIN_BARS - bars.length} para poder activar la ruta (mínimo {MIN_BARS}).
+            </Text>
+          )}
           {loading && <ActivityIndicator style={{ marginVertical: 12 }} />}
         </View>
       }
@@ -149,12 +173,6 @@ export default function AdminBarsScreen({ route, navigation }: Props) {
             </Text>
             <Text style={styles.barSchedule}>{formatSchedule(item.startTime, item.endTime)}</Text>
           </View>
-          <Pressable
-            style={styles.qrButton}
-            onPress={() => navigation.navigate('AdminBarQr', { barId: item.id, barName: item.name })}
-          >
-            <Text style={styles.qrButtonText}>QR</Text>
-          </Pressable>
           <Pressable style={styles.deleteButton} onPress={() => handleDelete(item)}>
             <Text style={styles.deleteButtonText}>✕</Text>
           </Pressable>
@@ -176,6 +194,8 @@ const styles = StyleSheet.create({
   addButton: { backgroundColor: '#b8860b', borderRadius: 8, padding: 12, alignItems: 'center' },
   addButtonText: { color: '#fff', fontWeight: '600' },
   error: { color: '#c00', marginTop: 8 },
+  limitNotice: { color: '#b8860b', fontWeight: '600', marginTop: 16, marginBottom: 4 },
+  minNotice: { color: '#c00', fontSize: 12, marginBottom: 8 },
   barRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -188,8 +208,6 @@ const styles = StyleSheet.create({
   },
   barName: { fontWeight: '700', fontSize: 15 },
   barSchedule: { color: '#888', fontSize: 12, marginTop: 2 },
-  qrButton: { backgroundColor: '#eee', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
-  qrButtonText: { fontWeight: '700', color: '#333' },
   deleteButton: { padding: 8 },
   deleteButtonText: { color: '#c00', fontWeight: '700', fontSize: 16 },
   emptyText: { color: '#888', textAlign: 'center', marginTop: 20 },

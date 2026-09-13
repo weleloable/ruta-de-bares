@@ -1,7 +1,7 @@
 import { supabase } from '../supabase';
-import type { AdminBar, Bar } from '../../types/domain';
+import type { Bar } from '../../types/domain';
 
-interface BarPublicRow {
+interface BarRow {
   id: string;
   route_id: string;
   name: string;
@@ -13,9 +13,7 @@ interface BarPublicRow {
   order_index: number;
 }
 
-type BarAdminRow = BarPublicRow & { qr_secret: string };
-
-function mapBar(row: BarPublicRow): Bar {
+function mapBar(row: BarRow): Bar {
   return {
     id: row.id,
     routeId: row.route_id,
@@ -29,11 +27,7 @@ function mapBar(row: BarPublicRow): Bar {
   };
 }
 
-function mapAdminBar(row: BarAdminRow): AdminBar {
-  return { ...mapBar(row), qrSecret: row.qr_secret };
-}
-
-/** Bares de la ruta activa, sin secretos de QR. Para el mapa y la compostelana. */
+/** Bares de la ruta activa. Para el mapa, la compostelana y el check-in. */
 export async function listPublicBars(routeId: string): Promise<Bar[]> {
   const { data, error } = await supabase
     .from('bars_public')
@@ -44,15 +38,15 @@ export async function listPublicBars(routeId: string): Promise<Bar[]> {
   return (data ?? []).map(mapBar);
 }
 
-/** Solo admins (RLS): incluye el qr_secret para pintar el QR de cada bar. */
-export async function adminListBars(routeId: string): Promise<AdminBar[]> {
+/** Solo admins (RLS): también ve bares de rutas todavía inactivas (borradores). */
+export async function adminListBars(routeId: string): Promise<Bar[]> {
   const { data, error } = await supabase
     .from('bars')
     .select('*')
     .eq('route_id', routeId)
     .order('order_index', { ascending: true });
   if (error) throw error;
-  return (data ?? []).map(mapAdminBar);
+  return (data ?? []).map(mapBar);
 }
 
 export interface NewBarInput {
@@ -66,7 +60,7 @@ export interface NewBarInput {
   orderIndex: number;
 }
 
-export async function adminCreateBar(input: NewBarInput): Promise<AdminBar> {
+export async function adminCreateBar(input: NewBarInput): Promise<Bar> {
   const { data, error } = await supabase
     .from('bars')
     .insert({
@@ -82,7 +76,7 @@ export async function adminCreateBar(input: NewBarInput): Promise<AdminBar> {
     .select('*')
     .single();
   if (error) throw error;
-  return mapAdminBar(data);
+  return mapBar(data);
 }
 
 export async function adminDeleteBar(barId: string): Promise<void> {

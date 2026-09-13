@@ -1,9 +1,8 @@
 -- Ruta de Bares — esquema inicial
 -- Modelo: rutas anuales creadas por administradores, bares con horario y
--- posición, y "sellos" (seals) que un usuario obtiene escaneando el QR
--- físico de cada bar. Progreso de sellado visible para todo el grupo.
-
-create extension if not exists pgcrypto;
+-- posición, y "sellos" (seals) que un usuario obtiene automáticamente por
+-- GPS: al estar a menos de 10m de un bar durante su turno horario.
+-- Progreso de sellado visible para todo el grupo.
 
 -- ---------------------------------------------------------------------------
 -- profiles: un perfil por usuario de auth.users, con rol admin|user.
@@ -88,9 +87,10 @@ create policy "routes_admin_write"
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
 
 -- ---------------------------------------------------------------------------
--- bars: bares de una ruta, con horario y posición. qr_secret NUNCA se expone
--- a clientes normales: la tabla es de solo-admin y hay una vista pública
--- (bars_public) sin esa columna, que sí puede leer cualquier usuario.
+-- bars: entre 5 y 20 bares por ruta, con horario y posición GPS. La tabla
+-- es de solo-admin (para poder editar bares de rutas aún no activas); los
+-- usuarios normales leen bars_public, que solo expone lo necesario para el
+-- mapa y el check-in.
 -- ---------------------------------------------------------------------------
 create table public.bars (
   id uuid primary key default gen_random_uuid(),
@@ -102,10 +102,31 @@ create table public.bars (
   start_time time not null,
   end_time time not null,
   order_index int not null,
-  qr_secret text not null default encode(gen_random_bytes(16), 'hex'),
   created_at timestamptz not null default now(),
   unique (route_id, order_index)
 );
+
+-- Una ruta tiene entre 5 y 20 bares. El máximo se comprueba al añadir un
+-- bar; el mínimo solo tiene sentido al activar la ruta (mientras se está
+-- montando, tiene menos de 5 la mayor parte del tiempo).
+create function public.enforce_max_bars_per_route()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_count int;
+begin
+  select count(*) into v_count from public.bars where route_id = new.route_id;
+  if v_count >= 20 then
+    raise exception 'Una ruta no puede tener más de 20 bares' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger bars_max_20
+  before insert on public.bars
+  for each row execute function public.enforce_max_bars_per_route();
 
 alter table public.bars enable row level security;
 
@@ -115,8 +136,33 @@ create policy "bars_admin_only"
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
 
--- Vista pública: cualquier usuario autenticado ve los bares de rutas activas,
--- sin el secreto del QR. Propiedad del owner de la tabla => evalúa sin RLS.
+-- Al activar una ruta (is_active false -> true) debe tener ya al menos 5
+-- bares. Mientras se monta (is_active sigue en false) no se exige nada.
+create function public.enforce_min_bars_before_activation()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_count int;
+begin
+  if new.is_active and not old.is_active then
+    select count(*) into v_count from public.bars where route_id = new.id;
+    if v_count < 5 then
+      raise exception 'Una ruta necesita al menos 5 bares para activarse (tiene %)', v_count
+        using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger routes_min_5_before_activate
+  before update on public.routes
+  for each row execute function public.enforce_min_bars_before_activation();
+
+-- Vista pública: cualquier usuario autenticado ve los bares de rutas activas.
+-- Propiedad del owner de la tabla => evalúa sin RLS (patrón estándar de
+-- Supabase para exponer una proyección de una tabla restringida).
 create view public.bars_public
   with (security_invoker = false) as
 select b.id, b.route_id, b.name, b.address, b.latitude, b.longitude,
@@ -129,7 +175,7 @@ grant select on public.bars_public to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- seals: un sello por (bar, usuario). Progreso visible para todo el grupo.
--- Nunca se inserta directamente: solo a través de redeem_stamp().
+-- Nunca se inserta directamente: solo a través de check_in().
 -- ---------------------------------------------------------------------------
 create table public.seals (
   id uuid primary key default gen_random_uuid(),
@@ -153,19 +199,49 @@ create policy "seals_select_group"
   );
 
 -- Sin policy de insert/update/delete para 'authenticated': todo pasa por
--- redeem_stamp(), que corre como el owner de la tabla (security definer).
+-- check_in(), que corre como el owner de la tabla (security definer).
 
 -- ---------------------------------------------------------------------------
--- redeem_stamp: valida el secreto escaneado del QR y sella el bar para el
--- usuario autenticado. Idempotente (un segundo escaneo no duplica ni falla).
+-- haversine_meters: distancia en metros entre dos puntos GPS. El cliente
+-- (src/lib/geo.ts) usa la misma fórmula para el feedback inmediato en
+-- pantalla; si tocas una, toca la otra.
 -- ---------------------------------------------------------------------------
-create function public.redeem_stamp(p_route_id uuid, p_bar_id uuid, p_secret text)
+create function public.haversine_meters(
+  lat1 double precision, lon1 double precision,
+  lat2 double precision, lon2 double precision
+)
+returns double precision
+language sql
+immutable
+as $$
+  select 2 * 6371000 * asin(sqrt(
+    sin(radians(lat2 - lat1) / 2) ^ 2
+    + cos(radians(lat1)) * cos(radians(lat2)) * sin(radians(lon2 - lon1) / 2) ^ 2
+  ));
+$$;
+
+-- ---------------------------------------------------------------------------
+-- check_in: sella un bar para el usuario autenticado si (a) el bar
+-- pertenece a la ruta activa, (b) está a <=10m de la posición GPS que
+-- envía el dispositivo, y (c) la hora local (Europe/Madrid) cae dentro del
+-- turno del bar. Idempotente. Nunca confía en que el cliente diga "estoy
+-- cerca": recalcula la distancia aquí con las coordenadas que manda.
+--
+-- Límite conocido: no hay forma de verificar en el servidor que las
+-- coordenadas que manda el móvil son reales (un GPS falseado -mock
+-- location- podría engañarlo). Igual que un QR fotografiado, es una
+-- limitación aceptada para una ruta de grupo, no un sistema anti-fraude.
+-- ---------------------------------------------------------------------------
+create function public.check_in(p_route_id uuid, p_bar_id uuid, p_lat double precision, p_lng double precision)
 returns jsonb
 language plpgsql
 security definer set search_path = public
 as $$
 declare
   v_bar public.bars%rowtype;
+  v_distance double precision;
+  v_local_time time;
+  v_in_window boolean;
   v_already boolean;
 begin
   if auth.uid() is null then
@@ -184,17 +260,27 @@ begin
     return jsonb_build_object('ok', false, 'error', 'route_or_bar_not_found');
   end if;
 
-  if v_bar.qr_secret <> p_secret then
-    return jsonb_build_object('ok', false, 'error', 'invalid_secret');
+  v_distance := public.haversine_meters(p_lat, p_lng, v_bar.latitude, v_bar.longitude);
+  if v_distance > 10 then
+    return jsonb_build_object('ok', false, 'error', 'too_far', 'distance_m', v_distance);
+  end if;
+
+  v_local_time := (now() at time zone 'Europe/Madrid')::time;
+  if v_bar.end_time >= v_bar.start_time then
+    v_in_window := v_local_time between v_bar.start_time and v_bar.end_time;
+  else
+    -- El turno cruza medianoche (ej. 23:30–01:00).
+    v_in_window := v_local_time >= v_bar.start_time or v_local_time <= v_bar.end_time;
+  end if;
+
+  if not v_in_window then
+    return jsonb_build_object('ok', false, 'error', 'outside_schedule');
   end if;
 
   select exists(
     select 1 from public.seals s where s.bar_id = p_bar_id and s.user_id = auth.uid()
   ) into v_already;
 
-  -- ON CONFLICT como red de seguridad además del check de arriba: el "for
-  -- update of b" ya serializa dos escaneos del mismo bar, pero esto evita
-  -- que cualquier otra carrera termine en un 23505 sin manejar.
   insert into public.seals (route_id, bar_id, user_id)
   values (p_route_id, p_bar_id, auth.uid())
   on conflict (bar_id, user_id) do nothing;
@@ -207,8 +293,4 @@ begin
 end;
 $$;
 
-grant execute on function public.redeem_stamp(uuid, uuid, text) to authenticated;
-
--- Nota: los admins leen qr_secret directamente de public.bars (permitido por
--- bars_admin_only) para pintar el QR de cada bar. No hace falta una función
--- aparte: la policy ya restringe esa columna a admins.
+grant execute on function public.check_in(uuid, uuid, double precision, double precision) to authenticated;
