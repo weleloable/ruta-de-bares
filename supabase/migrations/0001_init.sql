@@ -192,10 +192,12 @@ begin
     select 1 from public.seals s where s.bar_id = p_bar_id and s.user_id = auth.uid()
   ) into v_already;
 
-  if not v_already then
-    insert into public.seals (route_id, bar_id, user_id)
-    values (p_route_id, p_bar_id, auth.uid());
-  end if;
+  -- ON CONFLICT como red de seguridad además del check de arriba: el "for
+  -- update of b" ya serializa dos escaneos del mismo bar, pero esto evita
+  -- que cualquier otra carrera termine en un 23505 sin manejar.
+  insert into public.seals (route_id, bar_id, user_id)
+  values (p_route_id, p_bar_id, auth.uid())
+  on conflict (bar_id, user_id) do nothing;
 
   return jsonb_build_object(
     'ok', true,
