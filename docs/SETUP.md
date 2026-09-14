@@ -88,16 +88,21 @@ Rellena:
 
 | Variable | Donde sale |
 | --- | --- |
-| `EXPO_PUBLIC_SUPABASE_URL` | Supabase > Project Settings > API |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase > Project Settings > API (la clave publica) |
+| `EXPO_PUBLIC_SUPABASE_URL` | `https://<project-id>.supabase.co` |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase > Project Settings > API Keys (la que empieza por `sb_publishable_`) |
 | `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Cloud > APIs & Services > Credentials |
 
 `.env` esta en `.gitignore`. No lo subas.
 
-La `anon key` es publica por diseno: va dentro de la app, cualquiera puede
-extraerla. Lo que protege los datos es RLS, no el secreto de esa clave. La
-`service_role`, en cambio, **no aparece en ningun sitio de este repositorio** y
-no debe salir nunca del panel de Supabase ni de las Edge Functions.
+La clave **publicable** (`sb_publishable_...`) es publica por diseno: va dentro
+del binario y cualquiera puede extraerla. Lo que protege los datos es RLS, no el
+secreto de esa clave. La clave **secreta** (`sb_secret_...`, antes
+`service_role`) **no aparece en ningun sitio de este repositorio** y no debe
+salir nunca del panel de Supabase ni de las Edge Functions.
+
+Si tu proyecto todavia usa el formato antiguo, la equivalencia es
+`anon` -> publicable y `service_role` -> secreta. Sirven igual en las mismas
+posiciones.
 
 ### La clave de Google Maps
 
@@ -135,7 +140,7 @@ build sale sin clave de Google y sin Supabase:
 
 ```bash
 eas env:set --name EXPO_PUBLIC_SUPABASE_URL --value "https://TU-PROYECTO.supabase.co" --environment development --visibility plaintext
-eas env:set --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "eyJhbGciOi..." --environment development --visibility plaintext
+eas env:set --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value "sb_publishable_..." --environment development --visibility plaintext
 eas env:set --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value "AIza..." --environment development --visibility plaintext
 ```
 
