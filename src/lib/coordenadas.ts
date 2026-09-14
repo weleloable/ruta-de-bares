@@ -74,10 +74,16 @@ function componentes(limpio: string): [Componente, Componente] | string {
       return 'Solo vale una URL de un sitio de Google Maps, sin nada mas en el campo.';
     }
     const pines = [...limpio.matchAll(PIN_EN_URL)];
-    if (pines.length !== 1) {
-      return pines.length === 0
-        ? 'Esa URL no lleva la posicion del pin. En Google Maps, clic derecho sobre el bar y copia las coordenadas.'
-        : 'Esa URL lleva varias posiciones. Copia las coordenadas del bar con clic derecho.';
+    // Se cuentan TODOS los marcadores, no solo los pines bien formados: un pin
+    // roto al lado de uno bueno no puede dejar de contar, porque entonces no se
+    // sabe cual de los dos es el bar.
+    const marcadores3d = limpio.match(/!3d/gi)?.length ?? 0;
+    const marcadores4d = limpio.match(/!4d/gi)?.length ?? 0;
+    if (marcadores3d > 1 || marcadores4d > 1 || pines.length > 1) {
+      return 'Esa URL lleva varias posiciones. Copia las coordenadas del bar con clic derecho.';
+    }
+    if (pines.length === 0) {
+      return 'Esa URL no lleva la posicion del pin. En Google Maps, clic derecho sobre el bar y copia las coordenadas.';
     }
     return [{ valor: pines[0][1] }, { valor: pines[0][2] }];
   }
@@ -164,11 +170,12 @@ export function formatCoordenadas(punto: Punto): string {
 }
 
 /**
- * Como se va a guardar, en palabras: "40.41680° N, 3.70380° O". Se ensena
- * bajo el campo para que un signo o un hemisferio equivocado salte a la vista.
+ * Como se va a guardar, en palabras: "40.4168° N, 3.7038° O". Se ensena bajo
+ * el campo para que un signo o un hemisferio equivocado salte a la vista. Sin
+ * redondear: dice "se guardara en", asi que muestra exactamente eso.
  */
 export function describirPunto({ lat, lng }: Punto): string {
   const ns = lat < 0 ? 'S' : 'N';
   const eo = lng < 0 ? 'O' : 'E';
-  return `${Math.abs(lat).toFixed(5)}° ${ns}, ${Math.abs(lng).toFixed(5)}° ${eo}`;
+  return `${formatNumero(Math.abs(lat))}° ${ns}, ${formatNumero(Math.abs(lng))}° ${eo}`;
 }

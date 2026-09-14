@@ -91,6 +91,14 @@ describe('parseCoordenadas', () => {
     for (const [texto, motivo] of [
       ['https://www.google.com/maps/@40.4168,-3.7038,17z', /pin/],
       ['https://www.google.com/maps/place/!3d40.1111!4d-3.1111/!3d41.2222!4d2.2222', /varias/],
+      // Un pin roto al lado de uno bueno tambien son dos posiciones.
+      ['https://www.google.com/maps/place/X/data=!3d1.0000!4d2.0000x/!3d40.4168!4d-3.7038', /varias/],
+      ['https://www.google.com/maps/place/X/data=!3d1!4d2/!3d40.4168!4d-3.7038', /varias/],
+      ['https://www.google.com/maps/place/X/data=!3d1.0000!4d2.0000%2C/!3d40.4168!4d-3.7038', /varias/],
+      ['https://www.google.com/maps/place/X/data=!3d40.4168!4d-3.7038#!3d1.0000!4d1.0000x', /varias/],
+      ['https://www.google.com/maps/place/X/data=!3d40.4168!4d-3.7038!3d40.4168', /varias/],
+      ['https://www.google.com/maps/place/X/data=!3d!3d40.4168!4d-3.7038', /varias/],
+      ['https://www.google.com/maps/place/X/data=!3D1.0000!4D2.0000/!3d40.4168!4d-3.7038', /varias/],
       ['https://evil.example/?x=!3d10.0000!4d20.0000', /Google Maps/],
       ['https://google.evil/maps/place/X/data=!3d40.4169!4d-3.7035', /Google Maps/],
       ['https://google.com.x/maps/place/X/data=!3d40.4169!4d-3.7035', /Google Maps/],
@@ -189,8 +197,13 @@ describe('formatCoordenadas', () => {
 
 describe('describirPunto', () => {
   it('pone hemisferios en castellano', () => {
-    assert.equal(describirPunto({ lat: 40.4168, lng: -3.7038 }), '40.41680° N, 3.70380° O');
-    assert.equal(describirPunto({ lat: -33.8688, lng: 151.2093 }), '33.86880° S, 151.20930° E');
+    assert.equal(describirPunto({ lat: 40.4168, lng: -3.7038 }), '40.4168° N, 3.7038° O');
+    assert.equal(describirPunto({ lat: -33.8688, lng: 151.2093 }), '33.8688° S, 151.2093° E');
+  });
+
+  it('muestra el valor exacto que se guarda, sin redondear', () => {
+    assert.equal(describirPunto({ lat: 40.416809, lng: -3.703825813266 }), '40.416809° N, 3.703825813266° O');
+    assert.equal(describirPunto({ lat: 3.169490014762266e-7, lng: -1e-6 }), '0.0000003169490014762266° N, 0.000001° O');
   });
 });
 
