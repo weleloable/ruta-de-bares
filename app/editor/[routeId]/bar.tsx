@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker, PROVIDER_GOOGLE, type MapPressEvent } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SelectorPosicion } from '../../../src/components/SelectorPosicion';
 import { Banner, Button, Card, Field, Loading } from '../../../src/components/ui';
 import {
   getRouteWithBars,
@@ -14,7 +14,7 @@ import { construirVentana, formatHora } from '../../../src/features/routes/horas
 import { RADIUS_DEFAULT_M, validateBarDraft } from '../../../src/features/routes/validation';
 import { getCurrentPosition } from '../../../src/features/stamps/api';
 import { desdeFechaISO } from '../../../src/lib/fechas';
-import { colors, mapStyle, radius as radios, space, typography } from '../../../src/lib/theme';
+import { colors, space, typography } from '../../../src/lib/theme';
 import type { RouteBarRow, RouteRow } from '../../../src/types/database';
 
 /** Centro por defecto cuando no hay nada mejor: Puerta del Sol, Madrid. */
@@ -23,9 +23,11 @@ const CENTRO_POR_DEFECTO = { lat: 40.4168, lng: -3.7038 };
 /**
  * Alta y edicion de un bar.
  *
- * La posicion se marca tocando el mapa o arrastrando el pin, no escribiendo
- * coordenadas: nadie sabe de memoria la latitud de su bar, y el circulo del
- * radio se ve en el sitio, que es justo lo que el admin necesita decidir.
+ * En el movil la posicion se marca tocando el mapa o arrastrando el pin, no
+ * escribiendo coordenadas: nadie sabe de memoria la latitud de su bar, y el
+ * circulo del radio se ve en el sitio, que es justo lo que el admin necesita
+ * decidir. En web no hay mapa (ver SelectorPosicion.web.tsx): se pegan las
+ * coordenadas de Google Maps y nada se precarga en un bar nuevo.
  */
 export default function EditorDeBar() {
   const { routeId, barId } = useLocalSearchParams<{ routeId: string; barId?: string }>();
@@ -82,9 +84,13 @@ export default function EditorDeBar() {
           const cierreAnterior = new Date(ultimo.closes_at);
           setAbre(formatHora(cierreAnterior));
           setCierra(formatHora(new Date(cierreAnterior.getTime() + 60 * 60 * 1000)));
-          setPunto({ lat: ultimo.lat, lng: ultimo.lng });
+          // En web no hay mapa donde se vea el pin: cualquier posicion
+          // precargada se guardaria sin que el admin la haya elegido.
+          if (Platform.OS !== 'web') setPunto({ lat: ultimo.lat, lng: ultimo.lng });
           return;
         }
+
+        if (Platform.OS === 'web') return;
 
         // Primer bar de la ruta: se intenta centrar donde esta el admin.
         try {
@@ -114,7 +120,11 @@ export default function EditorDeBar() {
 
   async function onGuardar() {
     if (!routeId || !punto) {
-      setErrores(['Marca la posicion del bar en el mapa.']);
+      setErrores([
+        Platform.OS === 'web'
+          ? 'Escribe unas coordenadas validas para el bar.'
+          : 'Marca la posicion del bar en el mapa.',
+      ]);
       return;
     }
     if (!resultadoVentana.ok) {
@@ -163,11 +173,6 @@ export default function EditorDeBar() {
     }
   }
 
-  function onTocarMapa(evento: MapPressEvent) {
-    const { latitude, longitude } = evento.nativeEvent.coordinate;
-    setPunto({ lat: latitude, lng: longitude });
-  }
-
   if (cargando) return <Loading label="Preparando el bar..." />;
 
   const radioNumero = Number(radio);
@@ -192,57 +197,13 @@ export default function EditorDeBar() {
 
           <Card style={styles.tarjetaMapa}>
             <Text style={typography.overline}>Posicion</Text>
-            <Text style={typography.muted}>
-              Toca el mapa o arrastra el pin. El circulo es la zona desde la que se puede sellar.
-            </Text>
-            {Platform.OS === 'web' ? (
-              <Banner tone="info">El selector de mapa solo funciona en el movil.</Banner>
-            ) : (
-              <View style={styles.mapaCaja}>
-                <MapView
-                  style={StyleSheet.absoluteFill}
-                  provider={PROVIDER_GOOGLE}
-                  customMapStyle={mapStyle}
-                  onPress={onTocarMapa}
-                  initialRegion={{
-                    latitude: punto?.lat ?? CENTRO_POR_DEFECTO.lat,
-                    longitude: punto?.lng ?? CENTRO_POR_DEFECTO.lng,
-                    latitudeDelta: 0.006,
-                    longitudeDelta: 0.006,
-                  }}
-                >
-                  {punto ? (
-                    <>
-                      <Marker
-                        coordinate={{ latitude: punto.lat, longitude: punto.lng }}
-                        draggable
-                        onDragEnd={(e) =>
-                          setPunto({
-                            lat: e.nativeEvent.coordinate.latitude,
-                            lng: e.nativeEvent.coordinate.longitude,
-                          })
-                        }
-                        pinColor={colors.stamp}
-                      />
-                      {radioValido ? (
-                        <Circle
-                          center={{ latitude: punto.lat, longitude: punto.lng }}
-                          radius={radioNumero}
-                          strokeColor={colors.stamp}
-                          fillColor="rgba(168, 44, 36, 0.14)"
-                          strokeWidth={1}
-                        />
-                      ) : null}
-                    </>
-                  ) : null}
-                </MapView>
-              </View>
-            )}
-            <Text style={typography.muted}>
-              {punto
-                ? `${punto.lat.toFixed(5)}, ${punto.lng.toFixed(5)}`
-                : 'Sin posicion marcada todavia.'}
-            </Text>
+            <SelectorPosicion
+              key={editando ? barId : 'nuevo'}
+              punto={punto}
+              radioM={radioValido ? radioNumero : null}
+              centroInicial={CENTRO_POR_DEFECTO}
+              onCambiar={setPunto}
+            />
           </Card>
 
           <Field
@@ -300,13 +261,6 @@ const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   tarjetaMapa: { gap: space.sm },
-  mapaCaja: {
-    height: 260,
-    borderRadius: radios.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   filaHoras: { flexDirection: 'row', gap: space.md },
   mitad: { flex: 1 },
 });
