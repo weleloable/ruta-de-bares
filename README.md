@@ -86,10 +86,13 @@ npx expo start --dev-client     # necesita un development build, no Expo Go
 El mapa es un modulo nativo con la clave de Google dentro, asi que Expo Go no
 vale. El build se hace una vez con `eas build --profile development`.
 
+La version web se publica sola en <https://weleloable.github.io/ruta-de-bares/>
+en cada push a `master` (ver "Publicar la web en GitHub Pages" en [docs/SETUP.md](docs/SETUP.md)).
+
 ## Tests
 
 ```bash
-npm test         # 84 tests, sin red, ~450 ms
+npm test         # 93 tests, sin red, ~450 ms
 npm run typecheck
 npm run check:functions   # typecheck de las Edge Functions con Deno (via npx, no hay que instalarlo)
 npm run check    # typecheck + tests + funciones

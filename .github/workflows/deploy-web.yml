@@ -1,0 +1,83 @@
+# Publica la version web en https://weleloable.github.io/ruta-de-bares/
+# en cada push a master. Guia: docs/SETUP.md, "Publicar la web en GitHub Pages".
+name: Publicar web
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue cada vez. No se cancela el que esta en marcha: cortar un
+# deploy-pages a medias deja Pages en un estado raro; el siguiente espera.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Variables de repositorio (Settings > Secrets and variables > Actions >
+      # Variables), no secretos: la clave publicable acaba dentro del bundle
+      # igual. Expo las incrusta al exportar.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # Node 24: los tests usan el borrado de tipos nativo de Node.
+          node-version: 24
+          cache: npm
+
+      - name: Comprobar variables de Supabase
+        run: |
+          faltan=0
+          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ]; then
+            echo "::error::Falta la variable de repositorio EXPO_PUBLIC_SUPABASE_URL (Settings > Secrets and variables > Actions > Variables)."
+            faltan=1
+          fi
+          if [ -z "$EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "::error::Falta la variable de repositorio EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY (Settings > Secrets and variables > Actions > Variables)."
+            faltan=1
+          fi
+          exit $faltan
+
+      - run: npm ci
+
+      - name: Exportar web
+        env:
+          # Solo aqui: app.config.ts pone experiments.baseUrl a partir de esto.
+          WEB_BASE_URL: /ruta-de-bares
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Fallback SPA y .nojekyll
+        run: |
+          # Pages no conoce las rutas del router: /ruta-de-bares/invitacion no
+          # existe como fichero. 404.html = index.html hace que cargue la app y
+          # el router resuelva la ruta en el navegador.
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+          # Sin esto el tar excluye los ficheros que empiezan por punto y
+          # .nojekyll no llega.
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v5
+        id: deployment
