@@ -1,0 +1,15 @@
+# Configuracion de las Edge Functions.
+#
+# Si usas la CLI de Supabase, `supabase init` genera un config.toml completo con
+# tu project_id y muchas mas secciones. Quedate con estos dos bloques y pega el
+# resto de lo que genere: lo importante aqui es verify_jwt.
+
+[functions.create-invite]
+# La crea un admin con su sesion abierta: el JWT tiene que verificarse.
+verify_jwt = true
+
+[functions.redeem-invite]
+# Se llama SIN sesion (quien la usa todavia no tiene cuenta). La autorizacion
+# la da el token de invitacion de un solo uso, que la funcion valida por su
+# cuenta contra el sha256 guardado en la tabla `invites`.
+verify_jwt = false

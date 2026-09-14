@@ -1,27 +1,114 @@
 # Ruta de Bares 🍻
 
-App móvil (React Native + Expo) para planear y compartir rutas de bares.
+App movil para organizar una ruta de bares y llevar la cuenta de los sellos,
+al estilo de la compostelana del Camino.
+
+Solo se entra por invitacion. No hay registro abierto.
+
+## Las cuatro pestanas
+
+| Pestana | Quien la ve | Que hace |
+| --- | --- | --- |
+| **Sellos** | todos | La compostelana: un hueco por bar, se rellena al sellar |
+| **Ruta** | todos | Mapa de Google con los bares numerados y el trazado que los une |
+| **Editor** | solo admins | Crear rutas, anadir bares, ordenarlos, fijar horarios, publicar |
+| **Mi perfil** | todos | Foto, nombre, y para admins el panel de invitaciones |
+
+## Como se consigue un sello
+
+El usuario pulsa **Sellar** y el servidor comprueba tres cosas antes de
+concederlo:
+
+1. La ruta esta publicada.
+2. Es la hora: `now()` cae dentro de la ventana `opens_at` - `closes_at` de ese bar.
+3. Esta alli: la distancia haversine a las coordenadas del bar no pasa de su
+   `radius_m`.
+
+Las tres viven en la funcion `claim_stamp` de Postgres, y es el **unico** camino
+para crear un sello: la tabla `stamps` no tiene politica de `INSERT` y al rol
+`authenticated` se le ha revocado el privilegio. El cliente no puede inventarse
+sellos ni con la clave en la mano.
+
+`src/features/stamps/rules.ts` repite esas reglas en TypeScript, pero solo para
+la interfaz: para decir "te faltan 40 m" o "abre en 25 min" sin ir al servidor.
+Si las dos discrepan, manda el SQL.
+
+## Como entra la gente
+
+- **Administradores**: la cuenta se crea a mano en el panel de Supabase y se
+  asciende con una linea de SQL. No hay ninguna pantalla que conceda el rol.
+- **Participantes**: un admin genera un enlace de un solo uso desde
+  **Mi perfil > Invitaciones**. Quien lo abre elige correo y contrasena y entra
+  como participante, sin acceso al editor.
+
+La base de datos guarda el **sha256** del token, nunca el token. Se ve una sola
+vez, al crearlo. El canje reclama la invitacion con un `UPDATE ... WHERE
+used_at IS NULL` antes de crear nada: de dos personas que abran el mismo enlace
+a la vez, solo una consigue cuenta.
 
 ## Stack
 
-- [Expo](https://expo.dev/) + React Native
-- TypeScript
+- [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) + React Native 0.86, TypeScript estricto
+- [Expo Router](https://docs.expo.dev/router/introduction/) para la navegacion
+- [Supabase](https://supabase.com/) para auth, Postgres con RLS, Storage y Edge Functions
+- [react-native-maps](https://docs.expo.dev/versions/v57.0.0/sdk/map-view/) con Google Maps
+- Sesion en el keystore del sistema via `expo-secure-store`, troceada porque
+  una sesion de Supabase pasa del limite de 2048 bytes por valor
+
+## Estructura
+
+```
+app/                      pantallas (Expo Router; la carpeta ES el mapa de rutas)
+  (auth)/                 login y canje de invitacion
+  (tabs)/                 las cuatro pestanas
+  editor/[routeId]/       lista de bares de una ruta y formulario de bar
+src/
+  features/<dominio>/     reglas, llamadas a datos y componentes de cada dominio
+  components/             piezas de interfaz compartidas
+  lib/                    cliente de Supabase, tema, fechas, utilidades
+  types/database.ts       espejo en TypeScript del esquema SQL
+supabase/
+  migrations/0001_init.sql  tablas, RLS, claim_stamp, bucket de avatares
+  functions/                create-invite y redeem-invite
+docs/SETUP.md             puesta en marcha, de cero a la app corriendo
+```
 
 ## Empezar
 
+Lee [docs/SETUP.md](docs/SETUP.md). Resumido:
+
 ```bash
 npm install
-npm start
+cp .env.example .env            # y rellena los tres valores
+npx expo start --dev-client     # necesita un development build, no Expo Go
 ```
 
-Luego escanea el QR con la app **Expo Go** (Android/iOS), o usa:
+El mapa es un modulo nativo con la clave de Google dentro, asi que Expo Go no
+vale. El build se hace una vez con `eas build --profile development`.
+
+## Tests
 
 ```bash
-npm run android
-npm run ios
-npm run web
+npm test         # 84 tests, sin red, ~450 ms
+npm run typecheck
+npm run check:functions   # typecheck de las Edge Functions con Deno (via npx, no hay que instalarlo)
+npm run check    # typecheck + tests + funciones
+npm run doctor   # expo-doctor: versiones y dependencias nativas
 ```
 
-## Estado
+Los tests corren con `node --test` sobre los ficheros `.ts` directamente (Node
+24 borra los tipos solo), sin Jest ni transpilacion. Cubren lo que puede fallar
+en silencio: la geocerca, las ventanas horarias, el troceado de la sesion, el
+parseo de enlaces de invitacion y la validacion del editor.
 
-🚧 Proyecto recién iniciado.
+`tests/migration.test.ts` pasa `0001_init.sql` por el parser **real** de
+Postgres (`pg-query-emscripten`, el mismo codigo C compilado a wasm) y ademas
+comprueba las invariantes que no se pueden perder por descuido: RLS activo en
+las cinco tablas, ninguna via de `INSERT` en `stamps`, y que `claim_stamp`
+siga levantando sus cuatro errores. Lo que NO comprueba es el comportamiento
+en caliente: eso es la lista de verificacion de [docs/SETUP.md](docs/SETUP.md).
+
+## Instalar dependencias
+
+Siempre con `npx expo install <paquete>`, nunca `npm install <paquete>`.
+Ver "Problemas conocidos" en [docs/SETUP.md](docs/SETUP.md).
