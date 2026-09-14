@@ -1,0 +1,14 @@
+{
+  // Los tests corren en Node (node --test con borrado de tipos nativo), no en
+  // React Native. Necesitan los tipos de Node y las importaciones con extension
+  // .ts que Node exige, y ninguna de las dos cosas debe filtrarse al codigo de
+  // la app: por eso viven en su propio tsconfig y el principal los excluye.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.test.ts", "tests/**/*.test.ts", "tests/**/*.d.ts"],
+  "exclude": ["node_modules"]
+}
