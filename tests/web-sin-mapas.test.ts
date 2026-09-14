@@ -40,16 +40,16 @@ const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const PAQUETES_SIN_WEB = ['react-native-maps'];
 
-/** Orden de sourceExts de Expo para codigo (comprobado contra @expo/config abajo). */
-export const ORDEN_EXTENSIONES = ['ts', 'tsx', 'mjs', 'js', 'jsx'];
+/** Orden de sourceExts de Metro para codigo (comprobado contra expo/metro-config abajo). */
+export const ORDEN_EXTENSIONES = ['ts', 'tsx', 'mjs', 'js', 'jsx', 'cjs'];
 
 /** Alias de import (comprobado contra tsconfig.json abajo). */
 export const ALIAS: Record<string, string> = { '@/': 'src/' };
 
-const EXTENSION = /\.(tsx?|mjs|jsx?)$/;
-const VARIANTE_WEB = /\.web\.(tsx?|mjs|jsx?)$/;
-const VARIANTE_NATIVA = /\.(native|ios|android)\.(tsx?|mjs|jsx?)$/;
-const ESPECIFICADOR_NATIVO = /\.(native|ios|android)(\.(tsx?|mjs|jsx?))?$/;
+const EXTENSION = /\.(tsx?|[mc]js|jsx?)$/;
+const VARIANTE_WEB = /\.web\.(tsx?|[mc]js|jsx?)$/;
+const VARIANTE_NATIVA = /\.(native|ios|android)\.(tsx?|[mc]js|jsx?)$/;
+const ESPECIFICADOR_NATIVO = /\.(native|ios|android)(\.(tsx?|[mc]js|jsx?))?$/;
 
 function tipoDeScript(ruta: string): ts.ScriptKind {
   if (ruta.endsWith('.tsx')) return ts.ScriptKind.TSX;
@@ -58,15 +58,28 @@ function tipoDeScript(ruta: string): ts.ScriptKind {
   return ts.ScriptKind.JS;
 }
 
-function sinParentesis(nodo: ts.Expression): ts.Expression {
+/**
+ * Quita lo que Babel borra al compilar y deja la expresion de dentro:
+ * parentesis, `as`, `satisfies`, `!` y `<T>`. `require('x' as string)` llega
+ * a Metro como `require('x')`.
+ */
+function sinEnvoltorios(nodo: ts.Expression): ts.Expression {
   let actual = nodo;
-  while (ts.isParenthesizedExpression(actual)) actual = actual.expression;
+  while (
+    ts.isParenthesizedExpression(actual) ||
+    ts.isAsExpression(actual) ||
+    ts.isSatisfiesExpression(actual) ||
+    ts.isNonNullExpression(actual) ||
+    ts.isTypeAssertionExpression(actual)
+  ) {
+    actual = actual.expression;
+  }
   return actual;
 }
 
 function textoLiteral(nodo: ts.Node | undefined): string | null {
   if (nodo === undefined) return null;
-  const limpio = ts.isExpression(nodo) ? sinParentesis(nodo) : nodo;
+  const limpio = ts.isExpression(nodo) ? sinEnvoltorios(nodo) : nodo;
   return ts.isStringLiteral(limpio) || ts.isNoSubstitutionTemplateLiteral(limpio) ? limpio.text : null;
 }
 
@@ -107,7 +120,7 @@ export function importsEnEjecucion(codigo: string, ruta = 'fixture.tsx'): string
     ) {
       anotar(textoLiteral(nodo.moduleReference.expression));
     } else if (ts.isCallExpression(nodo)) {
-      const llamado = sinParentesis(nodo.expression);
+      const llamado = sinEnvoltorios(nodo.expression);
       if (
         llamado.kind === ts.SyntaxKind.ImportKeyword ||
         (ts.isIdentifier(llamado) && llamado.text === 'require')
@@ -192,7 +205,7 @@ function listar(dir: string): string[] {
   return readdirSync(join(raiz, dir), { withFileTypes: true }).flatMap((entrada) => {
     const ruta = `${dir}/${entrada.name}`;
     if (entrada.isDirectory()) return listar(ruta);
-    return EXTENSION.test(entrada.name) && !/\.test\.(tsx?|mjs|jsx?)$/.test(entrada.name) ? [ruta] : [];
+    return EXTENSION.test(entrada.name) && !/\.test\.(tsx?|[mc]js|jsx?)$/.test(entrada.name) ? [ruta] : [];
   });
 }
 
@@ -219,15 +232,15 @@ describe('bundle web sin react-native-maps', () => {
     );
   });
 
-  it('el orden de extensiones es el de Expo y el alias es el de tsconfig.json', () => {
+  it('el orden de extensiones es el sourceExts real de Metro y el alias es el de tsconfig.json', () => {
+    // La misma configuracion que usa `expo start`: si Expo cambia el orden o
+    // anade una extension de codigo, este test falla antes que el bundle.
     const requerir = createRequire(join(raiz, 'package.json'));
-    const { getLanguageExtensionsInOrder } = requerir('@expo/config/build/paths/extensions') as {
-      getLanguageExtensionsInOrder(o: { isTS: boolean; isModern: boolean; isReact: boolean }): string[];
+    const { getDefaultConfig } = requerir('expo/metro-config') as {
+      getDefaultConfig(raiz: string): { resolver: { sourceExts: string[] } };
     };
-    assert.deepEqual(
-      getLanguageExtensionsInOrder({ isTS: true, isModern: true, isReact: true }),
-      ORDEN_EXTENSIONES,
-    );
+    const deCodigo = getDefaultConfig(raiz).resolver.sourceExts.filter((ext) => /^([mc]?js|jsx|tsx?)$/.test(ext));
+    assert.deepEqual(deCodigo, ORDEN_EXTENSIONES);
 
     const tsconfig = ts.readConfigFile(join(raiz, 'tsconfig.json'), ts.sys.readFile);
     const paths = tsconfig.config?.compilerOptions?.paths as Record<string, string[]>;
@@ -269,6 +282,11 @@ describe('bundle web sin react-native-maps', () => {
       'const M = require(`react-native-maps`);',
       "const M = require(('react-native-maps'));",
       "const M = (require)('react-native-maps');",
+      "const M = require('react-native-maps' as string);",
+      "const M = await import('react-native-maps' as const);",
+      "const M = require('react-native-maps'!);",
+      "const M = require('react-native-maps' satisfies string);",
+      "const M = (require as any)('react-native-maps');",
       "import M = require('react-native-maps');",
       "export { Marker } from 'react-native-maps';",
       "export{Marker}from'react-native-maps'",
@@ -278,6 +296,8 @@ describe('bundle web sin react-native-maps', () => {
     ]) {
       assert.equal(mapas(codigo), true, codigo);
     }
+    // `<T>x` solo existe en .ts: en .tsx es JSX y el archivo ni compila.
+    assert.equal(importaEnEjecucion("const M = require(<any>'react-native-maps');", 'react-native-maps', 'x.ts'), true);
   });
 
   it('no marca lo que no llega al bundle', () => {
@@ -313,6 +333,11 @@ describe('bundle web sin react-native-maps', () => {
     assert.equal(tsConWebTsx.length, 1);
     assert.match(tsConWebTsx[0], /despues/);
     assert.equal(violaciones([conMapa('src/components/Mapa.tsx')], soloExiste('src/components/Mapa.web.js')).length, 1);
+    // .cjs tambien es codigo para Metro, y va el ultimo.
+    const cjs = violaciones([conMapa('src/lib/mapa.cjs')], () => false);
+    assert.equal(cjs.length, 1);
+    assert.match(cjs[0], /falta src\/lib\/mapa\.web\.cjs$/);
+    assert.equal(violaciones([conMapa('src/lib/mapa.cjs')], soloExiste('src/lib/mapa.web.js')).length, 0);
   });
 
   it('una variante .web.* que importa el paquete es una violacion; .native.* no', () => {

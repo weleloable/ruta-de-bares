@@ -149,10 +149,36 @@ describe('formatCoordenadas', () => {
       { lat: 0, lng: 0.1 + 0.2 },
       { lat: 1e-7, lng: -2.5e-9 },
       { lat: 89.99999999999999, lng: 1.23e-10 },
+      { lat: 3.169490014762266e-7, lng: -1e-21 },
+      { lat: -0, lng: Number.MIN_VALUE },
       { lat: -90, lng: 180 },
     ]) {
       const texto = formatCoordenadas(punto);
-      assert.deepEqual(parseCoordenadas(texto), { ok: true, punto }, texto);
+      assert.deepStrictEqual(parseCoordenadas(texto), { ok: true, punto }, texto);
+    }
+  });
+
+  it('propiedad: 20000 puntos al azar (muchos diminutos) vuelven exactos', () => {
+    // PRNG con semilla fija (mulberry32): el test es determinista.
+    let semilla = 0x5eed;
+    const azar = () => {
+      semilla = (semilla + 0x6d2b79f5) | 0;
+      let t = Math.imul(semilla ^ (semilla >>> 15), 1 | semilla);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const valor = (limite: number) => {
+      const escala = azar() < 0.5 ? 1 : 10 ** -Math.floor(azar() * 320);
+      return (azar() * 2 - 1) * limite * escala;
+    };
+    for (let i = 0; i < 20000; i += 1) {
+      const punto = { lat: valor(90), lng: valor(180) };
+      const texto = formatCoordenadas(punto);
+      const resultado = parseCoordenadas(texto);
+      assert.ok(
+        resultado.ok && Object.is(resultado.punto.lat, punto.lat) && Object.is(resultado.punto.lng, punto.lng),
+        `${JSON.stringify(punto)} -> "${texto}"`,
+      );
     }
   });
 

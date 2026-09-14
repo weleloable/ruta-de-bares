@@ -136,9 +136,26 @@ export function estadoCampoCoordenadas(texto: string): { punto: Punto | null; er
  * mismo double: lo que se ve en el campo es lo que se guarda.
  */
 function formatNumero(n: number): string {
-  const corto = String(n); // la representacion mas corta que vuelve al mismo double
-  if (/e/i.test(corto)) return n.toFixed(20).replace(/0+$/, '').padEnd(DECIMALES_MIN + 2, '0');
-  return decimales(corto) >= DECIMALES_MIN ? corto : n.toFixed(DECIMALES_MIN);
+  // String(n) es la representacion decimal mas corta que vuelve al mismo
+  // double. Se reescribe sin exponente (mismos digitos) y se rellena con ceros
+  // hasta DECIMALES_MIN: ningun paso redondea. toFixed si redondea, y con
+  // 3.17e-7 el texto ya no volvia al mismo numero.
+  const plano = sinExponente(Object.is(n, -0) ? '-0' : String(n));
+  const faltan = DECIMALES_MIN - decimales(plano);
+  if (faltan <= 0) return plano;
+  return plano.includes('.') ? plano + '0'.repeat(faltan) : `${plano}.${'0'.repeat(DECIMALES_MIN)}`;
+}
+
+/** "3.1694e-7" -> "0.00000031694", "1.5e+21" -> "1500000000000000000000". */
+function sinExponente(corto: string): string {
+  const partes = /^(-?)(\d)(?:\.(\d+))?e([+-]\d+)$/.exec(corto);
+  if (!partes) return corto;
+  const [, signo, entero, fraccion = '', exponente] = partes;
+  const digitos = entero + fraccion;
+  const punto = 1 + Number(exponente); // donde cae la coma decimal dentro de `digitos`
+  if (punto <= 0) return `${signo}0.${'0'.repeat(-punto)}${digitos}`;
+  if (punto >= digitos.length) return `${signo}${digitos}${'0'.repeat(punto - digitos.length)}`;
+  return `${signo}${digitos.slice(0, punto)}.${digitos.slice(punto)}`;
 }
 
 /** Texto inicial del campo, sin redondear. */
