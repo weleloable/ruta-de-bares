@@ -231,12 +231,30 @@ export function violaciones(archivos: readonly Archivo[], existe: (ruta: string)
   return problemas;
 }
 
+/**
+ * Si un archivo entra en el escaneo. En app/ entra todo archivo de codigo,
+ * tambien `x.test.tsx`: el require.context de expo-router (expo-router/_ctx.web.js)
+ * lo acepta como ruta y lo carga al arrancar. Fuera de app/ un test solo entra
+ * en el bundle si alguien lo importa, y entonces el import ya lo marca.
+ */
+export function entraEnElEscaneo(ruta: string): boolean {
+  if (!EXTENSION.test(ruta)) return false;
+  return ruta.startsWith('app/') || !/\.test\.(tsx?|[mc]js|jsx?)$/.test(ruta);
+}
+
 function listar(dir: string): string[] {
   return readdirSync(join(raiz, dir), { withFileTypes: true }).flatMap((entrada) => {
     const ruta = `${dir}/${entrada.name}`;
     if (entrada.isDirectory()) return listar(ruta);
-    return EXTENSION.test(entrada.name) && !/\.test\.(tsx?|[mc]js|jsx?)$/.test(entrada.name) ? [ruta] : [];
+    return entraEnElEscaneo(ruta) ? [ruta] : [];
   });
+}
+
+/** Archivos de codigo sueltos en la raiz: una app/ puede importar '../mapa'. */
+export function archivosDeRaiz(): string[] {
+  return readdirSync(raiz, { withFileTypes: true })
+    .filter((e) => e.isFile() && entraEnElEscaneo(e.name))
+    .map((e) => e.name);
 }
 
 /** Carpetas de primer nivel que nunca entran en el bundle de la app. */
@@ -267,7 +285,7 @@ const mapas = (codigo: string) => importaEnEjecucion(codigo, 'react-native-maps'
 
 describe('bundle web sin react-native-maps', () => {
   const archivosDelProyecto = () =>
-    carpetasDeCodigo().flatMap(listar).map((ruta) => ({
+    [...archivosDeRaiz(), ...carpetasDeCodigo().flatMap((carpeta) => listar(carpeta))].map((ruta) => ({
       ruta,
       codigo: readFileSync(join(raiz, ruta), 'utf8'),
     }));
@@ -466,6 +484,21 @@ describe('bundle web sin react-native-maps', () => {
     // Un modulo en una carpeta nueva recibe la misma regla que src/.
     const nuevo = { ruta: 'lib/mapa.tsx', codigo: "import 'react-native-maps';" };
     assert.equal(violaciones([nuevo], () => false).length, 1);
+  });
+
+  it('en app/ escanea tambien los .test.*, y escanea los archivos de la raiz', () => {
+    assert.equal(entraEnElEscaneo('app/mapa.test.tsx'), true);
+    assert.equal(entraEnElEscaneo('app/(tabs)/ruta.test.tsx'), true);
+    assert.equal(entraEnElEscaneo('src/lib/coordenadas.test.ts'), false);
+    assert.equal(entraEnElEscaneo('mapa.tsx'), true);
+    assert.equal(entraEnElEscaneo('app/fondo.png'), false);
+
+    const deRaiz = archivosDeRaiz();
+    assert.ok(deRaiz.includes('app.config.ts'), deRaiz.join(', '));
+    const raizConMapa = { ruta: 'mapa.tsx', codigo: "import 'react-native-maps';" };
+    assert.equal(violaciones([raizConMapa], () => false).length, 1);
+    const testDeRutaConMapa = { ruta: 'app/mapa.test.tsx', codigo: "import 'react-native-maps';" };
+    assert.equal(violaciones([testDeRutaConMapa], () => true).length, 1);
   });
 
   it('rutaLocal resuelve relativos y alias, y deja los paquetes', () => {
