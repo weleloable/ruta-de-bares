@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RutaMapa, type RutaMapaHandle } from '../../src/components/RutaMapa';
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { ventana } from '../../src/lib/fechas';
-import { colors, mapStyle, radius, shadow, space, typography } from '../../src/lib/theme';
+import { colors, radius, shadow, space, typography } from '../../src/lib/theme';
 
 /**
  * El mapa de la ruta: un marcador numerado por bar y una linea que los une en
@@ -16,39 +16,16 @@ import { colors, mapStyle, radius, shadow, space, typography } from '../../src/l
  */
 export default function RutaScreen() {
   const { activeRoute, bars, stamps, loading, error } = useActiveRoute();
-  const mapaRef = useRef<MapView>(null);
+  const mapaRef = useRef<RutaMapaHandle>(null);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
 
   const sellados = useMemo(() => new Set(stamps.map((s) => s.route_bar_id)), [stamps]);
-
-  const coordenadas = useMemo(
-    () => bars.map((bar) => ({ latitude: bar.lat, longitude: bar.lng })),
-    [bars],
-  );
-
-  const encuadrar = useCallback(() => {
-    if (coordenadas.length === 0 || !mapaRef.current) return;
-    mapaRef.current.fitToCoordinates(coordenadas, {
-      edgePadding: { top: 90, right: 70, bottom: 240, left: 70 },
-      animated: true,
-    });
-  }, [coordenadas]);
-
-  useEffect(() => {
-    // Pequena espera: fitToCoordinates antes de que el mapa tenga tamano no
-    // hace nada y el usuario se queda mirando el oceano Atlantico.
-    const id = setTimeout(encuadrar, 450);
-    return () => clearTimeout(id);
-  }, [encuadrar]);
 
   function irA(barId: string) {
     const bar = bars.find((b) => b.id === barId);
     if (!bar || !mapaRef.current) return;
     setSeleccionado(barId);
-    mapaRef.current.animateToRegion(
-      { latitude: bar.lat, longitude: bar.lng, latitudeDelta: 0.004, longitudeDelta: 0.004 },
-      350,
-    );
+    mapaRef.current.irA(bar);
   }
 
   if (Platform.OS === 'web') {
@@ -77,70 +54,13 @@ export default function RutaScreen() {
 
   return (
     <View style={styles.pantalla}>
-      <MapView
+      <RutaMapa
         ref={mapaRef}
-        style={StyleSheet.absoluteFill}
-        provider={PROVIDER_GOOGLE}
-        customMapStyle={mapStyle}
-        showsUserLocation
-        showsMyLocationButton={false}
-        toolbarEnabled={false}
-        onMapReady={encuadrar}
-        initialRegion={
-          coordenadas.length > 0
-            ? {
-                latitude: coordenadas[0].latitude,
-                longitude: coordenadas[0].longitude,
-                latitudeDelta: 0.02,
-                longitudeDelta: 0.02,
-              }
-            : undefined
-        }
-      >
-        {coordenadas.length > 1 ? (
-          <Polyline
-            coordinates={coordenadas}
-            strokeColor={colors.stamp}
-            strokeWidth={4}
-            lineDashPattern={[12, 8]}
-          />
-        ) : null}
-
-        {bars.map((bar, indice) => {
-          const sellado = sellados.has(bar.id);
-          return (
-            <Marker
-              key={bar.id}
-              coordinate={{ latitude: bar.lat, longitude: bar.lng }}
-              title={`${indice + 1}. ${bar.name}`}
-              description={ventana(new Date(bar.opens_at), new Date(bar.closes_at))}
-              onPress={() => setSeleccionado(bar.id)}
-              tracksViewChanges={false}
-            >
-              <View style={[styles.pin, sellado && styles.pinSellado]}>
-                <Text style={[styles.pinTexto, sellado && styles.pinTextoSellado]}>
-                  {indice + 1}
-                </Text>
-              </View>
-            </Marker>
-          );
-        })}
-
-        {seleccionado
-          ? bars
-              .filter((bar) => bar.id === seleccionado)
-              .map((bar) => (
-                <Circle
-                  key={`radio-${bar.id}`}
-                  center={{ latitude: bar.lat, longitude: bar.lng }}
-                  radius={bar.radius_m}
-                  strokeColor={colors.stamp}
-                  fillColor="rgba(168, 44, 36, 0.12)"
-                  strokeWidth={1}
-                />
-              ))
-          : null}
-      </MapView>
+        bars={bars}
+        sellados={sellados}
+        seleccionado={seleccionado}
+        onSeleccionar={setSeleccionado}
+      />
 
       <SafeAreaView style={styles.superpuesto} pointerEvents="box-none" edges={['top', 'bottom']}>
         <View style={styles.cabecera}>
@@ -159,7 +79,7 @@ export default function RutaScreen() {
         ) : null}
 
         <View style={styles.pie} pointerEvents="box-none">
-          <Pressable style={styles.botonEncuadre} onPress={encuadrar}>
+          <Pressable style={styles.botonEncuadre} onPress={() => mapaRef.current?.encuadrar()}>
             <Text style={styles.botonEncuadreTexto}>Ver toda la ruta</Text>
           </Pressable>
 
@@ -244,17 +164,4 @@ const styles = StyleSheet.create({
   // El carrusel ya pone el margen lateral; la tarjeta suelta del estado vacio no.
   tarjetaSuelta: { marginHorizontal: space.lg, width: 'auto' },
   tarjetaActiva: { borderColor: colors.stamp, borderWidth: 2 },
-  pin: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.pill,
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pinSellado: { backgroundColor: colors.stamp, borderColor: colors.stamp },
-  pinTexto: { fontWeight: '800', color: colors.ink },
-  pinTextoSellado: { color: colors.white },
 });
