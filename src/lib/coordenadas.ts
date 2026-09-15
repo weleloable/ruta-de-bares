@@ -1,6 +1,8 @@
 /**
- * Parseo de coordenadas escritas a mano, para el editor en web, donde no hay
- * mapa que tocar.
+ * Parseo de coordenadas escritas a mano o pegadas, para el campo de
+ * coordenadas del editor en web (junto al mapa de SelectorPosicion.web.tsx).
+ * Tambien es la fuente de verdad de lo que se guarda al tocar el mapa: ver
+ * puntoDesdeMapa, al final de este fichero.
  *
  * Formatos aceptados:
  *  - lo que copia Google Maps con clic derecho: "40.41680, -3.70380"
@@ -178,4 +180,36 @@ export function describirPunto({ lat, lng }: Punto): string {
   const ns = lat < 0 ? 'S' : 'N';
   const eo = lng < 0 ? 'O' : 'E';
   return `${formatNumero(Math.abs(lat))}° ${ns}, ${formatNumero(Math.abs(lng))}° ${eo}`;
+}
+
+/**
+ * Longitud en [-180, 180]. Leaflet repite el mundo en horizontal: un toque en
+ * la copia de la izquierda da -363.7 en vez de -3.7.
+ */
+export function normalizarLongitud(lng: number): number {
+  // En rango se devuelve intacta: la aritmetica modular de abajo convierte
+  // -3.7038 en -3.7038000000000125, y un toque normal escribiria decimales
+  // basura en el campo de coordenadas.
+  if (!Number.isFinite(lng) || (lng >= -180 && lng <= 180)) return lng;
+  const normalizada = ((((lng + 180) % 360) + 360) % 360) - 180;
+  // 180 y -180 son el mismo meridiano; se conserva el signo que venia.
+  return normalizada === -180 && lng > 0 ? 180 : normalizada;
+}
+
+/**
+ * De un toque o arrastre en el mapa web a lo que se escribe en el campo y lo
+ * que se guarda.
+ *
+ * El campo de texto es la unica fuente de verdad: el punto guardado es siempre
+ * el que resulta de leer el texto que se ensena. Si ese texto no es valido se
+ * guarda null (y la pantalla no deja guardar), nunca un punto que el campo
+ * rechaza.
+ *
+ * Vive aqui y no en un modulo aparte a proposito: los tests ejecutan los .ts
+ * directamente con Node, que no resuelve imports relativos sin extension, y
+ * Metro/TypeScript no aceptan la extension. En el mismo fichero no hace falta import.
+ */
+export function puntoDesdeMapa(lat: number, lng: number): { texto: string; punto: Punto | null } {
+  const texto = formatCoordenadas({ lat, lng: normalizarLongitud(lng) });
+  return { texto, punto: estadoCampoCoordenadas(texto).punto };
 }

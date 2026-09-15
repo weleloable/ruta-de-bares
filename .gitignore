@@ -45,3 +45,6 @@ yarn-error.*
 
 # worktrees de sesiones de Claude Code
 .claude/worktrees/
+
+# pantalla temporal de scripts/verificar-mapa-web.mjs (se borra sola)
+app/(auth)/verificar-mapa.tsx
