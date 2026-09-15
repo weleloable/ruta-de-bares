@@ -199,6 +199,43 @@ npx expo start --dev-client
 Solo hay que volver a compilar cuando cambian las dependencias nativas o
 `app.config.ts`. Para el resto, recarga y ya.
 
+## 7. Publicar la web en GitHub Pages
+
+La version web vive en <https://weleloable.github.io/ruta-de-bares/> y se
+publica sola en cada push a `master` con
+[`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml).
+
+Lo que hace el workflow:
+
+1. Comprueba que existen las dos variables de Supabase. Si falta alguna, se
+   para con un error que dice cual, antes de compilar nada.
+2. `npm ci` y `npx expo export --platform web --output-dir dist` con
+   `WEB_BASE_URL=/ruta-de-bares`. `app.config.ts` convierte eso en
+   `experiments.baseUrl`, que prefija los assets y los enlaces del router.
+   Sin la variable no hay prefijo, asi que `npx expo start --web` sigue en
+   `http://localhost:8081/` y los builds nativos no cambian.
+3. Copia `index.html` a `404.html`: Pages no conoce las rutas de la app, y al
+   recargar `/ruta-de-bares/invitacion` sirve `404.html`, que carga la app y el
+   router pinta la pantalla correcta. Anade tambien `.nojekyll`.
+4. Sube `dist` como artefacto y lo despliega con `actions/deploy-pages`.
+
+Configuracion del repositorio, una sola vez:
+
+| Donde | Que |
+| --- | --- |
+| **Settings > Secrets and variables > Actions > Variables** | `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, los mismos valores que en `.env`. Variables, no secretos: acaban dentro del JavaScript publico igual. La de Google Maps no hace falta en web. |
+| **Settings > Pages > Build and deployment > Source** | **GitHub Actions** |
+| **Settings > General > Danger Zone** | El repositorio tiene que ser **publico** si la cuenta es del plan gratuito: Pages en repos privados es de pago. |
+
+Para publicar sin hacer push: **Actions > Publicar web > Run workflow**, o
+`gh workflow run deploy-web.yml`.
+
+**Limitacion de las invitaciones.** Los enlaces que se comparten son
+`rutadebares://invitacion?token=...` y solo abren la app instalada. Desde la
+web se pueden crear invitaciones, pero abrir el enlace en un navegador no lleva
+a la web. Quien use la web tiene que ir a la pantalla de invitacion y pegar el
+codigo, que el mensaje compartido ya incluye.
+
 ---
 
 ## Lista de verificacion

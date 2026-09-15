@@ -6,6 +6,25 @@ import type { ExpoConfig } from 'expo/config';
  */
 const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
+/**
+ * Subruta de la web publicada en GitHub Pages (/ruta-de-bares). Solo la define
+ * el workflow .github/workflows/deploy-web.yml al exportar.
+ *
+ * Por que una variable y no `experiments.baseUrl` fijo: Expo usa ese valor
+ * tambien en `npx expo start --web` (el servidor de desarrollo pasaria a vivir
+ * en http://localhost:8081/ruta-de-bares/) y en los exports nativos. Con la
+ * variable, el desarrollo local y los builds de movil no cambian y solo el
+ * export de Pages lleva el prefijo en los assets y en los enlaces del router.
+ * No lleva prefijo EXPO_PUBLIC_ porque no hace falta dentro del bundle: Expo
+ * ya incrusta el baseUrl por su cuenta.
+ */
+const webBaseUrl = process.env.WEB_BASE_URL?.trim() ?? '';
+if (webBaseUrl !== '' && !/^(\/[A-Za-z0-9._-]+)+$/.test(webBaseUrl)) {
+  // Sin barra inicial Expo carga los assets relativos a la pagina y se rompen
+  // en cuanto la ruta tiene dos segmentos. Mejor fallar al exportar.
+  throw new Error(`WEB_BASE_URL invalido: "${webBaseUrl}". Formato: /subruta, sin barra final.`);
+}
+
 const config: ExpoConfig = {
   name: 'Ruta de Bares',
   slug: 'ruta-de-bares',
@@ -35,6 +54,7 @@ const config: ExpoConfig = {
   },
   experiments: {
     typedRoutes: true,
+    ...(webBaseUrl !== '' ? { baseUrl: webBaseUrl } : {}),
   },
   plugins: [
     'expo-router',
