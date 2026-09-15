@@ -42,3 +42,6 @@ yarn-error.*
 
 # env local
 .env
+
+# worktrees de sesiones de Claude Code
+.claude/worktrees/

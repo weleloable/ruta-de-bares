@@ -10,13 +10,19 @@ que los seis puntos pasen.
 
 ## 1. Base de datos
 
-En tu proyecto de Supabase, **SQL Editor > New query**. Pega entero el
-contenido de [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql)
-y pulsa **Run**.
+En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
+**cada migracion entera, en orden**, una query por fichero:
 
-Eso crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
+1. [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql)
+   y **Run**.
+2. [`supabase/migrations/0002_guard_role_sql_editor.sql`](../supabase/migrations/0002_guard_role_sql_editor.sql)
+   y **Run**. Sin esta, el punto 3 falla con `ROLE_CHANGE_FORBIDDEN`.
+
+La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
-`avatars`. Se puede volver a ejecutar sin romper nada.
+`avatars`. La 0002 deja que el propio SQL Editor (y la `service_role`) cambien
+el rol de un perfil; un usuario de la app sigue sin poder. Las dos se pueden
+volver a ejecutar sin romper nada.
 
 ## 2. Cerrar el registro publico
 
@@ -54,7 +60,42 @@ update public.profiles
 Para quitarle el rol a alguien, lo mismo con `role = 'user'`.
 
 Un usuario normal no puede ascenderse solo: el trigger `guard_profile_role`
-rechaza cualquier cambio de `role` que no venga de un admin.
+rechaza cualquier cambio de `role` que venga de la app y no de un admin. Solo
+lo dejan pasar el SQL Editor (conexion directa como `postgres`, sin sesion de
+usuario) y la `service_role`.
+
+**Si el `update` falla con `ROLE_CHANGE_FORBIDDEN`**: no has ejecutado la 0002
+(punto 1). Ejecutala y repite el `update`.
+
+**Si el `update` dice `UPDATE 0`**: esa cuenta no tiene fila en `profiles`
+(se creo antes de ejecutar la 0001). El bloque de abajo la crea.
+
+**Si todavia no puedes aplicar la 0002** en ese proyecto, este bloque hace lo
+mismo en una sola transaccion. Apaga el trigger solo mientras dura: si algo
+falla, el `rollback` lo deja encendido como estaba.
+
+```sql
+begin;
+
+insert into public.profiles (id, display_name)
+select id, split_part(email, '@', 1)
+  from auth.users
+ where email = 'tu@correo.com'
+on conflict (id) do nothing;
+
+alter table public.profiles disable trigger on_profile_update;
+
+update public.profiles
+   set role = 'admin', updated_at = now()
+ where id = (select id from auth.users where email = 'tu@correo.com');
+
+alter table public.profiles enable trigger on_profile_update;
+
+commit;
+```
+
+`alter table` toma un bloqueo exclusivo sobre `profiles` hasta el `commit`, asi
+que ninguna peticion de la app se cuela con el trigger apagado.
 
 ## 4. Desplegar las dos Edge Functions
 

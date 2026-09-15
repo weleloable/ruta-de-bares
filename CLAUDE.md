@@ -49,6 +49,7 @@ src/
   types/database.ts       espejo TS del esquema SQL
 supabase/
   migrations/0001_init.sql  tablas, RLS, claim_stamp, bucket avatars
+  migrations/0002_*.sql     el SQL Editor y service_role pueden cambiar roles
   functions/                create-invite, redeem-invite (Edge Functions)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -74,8 +75,9 @@ eas env:set --name EXPO_PUBLIC_... --environment development   # las env vars no
 supabase functions deploy redeem-invite --no-verify-jwt        # obligatorio en esta funcion, no es un fallo
 ```
 
-Deploy = 1) pegar `supabase/migrations/0001_init.sql` en el SQL Editor de
-Supabase, 2) desplegar las dos Edge Functions, 3) build con EAS. Paso a paso
+Deploy = 1) pegar en el SQL Editor de Supabase cada fichero de
+`supabase/migrations/` en orden (`0001_init.sql`, `0002_guard_role_sql_editor.sql`),
+2) desplegar las dos Edge Functions, 3) build con EAS. Paso a paso
 en [docs/SETUP.md](docs/SETUP.md).
 
 ## Convenciones
@@ -115,6 +117,15 @@ en [docs/SETUP.md](docs/SETUP.md).
   sha256 contra la tabla `invites` dentro de la función.
 - **Claves de Supabase en formato nuevo** (`sb_publishable_...` / `sb_secret_...`),
   no el antiguo `anon`/`service_role`. Ver equivalencia en `docs/SETUP.md`.
+- **`guard_profile_role` deja cambiar `role` al SQL Editor y a la `service_role`**
+  (`0002_guard_role_sql_editor.sql`): `is_admin()` mira `auth.uid()`, que es
+  NULL en el SQL Editor, y sin esta via no se podia crear el primer admin. Se
+  decide por `current_setting('role')` + `session_user`, nunca por
+  `request.jwt.claims` (cualquiera lo escribe con `set_config`). Probado contra
+  Postgres real en `tests/migration-0002.test.ts` (PGlite).
+- **Deploy de migraciones = pegar cada fichero de `supabase/migrations/` en
+  orden** en el SQL Editor. No se edita una migracion ya publicada: se anade la
+  siguiente.
 - **`tests/migration.test.ts` parsea el SQL real** con `pg-query-emscripten`
   (el parser de Postgres compilado a wasm) para comprobar invariantes de RLS
   y de `claim_stamp` que no se pueden perder por un refactor descuidado.
