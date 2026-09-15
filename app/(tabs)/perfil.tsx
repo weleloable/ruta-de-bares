@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, Card, Divider, Field } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
+import { useInstalacion } from '../../src/features/pwa/pwa';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
@@ -14,6 +15,8 @@ export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const { stamps } = useActiveRoute();
   const router = useRouter();
+  // En la app nativa devuelve 'no-web' y la tarjeta no se pinta.
+  const { estado: instalacion, instalando, instalar } = useInstalacion();
 
   const [nombre, setNombre] = useState(profile?.display_name ?? '');
   const [guardando, setGuardando] = useState(false);
@@ -141,6 +144,32 @@ export default function PerfilScreen() {
             administrador.
           </Text>
         </Card>
+
+        {instalacion.tipo !== 'no-web' ? (
+          <Card>
+            <Text style={typography.sectionTitle}>Instalar la app</Text>
+            {instalacion.tipo === 'instalada' ? (
+              <Text style={typography.muted}>
+                Ya esta instalada en este dispositivo. Abrela desde el icono de tu pantalla de inicio.
+              </Text>
+            ) : (
+              <Text style={typography.muted}>
+                Anade Ruta de Bares a tu pantalla de inicio: se abre a pantalla completa, como una app,
+                sin pasar por ninguna tienda.
+              </Text>
+            )}
+            {instalacion.tipo === 'boton' ? (
+              <Button title="Instalar app" onPress={() => void instalar()} loading={instalando} />
+            ) : null}
+            {instalacion.tipo === 'instrucciones'
+              ? instalacion.pasos.map((paso, indice) => (
+                  <Text key={paso} style={typography.body}>
+                    {`${indice + 1}. ${paso}`}
+                  </Text>
+                ))
+              : null}
+          </Card>
+        ) : null}
 
         {isAdmin ? (
           <Card>

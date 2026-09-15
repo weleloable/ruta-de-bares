@@ -10,9 +10,9 @@ Solo se entra por invitacion. No hay registro abierto.
 | Pestana | Quien la ve | Que hace |
 | --- | --- | --- |
 | **Sellos** | todos | La compostelana: un hueco por bar, se rellena al sellar |
-| **Ruta** | todos | Mapa de Google con los bares numerados y el trazado que los une |
-| **Editor** | solo admins | Crear rutas, anadir bares, ordenarlos, fijar horarios, publicar |
-| **Mi perfil** | todos | Foto, nombre, y para admins el panel de invitaciones |
+| **Ruta** | todos | Mapa con los bares numerados y el trazado que los une (Google Maps en la app nativa, OpenStreetMap en la web) |
+| **Editor** | solo admins | Crear rutas, anadir bares tocando el mapa (o pegando coordenadas en web), ordenarlos, fijar horarios, publicar |
+| **Mi perfil** | todos | Foto, nombre, "Instalar la app" en la web, y para admins el panel de invitaciones |
 
 ## Como se consigue un sello
 
@@ -52,6 +52,7 @@ a la vez, solo una consigue cuenta.
 - [Expo Router](https://docs.expo.dev/router/introduction/) para la navegacion
 - [Supabase](https://supabase.com/) para auth, Postgres con RLS, Storage y Edge Functions
 - [react-native-maps](https://docs.expo.dev/versions/v57.0.0/sdk/map-view/) con Google Maps
+- En web: [Leaflet](https://leafletjs.com/) + [react-leaflet](https://react-leaflet.js.org/) con teselas de OpenStreetMap, y app instalable (PWA): ver seccion 8 de [docs/SETUP.md](docs/SETUP.md)
 - Sesion en el keystore del sistema via `expo-secure-store`, troceada porque
   una sesion de Supabase pasa del limite de 2048 bytes por valor
 
@@ -92,11 +93,12 @@ en cada push a `master` (ver "Publicar la web en GitHub Pages" en [docs/SETUP.md
 ## Tests
 
 ```bash
-npm test         # 93 tests, sin red, ~450 ms
+npm test         # ~250 tests, sin red, en segundos
 npm run typecheck
 npm run check:functions   # typecheck de las Edge Functions con Deno (via npx, no hay que instalarlo)
-npm run check    # typecheck + tests + funciones
+npm run check    # typecheck + tests + funciones (gate de cada commit)
 npm run doctor   # expo-doctor: versiones y dependencias nativas
+npm run verificar:web     # mapa web en Chrome headless: comprueba en pixeles que no se reencuadra de mas (20 s - 1 min)
 ```
 
 Los tests corren con `node --test` sobre los ficheros `.ts` directamente (Node

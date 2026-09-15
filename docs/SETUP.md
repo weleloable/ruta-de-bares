@@ -236,6 +236,62 @@ web se pueden crear invitaciones, pero abrir el enlace en un navegador no lleva
 a la web. Quien use la web tiene que ir a la pantalla de invitacion y pegar el
 codigo, que el mensaje compartido ya incluye.
 
+## 8. Mapa en la web y app instalable
+
+La web tiene el mismo mapa que el movil, pero con **OpenStreetMap** en vez de
+Google: gratis, sin clave y sin tarjeta. No hay nada que configurar.
+
+- **Pestana Ruta**: bares numerados, linea discontinua en el orden de la ruta,
+  circulo del radio del bar elegido y punto azul de "estas aqui" si el
+  navegador ya tiene permiso de ubicacion. Abrir el mapa nunca pregunta por la
+  ubicacion (se pide al sellar). **En iPhone el punto azul puede no salir**:
+  Safari suele contestar "preguntar" al consultar el permiso aunque ya se haya
+  concedido, y la app no lanza la pregunta solo para pintar el punto. Sellar
+  funciona igual.
+- **Editor de bar**: se toca el mapa o se arrastra el pin, con el circulo del
+  radio dibujado. Tambien "Usar mi ubicacion" (para dar de alta el bar estando
+  dentro) y el campo de coordenadas para pegar las de Google Maps.
+
+**Antes de subir cambios al mapa web**, `npm run verificar:web`: monta el mapa
+en Chrome headless y comprueba en pixeles que no se reencuadra al cambiar la
+medida de la cabecera, al cambiar de pestana ni al recargar los mismos bares,
+y que si reencuadra cuando cambian. Necesita Chrome (o la variable `CHROME`) y
+tarda de 20 s a 1 min segun la cache del export.
+
+Codigo: `src/components/RutaMapa.web.tsx`, `src/components/SelectorPosicion.web.tsx`
+y `src/lib/mapaWeb.ts`. Metro elige los `.web.tsx` al bundlear para web, asi
+que ni `react-native-maps` entra en la web ni Leaflet en el movil
+(`tests/web-sin-mapas.test.ts` y `tests/leaflet-solo-web.test.ts` lo vigilan).
+
+### Instalarla en el movil
+
+No hace falta APK ni tienda: la web es una **PWA** y se instala desde el navegador.
+
+| Movil | Como |
+| --- | --- |
+| **Android** (Chrome) | *Mi perfil > Instalar la app > Instalar app*, o menu de Chrome > "Instalar aplicacion" |
+| **iPhone / iPad** | Abrir en **Safari** > boton Compartir > "Anadir a pantalla de inicio" |
+
+La tarjeta *Instalar la app* de Mi perfil detecta el dispositivo: si el
+navegador permite instalar con un toque ensena el boton; si no (iPhone, otros
+navegadores), ensena los pasos. Una vez instalada se abre a pantalla completa
+con el icono del sello "RB".
+
+Piezas: `public/manifest.json`, `public/icons/`, `public/sw.js` y
+`src/features/pwa/`. Dos decisiones que no son obvias:
+
+- **El service worker no cachea la app.** Todo va a la red; solo guarda una
+  pagina de "sin conexion". Un service worker que cachea HTML y JS deja a la
+  gente con la version vieja tras cada despliegue. Si se cambia `sw.js`, subir
+  `VERSION` dentro del fichero.
+- **El manifest y el icono de iOS los enlaza la app al arrancar**, no
+  `public/index.html`: Expo no reescribe ese fichero con el `baseUrl`
+  (`/ruta-de-bares`), asi que un enlace fijo fallaria en GitHub Pages o en
+  localhost. La ruta sale de `experiments.baseUrl` en tiempo de ejecucion.
+
+Los iconos salen del sello del login; el origen a 1024 px esta en
+`assets/icono-web.png`.
+
 ---
 
 ## Lista de verificacion

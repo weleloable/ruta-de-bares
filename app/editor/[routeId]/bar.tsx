@@ -23,11 +23,11 @@ const CENTRO_POR_DEFECTO = { lat: 40.4168, lng: -3.7038 };
 /**
  * Alta y edicion de un bar.
  *
- * En el movil la posicion se marca tocando el mapa o arrastrando el pin, no
- * escribiendo coordenadas: nadie sabe de memoria la latitud de su bar, y el
- * circulo del radio se ve en el sitio, que es justo lo que el admin necesita
- * decidir. En web no hay mapa (ver SelectorPosicion.web.tsx): se pegan las
- * coordenadas de Google Maps y nada se precarga en un bar nuevo.
+ * La posicion se marca tocando el mapa o arrastrando el pin, no escribiendo
+ * coordenadas: nadie sabe de memoria la latitud de su bar, y el circulo del
+ * radio se ve en el sitio, que es justo lo que el admin necesita decidir. En
+ * movil el mapa es Google (SelectorPosicion.tsx) y en web OpenStreetMap
+ * (SelectorPosicion.web.tsx); en web ademas se pueden pegar coordenadas.
  */
 export default function EditorDeBar() {
   const { routeId, barId } = useLocalSearchParams<{ routeId: string; barId?: string }>();
@@ -47,6 +47,12 @@ export default function EditorDeBar() {
   const [abre, setAbre] = useState('19:00');
   const [cierra, setCierra] = useState('20:00');
   const [punto, setPunto] = useState<{ lat: number; lng: number } | null>(null);
+  // Donde arranca el mapa en un bar nuevo. Es solo el encuadre inicial, nunca
+  // una posicion: un bar nuevo empieza sin pin y no se guarda hasta que el
+  // admin marca el sitio. Antes se precargaba la posicion del bar anterior, o
+  // Puerta del Sol si se negaba la ubicacion, y "guardar sin tocar" dejaba el
+  // bar en un sitio que nadie habia elegido.
+  const [centroMapa, setCentroMapa] = useState(CENTRO_POR_DEFECTO);
 
   const editando = typeof barId === 'string' && barId.length > 0;
 
@@ -84,20 +90,21 @@ export default function EditorDeBar() {
           const cierreAnterior = new Date(ultimo.closes_at);
           setAbre(formatHora(cierreAnterior));
           setCierra(formatHora(new Date(cierreAnterior.getTime() + 60 * 60 * 1000)));
-          // En web no hay mapa donde se vea el pin: cualquier posicion
-          // precargada se guardaria sin que el admin la haya elegido.
-          if (Platform.OS !== 'web') setPunto({ lat: ultimo.lat, lng: ultimo.lng });
+          setCentroMapa({ lat: ultimo.lat, lng: ultimo.lng });
           return;
         }
 
-        if (Platform.OS === 'web') return;
-
-        // Primer bar de la ruta: se intenta centrar donde esta el admin.
-        try {
-          const aqui = await getCurrentPosition();
-          if (activo) setPunto(aqui);
-        } catch {
-          if (activo) setPunto(CENTRO_POR_DEFECTO);
+        // Primer bar de la ruta: en el movil el mapa se centra donde esta el
+        // admin. En web no se pide la ubicacion al abrir la pantalla (el
+        // navegador lanzaria la pregunta sin contexto): el selector tiene el
+        // boton "Usar mi ubicacion" para cuando la quiera.
+        if (Platform.OS !== 'web') {
+          try {
+            const aqui = await getCurrentPosition();
+            if (activo) setCentroMapa(aqui);
+          } catch {
+            // Sin permiso o sin GPS: el mapa se queda en el centro por defecto.
+          }
         }
       } catch (e) {
         if (activo) setError(e instanceof Error ? e.message : 'No se pudo cargar la ruta.');
@@ -120,11 +127,7 @@ export default function EditorDeBar() {
 
   async function onGuardar() {
     if (!routeId || !punto) {
-      setErrores([
-        Platform.OS === 'web'
-          ? 'Escribe unas coordenadas validas para el bar.'
-          : 'Marca la posicion del bar en el mapa.',
-      ]);
+      setErrores(['Marca la posicion del bar en el mapa.']);
       return;
     }
     if (!resultadoVentana.ok) {
@@ -201,7 +204,7 @@ export default function EditorDeBar() {
               key={editando ? barId : 'nuevo'}
               punto={punto}
               radioM={radioValido ? radioNumero : null}
-              centroInicial={CENTRO_POR_DEFECTO}
+              centroInicial={centroMapa}
               onCambiar={setPunto}
             />
           </Card>
