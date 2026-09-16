@@ -9,7 +9,7 @@ import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { useInstalacion } from '../../src/features/pwa/pwa';
-import { colors, radius, space, typography } from '../../src/lib/theme';
+import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
@@ -128,6 +128,7 @@ export default function PerfilScreen() {
             onChangeText={setNombre}
             placeholder="Como quieres que te llamemos"
             editable={!guardando}
+            style={styles.inputCentrado}
           />
           <Button
             title="Guardar nombre"
@@ -200,17 +201,16 @@ export default function PerfilScreen() {
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
-  // El estilo de typography.overline (mayusculas, negrita, espaciado entre
-  // letras: el que ya tenia la etiqueta "Nombre visible"), pero al tamano de
-  // typography.sectionTitle (19, el que tenia "Tus datos") para que lea como
-  // titulo. Color: colors.inkFaint (#A2907C) bajado ~15%, #8A7A69.
+  // Georgia, peso normal, sin mayusculas: decision final tras comparar varias
+  // combinaciones en vivo. Tamano igual que "Tus datos" antes de quitarlo;
+  // color colors.inkFaint (#A2907C) bajado ~15% para que lea como titulo.
   tituloNombre: {
+    fontFamily: fonts.title,
     fontSize: 19,
-    fontWeight: '700',
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
     color: '#8A7A69',
+    textAlign: 'center',
   },
+  inputCentrado: { textAlign: 'center' },
   cabecera: { alignItems: 'center', gap: space.xs },
   avatarPulsable: { alignItems: 'center', gap: space.xs },
   avatar: {
