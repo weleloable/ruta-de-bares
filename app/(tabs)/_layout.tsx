@@ -54,6 +54,9 @@ export default function TabsLayout() {
         name="perfil"
         options={{
           title: 'Mi perfil',
+          // Sin cabecera: la pantalla llega hasta arriba del todo y el margen
+          // del notch se lo come su propio SafeAreaView, como hace 'ruta'.
+          headerShown: false,
           tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
         }}
       />
