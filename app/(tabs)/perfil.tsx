@@ -7,9 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, Card, Divider, Field } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
+import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { useInstalacion } from '../../src/features/pwa/pwa';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
-import { confirmar } from '../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
@@ -24,6 +24,8 @@ export default function PerfilScreen() {
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+  const [confirmandoSalida, setConfirmandoSalida] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
 
   // El perfil llega despues del primer render (lo carga AuthProvider): sin esto
   // el campo se queda vacio aunque el usuario tenga nombre.
@@ -68,18 +70,18 @@ export default function PerfilScreen() {
     }
   }
 
-  async function onSalir() {
-    const confirmado = await confirmar({
-      titulo: 'Cerrar sesion',
-      mensaje: 'Tendras que volver a entrar con tu correo y contrasena.',
-      textoConfirmar: 'Cerrar sesion',
-      destructivo: true,
-    });
-    if (!confirmado) return;
+  async function onConfirmarSalir() {
+    setSaliendo(true);
+    setError(null);
+    setExito(null);
     try {
       await signOut();
+      // Si sale bien no se toca nada mas: AuthGate ve la sesion a null y
+      // redirige al login, con lo que esta pantalla (y el dialogo) se desmontan.
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cerrar la sesion.');
+      setConfirmandoSalida(false);
+      setSaliendo(false);
     }
   }
 
@@ -184,8 +186,23 @@ export default function PerfilScreen() {
           </Card>
         ) : null}
 
-        <Button title="Cerrar sesion" variant="danger" onPress={onSalir} />
+        <Button
+          title="Cerrar sesion"
+          variant="danger"
+          onPress={() => setConfirmandoSalida(true)}
+        />
       </ScrollView>
+
+      <DialogoConfirmar
+        visible={confirmandoSalida}
+        titulo="Cerrar sesion"
+        mensaje="Tendras que volver a entrar con tu correo y contrasena."
+        textoConfirmar="Cerrar sesion"
+        destructivo
+        ocupado={saliendo}
+        onConfirmar={onConfirmarSalir}
+        onCancelar={() => setConfirmandoSalida(false)}
+      />
     </SafeAreaView>
   );
 }
