@@ -195,8 +195,7 @@ export default function PerfilScreen() {
 
       <DialogoConfirmar
         visible={confirmandoSalida}
-        titulo="Cerrar sesion"
-        mensaje="Tendras que volver a entrar con tu correo y contrasena."
+        titulo="¿Volveremos a bebernos?"
         textoConfirmar="Cerrar sesion"
         destructivo
         ocupado={saliendo}

@@ -17,7 +17,7 @@ import { space, typography } from '../../lib/theme';
 export function DialogoConfirmar({
   visible,
   titulo,
-  mensaje,
+  mensaje = '',
   textoConfirmar,
   textoCancelar = 'Cancelar',
   destructivo = false,
@@ -27,7 +27,8 @@ export function DialogoConfirmar({
 }: {
   visible: boolean;
   titulo: string;
-  mensaje: string;
+  /** Opcional: con un titulo que ya se explica solo, sobra la linea de abajo. */
+  mensaje?: string;
   textoConfirmar: string;
   textoCancelar?: string;
   destructivo?: boolean;
@@ -57,8 +58,8 @@ export function DialogoConfirmar({
           accessibilityLabel={textoCancelar}
         />
         <Card style={styles.tarjeta}>
-          <Text style={typography.sectionTitle}>{titulo}</Text>
-          <Text style={typography.body}>{mensaje}</Text>
+          <Text style={[typography.sectionTitle, styles.centrado]}>{titulo}</Text>
+          {mensaje ? <Text style={[typography.body, styles.centrado]}>{mensaje}</Text> : null}
           <View style={styles.acciones}>
             <Button
               title={textoConfirmar}
@@ -85,5 +86,6 @@ const styles = StyleSheet.create({
   // Los botones son pildoras anchas: en vertical nunca parten el texto, y es
   // como apila la app sus acciones en todas las pantallas.
   tarjeta: { width: '100%', maxWidth: 400 },
+  centrado: { textAlign: 'center' },
   acciones: { gap: space.sm, marginTop: space.xs },
 });
