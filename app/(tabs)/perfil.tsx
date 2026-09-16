@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, Divider, Field } from '../../src/components/ui';
@@ -9,6 +9,7 @@ import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
 import { useInstalacion } from '../../src/features/pwa/pwa';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
+import { confirmar } from '../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
@@ -67,21 +68,19 @@ export default function PerfilScreen() {
     }
   }
 
-  function onSalir() {
-    Alert.alert('Cerrar sesion', 'Tendras que volver a entrar con tu correo y contrasena.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Cerrar sesion',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await signOut();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'No se pudo cerrar la sesion.');
-          }
-        },
-      },
-    ]);
+  async function onSalir() {
+    const confirmado = await confirmar({
+      titulo: 'Cerrar sesion',
+      mensaje: 'Tendras que volver a entrar con tu correo y contrasena.',
+      textoConfirmar: 'Cerrar sesion',
+      destructivo: true,
+    });
+    if (!confirmado) return;
+    try {
+      await signOut();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo cerrar la sesion.');
+    }
   }
 
   return (
