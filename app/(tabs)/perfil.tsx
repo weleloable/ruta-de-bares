@@ -89,14 +89,7 @@ export default function PerfilScreen() {
     // 'top' porque esta pantalla ya no tiene cabecera: sin el, el contenido se
     // mete debajo de la hora y el notch. Abajo manda la barra de pestanas.
     <SafeAreaView style={styles.pantalla} edges={['top', 'left', 'right']}>
-      {/* El recorte va en el style del ScrollView (su viewport), no en el
-          contenido: asi una tarjeta que sube o baja se corta en curva contra
-          el borde de la pantalla, y no a escuadra. */}
-      <ScrollView
-        style={styles.marco}
-        contentContainerStyle={styles.cuerpo}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
         <Card style={styles.cabecera}>
           <Pressable onPress={onCambiarFoto} disabled={subiendo} style={styles.avatarPulsable}>
             {profile?.avatar_url ? (
@@ -217,11 +210,6 @@ export default function PerfilScreen() {
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
-  // 48 y no radius.lg (18): las tarjetas van metidas space.lg (16) hacia
-  // dentro, y con 18 la curva ya se ha agotado al llegar a ellas, asi que el
-  // corte sale recto y no se nota. Medido en Chrome: a 18 px el corte es
-  // plano, a 48 la esquina de la tarjeta se redondea de verdad.
-  marco: { flex: 1, borderRadius: 48, overflow: 'hidden' },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   cabecera: { alignItems: 'center', gap: space.xs },
   avatarPulsable: { alignItems: 'center', gap: space.xs },
