@@ -4,17 +4,15 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Button, Card, Divider, Field } from '../../src/components/ui';
+import { Banner, Button, Card, Field } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { useInstalacion } from '../../src/features/pwa/pwa';
-import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
-import { colors, radius, space, typography } from '../../src/lib/theme';
+import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
-  const { stamps } = useActiveRoute();
   const router = useRouter();
   // En la app nativa devuelve 'no-web' y la tarjeta no se pinta.
   const { estado: instalacion, instalando, instalar } = useInstalacion();
@@ -117,23 +115,20 @@ export default function PerfilScreen() {
               {isAdmin ? 'Administrador' : 'Participante'}
             </Text>
           </View>
-
-          <Text style={typography.muted}>
-            {stamps.length} {stamps.length === 1 ? 'sello conseguido' : 'sellos conseguidos'}
-          </Text>
         </Card>
 
         {error ? <Banner tone="error">{error}</Banner> : null}
         {exito ? <Banner tone="success">{exito}</Banner> : null}
 
         <Card>
-          <Text style={typography.sectionTitle}>Tus datos</Text>
+          <Text style={styles.tituloNombre}>Nombre de bartalla</Text>
           <Field
-            label="Nombre visible"
+            label=""
             value={nombre}
             onChangeText={setNombre}
             placeholder="Como quieres que te llamemos"
             editable={!guardando}
+            style={styles.inputCentrado}
           />
           <Button
             title="Guardar nombre"
@@ -141,11 +136,6 @@ export default function PerfilScreen() {
             disabled={!cambiado || guardando}
             loading={guardando}
           />
-          <Divider />
-          <Text style={typography.muted}>
-            El correo no se puede cambiar desde la app. Si lo necesitas, pideselo a un
-            administrador.
-          </Text>
         </Card>
 
         {instalacion.tipo !== 'no-web' ? (
@@ -211,6 +201,16 @@ export default function PerfilScreen() {
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
+  // Georgia, peso normal, sin mayusculas: decision final tras comparar varias
+  // combinaciones en vivo. Tamano igual que "Tus datos" antes de quitarlo;
+  // color colors.inkFaint (#A2907C) bajado ~15% para que lea como titulo.
+  tituloNombre: {
+    fontFamily: fonts.title,
+    fontSize: 19,
+    color: '#8A7A69',
+    textAlign: 'center',
+  },
+  inputCentrado: { textAlign: 'center' },
   cabecera: { alignItems: 'center', gap: space.xs },
   avatarPulsable: { alignItems: 'center', gap: space.xs },
   avatar: {
