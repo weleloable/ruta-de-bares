@@ -1,12 +1,13 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, Divider, Field } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
+import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { useInstalacion } from '../../src/features/pwa/pwa';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors, radius, space, typography } from '../../src/lib/theme';
@@ -23,6 +24,8 @@ export default function PerfilScreen() {
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+  const [confirmandoSalida, setConfirmandoSalida] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
 
   // El perfil llega despues del primer render (lo carga AuthProvider): sin esto
   // el campo se queda vacio aunque el usuario tenga nombre.
@@ -67,25 +70,25 @@ export default function PerfilScreen() {
     }
   }
 
-  function onSalir() {
-    Alert.alert('Cerrar sesion', 'Tendras que volver a entrar con tu correo y contrasena.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Cerrar sesion',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await signOut();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'No se pudo cerrar la sesion.');
-          }
-        },
-      },
-    ]);
+  async function onConfirmarSalir() {
+    setSaliendo(true);
+    setError(null);
+    setExito(null);
+    try {
+      await signOut();
+      // Si sale bien no se toca nada mas: AuthGate ve la sesion a null y
+      // redirige al login, con lo que esta pantalla (y el dialogo) se desmontan.
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo cerrar la sesion.');
+      setConfirmandoSalida(false);
+      setSaliendo(false);
+    }
   }
 
   return (
-    <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
+    // 'top' porque esta pantalla ya no tiene cabecera: sin el, el contenido se
+    // mete debajo de la hora y el notch. Abajo manda la barra de pestanas.
+    <SafeAreaView style={styles.pantalla} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
         <Card style={styles.cabecera}>
           <Pressable onPress={onCambiarFoto} disabled={subiendo} style={styles.avatarPulsable}>
@@ -185,8 +188,22 @@ export default function PerfilScreen() {
           </Card>
         ) : null}
 
-        <Button title="Cerrar sesion" variant="danger" onPress={onSalir} />
+        <Button
+          title="Cerrar sesion"
+          variant="danger"
+          onPress={() => setConfirmandoSalida(true)}
+        />
       </ScrollView>
+
+      <DialogoConfirmar
+        visible={confirmandoSalida}
+        titulo="¿Volveremos a bebernos?"
+        textoConfirmar="Cerrar sesion"
+        destructivo
+        ocupado={saliendo}
+        onConfirmar={onConfirmarSalir}
+        onCancelar={() => setConfirmandoSalida(false)}
+      />
     </SafeAreaView>
   );
 }
