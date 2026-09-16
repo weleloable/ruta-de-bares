@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { BIO_MAX, ETIQUETAS_MAX } from '../src/features/match/reglas.ts';
+import { BIO_MAX, ETIQUETAS_MAX, ZUMBIDO_ESPERA_MS } from '../src/features/match/reglas.ts';
 import { leerFichero } from './pglite-supabase.ts';
 
 /**
@@ -21,5 +21,9 @@ describe('reglas.ts es espejo de 0003_tirate_una_cana.sql', () => {
 
   it('numero maximo de etiquetas', () => {
     assert.match(sql, new RegExp(`cardinality\\(v_tags\\) > ${ETIQUETAS_MAX}\\b`));
+  });
+
+  it('espera entre zumbidos', () => {
+    assert.match(sql, new RegExp(`last_buzz_at <= now\\(\\) - interval '${ZUMBIDO_ESPERA_MS / 1000} seconds'`));
   });
 });

@@ -159,6 +159,27 @@ export default function PersonaCana() {
             onPress={() => votar('like')}
           />
         </View>
+
+        {persona.connection_id ? (
+          <Pressable
+            accessibilityRole="button"
+            // Etiqueta explicita: el icono es un caracter de la fuente y, sin
+            // ella, el lector de pantalla lo leeria delante del texto.
+            accessibilityLabel={`Abrir chat${persona.unread_count > 0 ? `, ${persona.unread_count} sin leer` : ''}`}
+            onPress={() =>
+              router.push({
+                pathname: '/cana/chat/[connectionId]',
+                params: { connectionId: persona.connection_id as string },
+              })
+            }
+            style={({ pressed }) => [styles.abrirChat, pressed && styles.votoPulsado]}
+          >
+            <Ionicons name="chatbubbles" size={20} color={colors.white} />
+            <Text style={styles.abrirChatTexto}>
+              Abrir chat{persona.unread_count > 0 ? ` (${persona.unread_count} sin leer)` : ''}
+            </Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -231,4 +252,14 @@ const styles = StyleSheet.create({
   },
   votoPulsado: { opacity: 0.75 },
   votoTexto: { fontSize: 16, fontWeight: '800' },
+  abrirChat: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.teal,
+  },
+  abrirChatTexto: { fontSize: 16, fontWeight: '800', color: colors.white },
 });

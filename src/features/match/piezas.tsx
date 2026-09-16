@@ -20,6 +20,9 @@ export function Casilla({
   return (
     <Pressable
       accessibilityRole="checkbox"
+      // Sin etiqueta explicita, el icono de la marca (un caracter de la
+      // fuente) se colaria en lo que lee el lector de pantalla.
+      accessibilityLabel={texto}
       accessibilityState={{ checked: marcada, disabled: desactivada }}
       disabled={desactivada}
       onPress={() => onCambiar(!marcada)}

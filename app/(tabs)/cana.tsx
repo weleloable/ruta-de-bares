@@ -5,10 +5,19 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, EmptyState, Loading } from '../../src/components/ui';
-import { activateMatch, deactivateMatch, getMatchGrid, getMatchProfile } from '../../src/features/match/api';
+import { useAuth } from '../../src/features/auth/AuthProvider';
+import {
+  activateMatch,
+  deactivateMatch,
+  getMatchGrid,
+  getMatchInbox,
+  getMatchProfile,
+} from '../../src/features/match/api';
+import { ListaChats } from '../../src/features/match/ListaChats';
 import { Casilla } from '../../src/features/match/piezas';
 import {
   FILTROS,
+  chatsPendientes,
   contarPorFiltro,
   estadoPestana,
   estadoTarjeta,
@@ -20,10 +29,16 @@ import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { confirmar } from '../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 import { useSondeo } from '../../src/lib/useSondeo';
-import type { MatchGridRow, MatchProfileState } from '../../src/types/database';
+import type { MatchGridRow, MatchInboxRow, MatchProfileState } from '../../src/types/database';
 
-/** Cada cuanto se refresca la grilla con la pestana a la vista. */
-const REFRESCO_GRILLA_MS = 45_000;
+/**
+ * Cada cuanto se refrescan grilla y chats con la pestana a la vista. Mas a
+ * menudo en Chats: ahi lo que llega (una pregunta) pide respuesta.
+ */
+const REFRESCO_PERFILES_MS = 45_000;
+const REFRESCO_CHATS_MS = 15_000;
+
+type Vista = 'perfiles' | 'chats';
 
 const VACIO: Record<Filtro, { title: string; body: string }> = {
   todos: {
@@ -48,10 +63,14 @@ const VACIO: Record<Filtro, { title: string; body: string }> = {
  */
 export default function CanaScreen() {
   const router = useRouter();
+  const { session } = useAuth();
+  const yo = session?.user.id ?? '';
   const { activeRoute, loading: cargandoRuta } = useActiveRoute();
 
   const [perfil, setPerfil] = useState<MatchProfileState | null>(null);
   const [tarjetas, setTarjetas] = useState<MatchGridRow[]>([]);
+  const [bandeja, setBandeja] = useState<MatchInboxRow[]>([]);
+  const [vista, setVista] = useState<Vista>('perfiles');
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +85,10 @@ export default function CanaScreen() {
     try {
       const actual = await getMatchProfile();
       setPerfil(actual);
-      setTarjetas(actual.is_active && rutaId ? await getMatchGrid(rutaId) : []);
+      const [grilla, chats] =
+        actual.is_active && rutaId ? await Promise.all([getMatchGrid(rutaId), getMatchInbox(rutaId)]) : [[], []];
+      setTarjetas(grilla);
+      setBandeja(chats);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cargar Tírate una caña.');
     } finally {
@@ -88,16 +110,20 @@ export default function CanaScreen() {
   const refrescar = useCallback(async () => {
     if (!rutaId) return;
     try {
-      setTarjetas(await getMatchGrid(rutaId));
+      const [grilla, chats] = await Promise.all([getMatchGrid(rutaId), getMatchInbox(rutaId)]);
+      setTarjetas(grilla);
+      setBandeja(chats);
     } catch {
       // El siguiente tick lo reintenta.
     }
   }, [rutaId]);
-  useSondeo(refrescar, REFRESCO_GRILLA_MS, estado.tipo === 'activado');
+  useSondeo(
+    refrescar,
+    vista === 'chats' ? REFRESCO_CHATS_MS : REFRESCO_PERFILES_MS,
+    estado.tipo === 'activado',
+  );
 
-  const estados = tarjetas.map(estadoTarjeta);
-  const cuenta = contarPorFiltro(estados);
-  const visibles = tarjetas.filter((_, indice) => pasaFiltro(filtro, estados[indice]));
+  const pendientes = chatsPendientes(bandeja, yo);
 
   async function onActivar() {
     if (estado.tipo !== 'desactivado') return;
@@ -214,44 +240,105 @@ export default function CanaScreen() {
               </Pressable>
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtros}>
-              {FILTROS.map(({ id, etiqueta }) => {
-                const elegido = id === filtro;
+            <View style={styles.segmento} accessibilityRole="tablist">
+              {(['perfiles', 'chats'] as const).map((opcion) => {
+                const elegida = opcion === vista;
                 return (
                   <Pressable
-                    key={id}
+                    key={opcion}
                     accessibilityRole="tab"
-                    accessibilityState={{ selected: elegido }}
-                    onPress={() => setFiltro(id)}
-                    style={[styles.filtro, elegido && styles.filtroElegido]}
+                    accessibilityState={{ selected: elegida }}
+                    accessibilityLabel={
+                      opcion === 'perfiles'
+                        ? 'Perfiles'
+                        : `Chats${pendientes > 0 ? `, ${pendientes} pendientes` : ''}`
+                    }
+                    onPress={() => setVista(opcion)}
+                    style={[styles.segmentoOpcion, elegida && styles.segmentoElegido]}
                   >
-                    <Text style={[styles.filtroTexto, elegido && styles.filtroTextoElegido]}>
-                      {etiqueta} {cuenta[id]}
+                    <Text style={[styles.segmentoTexto, elegida && styles.segmentoTextoElegido]}>
+                      {opcion === 'perfiles' ? 'Perfiles' : 'Chats'}
                     </Text>
+                    {opcion === 'chats' && pendientes > 0 ? (
+                      <View style={styles.pendientes}>
+                        <Text style={styles.pendientesTexto}>{pendientes}</Text>
+                      </View>
+                    ) : null}
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
 
-            {visibles.length === 0 ? (
-              <EmptyState title={VACIO[filtro].title} body={VACIO[filtro].body} />
+            {vista === 'chats' ? (
+              <ListaChats
+                filas={bandeja}
+                yo={yo}
+                onAbrir={(connectionId) =>
+                  router.push({ pathname: '/cana/chat/[connectionId]', params: { connectionId } })
+                }
+              />
             ) : (
-              <View style={styles.rejilla}>
-                {visibles.map((persona) => (
-                  <TarjetaPersona
-                    key={persona.user_id}
-                    persona={persona}
-                    onPress={() =>
-                      router.push({ pathname: '/cana/persona/[userId]', params: { userId: persona.user_id } })
-                    }
-                  />
-                ))}
-              </View>
+              <VistaPerfiles
+                tarjetas={tarjetas}
+                filtro={filtro}
+                onFiltro={setFiltro}
+                onAbrir={(userId) => router.push({ pathname: '/cana/persona/[userId]', params: { userId } })}
+              />
             )}
           </>
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Filtros con contador y la grilla de tres columnas. */
+function VistaPerfiles({
+  tarjetas,
+  filtro,
+  onFiltro,
+  onAbrir,
+}: {
+  tarjetas: readonly MatchGridRow[];
+  filtro: Filtro;
+  onFiltro(filtro: Filtro): void;
+  onAbrir(userId: string): void;
+}) {
+  const estados = tarjetas.map(estadoTarjeta);
+  const cuenta = contarPorFiltro(estados);
+  const visibles = tarjetas.filter((_, indice) => pasaFiltro(filtro, estados[indice]));
+
+  return (
+    <>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtros}>
+        {FILTROS.map(({ id, etiqueta }) => {
+          const elegido = id === filtro;
+          return (
+            <Pressable
+              key={id}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: elegido }}
+              onPress={() => onFiltro(id)}
+              style={[styles.filtro, elegido && styles.filtroElegido]}
+            >
+              <Text style={[styles.filtroTexto, elegido && styles.filtroTextoElegido]}>
+                {etiqueta} {cuenta[id]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {visibles.length === 0 ? (
+        <EmptyState title={VACIO[filtro].title} body={VACIO[filtro].body} />
+      ) : (
+        <View style={styles.rejilla}>
+          {visibles.map((persona) => (
+            <TarjetaPersona key={persona.user_id} persona={persona} onPress={() => onAbrir(persona.user_id)} />
+          ))}
+        </View>
+      )}
+    </>
   );
 }
 
@@ -306,6 +393,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   accionTexto: { fontSize: 13, fontWeight: '700', color: colors.ink },
+  segmento: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: radius.pill,
+    backgroundColor: colors.paperDeep,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  segmentoOpcion: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+  },
+  segmentoElegido: { backgroundColor: colors.card },
+  segmentoTexto: { fontSize: 14, fontWeight: '600', color: colors.inkSoft },
+  segmentoTextoElegido: { color: colors.ink, fontWeight: '800' },
+  pendientes: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.stamp,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendientesTexto: { color: colors.white, fontSize: 11, fontWeight: '800' },
   filtros: { gap: space.sm, paddingRight: space.lg },
   filtro: {
     paddingHorizontal: space.md,

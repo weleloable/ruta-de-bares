@@ -74,6 +74,7 @@ function AuthGate() {
       <Stack.Screen name="invitaciones" options={{ title: 'Invitaciones' }} />
       <Stack.Screen name="cana/presentacion" options={{ title: 'Preséntate' }} />
       <Stack.Screen name="cana/persona/[userId]" options={{ title: 'Tírate una caña' }} />
+      <Stack.Screen name="cana/chat/[connectionId]" options={{ title: 'Chat' }} />
     </Stack>
   );
 }

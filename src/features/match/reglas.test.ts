@@ -5,15 +5,24 @@ import {
   BIO_MAX,
   ETIQUETAS_MAX,
   FILTROS,
+  SOLAPE_SONDEO_MS,
+  ZUMBIDO_ESPERA_MS,
   alternarEtiqueta,
+  chatsPendientes,
   contarPorFiltro,
   describirErrorCana,
+  desdeParaSondeo,
+  esperaZumbidoMs,
   estadoPestana,
   estadoTarjeta,
+  fusionarMensajes,
   pasaFiltro,
+  teTocaResponder,
   validarPresentacion,
+  vistaPreviaChat,
   votoRompeConexion,
   type EstadoTarjeta,
+  type FilaBandeja,
 } from './reglas.ts';
 
 describe('estadoTarjeta', () => {
@@ -53,6 +62,84 @@ describe('filtros de la grilla', () => {
       const donde = FILTROS.filter((f) => pasaFiltro(f.id, estado)).map((f) => f.id);
       assert.ok(donde.includes('todos') && donde.length >= 2, `${estado} solo aparece en ${donde}`);
     }
+  });
+});
+
+describe('mensajes del chat por polling', () => {
+  const m = (id: string, segundo: number) => ({ id, created_at: new Date(Date.UTC(2026, 8, 19, 20, 0, segundo)).toISOString() });
+
+  it('fusiona sin repetidos y ordena por hora, tambien un mensaje que llega tarde', () => {
+    const actuales = [m('a', 1), m('c', 5)];
+    const traidos = [m('c', 5), m('b', 3), m('d', 7)];
+    assert.deepEqual(
+      fusionarMensajes(actuales, traidos).map((x) => x.id),
+      ['a', 'b', 'c', 'd'],
+    );
+  });
+
+  it('con la misma hora desempata por id, para que el orden no baile entre consultas', () => {
+    assert.deepEqual(
+      fusionarMensajes([m('z', 1)], [m('y', 1)]).map((x) => x.id),
+      ['y', 'z'],
+    );
+  });
+
+  it('pide desde el ultimo mensaje menos el solape, o todo si no hay nada', () => {
+    assert.equal(desdeParaSondeo([]), null);
+    assert.equal(desdeParaSondeo([m('a', 1), m('b', 30)]), new Date(Date.UTC(2026, 8, 19, 20, 0, 20)).toISOString());
+    assert.equal(SOLAPE_SONDEO_MS, 10_000);
+  });
+});
+
+describe('esperaZumbidoMs', () => {
+  const ahora = new Date(Date.UTC(2026, 8, 19, 20, 0, 40));
+  it('sin zumbido previo o pasados 30 s, se puede ya', () => {
+    assert.equal(esperaZumbidoMs(null, ahora), 0);
+    assert.equal(esperaZumbidoMs(new Date(Date.UTC(2026, 8, 19, 20, 0, 10)).toISOString(), ahora), 0);
+  });
+  it('dentro de los 30 s dice cuanto falta', () => {
+    assert.equal(esperaZumbidoMs(new Date(Date.UTC(2026, 8, 19, 20, 0, 30)).toISOString(), ahora), 20_000);
+    assert.equal(ZUMBIDO_ESPERA_MS, 30_000);
+  });
+});
+
+describe('bandeja de chats', () => {
+  const YO = 'yo';
+  const fila = (cambios: Partial<FilaBandeja>): FilaBandeja => ({
+    question_state: 'none',
+    question_asked_by: null,
+    last_kind: null,
+    last_sender_id: null,
+    unread_count: 0,
+    ...cambios,
+  });
+
+  it('una pregunta que te han hecho manda sobre el ultimo mensaje', () => {
+    const f = fila({ question_state: 'pending', question_asked_by: 'otra', last_kind: 'gif', last_sender_id: 'otra' });
+    assert.equal(teTocaResponder(f, YO), true);
+    assert.equal(vistaPreviaChat(f, YO), 'Te ha preguntado si os tomáis una cerveza');
+  });
+
+  it('tu pregunta sin responder no te pide nada a ti', () => {
+    const f = fila({ question_state: 'pending', question_asked_by: YO });
+    assert.equal(teTocaResponder(f, YO), false);
+    assert.equal(vistaPreviaChat(f, YO), 'Esperando su respuesta a la cerveza');
+  });
+
+  it('distingue lo que has mandado tu de lo que te han mandado', () => {
+    assert.equal(vistaPreviaChat(fila({ last_kind: 'buzz', last_sender_id: YO }), YO), 'Tú: un zumbido');
+    assert.equal(vistaPreviaChat(fila({ last_kind: 'buzz', last_sender_id: 'otra' }), YO), 'Te ha mandado un zumbido');
+    assert.equal(vistaPreviaChat(fila({}), YO), 'Nueva conexión: saluda con un GIF');
+  });
+
+  it('cuenta conversaciones pendientes, no mensajes', () => {
+    const filas = [
+      fila({ unread_count: 3 }),
+      fila({ question_state: 'pending', question_asked_by: 'otra' }),
+      fila({ question_state: 'pending', question_asked_by: YO }),
+      fila({}),
+    ];
+    assert.equal(chatsPendientes(filas, YO), 2);
   });
 });
 

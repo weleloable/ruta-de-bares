@@ -119,6 +119,83 @@ export function votoRompeConexion(estado: EstadoTarjeta, voto: 'like' | 'dislike
   return estado === 'conexion' && voto === 'dislike';
 }
 
+// --- Chat -------------------------------------------------------------------
+
+/** Un zumbido cada 30 s por persona y conexion. */
+export const ZUMBIDO_ESPERA_MS = 30_000;
+
+/**
+ * Cuanto se solapa cada consulta de mensajes con la anterior. Un mensaje
+ * insertado antes puede confirmarse despues de otro ya recibido; sin solape el
+ * polling se lo saltaria. Los repetidos se quitan por id (fusionarMensajes).
+ */
+export const SOLAPE_SONDEO_MS = 10_000;
+
+type MensajeOrdenable = { id: string; created_at: string };
+
+/** Une lo que ya habia con lo recien traido, sin repetidos y en orden. */
+export function fusionarMensajes<T extends MensajeOrdenable>(actuales: readonly T[], nuevos: readonly T[]): T[] {
+  const porId = new Map<string, T>();
+  for (const mensaje of actuales) porId.set(mensaje.id, mensaje);
+  for (const mensaje of nuevos) porId.set(mensaje.id, mensaje);
+  return [...porId.values()].sort(
+    (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || a.id.localeCompare(b.id),
+  );
+}
+
+/** Desde cuando pedir mensajes: el ultimo conocido menos el solape; null = todos. */
+export function desdeParaSondeo(mensajes: readonly MensajeOrdenable[]): string | null {
+  const ultimo = mensajes.at(-1);
+  if (!ultimo) return null;
+  return new Date(Date.parse(ultimo.created_at) - SOLAPE_SONDEO_MS).toISOString();
+}
+
+/** Milisegundos que faltan para poder mandar otro zumbido (0 = ya se puede). */
+export function esperaZumbidoMs(ultimoZumbido: string | null, ahora: Date): number {
+  if (!ultimoZumbido) return 0;
+  return Math.max(0, Date.parse(ultimoZumbido) + ZUMBIDO_ESPERA_MS - ahora.getTime());
+}
+
+export type FilaBandeja = {
+  question_state: 'none' | 'pending' | 'postponed' | 'accepted' | 'rejected';
+  question_asked_by: string | null;
+  last_kind: 'gif' | 'buzz' | 'question' | 'answer' | 'text' | null;
+  last_sender_id: string | null;
+  unread_count: number;
+};
+
+/** La otra persona te ha preguntado y te toca responder. */
+export function teTocaResponder(fila: FilaBandeja, yo: string): boolean {
+  return fila.question_state === 'pending' && fila.question_asked_by !== yo;
+}
+
+/** Conversaciones que piden atencion: para el contador de la pestana Chats. */
+export function chatsPendientes(filas: readonly FilaBandeja[], yo: string): number {
+  return filas.filter((fila) => teTocaResponder(fila, yo) || fila.unread_count > 0).length;
+}
+
+/** Una linea bajo el nombre en la lista de chats. */
+export function vistaPreviaChat(fila: FilaBandeja, yo: string): string {
+  if (teTocaResponder(fila, yo)) return 'Te ha preguntado si os tomáis una cerveza';
+  if (fila.question_state === 'pending') return 'Esperando su respuesta a la cerveza';
+  const mio = fila.last_sender_id === yo;
+  switch (fila.last_kind) {
+    case 'gif':
+      return mio ? 'Tú: un GIF' : 'Te ha mandado un GIF';
+    case 'buzz':
+      return mio ? 'Tú: un zumbido' : 'Te ha mandado un zumbido';
+    case 'text':
+      return mio ? 'Tú: un mensaje' : 'Te ha escrito';
+    case 'answer':
+      if (fila.question_state === 'accepted') return '¡Cerveza aceptada!';
+      return mio ? 'Le has pedido que te pregunte luego' : 'Te ha dicho que le preguntes luego';
+    case 'question':
+      return mio ? 'Le has preguntado por una cerveza' : 'Te ha preguntado por una cerveza';
+    default:
+      return 'Nueva conexión: saluda con un GIF';
+  }
+}
+
 const MENSAJES: Record<string, string> = {
   NOT_AUTHENTICATED: 'Tu sesión ha caducado. Vuelve a entrar.',
   NOT_PARTICIPANT: 'No participas en esta ruta.',
@@ -156,6 +233,20 @@ const MENSAJES: Record<string, string> = {
  * de ahi la busqueda por inclusion. Lo que no es un codigo pasa tal cual.
  */
 export function describirErrorCana(mensaje: string): string {
-  const codigo = Object.keys(MENSAJES).find((clave) => new RegExp(`\\b${clave}\\b`).test(mensaje));
+  const codigo = codigoErrorCana(mensaje);
   return codigo ? MENSAJES[codigo] : mensaje;
 }
+
+/** El codigo del SQL que trae un mensaje de error, o null si no trae ninguno. */
+export function codigoErrorCana(mensaje: string): string | null {
+  return Object.keys(MENSAJES).find((clave) => new RegExp(`\\b${clave}\\b`).test(mensaje)) ?? null;
+}
+
+/** Errores tras los que un chat ya no se puede usar: se deja de preguntar y se explica. */
+export const CONEXION_PERDIDA: ReadonlySet<string> = new Set([
+  'CONNECTION_NOT_FOUND',
+  'CONNECTION_CLOSED',
+  'CONNECTION_UNAVAILABLE',
+  'MATCH_NOT_ACTIVE',
+  'NOT_PARTICIPANT',
+]);

@@ -70,9 +70,22 @@ se aplica antes. La migracion de pertenencia la sustituye con
 `create or replace`, sin cambiar la firma. Hay que acordar la numeracion de las
 migraciones para no usar las dos el mismo numero.
 
+## GIFs
+
+Catalogo propio dentro de la app (D13): `assets/gifs/<id>.gif`, listados en
+`src/features/match/gifs.ts` y en la tabla `match_gifs` de la migracion. El
+chat guarda solo el id. `tests/match-gifs.test.ts` comprueba que los dos
+catalogos coinciden y que cada fichero existe y pesa menos de 200 KB.
+
+Los 8 actuales son **provisionales**: dibujados para el prototipo con la paleta
+de la app, sin derechos de terceros. Para cambiarlos, mismo id o una migracion
+nueva que actualice `match_gifs`.
+
 ## Sin tiempo real
 
-El chat pregunta cada pocos segundos (polling) mientras esta abierto y visible;
-la grilla y la bandeja, al entrar y cada poco. No usa Supabase Realtime. Si se
+El chat pregunta cada 4 s (polling) mientras esta abierto y visible; la
+pestana, al entrar y cada 45 s (15 s en Chats). Un zumbido que llega con el chat
+abierto hace temblar la pantalla y vibrar el movil donde se puede (Android si,
+Safari en iPhone no). No usa Supabase Realtime. Si se
 queda corto, las tablas y funciones no cambian. Las notificaciones estan
 aparcadas.

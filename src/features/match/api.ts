@@ -1,6 +1,14 @@
 import { supabase } from '../../lib/supabase';
-import type { MatchCatalogRow, MatchGridRow, MatchProfileState, MatchVote } from '../../types/database';
-import { describirErrorCana } from './reglas';
+import type {
+  MatchCatalogRow,
+  MatchConnectionDetail,
+  MatchGridRow,
+  MatchInboxRow,
+  MatchMessageRow,
+  MatchProfileState,
+  MatchVote,
+} from '../../types/database';
+import { codigoErrorCana, describirErrorCana } from './reglas';
 
 /**
  * Llamadas de "Tirate una cana". Solo funciones match_* y los catalogos: las
@@ -8,8 +16,19 @@ import { describirErrorCana } from './reglas';
  * Cada error sale ya traducido para ensenarlo tal cual.
  */
 
+/** Error con el mensaje para ensenar y el codigo del SQL para decidir que hacer. */
+export class ErrorCana extends Error {
+  readonly codigo: string | null;
+
+  constructor(mensajeServidor: string) {
+    super(describirErrorCana(mensajeServidor));
+    this.name = 'ErrorCana';
+    this.codigo = codigoErrorCana(mensajeServidor);
+  }
+}
+
 function fallo(error: { message: string }): never {
-  throw new Error(describirErrorCana(error.message));
+  throw new ErrorCana(error.message);
 }
 
 export async function getMatchProfile(): Promise<MatchProfileState> {
@@ -68,6 +87,49 @@ export async function voteMatch(
   });
   if (error) fallo(error);
   return { connectionId: data?.[0]?.connection_id ?? null };
+}
+
+/** Conexiones abiertas; primero lo que espera tu respuesta (lo ordena el servidor). */
+export async function getMatchInbox(routeId: string): Promise<MatchInboxRow[]> {
+  const { data, error } = await supabase.rpc('match_inbox', { p_route_id: routeId });
+  if (error) fallo(error);
+  return data ?? [];
+}
+
+export async function getMatchConnection(connectionId: string): Promise<MatchConnectionDetail> {
+  const { data, error } = await supabase.rpc('match_get_connection', { p_connection_id: connectionId });
+  if (error) fallo(error);
+  const [detalle] = data ?? [];
+  if (!detalle) throw new Error('Esta conversación no existe.');
+  return detalle;
+}
+
+/** Mensajes desde `despues` (null = todos). Tambien marca la conversacion como leida. */
+export async function fetchMatchMessages(connectionId: string, despues: string | null): Promise<MatchMessageRow[]> {
+  const { data, error } = await supabase.rpc('match_fetch_messages', {
+    p_connection_id: connectionId,
+    p_after: despues,
+  });
+  if (error) fallo(error);
+  return data ?? [];
+}
+
+async function enviado(
+  peticion: PromiseLike<{ data: MatchMessageRow[] | null; error: { message: string } | null }>,
+): Promise<MatchMessageRow> {
+  const { data, error } = await peticion;
+  if (error) fallo(error);
+  const [mensaje] = data ?? [];
+  if (!mensaje) throw new Error('No se pudo enviar.');
+  return mensaje;
+}
+
+export function sendMatchGif(connectionId: string, gifId: string): Promise<MatchMessageRow> {
+  return enviado(supabase.rpc('match_send_gif', { p_connection_id: connectionId, p_gif_id: gifId }));
+}
+
+export function sendMatchBuzz(connectionId: string): Promise<MatchMessageRow> {
+  return enviado(supabase.rpc('match_send_buzz', { p_connection_id: connectionId }));
 }
 
 export async function listMatchTags(): Promise<MatchCatalogRow[]> {
