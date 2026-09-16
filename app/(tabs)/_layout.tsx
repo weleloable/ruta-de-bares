@@ -36,6 +36,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="cana"
+        options={{
+          // "Tirate una cana" no cabe en la barra: nombre corto abajo y
+          // completo en la cabecera.
+          title: 'Caña',
+          headerTitle: 'Tírate una caña',
+          tabBarIcon: ({ color, size }) => <Ionicons name="beer" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="perfil"
         options={{
           title: 'Mi perfil',
