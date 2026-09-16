@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import type { MatchCatalogRow, MatchProfileState } from '../../types/database';
+import type { MatchCatalogRow, MatchGridRow, MatchProfileState, MatchVote } from '../../types/database';
 import { describirErrorCana } from './reglas';
 
 /**
@@ -46,6 +46,28 @@ export async function deactivateMatch(): Promise<void> {
 export async function updateMatchProfile(bio: string, etiquetas: string[]): Promise<void> {
   const { error } = await supabase.rpc('match_update_profile', { p_bio: bio, p_tag_ids: etiquetas });
   if (error) fallo(error);
+}
+
+/** Quien lo tiene activado en la ruta, con tu voto. El orden lo decide el servidor (D12). */
+export async function getMatchGrid(routeId: string): Promise<MatchGridRow[]> {
+  const { data, error } = await supabase.rpc('match_grid', { p_route_id: routeId });
+  if (error) fallo(error);
+  return data ?? [];
+}
+
+/** Vota y devuelve la conexion si el voto la ha abierto (o sigue abierta). */
+export async function voteMatch(
+  routeId: string,
+  targetId: string,
+  value: MatchVote,
+): Promise<{ connectionId: string | null }> {
+  const { data, error } = await supabase.rpc('match_vote', {
+    p_route_id: routeId,
+    p_target_id: targetId,
+    p_value: value,
+  });
+  if (error) fallo(error);
+  return { connectionId: data?.[0]?.connection_id ?? null };
 }
 
 export async function listMatchTags(): Promise<MatchCatalogRow[]> {

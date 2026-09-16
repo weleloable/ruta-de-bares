@@ -5,13 +5,39 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, EmptyState, Loading } from '../../src/components/ui';
-import { activateMatch, deactivateMatch, getMatchProfile } from '../../src/features/match/api';
+import { activateMatch, deactivateMatch, getMatchGrid, getMatchProfile } from '../../src/features/match/api';
 import { Casilla } from '../../src/features/match/piezas';
-import { estadoPestana } from '../../src/features/match/reglas';
+import {
+  FILTROS,
+  contarPorFiltro,
+  estadoPestana,
+  estadoTarjeta,
+  pasaFiltro,
+  type Filtro,
+} from '../../src/features/match/reglas';
+import { TarjetaPersona } from '../../src/features/match/TarjetaPersona';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { confirmar } from '../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../src/lib/theme';
-import type { MatchProfileState } from '../../src/types/database';
+import { useSondeo } from '../../src/lib/useSondeo';
+import type { MatchGridRow, MatchProfileState } from '../../src/types/database';
+
+/** Cada cuanto se refresca la grilla con la pestana a la vista. */
+const REFRESCO_GRILLA_MS = 45_000;
+
+const VACIO: Record<Filtro, { title: string; body: string }> = {
+  todos: {
+    title: 'Aún no hay nadie',
+    body: 'Cuando alguien de tu ruta active Tírate una caña, aparecerá aquí.',
+  },
+  'me-gusta': { title: 'Nadie marcado', body: 'Las personas a las que des Me gusta aparecerán aquí.' },
+  'no-me-gusta': { title: 'Nadie descartado', body: 'Aquí verás a quien hayas dado No me gusta.' },
+  conexiones: {
+    title: 'Sin conexiones todavía',
+    body: 'Cuando alguien a quien has dado Me gusta te lo devuelva, aparecerá aquí.',
+  },
+  nuevos: { title: 'Nada nuevo', body: 'Ya has votado a todo el mundo. Vuelve más tarde.' },
+};
 
 /**
  * "Tirate una cana": el tinder cervecero de la ruta activa.
@@ -25,24 +51,30 @@ export default function CanaScreen() {
   const { activeRoute, loading: cargandoRuta } = useActiveRoute();
 
   const [perfil, setPerfil] = useState<MatchProfileState | null>(null);
+  const [tarjetas, setTarjetas] = useState<MatchGridRow[]>([]);
+  const [filtro, setFiltro] = useState<Filtro>('todos');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mayorDeEdad, setMayorDeEdad] = useState(false);
   const [cambiando, setCambiando] = useState(false);
 
+  const rutaId = activeRoute?.id ?? null;
+
   const cargar = useCallback(async () => {
     setCargando(true);
     setError(null);
     try {
-      setPerfil(await getMatchProfile());
+      const actual = await getMatchProfile();
+      setPerfil(actual);
+      setTarjetas(actual.is_active && rutaId ? await getMatchGrid(rutaId) : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cargar Tírate una caña.');
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [rutaId]);
 
-  // Al volver de la presentacion el perfil ha cambiado.
+  // Al volver de la presentacion o de una ficha, perfil y votos han cambiado.
   useFocusEffect(
     useCallback(() => {
       void cargar();
@@ -50,6 +82,22 @@ export default function CanaScreen() {
   );
 
   const estado = estadoPestana(activeRoute !== null, perfil);
+
+  // En segundo plano y sin spinner: alguien nuevo, una conexion, un mensaje.
+  // Un fallo puntual de red no pisa la grilla que ya se ve.
+  const refrescar = useCallback(async () => {
+    if (!rutaId) return;
+    try {
+      setTarjetas(await getMatchGrid(rutaId));
+    } catch {
+      // El siguiente tick lo reintenta.
+    }
+  }, [rutaId]);
+  useSondeo(refrescar, REFRESCO_GRILLA_MS, estado.tipo === 'activado');
+
+  const estados = tarjetas.map(estadoTarjeta);
+  const cuenta = contarPorFiltro(estados);
+  const visibles = tarjetas.filter((_, indice) => pasaFiltro(filtro, estados[indice]));
 
   async function onActivar() {
     if (estado.tipo !== 'desactivado') return;
@@ -166,10 +214,40 @@ export default function CanaScreen() {
               </Pressable>
             </View>
 
-            <EmptyState
-              title="Ya se te ve"
-              body={`La gente de ${activeRoute?.name ?? 'tu ruta'} que también lo tenga activado ya puede verte.`}
-            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtros}>
+              {FILTROS.map(({ id, etiqueta }) => {
+                const elegido = id === filtro;
+                return (
+                  <Pressable
+                    key={id}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: elegido }}
+                    onPress={() => setFiltro(id)}
+                    style={[styles.filtro, elegido && styles.filtroElegido]}
+                  >
+                    <Text style={[styles.filtroTexto, elegido && styles.filtroTextoElegido]}>
+                      {etiqueta} {cuenta[id]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {visibles.length === 0 ? (
+              <EmptyState title={VACIO[filtro].title} body={VACIO[filtro].body} />
+            ) : (
+              <View style={styles.rejilla}>
+                {visibles.map((persona) => (
+                  <TarjetaPersona
+                    key={persona.user_id}
+                    persona={persona}
+                    onPress={() =>
+                      router.push({ pathname: '/cana/persona/[userId]', params: { userId: persona.user_id } })
+                    }
+                  />
+                ))}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -214,7 +292,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.green,
-    backgroundColor: '#DCEBE1',
+    backgroundColor: colors.greenSoft,
   },
   punto: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: colors.green },
   activadoTexto: { fontSize: 13, fontWeight: '700', color: colors.green },
@@ -228,4 +306,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   accionTexto: { fontSize: 13, fontWeight: '700', color: colors.ink },
+  filtros: { gap: space.sm, paddingRight: space.lg },
+  filtro: {
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  filtroElegido: { backgroundColor: colors.beer, borderColor: colors.beerDark },
+  filtroTexto: { color: colors.inkSoft, fontWeight: '600', fontSize: 13, fontVariant: ['tabular-nums'] },
+  filtroTextoElegido: { color: colors.white },
+  // Sin padding lateral propio: cada celda trae su aire (TarjetaPersona), y
+  // el margen negativo alinea los bordes de las tarjetas con el resto.
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -space.xs },
 });

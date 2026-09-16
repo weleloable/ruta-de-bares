@@ -58,6 +58,67 @@ export function estadoPestana(
   };
 }
 
+// --- Grilla -----------------------------------------------------------------
+
+/**
+ * Lo que ve cada persona de una tarjeta. El voto de la otra persona no llega
+ * nunca al cliente: solo se nota como conexion cuando los dos coinciden.
+ */
+export type EstadoTarjeta = 'nuevo' | 'me-gusta' | 'no-me-gusta' | 'conexion';
+
+export function estadoTarjeta(tarjeta: {
+  my_vote: 'like' | 'dislike' | null;
+  connection_id: string | null;
+}): EstadoTarjeta {
+  if (tarjeta.connection_id !== null) return 'conexion';
+  if (tarjeta.my_vote === 'like') return 'me-gusta';
+  if (tarjeta.my_vote === 'dislike') return 'no-me-gusta';
+  return 'nuevo';
+}
+
+export type Filtro = 'todos' | 'me-gusta' | 'no-me-gusta' | 'conexiones' | 'nuevos';
+
+/** En el orden en que se ensenan. */
+export const FILTROS: readonly { id: Filtro; etiqueta: string }[] = [
+  { id: 'todos', etiqueta: 'Todos' },
+  { id: 'me-gusta', etiqueta: 'Me gusta' },
+  { id: 'no-me-gusta', etiqueta: 'No me gusta' },
+  { id: 'conexiones', etiqueta: 'Conexiones' },
+  { id: 'nuevos', etiqueta: 'Nuevos' },
+];
+
+export function pasaFiltro(filtro: Filtro, estado: EstadoTarjeta): boolean {
+  switch (filtro) {
+    case 'todos':
+      return true;
+    case 'me-gusta':
+      // Una conexion tambien es un Me gusta que has dado (D6).
+      return estado === 'me-gusta' || estado === 'conexion';
+    case 'no-me-gusta':
+      return estado === 'no-me-gusta';
+    case 'conexiones':
+      return estado === 'conexion';
+    case 'nuevos':
+      return estado === 'nuevo';
+  }
+}
+
+export function contarPorFiltro(estados: readonly EstadoTarjeta[]): Record<Filtro, number> {
+  const cuenta = { todos: 0, 'me-gusta': 0, 'no-me-gusta': 0, conexiones: 0, nuevos: 0 };
+  for (const estado of estados) {
+    for (const { id } of FILTROS) if (pasaFiltro(id, estado)) cuenta[id] += 1;
+  }
+  return cuenta;
+}
+
+/**
+ * Cambiar a No me gusta a alguien con quien hay conexion la cierra y borra el
+ * chat: es lo unico irreversible de votar, y lo unico que se confirma.
+ */
+export function votoRompeConexion(estado: EstadoTarjeta, voto: 'like' | 'dislike'): boolean {
+  return estado === 'conexion' && voto === 'dislike';
+}
+
 const MENSAJES: Record<string, string> = {
   NOT_AUTHENTICATED: 'Tu sesión ha caducado. Vuelve a entrar.',
   NOT_PARTICIPANT: 'No participas en esta ruta.',

@@ -73,6 +73,7 @@ function AuthGate() {
       <Stack.Screen name="editor/[routeId]/bar" options={{ title: 'Bar de la ruta' }} />
       <Stack.Screen name="invitaciones" options={{ title: 'Invitaciones' }} />
       <Stack.Screen name="cana/presentacion" options={{ title: 'Preséntate' }} />
+      <Stack.Screen name="cana/persona/[userId]" options={{ title: 'Tírate una caña' }} />
     </Stack>
   );
 }

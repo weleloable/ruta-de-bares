@@ -68,12 +68,16 @@ export function AvatarCana({
   nombre,
   foto,
   tamano,
+  tamanoIniciales,
   redondo = true,
   style,
 }: {
   nombre: string;
   foto: string | null;
+  /** Lado en px. Sin el, el tamano lo pone `style` (p. ej. ancho 100% y aspectRatio). */
   tamano?: number;
+  /** Solo hace falta sin `tamano`: con el, las iniciales se escalan solas. */
+  tamanoIniciales?: number;
   redondo?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -88,7 +92,12 @@ export function AvatarCana({
   }
   return (
     <View style={[styles.avatar, medidas, forma, { backgroundColor: tonoDe(nombre) }, style]}>
-      <Text style={[styles.iniciales, tamano ? { fontSize: Math.max(11, tamano * 0.34) } : null]}>
+      <Text
+        style={[
+          styles.iniciales,
+          { fontSize: tamano ? Math.max(11, tamano * 0.34) : (tamanoIniciales ?? styles.iniciales.fontSize) },
+        ]}
+      >
         {initials(nombre, '')}
       </Text>
     </View>

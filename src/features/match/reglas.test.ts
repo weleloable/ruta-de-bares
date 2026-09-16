@@ -4,11 +4,66 @@ import { describe, it } from 'node:test';
 import {
   BIO_MAX,
   ETIQUETAS_MAX,
+  FILTROS,
   alternarEtiqueta,
+  contarPorFiltro,
   describirErrorCana,
   estadoPestana,
+  estadoTarjeta,
+  pasaFiltro,
   validarPresentacion,
+  votoRompeConexion,
+  type EstadoTarjeta,
 } from './reglas.ts';
+
+describe('estadoTarjeta', () => {
+  it('sin voto es nueva, con voto es tu voto', () => {
+    assert.equal(estadoTarjeta({ my_vote: null, connection_id: null }), 'nuevo');
+    assert.equal(estadoTarjeta({ my_vote: 'like', connection_id: null }), 'me-gusta');
+    assert.equal(estadoTarjeta({ my_vote: 'dislike', connection_id: null }), 'no-me-gusta');
+  });
+
+  it('la conexion gana a tu voto: es lo que el servidor dice ahora mismo', () => {
+    assert.equal(estadoTarjeta({ my_vote: 'like', connection_id: 'c1' }), 'conexion');
+  });
+});
+
+describe('filtros de la grilla', () => {
+  const estados: EstadoTarjeta[] = ['nuevo', 'nuevo', 'me-gusta', 'no-me-gusta', 'conexion'];
+
+  it('en el orden de la especificacion', () => {
+    assert.deepEqual(
+      FILTROS.map((f) => f.etiqueta),
+      ['Todos', 'Me gusta', 'No me gusta', 'Conexiones', 'Nuevos'],
+    );
+  });
+
+  it('Me gusta incluye las conexiones (D6) y Todos lo incluye todo', () => {
+    assert.deepEqual(contarPorFiltro(estados), {
+      todos: 5,
+      'me-gusta': 2,
+      'no-me-gusta': 1,
+      conexiones: 1,
+      nuevos: 2,
+    });
+  });
+
+  it('cada estado cae en Todos y en al menos otro filtro', () => {
+    for (const estado of ['nuevo', 'me-gusta', 'no-me-gusta', 'conexion'] as const) {
+      const donde = FILTROS.filter((f) => pasaFiltro(f.id, estado)).map((f) => f.id);
+      assert.ok(donde.includes('todos') && donde.length >= 2, `${estado} solo aparece en ${donde}`);
+    }
+  });
+});
+
+describe('votoRompeConexion', () => {
+  it('solo pasar a No me gusta con conexion abierta pide confirmacion', () => {
+    assert.equal(votoRompeConexion('conexion', 'dislike'), true);
+    assert.equal(votoRompeConexion('conexion', 'like'), false);
+    assert.equal(votoRompeConexion('me-gusta', 'dislike'), false);
+    assert.equal(votoRompeConexion('nuevo', 'dislike'), false);
+  });
+});
 
 describe('validarPresentacion', () => {
   it('acepta una frase con espacios alrededor y sin etiquetas', () => {
