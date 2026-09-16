@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  APLAZAMIENTOS_MAX,
   BIO_MAX,
   ETIQUETAS_MAX,
   FILTROS,
+  PREGUNTA_ESPERA_MS,
   SOLAPE_SONDEO_MS,
+  TEXTOS_POR_PERSONA,
+  TEXTO_MAX,
   ZUMBIDO_ESPERA_MS,
   alternarEtiqueta,
   chatsPendientes,
@@ -14,6 +18,7 @@ import {
   desdeParaSondeo,
   esperaZumbidoMs,
   estadoPestana,
+  estadoPregunta,
   estadoTarjeta,
   fusionarMensajes,
   pasaFiltro,
@@ -140,6 +145,70 @@ describe('bandeja de chats', () => {
       fila({}),
     ];
     assert.equal(chatsPendientes(filas, YO), 2);
+  });
+});
+
+describe('estadoPregunta', () => {
+  const YO = 'yo';
+  const OTRA = 'otra';
+  const ahora = new Date(Date.UTC(2026, 8, 19, 22, 0, 0));
+  const haceMin = (min: number) => new Date(ahora.getTime() - min * 60_000).toISOString();
+  const conexion = (cambios: Partial<Parameters<typeof estadoPregunta>[0]>) => ({
+    question_state: 'none' as const,
+    question_asked_by: null,
+    question_answered_at: null,
+    postpone_count: 0,
+    my_texts_sent: 0,
+    ...cambios,
+  });
+
+  it('sin preguntar, cualquiera puede (D4)', () => {
+    assert.deepEqual(estadoPregunta(conexion({}), YO, ahora), { tipo: 'disponible', tuvoAplazamiento: false });
+  });
+
+  it('una pregunta pendiente: la espera quien pregunto y la responde la otra persona', () => {
+    const pendiente = conexion({ question_state: 'pending', question_asked_by: OTRA });
+    assert.deepEqual(estadoPregunta(pendiente, OTRA, ahora), { tipo: 'esperando-respuesta' });
+    assert.deepEqual(estadoPregunta(pendiente, YO, ahora), { tipo: 'te-toca-responder', ultimoAplazamiento: false });
+  });
+
+  it('avisa cuando aplazar otra vez seria el ultimo aplazamiento', () => {
+    const segunda = conexion({ question_state: 'pending', question_asked_by: OTRA, postpone_count: 1 });
+    assert.deepEqual(estadoPregunta(segunda, YO, ahora), { tipo: 'te-toca-responder', ultimoAplazamiento: true });
+  });
+
+  it(`aplazada: hay que esperar ${PREGUNTA_ESPERA_MS / 60_000} min desde la respuesta, y luego vuelve a estar disponible`, () => {
+    const aplazada = conexion({
+      question_state: 'postponed',
+      question_asked_by: YO,
+      question_answered_at: haceMin(10),
+      postpone_count: 1,
+    });
+    assert.deepEqual(estadoPregunta(aplazada, YO, ahora), {
+      tipo: 'aplazada',
+      disponibleEnMs: 20 * 60_000,
+      teLoAplazaron: true,
+    });
+    assert.equal((estadoPregunta(aplazada, OTRA, ahora) as { teLoAplazaron: boolean }).teLoAplazaron, false);
+    assert.deepEqual(estadoPregunta({ ...aplazada, question_answered_at: haceMin(31) }, YO, ahora), {
+      tipo: 'disponible',
+      tuvoAplazamiento: true,
+    });
+  });
+
+  it(`tras ${APLAZAMIENTOS_MAX} aplazamientos no se pregunta mas, aunque haya pasado la espera`, () => {
+    const agotada = conexion({ question_state: 'postponed', question_answered_at: haceMin(90), postpone_count: 2 });
+    assert.deepEqual(estadoPregunta(agotada, YO, ahora), { tipo: 'sin-mas-preguntas' });
+  });
+
+  it(`aceptada: ${TEXTOS_POR_PERSONA} textos por persona (D7)`, () => {
+    const aceptada = conexion({ question_state: 'accepted' });
+    assert.deepEqual(estadoPregunta(aceptada, YO, ahora), { tipo: 'aceptada', textosRestantes: 2 });
+    assert.deepEqual(estadoPregunta({ ...aceptada, my_texts_sent: 2 }, YO, ahora), {
+      tipo: 'aceptada',
+      textosRestantes: 0,
+    });
+    assert.equal(TEXTO_MAX, 120);
   });
 });
 

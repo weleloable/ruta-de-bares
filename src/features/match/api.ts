@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import type {
+  BeerAnswer,
+  BeerQuestionState,
   MatchCatalogRow,
   MatchConnectionDetail,
   MatchGridRow,
@@ -130,6 +132,29 @@ export function sendMatchGif(connectionId: string, gifId: string): Promise<Match
 
 export function sendMatchBuzz(connectionId: string): Promise<MatchMessageRow> {
   return enviado(supabase.rpc('match_send_buzz', { p_connection_id: connectionId }));
+}
+
+export function sendMatchText(connectionId: string, body: string): Promise<MatchMessageRow> {
+  return enviado(supabase.rpc('match_send_text', { p_connection_id: connectionId, p_body: body }));
+}
+
+export function askBeer(connectionId: string): Promise<MatchMessageRow> {
+  return enviado(supabase.rpc('match_ask_beer', { p_connection_id: connectionId }));
+}
+
+/** Tras un "no" la conexion queda cerrada: is_open llega a false. */
+export async function answerBeer(
+  connectionId: string,
+  answer: BeerAnswer,
+): Promise<{ questionState: BeerQuestionState; isOpen: boolean }> {
+  const { data, error } = await supabase.rpc('match_answer_beer', {
+    p_connection_id: connectionId,
+    p_answer: answer,
+  });
+  if (error) fallo(error);
+  const [fila] = data ?? [];
+  if (!fila) throw new Error('No se pudo guardar tu respuesta.');
+  return { questionState: fila.question_state, isOpen: fila.is_open };
 }
 
 export async function listMatchTags(): Promise<MatchCatalogRow[]> {

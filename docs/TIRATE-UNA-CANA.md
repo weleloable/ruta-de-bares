@@ -45,12 +45,27 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
 | D13 | **Catalogo propio de GIFs** dentro de la app, sin buscador externo. |
 
+## Probarlo en local
+
+Con Supabase local (`npx supabase start`, necesita Docker) y la 0003 aplicada,
+hacen falta al menos dos cuentas con la feature activada en la misma ruta
+publicada. Para no esperar 30 minutos a probar un aplazamiento, desde el SQL
+Editor o `psql`:
+
+```sql
+update public.match_connections
+   set question_answered_at = now() - interval '31 minutes'
+ where id = '<id de la conexion>';
+```
+
+Lo mismo con `match_connection_members.last_buzz_at` para el zumbido.
+
 ## Donde esta cada regla
 
-Todas las reglas viven en `supabase/migrations/0004_tirate_una_cana.sql`. La
+Todas las reglas viven en `supabase/migrations/0003_tirate_una_cana.sql`. La
 app no lee ni escribe ninguna tabla `match_*` salvo los catalogos de etiquetas
 y GIFs; todo pasa por funciones `SECURITY DEFINER`, como `claim_stamp`.
-`tests/migration-0004.test.ts` las ejecuta sobre Postgres real (PGlite).
+`tests/migration-0003.test.ts` las ejecuta sobre Postgres real (PGlite).
 
 La copia en TypeScript (`src/features/match/reglas.ts`) es un espejo para la
 interfaz ("podras volver a preguntar en 12 min"). Si discrepan, manda el SQL.
@@ -64,7 +79,7 @@ que construye otra persona:
 public.is_route_participant(p_route_id uuid, p_user_id uuid) returns boolean
 ```
 
-La 0004 trae una version **provisional** (participa todo el mundo en las rutas
+La 0003 trae una version **provisional** (participa todo el mundo en las rutas
 publicadas) y solo la crea si no existe, para no pisar la buena si su migracion
 se aplica antes. La migracion de pertenencia la sustituye con
 `create or replace`, sin cambiar la firma. Hay que acordar la numeracion de las

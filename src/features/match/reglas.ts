@@ -156,6 +156,59 @@ export function esperaZumbidoMs(ultimoZumbido: string | null, ahora: Date): numb
   return Math.max(0, Date.parse(ultimoZumbido) + ZUMBIDO_ESPERA_MS - ahora.getTime());
 }
 
+// --- La pregunta de la cerveza ---------------------------------------------
+
+/** Tras "dentro de un rato" se puede volver a preguntar pasado este tiempo (D5). */
+export const PREGUNTA_ESPERA_MS = 30 * 60_000;
+/** Aplazamientos como maximo; despues ya no se pregunta mas en la pareja (D5). */
+export const APLAZAMIENTOS_MAX = 2;
+/** Textos que puede mandar cada persona tras el Si (D7). */
+export const TEXTOS_POR_PERSONA = 2;
+export const TEXTO_MAX = 120;
+
+export type EstadoPregunta =
+  /** Cualquiera de los dos puede preguntar (D4). */
+  | { tipo: 'disponible'; tuvoAplazamiento: boolean }
+  | { tipo: 'esperando-respuesta' }
+  | { tipo: 'te-toca-responder'; ultimoAplazamiento: boolean }
+  /** `teLoAplazaron`: la otra persona dijo "luego" a TU pregunta. */
+  | { tipo: 'aplazada'; disponibleEnMs: number; teLoAplazaron: boolean }
+  | { tipo: 'sin-mas-preguntas' }
+  | { tipo: 'aceptada'; textosRestantes: number }
+  | { tipo: 'rechazada' };
+
+export function estadoPregunta(
+  conexion: {
+    question_state: 'none' | 'pending' | 'postponed' | 'accepted' | 'rejected';
+    question_asked_by: string | null;
+    question_answered_at: string | null;
+    postpone_count: number;
+    my_texts_sent: number;
+  },
+  yo: string,
+  ahora: Date,
+): EstadoPregunta {
+  switch (conexion.question_state) {
+    case 'none':
+      return { tipo: 'disponible', tuvoAplazamiento: false };
+    case 'pending':
+      return conexion.question_asked_by === yo
+        ? { tipo: 'esperando-respuesta' }
+        : { tipo: 'te-toca-responder', ultimoAplazamiento: conexion.postpone_count >= APLAZAMIENTOS_MAX - 1 };
+    case 'postponed': {
+      if (conexion.postpone_count >= APLAZAMIENTOS_MAX) return { tipo: 'sin-mas-preguntas' };
+      const respondida = conexion.question_answered_at ? Date.parse(conexion.question_answered_at) : 0;
+      const falta = respondida + PREGUNTA_ESPERA_MS - ahora.getTime();
+      if (falta <= 0) return { tipo: 'disponible', tuvoAplazamiento: true };
+      return { tipo: 'aplazada', disponibleEnMs: falta, teLoAplazaron: conexion.question_asked_by === yo };
+    }
+    case 'accepted':
+      return { tipo: 'aceptada', textosRestantes: Math.max(0, TEXTOS_POR_PERSONA - conexion.my_texts_sent) };
+    case 'rejected':
+      return { tipo: 'rechazada' };
+  }
+}
+
 export type FilaBandeja = {
   question_state: 'none' | 'pending' | 'postponed' | 'accepted' | 'rejected';
   question_asked_by: string | null;

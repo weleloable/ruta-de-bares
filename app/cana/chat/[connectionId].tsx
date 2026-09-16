@@ -4,11 +4,13 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-rou
 import { useCallback, useRef, useState, type ComponentProps } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   Vibration,
   View,
 } from 'react-native';
@@ -18,32 +20,42 @@ import { Banner, Button, EmptyState, Loading } from '../../../src/components/ui'
 import { useAuth } from '../../../src/features/auth/AuthProvider';
 import {
   ErrorCana,
+  answerBeer,
+  askBeer,
   fetchMatchMessages,
   getMatchConnection,
   sendMatchBuzz,
   sendMatchGif,
+  sendMatchText,
 } from '../../../src/features/match/api';
 import { gifPorId } from '../../../src/features/match/gifs';
 import { AvatarCana } from '../../../src/features/match/piezas';
+import { FranjaCerveza, ResponderCerveza, textoRestante } from '../../../src/features/match/PreguntaCerveza';
 import {
   CONEXION_PERDIDA,
+  TEXTO_MAX,
   desdeParaSondeo,
   esperaZumbidoMs,
+  estadoPregunta,
   fusionarMensajes,
 } from '../../../src/features/match/reglas';
 import { SelectorGif } from '../../../src/features/match/SelectorGif';
+import { formatDuration } from '../../../src/features/stamps/rules';
+import { confirmar } from '../../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
 import { useNow } from '../../../src/lib/useNow';
 import { useSondeo } from '../../../src/lib/useSondeo';
-import type { MatchConnectionDetail, MatchMessageRow } from '../../../src/types/database';
+import type { BeerAnswer, MatchConnectionDetail, MatchMessageRow } from '../../../src/types/database';
 
 /** Con el chat a la vista se pregunta cada 4 s: un zumbido llega con ese retraso como mucho. */
 const SONDEO_CHAT_MS = 4_000;
 
 /**
- * Chat de una conexion de Tirate una cana: GIFs del catalogo y zumbidos.
+ * Chat de una conexion de Tirate una cana: GIFs del catalogo, zumbidos y la
+ * pregunta de la cerveza, que desbloquea dos textos por persona si es un Si.
  * Todo lo que se puede o no se puede enviar lo decide el servidor; la pantalla
- * solo deshabilita lo que ya sabe que va a fallar (p. ej. el zumbido en espera).
+ * solo deshabilita lo que ya sabe que va a fallar (p. ej. el zumbido en espera)
+ * con el espejo de reglas.ts.
  */
 export default function ChatCana() {
   const { connectionId } = useLocalSearchParams<{ connectionId: string }>();
@@ -58,6 +70,7 @@ export default function ChatCana() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [eligiendoGif, setEligiendoGif] = useState(false);
+  const [texto, setTexto] = useState('');
 
   // Refs y no estado: el sondeo necesita lo ultimo sin volver a crearse.
   const conocidos = useRef<MatchMessageRow[]>([]);
@@ -121,20 +134,52 @@ export default function ChatCana() {
   );
   useSondeo(traer, SONDEO_CHAT_MS, perdida === null);
 
-  async function enviar(accion: () => Promise<MatchMessageRow>) {
+  /** Envia, pinta el mensaje al momento y vuelve a leer el estado (pregunta, textos, zumbido). */
+  async function enviar(accion: () => Promise<MatchMessageRow>): Promise<boolean> {
     setEnviando(true);
     setError(null);
     try {
-      const mensaje = await accion();
-      aplicar([mensaje]);
-      if (mensaje.kind === 'buzz') {
-        setDetalle((previo) => (previo ? { ...previo, my_last_buzz_at: mensaje.created_at } : previo));
-      }
+      aplicar([await accion()]);
+      await traer();
+      return true;
     } catch (e) {
       fallo(e, 'No se pudo enviar.');
+      return false;
     } finally {
       setEnviando(false);
     }
+  }
+
+  async function responder(respuesta: BeerAnswer) {
+    if (!detalle) return;
+    if (respuesta === 'no') {
+      const seguro = await confirmar({
+        titulo: `Decir que no a ${detalle.display_name}`,
+        mensaje: 'Se cerrará la conexión y se borrará el chat.',
+        aceptar: 'Decir que no',
+        destructiva: true,
+      });
+      if (!seguro) return;
+    }
+    setEnviando(true);
+    setError(null);
+    try {
+      const { isOpen } = await answerBeer(detalle.connection_id, respuesta);
+      if (!isOpen) {
+        setPerdida('Has dicho que no. La conexión se ha cerrado y el chat se ha borrado.');
+        return;
+      }
+      await traer();
+    } catch (e) {
+      fallo(e, 'No se pudo guardar tu respuesta.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function enviarTexto() {
+    if (!detalle || texto.trim().length === 0) return;
+    if (await enviar(() => sendMatchText(detalle.connection_id, texto))) setTexto('');
   }
 
   if (cargando) return <Loading label="Abriendo el chat..." />;
@@ -151,63 +196,133 @@ export default function ChatCana() {
     );
   }
 
-  const esperaZumbido = esperaZumbidoMs(detalle.my_last_buzz_at, new Date(ahora.getTime() + desfase.current));
+  const ahoraServidor = new Date(ahora.getTime() + desfase.current);
+  const esperaZumbido = esperaZumbidoMs(detalle.my_last_buzz_at, ahoraServidor);
+  const pregunta = estadoPregunta(detalle, yo, ahoraServidor);
   const nombre = detalle.display_name;
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: nombre }} />
+      <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Ver la ficha de ${nombre}`}
-        onPress={() =>
-          router.push({ pathname: '/cana/persona/[userId]', params: { userId: detalle.other_user_id } })
-        }
-        style={styles.cabecera}
-      >
-        <AvatarCana nombre={nombre} foto={detalle.avatar_url} tamano={36} />
-        <Text style={[typography.cardTitle, styles.cabeceraNombre]} numberOfLines={1}>
-          {nombre}
-        </Text>
-        <Text style={styles.enlace}>Ver ficha</Text>
-      </Pressable>
-
-      <Animated.View style={[styles.hilo, { transform: [{ translateX: temblor }] }]}>
-        <ScrollView
-          ref={scroll}
-          contentContainerStyle={styles.mensajes}
-          onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Ver la ficha de ${nombre}`}
+          onPress={() =>
+            router.push({ pathname: '/cana/persona/[userId]', params: { userId: detalle.other_user_id } })
+          }
+          style={styles.cabecera}
         >
-          {mensajes.length === 0 ? (
-            <Text style={[typography.muted, styles.centrado]}>
-              Sois una conexión. Rompe el hielo con un GIF o un zumbido.
-            </Text>
-          ) : (
-            mensajes.map((mensaje) => (
-              <Mensaje key={mensaje.id} mensaje={mensaje} mio={mensaje.sender_id === yo} nombreOtro={nombre} />
-            ))
-          )}
-        </ScrollView>
-      </Animated.View>
+          <AvatarCana nombre={nombre} foto={detalle.avatar_url} tamano={36} />
+          <Text style={[typography.cardTitle, styles.cabeceraNombre]} numberOfLines={1}>
+            {nombre}
+          </Text>
+          <Text style={styles.enlace}>Ver ficha</Text>
+        </Pressable>
 
-      {error ? (
-        <View style={styles.aviso}>
-          <Banner tone="error">{error}</Banner>
-        </View>
-      ) : null}
+        <FranjaCerveza estado={pregunta} nombre={nombre} />
 
-      <View style={styles.composer}>
-        <View style={styles.acciones}>
-          <BotonChat icono="images" texto="GIF" onPress={() => setEligiendoGif(true)} desactivado={enviando} />
-          <BotonChat
-            icono="flash"
-            texto={esperaZumbido > 0 ? `Zumbido (${Math.ceil(esperaZumbido / 1000)} s)` : 'Zumbido'}
-            onPress={() => void enviar(() => sendMatchBuzz(detalle.connection_id))}
-            desactivado={enviando || esperaZumbido > 0}
+        <Animated.View style={[styles.hilo, { transform: [{ translateX: temblor }] }]}>
+          <ScrollView
+            ref={scroll}
+            contentContainerStyle={styles.mensajes}
+            onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}
+          >
+            {mensajes.length === 0 ? (
+              <Text style={[typography.muted, styles.centrado]}>
+                Sois una conexión. Rompe el hielo con un GIF o un zumbido.
+              </Text>
+            ) : (
+              mensajes.map((mensaje) => (
+                <Mensaje key={mensaje.id} mensaje={mensaje} mio={mensaje.sender_id === yo} nombreOtro={nombre} />
+              ))
+            )}
+          </ScrollView>
+        </Animated.View>
+
+        {error ? (
+          <View style={styles.aviso}>
+            <Banner tone="error">{error}</Banner>
+          </View>
+        ) : null}
+
+        {pregunta.tipo === 'te-toca-responder' ? (
+          <ResponderCerveza
+            nombre={nombre}
+            ultimoAplazamiento={pregunta.ultimoAplazamiento}
+            ocupado={enviando}
+            onResponder={(respuesta) => void responder(respuesta)}
           />
+        ) : null}
+
+        <View style={styles.composer}>
+          {pregunta.tipo === 'aceptada' ? (
+            pregunta.textosRestantes > 0 ? (
+              <View style={styles.escribir}>
+                <View style={styles.filaTexto}>
+                  <TextInput
+                    value={texto}
+                    onChangeText={setTexto}
+                    maxLength={TEXTO_MAX}
+                    placeholder="¿Dónde quedamos?"
+                    placeholderTextColor={colors.inkFaint}
+                    editable={!enviando}
+                    accessibilityLabel="Mensaje"
+                    style={styles.campo}
+                    onSubmitEditing={() => void enviarTexto()}
+                    returnKeyType="send"
+                  />
+                  <BotonChat
+                    icono="send"
+                    texto="Enviar"
+                    onPress={() => void enviarTexto()}
+                    desactivado={enviando || texto.trim().length === 0}
+                    compacto
+                  />
+                </View>
+                <Text style={styles.nota}>
+                  {textoRestante(pregunta.textosRestantes)} · {texto.trim().length}/{TEXTO_MAX}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.nota}>{textoRestante(0)} Seguid con GIFs y zumbidos.</Text>
+            )
+          ) : null}
+
+          <View style={styles.acciones}>
+            <BotonChat icono="images" texto="GIF" onPress={() => setEligiendoGif(true)} desactivado={enviando} />
+            <BotonChat
+              icono="flash"
+              texto={esperaZumbido > 0 ? `Zumbido (${Math.ceil(esperaZumbido / 1000)} s)` : 'Zumbido'}
+              onPress={() => void enviar(() => sendMatchBuzz(detalle.connection_id))}
+              desactivado={enviando || esperaZumbido > 0}
+            />
+            {pregunta.tipo === 'disponible' ||
+            pregunta.tipo === 'aplazada' ||
+            pregunta.tipo === 'esperando-respuesta' ? (
+              <BotonChat
+                icono="beer"
+                // En un tercio de ancho "Preguntar en 30 min" se corta: se ve
+                // la espera y el lector de pantalla recibe la frase entera.
+                texto={
+                  pregunta.tipo === 'aplazada'
+                    ? `En ${formatDuration(pregunta.disponibleEnMs)}`
+                    : pregunta.tipo === 'esperando-respuesta'
+                      ? 'Preguntado'
+                      : '¿Una caña?'
+                }
+                etiqueta={
+                  pregunta.tipo === 'aplazada' ? `Preguntar en ${formatDuration(pregunta.disponibleEnMs)}` : undefined
+                }
+                onPress={() => void enviar(() => askBeer(detalle.connection_id))}
+                desactivado={enviando || pregunta.tipo !== 'disponible'}
+                destacado={pregunta.tipo === 'disponible'}
+              />
+            ) : null}
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       <SelectorGif
         visible={eligiendoGif}
@@ -241,11 +356,34 @@ function Mensaje({ mensaje, mio, nombreOtro }: { mensaje: MatchMessageRow; mio: 
     }
     case 'buzz':
       return (
-        <View style={styles.evento}>
-          <Ionicons name="flash" size={14} color={colors.beerDark} />
-          <Text style={styles.eventoTexto}>
-            {mio ? 'Has mandado un zumbido' : `${nombreOtro} te ha mandado un zumbido`}
-          </Text>
+        <Evento icono="flash">{mio ? 'Has mandado un zumbido' : `${nombreOtro} te ha mandado un zumbido`}</Evento>
+      );
+    case 'question':
+      return (
+        <View style={styles.pregunta}>
+          <Text style={typography.overline}>{mio ? 'Has preguntado' : `${nombreOtro} pregunta`}</Text>
+          <Text style={styles.preguntaTexto}>¿Te tomas una cerveza conmigo?</Text>
+        </View>
+      );
+    case 'answer':
+      if (mensaje.answer === 'yes') {
+        return (
+          <Evento icono="beer" tono="aceptada">
+            {mio ? 'Has dicho que sí a la cerveza' : `¡${nombreOtro} ha dicho que sí a la cerveza!`}
+          </Evento>
+        );
+      }
+      return (
+        <Evento icono="time-outline">
+          {mio
+            ? 'Has pedido que te lo pregunten dentro de un rato'
+            : `${nombreOtro} dice que se lo preguntes dentro de un rato`}
+        </Evento>
+      );
+    case 'text':
+      return (
+        <View style={[styles.burbuja, styles.burbujaTexto, mio ? styles.mia : styles.suya]}>
+          <Text style={typography.body}>{mensaje.body}</Text>
         </View>
       );
     default:
@@ -253,28 +391,61 @@ function Mensaje({ mensaje, mio, nombreOtro }: { mensaje: MatchMessageRow; mio: 
   }
 }
 
+function Evento({
+  icono,
+  tono = 'normal',
+  children,
+}: {
+  icono: ComponentProps<typeof Ionicons>['name'];
+  tono?: 'normal' | 'aceptada';
+  children: string;
+}) {
+  const aceptada = tono === 'aceptada';
+  return (
+    <View style={[styles.evento, aceptada && styles.eventoAceptado]} accessible accessibilityLabel={children}>
+      <Ionicons name={icono} size={14} color={aceptada ? colors.white : colors.beerDark} />
+      <Text style={[styles.eventoTexto, aceptada && styles.eventoTextoAceptado]}>{children}</Text>
+    </View>
+  );
+}
+
 function BotonChat({
   icono,
   texto,
+  etiqueta,
   onPress,
   desactivado,
+  destacado = false,
+  compacto = false,
 }: {
   icono: ComponentProps<typeof Ionicons>['name'];
   texto: string;
+  /** Para el lector de pantalla, si el texto visible se queda corto. */
+  etiqueta?: string;
   onPress(): void;
   desactivado: boolean;
+  destacado?: boolean;
+  compacto?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={texto}
+      accessibilityLabel={etiqueta ?? texto}
       accessibilityState={{ disabled: desactivado }}
       disabled={desactivado}
       onPress={onPress}
-      style={({ pressed }) => [styles.boton, desactivado && styles.botonDesactivado, pressed && styles.pulsado]}
+      style={({ pressed }) => [
+        styles.boton,
+        compacto && styles.botonCompacto,
+        destacado && styles.botonDestacado,
+        desactivado && styles.botonDesactivado,
+        pressed && styles.pulsado,
+      ]}
     >
-      <Ionicons name={icono} size={18} color={colors.ink} />
-      <Text style={styles.botonTexto}>{texto}</Text>
+      <Ionicons name={icono} size={18} color={destacado ? colors.white : colors.ink} />
+      <Text style={[styles.botonTexto, destacado && styles.botonTextoDestacado]} numberOfLines={1}>
+        {texto}
+      </Text>
     </Pressable>
   );
 }
@@ -311,7 +482,39 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paperDeep,
   },
   eventoTexto: { fontSize: 12, color: colors.inkSoft, fontWeight: '600' },
+  eventoAceptado: { backgroundColor: colors.green },
+  eventoTextoAceptado: { color: colors.white },
+  pregunta: {
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: colors.beer,
+    backgroundColor: colors.card,
+  },
+  preguntaTexto: { fontFamily: typography.sectionTitle.fontFamily, fontSize: 16, color: colors.ink },
+  burbujaTexto: { paddingHorizontal: space.md, paddingVertical: space.sm },
   aviso: { paddingHorizontal: space.lg, paddingBottom: space.sm },
+  escribir: { gap: 4 },
+  filaTexto: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  campo: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.paper,
+    fontSize: 15,
+    color: colors.ink,
+  },
+  nota: { fontSize: 12, color: colors.inkSoft, fontVariant: ['tabular-nums'] },
+  botonCompacto: { flex: 0, paddingHorizontal: space.lg },
+  botonDestacado: { backgroundColor: colors.beer, borderColor: colors.beerDark },
+  botonTextoDestacado: { color: colors.white },
   composer: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
