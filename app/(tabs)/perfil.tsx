@@ -9,12 +9,10 @@ import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { useInstalacion } from '../../src/features/pwa/pwa';
-import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
-  const { stamps } = useActiveRoute();
   const router = useRouter();
   // En la app nativa devuelve 'no-web' y la tarjeta no se pinta.
   const { estado: instalacion, instalando, instalar } = useInstalacion();
@@ -117,10 +115,6 @@ export default function PerfilScreen() {
               {isAdmin ? 'Administrador' : 'Participante'}
             </Text>
           </View>
-
-          <Text style={typography.muted}>
-            {stamps.length} {stamps.length === 1 ? 'sello conseguido' : 'sellos conseguidos'}
-          </Text>
         </Card>
 
         {error ? <Banner tone="error">{error}</Banner> : null}
