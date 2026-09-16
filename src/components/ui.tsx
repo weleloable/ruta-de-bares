@@ -83,7 +83,7 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field(
 ) {
   return (
     <View style={styles.field}>
-      <Text style={typography.overline}>{label}</Text>
+      {label ? <Text style={typography.overline}>{label}</Text> : null}
       <TextInput
         ref={ref}
         placeholderTextColor={colors.inkFaint}
