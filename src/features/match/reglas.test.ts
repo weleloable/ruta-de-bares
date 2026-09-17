@@ -21,7 +21,10 @@ import {
   estadoPregunta,
   estadoTarjeta,
   fusionarMensajes,
+  hiloVacio,
   pasaFiltro,
+  recibirDelSondeo,
+  recibirEnviado,
   teTocaResponder,
   validarPresentacion,
   vistaPreviaChat,
@@ -29,6 +32,7 @@ import {
   quitarMeGustaRompeConexion,
   type EstadoTarjeta,
   type FilaBandeja,
+  type HiloChat,
 } from './reglas.ts';
 
 describe('estadoTarjeta', () => {
@@ -90,10 +94,42 @@ describe('mensajes del chat por polling', () => {
     );
   });
 
-  it('pide desde el ultimo mensaje menos el solape, o todo si no hay nada', () => {
-    assert.equal(desdeParaSondeo([]), null);
-    assert.equal(desdeParaSondeo([m('a', 1), m('b', 30)]), new Date(Date.UTC(2026, 8, 19, 20, 0, 20)).toISOString());
+  it('pide desde lo ultimo que trajo el sondeo menos el solape, o todo si no hay nada', () => {
+    assert.equal(desdeParaSondeo(hiloVacio()), null);
+    const hilo = recibirDelSondeo(hiloVacio(), [m('a', 1), m('b', 30)]);
+    assert.equal(desdeParaSondeo(hilo), m('', 20).created_at);
     assert.equal(SOLAPE_SONDEO_MS, 10_000);
+  });
+
+  it('un sondeo que trae mensajes viejos (el solape) no atrasa el "desde"', () => {
+    const hilo = recibirDelSondeo(recibirDelSondeo(hiloVacio(), [m('b', 30)]), [m('a', 1), m('b', 30)]);
+    assert.equal(desdeParaSondeo(hilo), m('', 20).created_at);
+    assert.deepEqual(hilo.mensajes.map((x) => x.id), ['a', 'b']);
+  });
+
+  it('lo enviado se pinta al momento pero no mueve el "desde"', () => {
+    const sondeado = recibirDelSondeo(hiloVacio(), [m('a', 1)]);
+    const hilo = recibirEnviado(sondeado, m('mio', 40));
+    assert.deepEqual(hilo.mensajes.map((x) => x.id), ['a', 'mio']);
+    assert.equal(desdeParaSondeo(hilo), desdeParaSondeo(sondeado));
+  });
+
+  it('tras mas de 10 s sin sondear, enviar al volver no hace perder lo que llego en el hueco', () => {
+    // Servidor de mentira con la regla de match_fetch_messages: lo posterior a p_after.
+    const servidor = [m('hola', 0)];
+    const sondear = (hilo: HiloChat<ReturnType<typeof m>>) => {
+      const desde = desdeParaSondeo(hilo);
+      return recibirDelSondeo(hilo, servidor.filter((x) => desde === null || Date.parse(x.created_at) > Date.parse(desde)));
+    };
+
+    let hilo = sondear(hiloVacio()); // abre el chat
+    servidor.push(m('gif-1', 2), m('gif-2', 3), m('gif-3', 4)); // la otra persona escribe; aqui no hay cobertura
+    const mio = m('mio', 15);
+    servidor.push(mio);
+    hilo = recibirEnviado(hilo, mio); // al volver, lo primero es enviar
+    hilo = sondear(hilo); // y la app vuelve a traer
+
+    assert.deepEqual(hilo.mensajes.map((x) => x.id), ['hola', 'gif-1', 'gif-2', 'gif-3', 'mio']);
   });
 });
 

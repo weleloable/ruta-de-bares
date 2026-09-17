@@ -17,7 +17,7 @@ ya esta decidido y lo que hace falta para trabajar en el codigo.
    de hasta 120 caracteres y hasta 5 etiquetas. Se puede editar despues.
 3. **Grilla** con foto y nombre de quien lo tiene activado en la ruta. Al tocar
    una tarjeta: foto grande, frase, etiquetas y un unico boton, **Me gusta**.
-4. **Solo Me gusta, sin "No me gusta"** (0004). Abrir la ficha de alguien lo
+4. **Solo Me gusta, sin "No me gusta"** (0005). Abrir la ficha de alguien lo
    deja como **Visto**; darle Me gusta lo marca, y volver a tocar lo quita (y
    vuelve a Visto). Me gusta mutuo = conexion. Quitar el Me gusta de una
    conexion pide confirmar: la cierra y borra el chat.
@@ -68,11 +68,11 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Las actuales son provisionales. |
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
 | D13 | **Catalogo propio de GIFs** dentro de la app, sin buscador externo. |
-| D14 | **Sin "No me gusta"** (17-09-2026): la unica accion es Me gusta. Abrir la ficha o quitar un Me gusta deja a la persona en **Visto**, que la otra persona no ve. Los No me gusta que hubiera pasan a Visto (0004). |
+| D14 | **Sin "No me gusta"** (17-09-2026): la unica accion es Me gusta. Abrir la ficha o quitar un Me gusta deja a la persona en **Visto**, que la otra persona no ve. Los No me gusta que hubiera pasan a Visto (0005). |
 
 ## Probarlo en local
 
-Con Supabase local (`npx supabase start`, necesita Docker) y la 0003 y la 0004 aplicadas,
+Con Supabase local (`npx supabase start`, necesita Docker) y la 0004 y la 0005 aplicadas,
 hacen falta al menos dos cuentas con la feature activada en la misma ruta
 publicada. Para no esperar 30 minutos a probar un aplazamiento, desde el SQL
 Editor o `psql`:
@@ -107,7 +107,7 @@ que construye otra persona:
 public.is_route_participant(p_route_id uuid, p_user_id uuid) returns boolean
 ```
 
-La 0003 trae una version **provisional** (participa todo el mundo en las rutas
+La 0004 trae una version **provisional** (participa todo el mundo en las rutas
 publicadas) y solo la crea si no existe, para no pisar la buena si su migracion
 se aplica antes. La migracion de pertenencia la sustituye con
 `create or replace`, sin cambiar la firma. Hay que acordar la numeracion de las
@@ -132,3 +132,8 @@ abierto hace temblar la pantalla y vibrar el movil donde se puede (Android si,
 Safari en iPhone no). No usa Supabase Realtime. Si se
 queda corto, las tablas y funciones no cambian. Las notificaciones estan
 aparcadas.
+
+Cada consulta pide los mensajes posteriores al ultimo que trajo la anterior,
+menos 10 s de solape. Lo que el movil envia se pinta al momento pero no cuenta
+para ese "desde": sin cobertura un rato, enviar lo primero al volver hacia que
+no llegara nunca lo que la otra persona habia mandado en el hueco.

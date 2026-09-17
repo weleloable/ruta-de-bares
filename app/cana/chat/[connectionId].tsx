@@ -37,7 +37,10 @@ import {
   desdeParaSondeo,
   esperaZumbidoMs,
   estadoPregunta,
-  fusionarMensajes,
+  hiloVacio,
+  recibirDelSondeo,
+  recibirEnviado,
+  type HiloChat,
 } from '../../../src/features/match/reglas';
 import { SelectorGif } from '../../../src/features/match/SelectorGif';
 import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
@@ -74,7 +77,7 @@ export default function ChatCana() {
   const [texto, setTexto] = useState('');
 
   // Refs y no estado: el sondeo necesita lo ultimo sin volver a crearse.
-  const conocidos = useRef<MatchMessageRow[]>([]);
+  const hilo = useRef<HiloChat<MatchMessageRow>>(hiloVacio());
   const primeraCarga = useRef(true);
   // Diferencia entre el reloj del servidor y el del movil, para las esperas.
   const desfase = useRef(0);
@@ -89,17 +92,10 @@ export default function ChatCana() {
     Animated.sequence([paso(12), paso(-12), paso(10), paso(-10), paso(6), paso(-6), paso(0)]).start();
   }, [temblor]);
 
-  const aplicar = useCallback(
-    (nuevos: MatchMessageRow[]) => {
-      const vistos = new Set(conocidos.current.map((m) => m.id));
-      const recibidos = nuevos.filter((m) => !vistos.has(m.id));
-      conocidos.current = fusionarMensajes(conocidos.current, nuevos);
-      setMensajes(conocidos.current);
-      // Solo zumba lo que llega con el chat abierto, no el historial al entrar.
-      if (!primeraCarga.current && recibidos.some((m) => m.kind === 'buzz' && m.sender_id !== yo)) zumbar();
-    },
-    [yo, zumbar],
-  );
+  const pintar = useCallback((siguiente: HiloChat<MatchMessageRow>) => {
+    hilo.current = siguiente;
+    setMensajes(siguiente.mensajes);
+  }, []);
 
   const fallo = useCallback((e: unknown, porDefecto: string) => {
     if (e instanceof ErrorCana && e.codigo && CONEXION_PERDIDA.has(e.codigo)) {
@@ -114,11 +110,16 @@ export default function ChatCana() {
     try {
       const [actual, nuevos] = await Promise.all([
         getMatchConnection(connectionId),
-        fetchMatchMessages(connectionId, desdeParaSondeo(conocidos.current)),
+        fetchMatchMessages(connectionId, desdeParaSondeo(hilo.current)),
       ]);
       desfase.current = Date.parse(actual.server_now) - Date.now();
       setDetalle(actual);
-      aplicar(nuevos);
+      const vistos = new Set(hilo.current.mensajes.map((m) => m.id));
+      pintar(recibirDelSondeo(hilo.current, nuevos));
+      // Solo zumba lo que llega con el chat abierto, no el historial al entrar.
+      if (!primeraCarga.current && nuevos.some((m) => !vistos.has(m.id) && m.kind === 'buzz' && m.sender_id !== yo)) {
+        zumbar();
+      }
       primeraCarga.current = false;
       setError(null);
     } catch (e) {
@@ -126,7 +127,7 @@ export default function ChatCana() {
     } finally {
       setCargando(false);
     }
-  }, [connectionId, perdida, aplicar, fallo]);
+  }, [connectionId, perdida, pintar, fallo, yo, zumbar]);
 
   useFocusEffect(
     useCallback(() => {
@@ -140,7 +141,9 @@ export default function ChatCana() {
     setEnviando(true);
     setError(null);
     try {
-      aplicar([await accion()]);
+      const enviado = await accion();
+      // hilo.current se lee despues del await: un sondeo puede haber llegado mientras.
+      pintar(recibirEnviado(hilo.current, enviado));
       await traer();
       return true;
     } catch (e) {

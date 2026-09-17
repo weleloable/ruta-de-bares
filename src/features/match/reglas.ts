@@ -150,11 +150,42 @@ export function fusionarMensajes<T extends MensajeOrdenable>(actuales: readonly 
   );
 }
 
-/** Desde cuando pedir mensajes: el ultimo conocido menos el solape; null = todos. */
-export function desdeParaSondeo(mensajes: readonly MensajeOrdenable[]): string | null {
-  const ultimo = mensajes.at(-1);
-  if (!ultimo) return null;
-  return new Date(Date.parse(ultimo.created_at) - SOLAPE_SONDEO_MS).toISOString();
+/**
+ * Lo que la pantalla de chat sabe del hilo. `mensajes` es lo que se pinta,
+ * tambien lo que el movil acaba de enviar; `ultimoSondeado` es la hora del
+ * mensaje mas reciente que ha devuelto una consulta de mensajes, y solo de ahi
+ * sale el "desde" de la siguiente.
+ *
+ * Lo enviado no mueve el "desde" porque la respuesta del envio no dice nada de
+ * lo que la otra persona haya mandado entretanto. Cuando contaba, un movil que
+ * pasaba mas de 10 s sin sondear (sin cobertura) y al volver lo primero que
+ * hacia era enviar, pedia desde su propio mensaje menos el solape y se saltaba
+ * para siempre lo que habia llegado en ese hueco.
+ */
+export type HiloChat<T extends MensajeOrdenable> = { mensajes: T[]; ultimoSondeado: string | null };
+
+export function hiloVacio<T extends MensajeOrdenable>(): HiloChat<T> {
+  return { mensajes: [], ultimoSondeado: null };
+}
+
+/** Lo que devuelve el sondeo: se pinta y adelanta el "desde" (nunca lo atrasa). */
+export function recibirDelSondeo<T extends MensajeOrdenable>(hilo: HiloChat<T>, nuevos: readonly T[]): HiloChat<T> {
+  let ultimo = hilo.ultimoSondeado;
+  for (const mensaje of nuevos) {
+    if (ultimo === null || Date.parse(mensaje.created_at) > Date.parse(ultimo)) ultimo = mensaje.created_at;
+  }
+  return { mensajes: fusionarMensajes(hilo.mensajes, nuevos), ultimoSondeado: ultimo };
+}
+
+/** Lo que el movil acaba de enviar: se pinta ya, pero no toca el "desde". */
+export function recibirEnviado<T extends MensajeOrdenable>(hilo: HiloChat<T>, enviado: T): HiloChat<T> {
+  return { mensajes: fusionarMensajes(hilo.mensajes, [enviado]), ultimoSondeado: hilo.ultimoSondeado };
+}
+
+/** Desde cuando pedir mensajes: lo ultimo que trajo el sondeo menos el solape; null = todos. */
+export function desdeParaSondeo(hilo: HiloChat<MensajeOrdenable>): string | null {
+  if (hilo.ultimoSondeado === null) return null;
+  return new Date(Date.parse(hilo.ultimoSondeado) - SOLAPE_SONDEO_MS).toISOString();
 }
 
 /** Milisegundos que faltan para poder mandar otro zumbido (0 = ya se puede). */
