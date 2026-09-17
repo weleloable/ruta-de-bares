@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   franja: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: 7 },
   franja_neutro: { backgroundColor: colors.paperDeep },
   franja_cerveza: { backgroundColor: colors.beer },
-  franja_aceptada: { backgroundColor: colors.green },
+  franja_aceptada: { backgroundColor: colors.beerDark },
   franjaTexto: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.white },
   franjaTextoNeutro: { color: colors.inkSoft, fontWeight: '600' },
   tarjeta: {

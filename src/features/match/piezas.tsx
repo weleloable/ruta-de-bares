@@ -107,7 +107,8 @@ export function AvatarCana({
   );
 }
 
-const TONOS = ['#9A5A11', '#6B5B4B', '#2F6B4F', '#8C6D52', '#B0703A', '#7A4E2D', '#5E7D6A', '#A2907C'];
+// Solo tonos de la paleta cervecera con contraste suficiente para las iniciales en blanco.
+const TONOS = [colors.beerDark, colors.inkSoft, colors.beer, colors.ink];
 
 function tonoDe(nombre: string): string {
   let suma = 0;

@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     height: 24,
     paddingHorizontal: 6,
     borderRadius: radius.pill,
-    backgroundColor: colors.teal,
+    backgroundColor: colors.beerDark,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -24,7 +24,8 @@ import {
   pasaFiltro,
   type Filtro,
 } from '../../src/features/match/reglas';
-import { TarjetaPersona } from '../../src/features/match/TarjetaPersona';
+import { LeyendaVasos, TarjetaPersona } from '../../src/features/match/TarjetaPersona';
+import { VasoCana, type NivelVaso } from '../../src/features/match/VasoCana';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { confirmar } from '../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../src/lib/theme';
@@ -37,6 +38,13 @@ import type { MatchGridRow, MatchInboxRow, MatchProfileState } from '../../src/t
  */
 const REFRESCO_PERFILES_MS = 45_000;
 const REFRESCO_CHATS_MS = 15_000;
+
+/** El mismo vaso de la tarjeta en el filtro de ese estado: la leyenda se aprende sola. */
+const VASO_FILTRO: Partial<Record<Filtro, NivelVaso>> = {
+  'me-gusta': 'media',
+  'no-me-gusta': 'vacio',
+  conexiones: 'llena',
+};
 
 type Vista = 'perfiles' | 'chats';
 
@@ -313,14 +321,24 @@ function VistaPerfiles({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtros}>
         {FILTROS.map(({ id, etiqueta }) => {
           const elegido = id === filtro;
+          const vaso = VASO_FILTRO[id];
           return (
             <Pressable
               key={id}
               accessibilityRole="tab"
+              accessibilityLabel={`${etiqueta} ${cuenta[id]}`}
               accessibilityState={{ selected: elegido }}
               onPress={() => onFiltro(id)}
               style={[styles.filtro, elegido && styles.filtroElegido]}
             >
+              {vaso ? (
+                <VasoCana
+                  nivel={vaso}
+                  tamano={16}
+                  trazo={elegido ? colors.card : colors.beerDark}
+                  liquido={elegido ? colors.beerSoft : colors.beer}
+                />
+              ) : null}
               <Text style={[styles.filtroTexto, elegido && styles.filtroTextoElegido]}>
                 {etiqueta} {cuenta[id]}
               </Text>
@@ -328,6 +346,8 @@ function VistaPerfiles({
           );
         })}
       </ScrollView>
+
+      {tarjetas.length > 0 ? <LeyendaVasos /> : null}
 
       {visibles.length === 0 ? (
         <EmptyState title={VACIO[filtro].title} body={VACIO[filtro].body} />
@@ -378,11 +398,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.green,
-    backgroundColor: colors.greenSoft,
+    borderColor: colors.beer,
+    backgroundColor: colors.beerSoft,
   },
-  punto: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: colors.green },
-  activadoTexto: { fontSize: 13, fontWeight: '700', color: colors.green },
+  punto: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: colors.beer },
+  activadoTexto: { fontSize: 13, fontWeight: '700', color: colors.beerDark },
   hueco: { flex: 1 },
   accion: {
     paddingHorizontal: space.md,
@@ -425,6 +445,9 @@ const styles = StyleSheet.create({
   pendientesTexto: { color: colors.white, fontSize: 11, fontWeight: '800' },
   filtros: { gap: space.sm, paddingRight: space.lg },
   filtro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderRadius: radius.pill,
@@ -435,7 +458,8 @@ const styles = StyleSheet.create({
   filtroElegido: { backgroundColor: colors.beer, borderColor: colors.beerDark },
   filtroTexto: { color: colors.inkSoft, fontWeight: '600', fontSize: 13, fontVariant: ['tabular-nums'] },
   filtroTextoElegido: { color: colors.white },
-  // Sin padding lateral propio: cada celda trae su aire (TarjetaPersona), y
-  // el margen negativo alinea los bordes de las tarjetas con el resto.
-  rejilla: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -space.xs },
+  // Sin padding lateral propio: cada celda trae su aire y el hueco del aro de
+  // conexion (TarjetaPersona, 2 + 2 + 2 px); el margen negativo alinea los
+  // bordes de las tarjetas con el resto de la pantalla.
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 },
 });

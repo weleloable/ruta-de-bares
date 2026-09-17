@@ -17,8 +17,27 @@ ya esta decidido y lo que hace falta para trabajar en el codigo.
    de hasta 120 caracteres y hasta 5 etiquetas. Se puede editar despues.
 3. **Grilla** con foto y nombre de quien lo tiene activado en la ruta. Al tocar
    una tarjeta: foto grande, frase, etiquetas y los botones de voto.
-4. **Votos cambiables:** Me gusta (verde), No me gusta (rojo), mutuo (turquesa,
-   conexion). Filtros: Todos, Nuevos, Me gusta, No me gusta, Conexiones.
+4. **Votos cambiables:** Me gusta, No me gusta y conexion (me gusta mutuo).
+   Filtros: Todos, Me gusta, No me gusta, Conexiones, Nuevos.
+
+## Como se ve cada estado: "la cana se llena"
+
+Por peticion de diseno, solo colores de la paleta cervecera de `src/lib/theme.ts`
+(nada de verde, rojo ni turquesa) y cada estado con su propia forma, para que se
+lea tambien en gris o con daltonismo. Propuesta y alternativas descartadas:
+<https://claude.ai/artifact/P9nn8iZsR4G8Sf73cNXHnE>.
+
+| Estado | Tarjeta | Vaso (`VasoCana`) |
+| --- | --- | --- |
+| Sin votar | borde crema fino | ninguno |
+| Me gusta | borde cerveza | media cana |
+| Conexion | borde tostado con doble aro y nombre sobre tostado | cana llena con espuma |
+| No me gusta | borde discontinuo y foto apagada | vaso vacio |
+
+El mismo vaso aparece en los filtros, en la leyenda sobre la grilla y en la ficha.
+Los vasos se dibujan con Views, sin SVG: `react-native-svg` obligaria a
+recompilar el development build. `tests/match-paleta.test.ts` impide volver a
+meter verde, turquesa o colores escritos a mano en la feature.
 5. **Chat** solo con conexion: GIFs del catalogo y zumbidos. La pregunta
    "Te tomas una cerveza conmigo?" se responde Si, No o "Preguntamelo dentro de
    un rato". Tras el Si cada persona puede mandar 2 textos de hasta 120

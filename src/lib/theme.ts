@@ -16,12 +16,9 @@ export const colors = {
   beerDark: '#9A5A11',
   stamp: '#A82C24',
   stampSoft: '#F0D6D2',
+  // Cerveza clara: fondo de lo tuyo en el chat de Tirate una cana.
+  beerSoft: '#F3E1C6',
   green: '#2F6B4F',
-  greenSoft: '#DCEBE1',
-  // Conexion de Tirate una cana: lo bastante lejos del verde de "Me gusta"
-  // para distinguirlos, y siempre acompanado de icono (daltonismo).
-  teal: '#127A80',
-  tealSoft: '#DDEFF0',
   border: '#D9C9AE',
   borderStrong: '#B8A183',
   danger: '#A82C24',

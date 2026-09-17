@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   mensajes: { padding: space.lg, gap: space.md },
   centrado: { textAlign: 'center', marginTop: space.xl },
   burbuja: { maxWidth: '72%', borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1 },
-  mia: { alignSelf: 'flex-end', borderColor: colors.beer, backgroundColor: '#F3E1C6' },
+  mia: { alignSelf: 'flex-end', borderColor: colors.beer, backgroundColor: colors.beerSoft },
   suya: { alignSelf: 'flex-start', borderColor: colors.border, backgroundColor: colors.card },
   gif: { width: 200, height: 150 },
   evento: {
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paperDeep,
   },
   eventoTexto: { fontSize: 12, color: colors.inkSoft, fontWeight: '600' },
-  eventoAceptado: { backgroundColor: colors.green },
+  eventoAceptado: { backgroundColor: colors.beerDark },
   eventoTextoAceptado: { color: colors.white },
   pregunta: {
     alignSelf: 'center',

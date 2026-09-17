@@ -9,6 +9,7 @@ import { getMatchGrid, listMatchTags, voteMatch } from '../../../src/features/ma
 import { AvatarCana, ChipEtiqueta } from '../../../src/features/match/piezas';
 import { estadoTarjeta, votoRompeConexion } from '../../../src/features/match/reglas';
 import { ASPECTO } from '../../../src/features/match/TarjetaPersona';
+import { VasoCana, type NivelVaso } from '../../../src/features/match/VasoCana';
 import { useActiveRoute } from '../../../src/features/routes/ActiveRouteProvider';
 import { confirmar } from '../../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
@@ -106,23 +107,38 @@ export default function PersonaCana() {
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
       <Stack.Screen options={{ title: persona.display_name }} />
       <ScrollView contentContainerStyle={styles.cuerpo}>
-        <View style={[styles.marco, { borderColor: aspecto.borde }]}>
-          <AvatarCana
-            nombre={persona.display_name}
-            foto={persona.avatar_url}
-            redondo={false}
-            tamanoIniciales={88}
-            style={styles.foto}
-          />
+        {/* Mismo lenguaje que la tarjeta de la grilla, sin apagar la foto: aqui se viene a mirarla. */}
+        <View style={[styles.anillo, aspecto.anillo ? { borderColor: aspecto.anillo } : null]}>
+          <View
+            style={[
+              styles.marco,
+              { borderColor: aspecto.borde, borderStyle: aspecto.discontinuo ? 'dashed' : 'solid' },
+            ]}
+          >
+            <AvatarCana
+              nombre={persona.display_name}
+              foto={persona.avatar_url}
+              redondo={false}
+              tamanoIniciales={88}
+              style={styles.foto}
+            />
+          </View>
         </View>
 
         <View style={styles.cabecera}>
           <Text style={[typography.screenTitle, styles.nombre]} numberOfLines={2}>
             {persona.display_name}
           </Text>
-          <View style={[styles.estado, { borderColor: aspecto.borde, backgroundColor: aspecto.fondo }]}>
-            {aspecto.icono ? <Ionicons name={aspecto.icono} size={14} color={aspecto.borde} /> : null}
-            <Text style={[styles.estadoTexto, { color: estado === 'nuevo' ? colors.inkSoft : aspecto.borde }]}>
+          <View
+            style={[
+              styles.estado,
+              aspecto.vaso
+                ? { borderColor: aspecto.borde, backgroundColor: aspecto.vaso.fondo }
+                : { borderColor: colors.border, backgroundColor: colors.paperDeep },
+            ]}
+          >
+            {aspecto.vaso ? <VasoCana nivel={aspecto.vaso.nivel} tamano={16} trazo={aspecto.vaso.trazo} /> : null}
+            <Text style={[styles.estadoTexto, { color: aspecto.vaso ? aspecto.vaso.trazo : colors.inkSoft }]}>
               {aspecto.texto}
             </Text>
           </View>
@@ -138,22 +154,27 @@ export default function PersonaCana() {
           </View>
         ) : null}
 
-        {aviso ? <Banner tone="success">{aviso}</Banner> : null}
+        {aviso ? (
+          <View style={styles.aviso} accessibilityRole="alert">
+            <VasoCana nivel="llena" tamano={22} trazo={colors.card} />
+            <Text style={styles.avisoTexto}>{aviso}</Text>
+          </View>
+        ) : null}
         {error ? <Banner tone="error">{error}</Banner> : null}
 
         <View style={styles.votos}>
           <BotonVoto
             texto="No me gusta"
-            icono="close"
-            color={colors.stamp}
+            vaso="vacio"
+            color={colors.ink}
             elegido={persona.my_vote === 'dislike'}
             ocupado={votando === 'dislike'}
             onPress={() => votar('dislike')}
           />
           <BotonVoto
             texto="Me gusta"
-            icono="checkmark"
-            color={colors.green}
+            vaso="media"
+            color={colors.beerDark}
             elegido={persona.my_vote === 'like'}
             ocupado={votando === 'like'}
             onPress={() => votar('like')}
@@ -187,14 +208,14 @@ export default function PersonaCana() {
 
 function BotonVoto({
   texto,
-  icono,
+  vaso,
   color,
   elegido,
   ocupado,
   onPress,
 }: {
   texto: string;
-  icono: 'close' | 'checkmark';
+  vaso: NivelVaso;
   color: string;
   elegido: boolean;
   ocupado: boolean;
@@ -213,7 +234,13 @@ function BotonVoto({
         (pressed || ocupado) && styles.votoPulsado,
       ]}
     >
-      <Ionicons name={icono} size={20} color={elegido ? colors.white : color} />
+      <VasoCana
+        nivel={vaso}
+        tamano={22}
+        trazo={elegido ? colors.card : color}
+        // Sobre el boton relleno de tostado, la cerveza clara se ve; la normal no.
+        liquido={elegido ? colors.beerSoft : colors.beer}
+      />
       <Text style={[styles.votoTexto, { color: elegido ? colors.white : color }]}>{texto}</Text>
     </Pressable>
   );
@@ -222,7 +249,16 @@ function BotonVoto({
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
-  marco: { borderWidth: 4, borderRadius: radius.lg, overflow: 'hidden', alignSelf: 'center', width: '100%', maxWidth: 420 },
+  anillo: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 432,
+    padding: 3,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    borderRadius: radius.lg + 6,
+  },
+  marco: { borderWidth: 4, borderRadius: radius.lg, overflow: 'hidden' },
   foto: { width: '100%', aspectRatio: 1 },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' },
   nombre: { flexShrink: 1 },
@@ -259,7 +295,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space.sm,
     borderRadius: radius.pill,
-    backgroundColor: colors.teal,
+    backgroundColor: colors.ink,
   },
   abrirChatTexto: { fontSize: 16, fontWeight: '800', color: colors.white },
+  aviso: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.beerDark,
+  },
+  avisoTexto: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.card },
 });
