@@ -42,7 +42,7 @@ const REFRESCO_CHATS_MS = 15_000;
 /** El mismo vaso de la tarjeta en el filtro de ese estado: la leyenda se aprende sola. */
 const VASO_FILTRO: Partial<Record<Filtro, NivelVaso>> = {
   'me-gusta': 'media',
-  'no-me-gusta': 'vacio',
+  visto: 'vacio',
   conexiones: 'llena',
 };
 
@@ -54,7 +54,10 @@ const VACIO: Record<Filtro, { title: string; body: string }> = {
     body: 'Cuando alguien de tu ruta active Tírate una caña, aparecerá aquí.',
   },
   'me-gusta': { title: 'Nadie marcado', body: 'Las personas a las que des Me gusta aparecerán aquí.' },
-  'no-me-gusta': { title: 'Nadie descartado', body: 'Aquí verás a quien hayas dado No me gusta.' },
+  visto: {
+    title: 'Nadie visto todavía',
+    body: 'Aquí verás a quien hayas abierto sin darle Me gusta.',
+  },
   conexiones: {
     title: 'Sin conexiones todavía',
     body: 'Cuando alguien a quien has dado Me gusta te lo devuelva, aparecerá aquí.',

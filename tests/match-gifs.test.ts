@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { leerFichero } from './pglite-supabase.ts';
 
 /**
- * El chat guarda solo el id del GIF (0003_tirate_una_cana.sql, match_gifs) y
+ * El chat guarda solo el id del GIF (0004_tirate_una_cana.sql, match_gifs) y
  * la app lo pinta con su propio fichero (src/features/match/gifs.ts). Si los
  * dos catalogos se separan, el servidor acepta un GIF que la app no sabe pintar
  * o la app ofrece uno que el servidor rechaza. gifs.ts no se puede importar en
@@ -16,7 +16,7 @@ import { leerFichero } from './pglite-supabase.ts';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const catalogoTs = readFileSync(join(raiz, 'src/features/match/gifs.ts'), 'utf8');
-const migracion = leerFichero('supabase/migrations/0003_tirate_una_cana.sql');
+const migracion = leerFichero('supabase/migrations/0004_tirate_una_cana.sql');
 
 const entradasTs = [...catalogoTs.matchAll(/\{ id: '([a-z0-9-]+)', etiqueta: '[^']+', fuente: require\('([^']+)'\) \}/g)].map(
   (m) => ({ id: m[1], ruta: m[2] }),

@@ -19,9 +19,9 @@ import { leerFichero } from './pglite-supabase.ts';
  * los compara leyendo el SQL real.
  */
 
-const sql = leerFichero('supabase/migrations/0003_tirate_una_cana.sql').replace(/--.*$/gm, '');
+const sql = leerFichero('supabase/migrations/0004_tirate_una_cana.sql').replace(/--.*$/gm, '');
 
-describe('reglas.ts es espejo de 0003_tirate_una_cana.sql', () => {
+describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
   it('longitud maxima de la frase', () => {
     assert.match(sql, new RegExp(`bio\\s+text not null default '' check \\(char_length\\(bio\\) <= ${BIO_MAX}\\)`));
     assert.match(sql, new RegExp(`char_length\\(v_bio\\) > ${BIO_MAX}\\b`));

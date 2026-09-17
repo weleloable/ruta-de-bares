@@ -5,19 +5,24 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, EmptyState, Loading } from '../../../src/components/ui';
-import { getMatchGrid, listMatchTags, voteMatch } from '../../../src/features/match/api';
+import { getMatchGrid, listMatchTags, markMatchSeen, setMatchLike } from '../../../src/features/match/api';
 import { AvatarCana, ChipEtiqueta } from '../../../src/features/match/piezas';
-import { estadoTarjeta, votoRompeConexion } from '../../../src/features/match/reglas';
+import {
+  estadoTarjeta,
+  hayQueMarcarVisto,
+  quitarMeGustaRompeConexion,
+} from '../../../src/features/match/reglas';
 import { ASPECTO } from '../../../src/features/match/TarjetaPersona';
-import { VasoCana, type NivelVaso } from '../../../src/features/match/VasoCana';
+import { VasoCana } from '../../../src/features/match/VasoCana';
 import { useActiveRoute } from '../../../src/features/routes/ActiveRouteProvider';
 import { confirmar } from '../../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
-import type { MatchGridRow, MatchVote } from '../../../src/types/database';
+import type { MatchGridRow } from '../../../src/types/database';
 
 /**
- * Ficha de una persona en Tirate una cana: foto grande, frase, etiquetas y los
- * dos botones de voto, que muestran tu voto actual y sirven para cambiarlo.
+ * Ficha de una persona en Tirate una cana: foto grande, frase, etiquetas y un
+ * unico boton, Me gusta, que se da y se quita. No hay "No me gusta" (0004):
+ * abrir la ficha ya la deja como Visto, y quitar el Me gusta tambien.
  *
  * Los datos salen de la misma grilla (match_grid): son pocas filas por ruta y
  * asi la ficha aplica las mismas reglas de visibilidad sin otra funcion SQL.
@@ -31,7 +36,7 @@ export default function PersonaCana() {
   const [persona, setPersona] = useState<MatchGridRow | null>(null);
   const [etiquetas, setEtiquetas] = useState<Map<string, string>>(new Map());
   const [cargando, setCargando] = useState(true);
-  const [votando, setVotando] = useState<MatchVote | null>(null);
+  const [cambiando, setCambiando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -40,7 +45,16 @@ export default function PersonaCana() {
     setError(null);
     try {
       const [filas, catalogo] = await Promise.all([getMatchGrid(rutaId), listMatchTags()]);
-      setPersona(filas.find((fila) => fila.user_id === userId) ?? null);
+      let encontrada = filas.find((fila) => fila.user_id === userId) ?? null;
+      if (encontrada && hayQueMarcarVisto(estadoTarjeta(encontrada))) {
+        try {
+          await markMatchSeen(rutaId, encontrada.user_id);
+          encontrada = { ...encontrada, my_vote: 'seen' };
+        } catch {
+          // Si no se apunta, la ficha se ve igual; solo no pasara a Visto.
+        }
+      }
+      setPersona(encontrada);
       setEtiquetas(new Map(catalogo.map((etiqueta) => [etiqueta.id, etiqueta.label])));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cargar la ficha.');
@@ -76,30 +90,32 @@ export default function PersonaCana() {
   const estado = estadoTarjeta(persona);
   const aspecto = ASPECTO[estado];
 
-  async function votar(valor: MatchVote) {
-    if (!persona || !rutaId || valor === persona.my_vote || votando) return;
-    if (votoRompeConexion(estado, valor)) {
+  const teGusta = persona.my_vote === 'like';
+
+  async function alternarMeGusta() {
+    if (!persona || !rutaId || cambiando) return;
+    if (teGusta && quitarMeGustaRompeConexion(estado)) {
       const seguro = await confirmar({
-        titulo: 'Cerrar la conexión',
+        titulo: 'Quitar tu Me gusta',
         mensaje: `Se cerrará la conexión con ${persona.display_name} y se borrará vuestro chat.`,
-        aceptar: 'No me gusta',
+        aceptar: 'Quitar Me gusta',
         destructiva: true,
       });
       if (!seguro) return;
     }
-    setVotando(valor);
+    setCambiando(true);
     setError(null);
     setAviso(null);
     try {
-      const { connectionId } = await voteMatch(rutaId, persona.user_id, valor);
+      const { connectionId } = await setMatchLike(rutaId, persona.user_id, !teGusta);
       if (connectionId && !persona.connection_id) {
         setAviso(`¡${persona.display_name} y tú os habéis dado me gusta! Ya sois una conexión.`);
       }
       await cargar();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar tu voto.');
+      setError(e instanceof Error ? e.message : 'No se pudo guardar tu Me gusta.');
     } finally {
-      setVotando(null);
+      setCambiando(false);
     }
   }
 
@@ -162,23 +178,15 @@ export default function PersonaCana() {
         ) : null}
         {error ? <Banner tone="error">{error}</Banner> : null}
 
-        <View style={styles.votos}>
-          <BotonVoto
-            texto="No me gusta"
-            vaso="vacio"
-            color={colors.ink}
-            elegido={persona.my_vote === 'dislike'}
-            ocupado={votando === 'dislike'}
-            onPress={() => votar('dislike')}
-          />
-          <BotonVoto
-            texto="Me gusta"
-            vaso="media"
-            color={colors.beerDark}
-            elegido={persona.my_vote === 'like'}
-            ocupado={votando === 'like'}
-            onPress={() => votar('like')}
-          />
+        <View style={styles.meGustaBloque}>
+          <BotonMeGusta activo={teGusta} ocupado={cambiando} onPress={() => void alternarMeGusta()} />
+          {teGusta ? (
+            <Text style={[typography.muted, styles.centrado]}>
+              {persona.connection_id
+                ? 'Si lo quitas, se cierra la conexión y se borra el chat.'
+                : 'Toca otra vez para quitar tu Me gusta.'}
+            </Text>
+          ) : null}
         </View>
 
         {persona.connection_id ? (
@@ -206,42 +214,29 @@ export default function PersonaCana() {
   );
 }
 
-function BotonVoto({
-  texto,
-  vaso,
-  color,
-  elegido,
-  ocupado,
-  onPress,
-}: {
-  texto: string;
-  vaso: NivelVaso;
-  color: string;
-  elegido: boolean;
-  ocupado: boolean;
-  onPress(): void;
-}) {
+/** Unico boton de la ficha: vacio sin Me gusta, relleno de tostado con Me gusta. */
+function BotonMeGusta({ activo, ocupado, onPress }: { activo: boolean; ocupado: boolean; onPress(): void }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected: elegido, busy: ocupado }}
-      accessibilityLabel={elegido ? `${texto}, tu voto actual` : texto}
+      accessibilityState={{ selected: activo, busy: ocupado }}
+      accessibilityLabel={activo ? 'Me gusta, activado. Toca para quitarlo' : 'Me gusta'}
+      disabled={ocupado}
       onPress={onPress}
       style={({ pressed }) => [
         styles.voto,
-        { borderColor: color },
-        elegido && { backgroundColor: color },
+        activo && styles.votoActivo,
         (pressed || ocupado) && styles.votoPulsado,
       ]}
     >
       <VasoCana
-        nivel={vaso}
-        tamano={22}
-        trazo={elegido ? colors.card : color}
+        nivel="media"
+        tamano={24}
+        trazo={activo ? colors.card : colors.beerDark}
         // Sobre el boton relleno de tostado, la cerveza clara se ve; la normal no.
-        liquido={elegido ? colors.beerSoft : colors.beer}
+        liquido={activo ? colors.beerSoft : colors.beer}
       />
-      <Text style={[styles.votoTexto, { color: elegido ? colors.white : color }]}>{texto}</Text>
+      <Text style={[styles.votoTexto, activo && styles.votoTextoActivo]}>Me gusta</Text>
     </Pressable>
   );
 }
@@ -274,20 +269,23 @@ const styles = StyleSheet.create({
   estadoTexto: { fontSize: 12, fontWeight: '700' },
   frase: { fontSize: 17, lineHeight: 24 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  votos: { flexDirection: 'row', gap: space.md },
+  meGustaBloque: { gap: space.sm },
+  centrado: { textAlign: 'center' },
   voto: {
-    flex: 1,
     minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm,
     borderWidth: 2,
+    borderColor: colors.beerDark,
     borderRadius: radius.pill,
     backgroundColor: colors.card,
   },
+  votoActivo: { backgroundColor: colors.beerDark },
   votoPulsado: { opacity: 0.75 },
-  votoTexto: { fontSize: 16, fontWeight: '800' },
+  votoTexto: { fontSize: 16, fontWeight: '800', color: colors.beerDark },
+  votoTextoActivo: { color: colors.white },
   abrirChat: {
     minHeight: 52,
     flexDirection: 'row',

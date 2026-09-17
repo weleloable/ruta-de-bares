@@ -13,7 +13,7 @@ type Aspecto = {
   discontinuo: boolean;
   /** Segundo aro por fuera: solo la conexion, lo mas importante de la grilla. */
   anillo: string | null;
-  /** Foto apagada: lo descartado se queda atras y no compite con lo nuevo. */
+  /** Foto apagada y en blanco y negro: lo ya visto se queda atras y no compite con lo nuevo. */
   apagada: boolean;
   /** Nombre sobre el color del borde en vez de sobre blanco. */
   nombreSobreColor: boolean;
@@ -29,7 +29,7 @@ type Aspecto = {
  *   sin votar   borde crema fino, sin vaso
  *   me gusta    borde cerveza y media cana
  *   conexion    borde tostado con doble aro, nombre sobre tostado y cana llena
- *   no me gusta borde discontinuo, foto apagada y vaso vacio
+ *   visto       borde discontinuo, foto en blanco y negro y vaso vacio
  */
 export const ASPECTO: Record<EstadoTarjeta, Aspecto> = {
   nuevo: {
@@ -62,7 +62,7 @@ export const ASPECTO: Record<EstadoTarjeta, Aspecto> = {
     vaso: { nivel: 'llena', fondo: colors.beerDark, trazo: colors.card },
     texto: 'Os habéis dado me gusta',
   },
-  'no-me-gusta': {
+  visto: {
     borde: colors.borderStrong,
     grosor: 2,
     discontinuo: true,
@@ -70,7 +70,7 @@ export const ASPECTO: Record<EstadoTarjeta, Aspecto> = {
     apagada: true,
     nombreSobreColor: false,
     vaso: { nivel: 'vacio', fondo: colors.card, trazo: colors.inkSoft },
-    texto: 'No te gusta',
+    texto: 'Visto',
   },
 };
 
@@ -146,7 +146,7 @@ export function LeyendaVasos() {
     <View style={styles.leyenda} accessibilityRole="text">
       <ElementoLeyenda nivel="media" texto="Te gusta" />
       <ElementoLeyenda nivel="llena" texto="Os habéis gustado" />
-      <ElementoLeyenda nivel="vacio" texto="No te gusta" trazo={colors.inkSoft} />
+      <ElementoLeyenda nivel="vacio" texto="Visto" trazo={colors.inkSoft} />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * Reglas de "Tirate una cana". Espejo de supabase/migrations/0003_tirate_una_cana.sql.
+ * Reglas de "Tirate una cana". Espejo de supabase/migrations/0004_tirate_una_cana.sql.
  *
  * El servidor es la autoridad: decide si activas, si hay conexion, si puedes
  * preguntar o escribir. Esta copia existe solo para la interfaz (deshabilitar
@@ -63,26 +63,28 @@ export function estadoPestana(
 /**
  * Lo que ve cada persona de una tarjeta. El voto de la otra persona no llega
  * nunca al cliente: solo se nota como conexion cuando los dos coinciden.
+ * No hay "No me gusta" (0004): quien abrio la ficha y no dio Me gusta, o lo
+ * quito, queda como Visto.
  */
-export type EstadoTarjeta = 'nuevo' | 'me-gusta' | 'no-me-gusta' | 'conexion';
+export type EstadoTarjeta = 'nuevo' | 'me-gusta' | 'visto' | 'conexion';
 
 export function estadoTarjeta(tarjeta: {
-  my_vote: 'like' | 'dislike' | null;
+  my_vote: 'like' | 'seen' | null;
   connection_id: string | null;
 }): EstadoTarjeta {
   if (tarjeta.connection_id !== null) return 'conexion';
   if (tarjeta.my_vote === 'like') return 'me-gusta';
-  if (tarjeta.my_vote === 'dislike') return 'no-me-gusta';
+  if (tarjeta.my_vote === 'seen') return 'visto';
   return 'nuevo';
 }
 
-export type Filtro = 'todos' | 'me-gusta' | 'no-me-gusta' | 'conexiones' | 'nuevos';
+export type Filtro = 'todos' | 'me-gusta' | 'visto' | 'conexiones' | 'nuevos';
 
 /** En el orden en que se ensenan. */
 export const FILTROS: readonly { id: Filtro; etiqueta: string }[] = [
   { id: 'todos', etiqueta: 'Todos' },
   { id: 'me-gusta', etiqueta: 'Me gusta' },
-  { id: 'no-me-gusta', etiqueta: 'No me gusta' },
+  { id: 'visto', etiqueta: 'Visto' },
   { id: 'conexiones', etiqueta: 'Conexiones' },
   { id: 'nuevos', etiqueta: 'Nuevos' },
 ];
@@ -94,8 +96,8 @@ export function pasaFiltro(filtro: Filtro, estado: EstadoTarjeta): boolean {
     case 'me-gusta':
       // Una conexion tambien es un Me gusta que has dado (D6).
       return estado === 'me-gusta' || estado === 'conexion';
-    case 'no-me-gusta':
-      return estado === 'no-me-gusta';
+    case 'visto':
+      return estado === 'visto';
     case 'conexiones':
       return estado === 'conexion';
     case 'nuevos':
@@ -104,7 +106,7 @@ export function pasaFiltro(filtro: Filtro, estado: EstadoTarjeta): boolean {
 }
 
 export function contarPorFiltro(estados: readonly EstadoTarjeta[]): Record<Filtro, number> {
-  const cuenta = { todos: 0, 'me-gusta': 0, 'no-me-gusta': 0, conexiones: 0, nuevos: 0 };
+  const cuenta = { todos: 0, 'me-gusta': 0, visto: 0, conexiones: 0, nuevos: 0 };
   for (const estado of estados) {
     for (const { id } of FILTROS) if (pasaFiltro(id, estado)) cuenta[id] += 1;
   }
@@ -112,11 +114,16 @@ export function contarPorFiltro(estados: readonly EstadoTarjeta[]): Record<Filtr
 }
 
 /**
- * Cambiar a No me gusta a alguien con quien hay conexion la cierra y borra el
- * chat: es lo unico irreversible de votar, y lo unico que se confirma.
+ * Quitar el Me gusta a alguien con quien hay conexion la cierra y borra el
+ * chat: es lo unico irreversible de la ficha, y lo unico que se confirma.
  */
-export function votoRompeConexion(estado: EstadoTarjeta, voto: 'like' | 'dislike'): boolean {
-  return estado === 'conexion' && voto === 'dislike';
+export function quitarMeGustaRompeConexion(estado: EstadoTarjeta): boolean {
+  return estado === 'conexion';
+}
+
+/** Al abrir una ficha solo hay que apuntar Visto si aun no habia nada. */
+export function hayQueMarcarVisto(estado: EstadoTarjeta): boolean {
+  return estado === 'nuevo';
 }
 
 // --- Chat -------------------------------------------------------------------

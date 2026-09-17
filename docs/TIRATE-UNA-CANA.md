@@ -16,9 +16,16 @@ ya esta decidido y lo que hace falta para trabajar en el codigo.
 2. **Primera activacion:** confirmar mayoria de edad y presentarse con una frase
    de hasta 120 caracteres y hasta 5 etiquetas. Se puede editar despues.
 3. **Grilla** con foto y nombre de quien lo tiene activado en la ruta. Al tocar
-   una tarjeta: foto grande, frase, etiquetas y los botones de voto.
-4. **Votos cambiables:** Me gusta, No me gusta y conexion (me gusta mutuo).
-   Filtros: Todos, Me gusta, No me gusta, Conexiones, Nuevos.
+   una tarjeta: foto grande, frase, etiquetas y un unico boton, **Me gusta**.
+4. **Solo Me gusta, sin "No me gusta"** (0004). Abrir la ficha de alguien lo
+   deja como **Visto**; darle Me gusta lo marca, y volver a tocar lo quita (y
+   vuelve a Visto). Me gusta mutuo = conexion. Quitar el Me gusta de una
+   conexion pide confirmar: la cierra y borra el chat.
+   Filtros: Todos, Me gusta, Visto, Conexiones, Nuevos.
+5. **Chat** solo con conexion: GIFs del catalogo y zumbidos. La pregunta
+   "Te tomas una cerveza conmigo?" se responde Si, No o "Preguntamelo dentro de
+   un rato". Tras el Si cada persona puede mandar 2 textos de hasta 120
+   caracteres.
 
 ## Como se ve cada estado: "la cana se llena"
 
@@ -29,19 +36,17 @@ lea tambien en gris o con daltonismo. Propuesta y alternativas descartadas:
 
 | Estado | Tarjeta | Vaso (`VasoCana`) |
 | --- | --- | --- |
-| Sin votar | borde crema fino | ninguno |
+| Sin votar (Nuevos) | borde crema fino | ninguno |
 | Me gusta | borde cerveza | media cana |
 | Conexion | borde tostado con doble aro y nombre sobre tostado | cana llena con espuma |
-| No me gusta | borde discontinuo y foto apagada | vaso vacio |
+| Visto | borde discontinuo y foto apagada en blanco y negro | vaso vacio |
 
 El mismo vaso aparece en los filtros, en la leyenda sobre la grilla y en la ficha.
 Los vasos se dibujan con Views, sin SVG: `react-native-svg` obligaria a
 recompilar el development build. `tests/match-paleta.test.ts` impide volver a
-meter verde, turquesa o colores escritos a mano en la feature.
-5. **Chat** solo con conexion: GIFs del catalogo y zumbidos. La pregunta
-   "Te tomas una cerveza conmigo?" se responde Si, No o "Preguntamelo dentro de
-   un rato". Tras el Si cada persona puede mandar 2 textos de hasta 120
-   caracteres.
+meter verde, turquesa o colores escritos a mano en la feature. En iPhone la foto
+de Visto solo se apaga (el filtro de gris no esta soportado alli); el borde
+discontinuo y el vaso vacio siguen marcando el estado.
 
 ## Decisiones
 
@@ -51,7 +56,7 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | ID | Decision |
 | --- | --- |
 | D1 | Votos y conexiones son **por ruta**: cada ruta es un evento y empieza de cero. |
-| D2 | Tras un **No**, el voto de quien rechaza pasa a No me gusta y el de quien pregunto se queda como estaba. El chat se borra. |
+| D2 | Tras un **No**, el Me gusta de quien rechaza pasa a **Visto** y el de quien pregunto se queda como estaba. El chat se borra. (Hasta la 0004 pasaba a No me gusta.) |
 | D3 | El estado de la pregunta pertenece a la **pareja**: cerrar y reabrir la conexion no deja volver a preguntar. |
 | D4 | Pregunta cualquiera de los dos, con **una sola pregunta viva** a la vez. |
 | D5 | "Dentro de un rato": se puede volver a preguntar a los **30 min**, con **2 aplazamientos** como maximo. |
@@ -63,10 +68,11 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Las actuales son provisionales. |
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
 | D13 | **Catalogo propio de GIFs** dentro de la app, sin buscador externo. |
+| D14 | **Sin "No me gusta"** (17-09-2026): la unica accion es Me gusta. Abrir la ficha o quitar un Me gusta deja a la persona en **Visto**, que la otra persona no ve. Los No me gusta que hubiera pasan a Visto (0004). |
 
 ## Probarlo en local
 
-Con Supabase local (`npx supabase start`, necesita Docker) y la 0003 aplicada,
+Con Supabase local (`npx supabase start`, necesita Docker) y la 0003 y la 0004 aplicadas,
 hacen falta al menos dos cuentas con la feature activada en la misma ruta
 publicada. Para no esperar 30 minutos a probar un aplazamiento, desde el SQL
 Editor o `psql`:
@@ -81,10 +87,13 @@ Lo mismo con `match_connection_members.last_buzz_at` para el zumbido.
 
 ## Donde esta cada regla
 
-Todas las reglas viven en `supabase/migrations/0003_tirate_una_cana.sql`. La
-app no lee ni escribe ninguna tabla `match_*` salvo los catalogos de etiquetas
-y GIFs; todo pasa por funciones `SECURITY DEFINER`, como `claim_stamp`.
-`tests/migration-0003.test.ts` las ejecuta sobre Postgres real (PGlite).
+Todas las reglas viven en `supabase/migrations/0004_tirate_una_cana.sql`, con
+los cambios de `0005_cana_visto.sql` (Visto en lugar de No me gusta:
+`match_set_like` y `match_mark_seen` sustituyen a `match_vote`). La app no lee
+ni escribe ninguna tabla `match_*` salvo los catalogos de etiquetas y GIFs;
+todo pasa por funciones `SECURITY DEFINER`, como `claim_stamp`.
+`tests/migration-0004.test.ts` y `tests/migration-0004.test.ts` las ejecutan
+sobre Postgres real (PGlite).
 
 La copia en TypeScript (`src/features/match/reglas.ts`) es un espejo para la
 interfaz ("podras volver a preguntar en 12 min"). Si discrepan, manda el SQL.

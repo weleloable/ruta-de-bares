@@ -4,8 +4,9 @@ import { colors } from '../../lib/theme';
 
 /**
  * El vaso que marca el estado de una persona en Tirate una cana: media caña es
- * tu Me gusta, caña llena es una conexion (los dos) y vaso vacio es un No me
- * gusta. Es el icono en color y en forma a la vez: se lee tambien en gris.
+ * tu Me gusta, caña llena es una conexion (los dos) y vaso vacio es Visto (la
+ * abriste y no le diste Me gusta). Es el icono en color y en forma a la vez:
+ * se lee tambien en gris.
  *
  * Dibujado con Views y no con SVG: react-native-svg es un modulo nativo nuevo
  * y obligaria a recompilar el development build solo por tres iconos.
@@ -63,12 +64,7 @@ export function VasoCana({
               backgroundColor: liquido,
             }}
           />
-        ) : (
-          <>
-            <Aspa ancho={ancho * 0.62} grosor={grosor} color={trazo} giro="45deg" />
-            <Aspa ancho={ancho * 0.62} grosor={grosor} color={trazo} giro="-45deg" />
-          </>
-        )}
+        ) : null}
       </View>
 
       {nivel === 'llena' ? (
@@ -98,24 +94,5 @@ export function VasoCana({
         </View>
       ) : null}
     </View>
-  );
-}
-
-function Aspa({ ancho, grosor, color, giro }: { ancho: number; grosor: number; color: string; giro: string }) {
-  return (
-    <View
-      style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        width: ancho,
-        height: grosor,
-        marginLeft: -ancho / 2,
-        marginTop: -grosor / 2,
-        borderRadius: grosor,
-        backgroundColor: color,
-        transform: [{ rotate: giro }],
-      }}
-    />
   );
 }

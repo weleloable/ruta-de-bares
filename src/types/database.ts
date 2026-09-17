@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Tipos del esquema. Escritos a mano contra supabase/migrations/ (0001 y
  * 0003): si cambia el SQL, cambia este fichero.
@@ -310,3 +311,284 @@ export type Database = {
     CompositeTypes: Record<string, never>;
   };
 };
+=======
+/**
+ * Tipos del esquema. Escritos a mano contra supabase/migrations/ (0001, 0003
+ * y 0004): si cambia el SQL, cambia este fichero.
+ *
+ * Se puede regenerar con:
+ *   npx supabase gen types typescript --project-id TU_REF > src/types/database.ts
+ */
+
+export type UserRole = 'admin' | 'user';
+
+export type ProfileRow = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RouteRow = {
+  id: string;
+  name: string;
+  description: string;
+  event_date: string | null;
+  is_published: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RouteBarRow = {
+  id: string;
+  route_id: string;
+  sort_order: number;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  radius_m: number;
+  opens_at: string;
+  closes_at: string;
+  notes: string;
+  created_at: string;
+};
+
+export type StampRow = {
+  id: string;
+  user_id: string;
+  route_bar_id: string;
+  stamped_at: string;
+  lat: number;
+  lng: number;
+  distance_m: number;
+};
+
+export type InviteRow = {
+  id: string;
+  token_hash: string;
+  label: string;
+  created_by: string;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
+  used_by: string | null;
+};
+
+// --- Tirate una cana (0004_tirate_una_cana.sql) -----------------------------
+
+/** 'seen' = Visto: abriste su ficha sin darle Me gusta, o lo quitaste (0004). */
+export type MatchVote = 'like' | 'seen';
+export type BeerQuestionState = 'none' | 'pending' | 'postponed' | 'accepted' | 'rejected';
+export type BeerAnswer = 'yes' | 'no' | 'later';
+export type MatchMessageKind = 'gif' | 'buzz' | 'question' | 'answer' | 'text';
+
+/** Catalogo de etiquetas y de GIFs: las dos unicas tablas match_* que la app lee. */
+export type MatchCatalogRow = {
+  id: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type MatchProfileState = {
+  is_active: boolean;
+  bio: string;
+  tag_ids: string[];
+  adult_confirmed: boolean;
+  has_activated_before: boolean;
+};
+
+export type MatchGridRow = {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  bio: string;
+  tag_ids: string[];
+  my_vote: MatchVote | null;
+  connection_id: string | null;
+  unread_count: number;
+};
+
+export type MatchInboxRow = {
+  connection_id: string;
+  other_user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  question_state: BeerQuestionState;
+  question_asked_by: string | null;
+  last_kind: MatchMessageKind | null;
+  last_sender_id: string | null;
+  last_at: string;
+  unread_count: number;
+};
+
+export type MatchConnectionDetail = {
+  connection_id: string;
+  route_id: string;
+  other_user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  question_state: BeerQuestionState;
+  question_asked_by: string | null;
+  question_asked_at: string | null;
+  question_answered_at: string | null;
+  postpone_count: number;
+  my_texts_sent: number;
+  other_texts_sent: number;
+  my_last_buzz_at: string | null;
+  server_now: string;
+};
+
+export type MatchMessageRow = {
+  id: string;
+  connection_id: string;
+  sender_id: string;
+  kind: MatchMessageKind;
+  gif_id: string | null;
+  answer: BeerAnswer | null;
+  body: string | null;
+  created_at: string;
+};
+
+type Insert<T, Opcionales extends keyof T> = Omit<T, Opcionales> & Partial<Pick<T, Opcionales>>;
+
+export type Database = {
+  public: {
+    Tables: {
+      profiles: {
+        Row: ProfileRow;
+        Insert: Insert<ProfileRow, 'display_name' | 'avatar_url' | 'role' | 'created_at' | 'updated_at'>;
+        Update: Partial<ProfileRow>;
+        Relationships: [];
+      };
+      routes: {
+        Row: RouteRow;
+        Insert: Insert<RouteRow, 'id' | 'description' | 'event_date' | 'is_published' | 'created_at' | 'updated_at'>;
+        Update: Partial<RouteRow>;
+        Relationships: [];
+      };
+      route_bars: {
+        Row: RouteBarRow;
+        Insert: Insert<RouteBarRow, 'id' | 'address' | 'radius_m' | 'notes' | 'created_at'>;
+        Update: Partial<RouteBarRow>;
+        Relationships: [];
+      };
+      stamps: {
+        Row: StampRow;
+        // Sin Insert util a proposito: los sellos solo se crean por claim_stamp().
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      invites: {
+        Row: InviteRow;
+        Insert: Insert<InviteRow, 'id' | 'label' | 'created_at' | 'used_at' | 'used_by'>;
+        Update: Partial<InviteRow>;
+        Relationships: [];
+      };
+      // Del resto de tablas match_* no hay entrada a proposito: no tienen
+      // privilegios para la app y todo pasa por las funciones de abajo, asi
+      // que un supabase.from('match_votes') ni siquiera compila.
+      match_tags: {
+        Row: MatchCatalogRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      match_gifs: {
+        Row: MatchCatalogRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      distance_m: {
+        Args: { lat1: number; lng1: number; lat2: number; lng2: number };
+        Returns: number;
+      };
+      claim_stamp: {
+        Args: { p_route_bar_id: string; p_lat: number; p_lng: number };
+        Returns: StampRow;
+      };
+      is_route_participant: {
+        Args: { p_route_id: string; p_user_id: string };
+        Returns: boolean;
+      };
+      match_get_profile: {
+        Args: Record<string, never>;
+        Returns: MatchProfileState[];
+      };
+      match_activate: {
+        Args: { p_adult_confirmed?: boolean; p_bio?: string | null; p_tag_ids?: string[] | null };
+        Returns: undefined;
+      };
+      match_deactivate: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      match_update_profile: {
+        Args: { p_bio: string; p_tag_ids?: string[] | null };
+        Returns: undefined;
+      };
+      match_grid: {
+        Args: { p_route_id: string };
+        Returns: MatchGridRow[];
+      };
+      match_mark_seen: {
+        Args: { p_route_id: string; p_target_id: string };
+        Returns: undefined;
+      };
+      match_set_like: {
+        Args: { p_route_id: string; p_target_id: string; p_liked: boolean };
+        Returns: { my_vote: MatchVote; connection_id: string | null }[];
+      };
+      match_inbox: {
+        Args: { p_route_id: string };
+        Returns: MatchInboxRow[];
+      };
+      match_get_connection: {
+        Args: { p_connection_id: string };
+        Returns: MatchConnectionDetail[];
+      };
+      match_fetch_messages: {
+        Args: { p_connection_id: string; p_after?: string | null };
+        Returns: MatchMessageRow[];
+      };
+      match_send_gif: {
+        Args: { p_connection_id: string; p_gif_id: string };
+        Returns: MatchMessageRow[];
+      };
+      match_send_buzz: {
+        Args: { p_connection_id: string };
+        Returns: MatchMessageRow[];
+      };
+      match_send_text: {
+        Args: { p_connection_id: string; p_body: string };
+        Returns: MatchMessageRow[];
+      };
+      match_ask_beer: {
+        Args: { p_connection_id: string };
+        Returns: MatchMessageRow[];
+      };
+      match_answer_beer: {
+        Args: { p_connection_id: string; p_answer: BeerAnswer };
+        Returns: { question_state: BeerQuestionState; is_open: boolean }[];
+      };
+    };
+    Enums: {
+      user_role: UserRole;
+    };
+    CompositeTypes: Record<string, never>;
+  };
+};
+>>>>>>> f992d72 (Tirate una cana: solo Me gusta, y "Visto" en lugar de No me gusta)

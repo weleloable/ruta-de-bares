@@ -25,16 +25,17 @@ import {
   teTocaResponder,
   validarPresentacion,
   vistaPreviaChat,
-  votoRompeConexion,
+  hayQueMarcarVisto,
+  quitarMeGustaRompeConexion,
   type EstadoTarjeta,
   type FilaBandeja,
 } from './reglas.ts';
 
 describe('estadoTarjeta', () => {
-  it('sin voto es nueva, con voto es tu voto', () => {
+  it('sin nada es nueva; abierta sin Me gusta es Visto; con Me gusta es Me gusta', () => {
     assert.equal(estadoTarjeta({ my_vote: null, connection_id: null }), 'nuevo');
+    assert.equal(estadoTarjeta({ my_vote: 'seen', connection_id: null }), 'visto');
     assert.equal(estadoTarjeta({ my_vote: 'like', connection_id: null }), 'me-gusta');
-    assert.equal(estadoTarjeta({ my_vote: 'dislike', connection_id: null }), 'no-me-gusta');
   });
 
   it('la conexion gana a tu voto: es lo que el servidor dice ahora mismo', () => {
@@ -43,12 +44,12 @@ describe('estadoTarjeta', () => {
 });
 
 describe('filtros de la grilla', () => {
-  const estados: EstadoTarjeta[] = ['nuevo', 'nuevo', 'me-gusta', 'no-me-gusta', 'conexion'];
+  const estados: EstadoTarjeta[] = ['nuevo', 'nuevo', 'me-gusta', 'visto', 'conexion'];
 
-  it('en el orden de la especificacion', () => {
+  it('en el orden de la especificacion, con Visto en lugar de No me gusta', () => {
     assert.deepEqual(
       FILTROS.map((f) => f.etiqueta),
-      ['Todos', 'Me gusta', 'No me gusta', 'Conexiones', 'Nuevos'],
+      ['Todos', 'Me gusta', 'Visto', 'Conexiones', 'Nuevos'],
     );
   });
 
@@ -56,14 +57,14 @@ describe('filtros de la grilla', () => {
     assert.deepEqual(contarPorFiltro(estados), {
       todos: 5,
       'me-gusta': 2,
-      'no-me-gusta': 1,
+      visto: 1,
       conexiones: 1,
       nuevos: 2,
     });
   });
 
   it('cada estado cae en Todos y en al menos otro filtro', () => {
-    for (const estado of ['nuevo', 'me-gusta', 'no-me-gusta', 'conexion'] as const) {
+    for (const estado of ['nuevo', 'me-gusta', 'visto', 'conexion'] as const) {
       const donde = FILTROS.filter((f) => pasaFiltro(f.id, estado)).map((f) => f.id);
       assert.ok(donde.includes('todos') && donde.length >= 2, `${estado} solo aparece en ${donde}`);
     }
@@ -212,12 +213,15 @@ describe('estadoPregunta', () => {
   });
 });
 
-describe('votoRompeConexion', () => {
-  it('solo pasar a No me gusta con conexion abierta pide confirmacion', () => {
-    assert.equal(votoRompeConexion('conexion', 'dislike'), true);
-    assert.equal(votoRompeConexion('conexion', 'like'), false);
-    assert.equal(votoRompeConexion('me-gusta', 'dislike'), false);
-    assert.equal(votoRompeConexion('nuevo', 'dislike'), false);
+describe('ficha: Visto y quitar Me gusta', () => {
+  it('solo quitar el Me gusta de una conexion pide confirmacion', () => {
+    assert.equal(quitarMeGustaRompeConexion('conexion'), true);
+    assert.equal(quitarMeGustaRompeConexion('me-gusta'), false);
+  });
+
+  it('abrir la ficha apunta Visto solo si aun no habia nada, como el servidor', () => {
+    assert.equal(hayQueMarcarVisto('nuevo'), true);
+    for (const estado of ['me-gusta', 'visto', 'conexion'] as const) assert.equal(hayQueMarcarVisto(estado), false);
   });
 });
 

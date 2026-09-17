@@ -14,7 +14,7 @@ import { codigoErrorCana, describirErrorCana } from './reglas';
 
 /**
  * Llamadas de "Tirate una cana". Solo funciones match_* y los catalogos: las
- * tablas no tienen privilegios para la app (ver 0003_tirate_una_cana.sql).
+ * tablas no tienen privilegios para la app (ver 0004_tirate_una_cana.sql).
  * Cada error sale ya traducido para ensenarlo tal cual.
  */
 
@@ -76,19 +76,29 @@ export async function getMatchGrid(routeId: string): Promise<MatchGridRow[]> {
   return data ?? [];
 }
 
-/** Vota y devuelve la conexion si el voto la ha abierto (o sigue abierta). */
-export async function voteMatch(
+/**
+ * Da o quita un Me gusta. Quitarlo deja a la persona en Visto. Devuelve tu
+ * voto y la conexion si el Me gusta la ha abierto (o sigue abierta).
+ */
+export async function setMatchLike(
   routeId: string,
   targetId: string,
-  value: MatchVote,
-): Promise<{ connectionId: string | null }> {
-  const { data, error } = await supabase.rpc('match_vote', {
+  liked: boolean,
+): Promise<{ myVote: MatchVote; connectionId: string | null }> {
+  const { data, error } = await supabase.rpc('match_set_like', {
     p_route_id: routeId,
     p_target_id: targetId,
-    p_value: value,
+    p_liked: liked,
   });
   if (error) fallo(error);
-  return { connectionId: data?.[0]?.connection_id ?? null };
+  const [fila] = data ?? [];
+  return { myVote: fila?.my_vote ?? (liked ? 'like' : 'seen'), connectionId: fila?.connection_id ?? null };
+}
+
+/** Apunta que has abierto su ficha (Visto). No rebaja un Me gusta. */
+export async function markMatchSeen(routeId: string, targetId: string): Promise<void> {
+  const { error } = await supabase.rpc('match_mark_seen', { p_route_id: routeId, p_target_id: targetId });
+  if (error) fallo(error);
 }
 
 /** Conexiones abiertas; primero lo que espera tu respuesta (lo ordena el servidor). */
