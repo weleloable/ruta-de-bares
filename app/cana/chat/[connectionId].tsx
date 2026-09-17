@@ -40,8 +40,8 @@ import {
   fusionarMensajes,
 } from '../../../src/features/match/reglas';
 import { SelectorGif } from '../../../src/features/match/SelectorGif';
+import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
 import { formatDuration } from '../../../src/features/stamps/rules';
-import { confirmar } from '../../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
 import { useNow } from '../../../src/lib/useNow';
 import { useSondeo } from '../../../src/lib/useSondeo';
@@ -69,6 +69,7 @@ export default function ChatCana() {
   const [perdida, setPerdida] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [confirmandoNo, setConfirmandoNo] = useState(false);
   const [eligiendoGif, setEligiendoGif] = useState(false);
   const [texto, setTexto] = useState('');
 
@@ -150,17 +151,17 @@ export default function ChatCana() {
     }
   }
 
-  async function responder(respuesta: BeerAnswer) {
-    if (!detalle) return;
+  function responder(respuesta: BeerAnswer) {
+    // "No" cierra la conexion y borra el chat: primero se confirma.
     if (respuesta === 'no') {
-      const seguro = await confirmar({
-        titulo: `Decir que no a ${detalle.display_name}`,
-        mensaje: 'Se cerrará la conexión y se borrará el chat.',
-        aceptar: 'Decir que no',
-        destructiva: true,
-      });
-      if (!seguro) return;
+      setConfirmandoNo(true);
+      return;
     }
+    void guardarRespuesta(respuesta);
+  }
+
+  async function guardarRespuesta(respuesta: BeerAnswer) {
+    if (!detalle) return;
     setEnviando(true);
     setError(null);
     try {
@@ -174,6 +175,7 @@ export default function ChatCana() {
       fallo(e, 'No se pudo guardar tu respuesta.');
     } finally {
       setEnviando(false);
+      setConfirmandoNo(false);
     }
   }
 
@@ -252,7 +254,7 @@ export default function ChatCana() {
             nombre={nombre}
             ultimoAplazamiento={pregunta.ultimoAplazamiento}
             ocupado={enviando}
-            onResponder={(respuesta) => void responder(respuesta)}
+            onResponder={responder}
           />
         ) : null}
 
@@ -331,6 +333,17 @@ export default function ChatCana() {
           setEligiendoGif(false);
           void enviar(() => sendMatchGif(detalle.connection_id, gifId));
         }}
+      />
+
+      <DialogoConfirmar
+        visible={confirmandoNo}
+        titulo={`Decir que no a ${nombre}`}
+        mensaje="Se cerrará la conexión y se borrará el chat."
+        textoConfirmar="Decir que no"
+        destructivo
+        ocupado={enviando}
+        onConfirmar={() => void guardarRespuesta('no')}
+        onCancelar={() => setConfirmandoNo(false)}
       />
     </SafeAreaView>
   );

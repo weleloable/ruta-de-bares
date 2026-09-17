@@ -27,7 +27,7 @@ import {
 import { LeyendaVasos, TarjetaPersona } from '../../src/features/match/TarjetaPersona';
 import { VasoCana, type NivelVaso } from '../../src/features/match/VasoCana';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
-import { confirmar } from '../../src/lib/confirmar';
+import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 import { useSondeo } from '../../src/lib/useSondeo';
 import type { MatchGridRow, MatchInboxRow, MatchProfileState } from '../../src/types/database';
@@ -87,6 +87,7 @@ export default function CanaScreen() {
   const [error, setError] = useState<string | null>(null);
   const [mayorDeEdad, setMayorDeEdad] = useState(false);
   const [cambiando, setCambiando] = useState(false);
+  const [confirmandoDesactivar, setConfirmandoDesactivar] = useState(false);
 
   const rutaId = activeRoute?.id ?? null;
 
@@ -154,21 +155,16 @@ export default function CanaScreen() {
     }
   }
 
-  async function onDesactivar() {
-    const seguro = await confirmar({
-      titulo: 'Desactivar Tírate una caña',
-      mensaje:
-        'Dejarás de aparecer en la grilla y en los chats de tu ruta. Tus votos y conexiones se guardan para cuando vuelvas a activarlo.',
-      aceptar: 'Desactivar',
-    });
-    if (!seguro) return;
+  async function onConfirmarDesactivar() {
     setCambiando(true);
     setError(null);
     try {
       await deactivateMatch();
+      setConfirmandoDesactivar(false);
       await cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo desactivar.');
+      setConfirmandoDesactivar(false);
     } finally {
       setCambiando(false);
     }
@@ -246,7 +242,12 @@ export default function CanaScreen() {
               >
                 <Text style={styles.accionTexto}>Editar perfil</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" style={styles.accion} onPress={onDesactivar} disabled={cambiando}>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.accion}
+                onPress={() => setConfirmandoDesactivar(true)}
+                disabled={cambiando}
+              >
                 <Text style={styles.accionTexto}>Desactivar</Text>
               </Pressable>
             </View>
@@ -299,6 +300,16 @@ export default function CanaScreen() {
           </>
         )}
       </ScrollView>
+
+      <DialogoConfirmar
+        visible={confirmandoDesactivar}
+        titulo="Desactivar Tírate una caña"
+        mensaje="Dejarás de aparecer en la grilla y en los chats de tu ruta. Tus votos y conexiones se guardan para cuando vuelvas a activarlo."
+        textoConfirmar="Desactivar"
+        ocupado={cambiando}
+        onConfirmar={onConfirmarDesactivar}
+        onCancelar={() => setConfirmandoDesactivar(false)}
+      />
     </SafeAreaView>
   );
 }

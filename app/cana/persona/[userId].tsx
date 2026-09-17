@@ -14,8 +14,8 @@ import {
 } from '../../../src/features/match/reglas';
 import { ASPECTO } from '../../../src/features/match/TarjetaPersona';
 import { VasoCana } from '../../../src/features/match/VasoCana';
+import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
 import { useActiveRoute } from '../../../src/features/routes/ActiveRouteProvider';
-import { confirmar } from '../../../src/lib/confirmar';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
 import type { MatchGridRow } from '../../../src/types/database';
 
@@ -37,6 +37,7 @@ export default function PersonaCana() {
   const [etiquetas, setEtiquetas] = useState<Map<string, string>>(new Map());
   const [cargando, setCargando] = useState(true);
   const [cambiando, setCambiando] = useState(false);
+  const [confirmandoQuitar, setConfirmandoQuitar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -92,22 +93,23 @@ export default function PersonaCana() {
 
   const teGusta = persona.my_vote === 'like';
 
-  async function alternarMeGusta() {
-    if (!persona || !rutaId || cambiando) return;
+  function alternarMeGusta() {
+    if (cambiando) return;
+    // Quitarlo en una conexion la cierra y borra el chat: primero se confirma.
     if (teGusta && quitarMeGustaRompeConexion(estado)) {
-      const seguro = await confirmar({
-        titulo: 'Quitar tu Me gusta',
-        mensaje: `Se cerrará la conexión con ${persona.display_name} y se borrará vuestro chat.`,
-        aceptar: 'Quitar Me gusta',
-        destructiva: true,
-      });
-      if (!seguro) return;
+      setConfirmandoQuitar(true);
+      return;
     }
+    void guardarMeGusta(!teGusta);
+  }
+
+  async function guardarMeGusta(dar: boolean) {
+    if (!persona || !rutaId) return;
     setCambiando(true);
     setError(null);
     setAviso(null);
     try {
-      const { connectionId } = await setMatchLike(rutaId, persona.user_id, !teGusta);
+      const { connectionId } = await setMatchLike(rutaId, persona.user_id, dar);
       if (connectionId && !persona.connection_id) {
         setAviso(`¡${persona.display_name} y tú os habéis dado me gusta! Ya sois una conexión.`);
       }
@@ -116,6 +118,7 @@ export default function PersonaCana() {
       setError(e instanceof Error ? e.message : 'No se pudo guardar tu Me gusta.');
     } finally {
       setCambiando(false);
+      setConfirmandoQuitar(false);
     }
   }
 
@@ -179,7 +182,7 @@ export default function PersonaCana() {
         {error ? <Banner tone="error">{error}</Banner> : null}
 
         <View style={styles.meGustaBloque}>
-          <BotonMeGusta activo={teGusta} ocupado={cambiando} onPress={() => void alternarMeGusta()} />
+          <BotonMeGusta activo={teGusta} ocupado={cambiando} onPress={alternarMeGusta} />
           {teGusta ? (
             <Text style={[typography.muted, styles.centrado]}>
               {persona.connection_id
@@ -210,6 +213,17 @@ export default function PersonaCana() {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <DialogoConfirmar
+        visible={confirmandoQuitar}
+        titulo="Quitar tu Me gusta"
+        mensaje={`Se cerrará la conexión con ${persona.display_name} y se borrará vuestro chat.`}
+        textoConfirmar="Quitar Me gusta"
+        destructivo
+        ocupado={cambiando}
+        onConfirmar={() => void guardarMeGusta(false)}
+        onCancelar={() => setConfirmandoQuitar(false)}
+      />
     </SafeAreaView>
   );
 }
