@@ -101,7 +101,12 @@ create or replace function public.create_route_invite(
 returns table (invite_id uuid, invite_token text, invite_expires_at timestamptz)
 language plpgsql
 security definer
-set search_path = public
+-- extensions y no solo public: en un proyecto de Supabase pgcrypto vive en el
+-- esquema `extensions`, no en `public` (la 0001 hace `create extension if not
+-- exists pgcrypto` sin `with schema`, que es un no-op si Supabase ya la trae
+-- preinstalada alli, como suele venir de fabrica). Sin esto, gen_random_bytes()
+-- de mas abajo revienta con "function gen_random_bytes(integer) does not exist".
+set search_path = public, extensions
 as $$
 declare
   v_token text;
