@@ -38,10 +38,14 @@ Deno.serve(async (req) => {
 
   const email = (body.email as string).trim().toLowerCase();
   const password = body.password as string;
+  // Sin espacios y <= 30: profiles_display_name_formato (migracion 0003) exige
+  // lo mismo. Si el nombre elegido ya lo tiene otro rutero, handle_new_user
+  // (el trigger que crea la fila de profiles) le anade "-2", "-3"... el alta
+  // nunca falla por esto, solo cambia el nombre final.
   const displayName =
-    typeof body.displayName === 'string' && body.displayName.trim().length > 0
-      ? body.displayName.trim().slice(0, 80)
-      : email.split('@')[0];
+    typeof body.displayName === 'string' && body.displayName.replace(/\s/g, '').length > 0
+      ? body.displayName.replace(/\s/g, '').slice(0, 30)
+      : email.split('@')[0].slice(0, 30);
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -98,8 +102,12 @@ Deno.serve(async (req) => {
   }
 
   // Paso 3: cerrar el circulo. El trigger handle_new_user ya creo el perfil con
-  // rol 'user'; aqui solo se fija el nombre y se marca quien uso la invitacion.
-  // Si algo de esto falla la cuenta ya existe y es usable, asi que no se deshace.
+  // rol 'user' y este mismo displayName (via user_metadata); aqui solo se
+  // marca quien uso la invitacion, y se reintenta el nombre por si acaso.
+  // Si displayName ya lo tiene otro rutero este UPDATE choca con el indice
+  // unico y no hace nada: el perfil se queda con el "-2"/"-3" que ya le puso
+  // el trigger. No se comprueba el error a proposito, la cuenta ya existe y es
+  // usable de todas formas.
   await admin
     .from('profiles')
     .update({ display_name: displayName })

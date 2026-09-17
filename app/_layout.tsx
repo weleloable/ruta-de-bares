@@ -4,13 +4,13 @@ import { StatusBar } from 'expo-status-bar';
 
 import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
-import { iniciarPwa } from '../src/features/pwa/pwa';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
+import { iniciarPwa } from '../src/lib/pwa';
 import { colors, fonts } from '../src/lib/theme';
 
-// Al cargar el modulo y no en un efecto: el navegador lanza el aviso de
-// instalacion (beforeinstallprompt) una sola vez al cargar la pagina, y si
-// nadie lo escucha en ese momento se pierde. En nativo no hace nada.
+// Al cargar el modulo y no en un efecto: el service worker se registra en
+// cuanto la pagina termina de cargar, sin esperar a que monte ningun
+// componente. En nativo no hace nada.
 iniciarPwa();
 
 /**

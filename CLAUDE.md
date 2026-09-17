@@ -12,7 +12,7 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 - **4 pestanas** (`app/(tabs)/`): Sellos (compostelana), Ruta (mapa con los
   bares numerados y el trazado: Google en nativo, OpenStreetMap en web), Editor
   (solo admins: crear rutas, anadir bares tocando el mapa, horarios, publicar),
-  Mi perfil (+ panel de invitaciones para admins, + "Instalar la app" en web).
+  Mi perfil (+ editor de rutas y panel de invitaciones para admins).
 - **App instalable (PWA)**: la web se instala desde el navegador en Android e
   iPhone, sin APK ni tienda. Ver seccion 8 de `docs/SETUP.md`.
 - **Sellar un bar** exige tres cosas a la vez: ruta publicada, dentro de la
@@ -59,6 +59,7 @@ public/                   solo web: index.html, manifest.json, sw.js, icons/
 supabase/
   migrations/0001_init.sql  tablas, RLS, claim_stamp, bucket avatars
   migrations/0002_*.sql     el SQL Editor y service_role pueden cambiar roles
+  migrations/0003_*.sql     nombre visible unico, sin espacios, <= 30 caracteres
   functions/                create-invite, redeem-invite (Edge Functions)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -85,7 +86,8 @@ supabase functions deploy redeem-invite --no-verify-jwt        # obligatorio en 
 ```
 
 Deploy = 1) pegar en el SQL Editor de Supabase cada fichero de
-`supabase/migrations/` en orden (`0001_init.sql`, `0002_guard_role_sql_editor.sql`),
+`supabase/migrations/` en orden (`0001_init.sql`, `0002_guard_role_sql_editor.sql`,
+`0003_nombre_unico.sql`),
 2) desplegar las dos Edge Functions, 3) build con EAS. Paso a paso
 en [docs/SETUP.md](docs/SETUP.md).
 
@@ -135,6 +137,14 @@ en [docs/SETUP.md](docs/SETUP.md).
 - **Deploy de migraciones = pegar cada fichero de `supabase/migrations/` en
   orden** en el SQL Editor. No se edita una migracion ya publicada: se anade la
   siguiente.
+- **Nombre visible unico** (`0003_nombre_unico.sql`): sin distinguir
+  mayusculas, sin espacios, <= 30 caracteres. La parte delicada no es la regla
+  sino que el alta no falle si el nombre por defecto (el prefijo del email, o
+  el que se escribe en la invitacion) ya esta cogido: `handle_new_user` corre
+  en la misma transaccion que la creacion de la cuenta, asi que un choque ahi
+  tumbaria el alta entera. En vez de eso el propio trigger prueba "-2", "-3"...
+  hasta encontrar uno libre. Probado contra Postgres real (PGlite) en
+  `tests/migration-0003.test.ts`.
 - **Mapa web con Leaflet + OpenStreetMap, nativo con Google** (`*.web.tsx` +
   `src/lib/mapaWeb.ts`): Leaflet toca `window` al importarse y tumbaria la app
   nativa. Solo se importa desde variantes `.web.*`; lo vigila
@@ -153,7 +163,7 @@ en [docs/SETUP.md](docs/SETUP.md).
   de "sin conexion": cachear HTML/JS deja a la gente en la version vieja tras
   cada despliegue. Subir `VERSION` al cambiarlo.
 - **Manifest e icono de iOS se enlazan en tiempo de ejecucion**
-  (`src/features/pwa/pwa.web.ts`), no en `public/index.html`: Expo no reescribe
+  (`src/lib/pwa.web.ts`), no en `public/index.html`: Expo no reescribe
   ese fichero con `experiments.baseUrl`, y la ruta difiere entre localhost (`/`)
   y GitHub Pages (`/ruta-de-bares/`).
 - **Export web local en Windows**: `MSYS_NO_PATHCONV=1` delante de

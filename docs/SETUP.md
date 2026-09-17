@@ -17,12 +17,17 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**.
 2. [`supabase/migrations/0002_guard_role_sql_editor.sql`](../supabase/migrations/0002_guard_role_sql_editor.sql)
    y **Run**. Sin esta, el punto 3 falla con `ROLE_CHANGE_FORBIDDEN`.
+3. [`supabase/migrations/0003_nombre_unico.sql`](../supabase/migrations/0003_nombre_unico.sql)
+   y **Run**. Hace el "Nombre de bartalla" unico (sin distinguir mayusculas),
+   sin espacios y de hasta 30 caracteres.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
 `avatars`. La 0002 deja que el propio SQL Editor (y la `service_role`) cambien
-el rol de un perfil; un usuario de la app sigue sin poder. Las dos se pueden
-volver a ejecutar sin romper nada.
+el rol de un perfil; un usuario de la app sigue sin poder. La 0003 anade la
+regla de nombre unico y hace que el alta nunca falle por una coincidencia:
+si el nombre por defecto ya esta cogido, le anade "-2", "-3"... Las tres se
+pueden volver a ejecutar sin romper nada.
 
 ## 2. Cerrar el registro publico
 
@@ -269,16 +274,18 @@ No hace falta APK ni tienda: la web es una **PWA** y se instala desde el navegad
 
 | Movil | Como |
 | --- | --- |
-| **Android** (Chrome) | *Mi perfil > Instalar la app > Instalar app*, o menu de Chrome > "Instalar aplicacion" |
+| **Android** (Chrome) | Menu de Chrome > "Instalar aplicacion" (o el icono de instalar de la barra de direcciones) |
 | **iPhone / iPad** | Abrir en **Safari** > boton Compartir > "Anadir a pantalla de inicio" |
 
-La tarjeta *Instalar la app* de Mi perfil detecta el dispositivo: si el
-navegador permite instalar con un toque ensena el boton; si no (iPhone, otros
-navegadores), ensena los pasos. Una vez instalada se abre a pantalla completa
-con el icono del sello "RB".
+No hay un boton propio para instalar: el navegador ofrece el suyo cuando
+quiere (Chrome/Edge en Android y escritorio) o, en iPhone, se hace a mano
+desde el menu Compartir. Una vez instalada se abre a pantalla completa con el
+icono del sello "RB".
 
 Piezas: `public/manifest.json`, `public/icons/`, `public/sw.js` y
-`src/features/pwa/`. Dos decisiones que no son obvias:
+`src/lib/pwa.web.ts` (enlaza el manifest y registra el service worker; la app
+nativa usa `src/lib/pwa.ts`, que no hace nada). Dos decisiones que no son
+obvias:
 
 - **El service worker no cachea la app.** Todo va a la red; solo guarda una
   pagina de "sin conexion". Un service worker que cachea HTML y JS deja a la

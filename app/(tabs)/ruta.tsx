@@ -52,12 +52,14 @@ export default function RutaScreen() {
         ? huecosDesdeMedidas({
             altoSuperior,
             altoPie,
-            margenSeguroArriba: insets.top,
+            // 0 y no insets.top: el mapa empieza debajo de BarraSuperior, que ya
+            // se come el notch. useSafeAreaInsets lo sigue devolviendo igual.
+            margenSeguroArriba: 0,
             margenSeguroAbajo: insets.bottom,
             aire: AIRE_PX,
           })
         : undefined,
-    [altoSuperior, altoPie, insets.top, insets.bottom],
+    [altoSuperior, altoPie, insets.bottom],
   );
 
   // Redondeado a pixel y sin actualizar si no cambia: onLayout se dispara a
@@ -85,7 +87,7 @@ export default function RutaScreen() {
 
   if (!activeRoute) {
     return (
-      <SafeAreaView style={styles.pantalla}>
+      <SafeAreaView style={styles.pantalla} edges={['bottom', 'left', 'right']}>
         <EmptyState
           title="Sin ruta que dibujar"
           body="Cuando haya una ruta publicada veras aqui sus bares y el trazado que los une."
@@ -105,7 +107,7 @@ export default function RutaScreen() {
         huecos={huecos}
       />
 
-      <SafeAreaView style={styles.superpuesto} pointerEvents="box-none" edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.superpuesto} pointerEvents="box-none" edges={['bottom']}>
         {/* Cabecera y aviso juntos: los dos tapan la parte de arriba del mapa. */}
         <View pointerEvents="box-none" onLayout={medirSuperior}>
           <View style={styles.cabecera}>
