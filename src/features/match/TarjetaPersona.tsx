@@ -106,7 +106,8 @@ export function TarjetaPersona({ persona, onPress }: { persona: MatchGridRow; on
           <View style={aspecto.apagada ? styles.apagada : null}>
             <AvatarCana
               nombre={persona.display_name}
-              foto={persona.avatar_url}
+              // La grilla pinta todas las fotos de la ruta a la vez: la miniatura (0006).
+              foto={persona.avatar_thumb_url ?? persona.avatar_url}
               redondo={false}
               tamanoIniciales={24}
               style={styles.foto}

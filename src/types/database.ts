@@ -13,6 +13,8 @@ export type ProfileRow = {
   id: string;
   display_name: string;
   avatar_url: string | null;
+  /** Version de 400 px para las listas (0006). NULL en fotos anteriores. */
+  avatar_thumb_url: string | null;
   role: UserRole;
   created_at: string;
   updated_at: string;
@@ -107,7 +109,10 @@ export type MatchProfileState = {
 export type MatchGridRow = {
   user_id: string;
   display_name: string;
+  /** Foto grande: la ficha se abre desde esta misma fila. */
   avatar_url: string | null;
+  /** La que pinta la casilla de la grilla; cae en avatar_url si no hay (0006). */
+  avatar_thumb_url: string | null;
   bio: string;
   tag_ids: string[];
   my_vote: MatchVote | null;
@@ -163,7 +168,10 @@ export type Database = {
     Tables: {
       profiles: {
         Row: ProfileRow;
-        Insert: Insert<ProfileRow, 'display_name' | 'avatar_url' | 'role' | 'created_at' | 'updated_at'>;
+        Insert: Insert<
+          ProfileRow,
+          'display_name' | 'avatar_url' | 'avatar_thumb_url' | 'role' | 'created_at' | 'updated_at'
+        >;
         Update: Partial<ProfileRow>;
         Relationships: [];
       };

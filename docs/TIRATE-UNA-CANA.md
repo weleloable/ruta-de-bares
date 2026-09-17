@@ -124,6 +124,14 @@ Los 8 actuales son **provisionales**: dibujados para el prototipo con la paleta
 de la app, sin derechos de terceros. Para cambiarlos, mismo id o una migracion
 nueva que actualice `match_gifs`.
 
+## Fotos
+
+La grilla pinta la foto de todas las personas de la ruta a la vez, asi que la
+app sube dos versiones (`src/features/profile/imagenes.ts`): 1080 px para la
+ficha y 400 px para la casilla, que es la que devuelven `match_grid`,
+`match_inbox` y `match_get_connection` (0006). Con fotos reales de movil eso
+baja una grilla de 200 personas de ~574 MB a ~4 MB.
+
 ## Sin tiempo real
 
 El chat pregunta cada 4 s (polling) mientras esta abierto y visible; la

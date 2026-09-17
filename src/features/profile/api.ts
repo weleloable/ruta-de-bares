@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
+import { prepararAvatar, type FotoLista } from './redimensionar';
 
 export { initials } from './initials';
 
@@ -29,7 +30,7 @@ export async function updateDisplayName(userId: string, displayName: string): Pr
   return data;
 }
 
-export type PickedImage = { uri: string; mimeType: string };
+export type PickedImage = { uri: string; mimeType: string; width: number; height: number };
 
 /** Abre la galeria recortando en cuadrado. null = el usuario cancelo. */
 export async function pickAvatar(): Promise<PickedImage | null> {
@@ -40,45 +41,55 @@ export async function pickAvatar(): Promise<PickedImage | null> {
 
   const resultado = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
+    // Solo recorta en nativo; en web no existe, por eso el cuadrado se recorta
+    // despues con recorteCuadrado (imagenes.ts).
     allowsEditing: true,
     aspect: [1, 1],
-    quality: 0.8,
+    quality: 1,
   });
 
   if (resultado.canceled || resultado.assets.length === 0) return null;
   const asset = resultado.assets[0];
-  return { uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg' };
+  // La calidad se aplica al guardar las dos versiones, no aqui: comprimir dos
+  // veces (picker + manipulator) ensucia la foto sin ahorrar nada.
+  return { uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg', width: asset.width, height: asset.height };
 }
 
-/**
- * Sube la imagen y devuelve su URL publica.
- *
- * La ruta es `<uid>/avatar-<timestamp>.<ext>`: la policy de storage exige que la
- * primera carpeta sea el uid, y el timestamp evita que la CDN sirva la foto
- * anterior cacheada.
- */
-export async function uploadAvatar(userId: string, image: PickedImage): Promise<string> {
-  const extension = image.mimeType.includes('png') ? 'png' : 'jpg';
-  const ruta = `${userId}/avatar-${Date.now()}.${extension}`;
-
+async function subirFichero(ruta: string, foto: FotoLista): Promise<string> {
   // fetch(uri).arrayBuffer() es la via soportada en React Native: no hay
   // File/Blob nativos fiables, y supabase-js acepta ArrayBuffer directamente.
-  const respuesta = await fetch(image.uri);
+  const respuesta = await fetch(foto.uri);
   if (!respuesta.ok) throw new Error('No se pudo leer la imagen elegida.');
   const bytes = await respuesta.arrayBuffer();
 
-  const { error: uploadError } = await supabase.storage
+  const { error } = await supabase.storage
     .from(AVATAR_BUCKET)
-    .upload(ruta, bytes, { contentType: image.mimeType, upsert: true });
-  if (uploadError) throw new Error(uploadError.message);
+    .upload(ruta, bytes, { contentType: foto.mimeType, upsert: true });
+  if (error) throw new Error(error.message);
 
-  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(ruta);
+  return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(ruta).data.publicUrl;
+}
+
+/**
+ * Sube la foto en dos tamanos (ficha y miniatura) y devuelve sus URLs.
+ *
+ * La ruta es `<uid>/avatar-<timestamp>.jpg`: la policy de storage exige que la
+ * primera carpeta sea el uid, y el timestamp evita que la CDN sirva la foto
+ * anterior cacheada. La miniatura es la que pinta la grilla de la cana, donde
+ * se ven todas las fotos de la ruta a la vez (ver imagenes.ts).
+ */
+export async function uploadAvatar(userId: string, image: PickedImage): Promise<{ avatarUrl: string; thumbUrl: string }> {
+  const { foto, miniatura } = await prepararAvatar(image.uri, image.width, image.height);
+  const sello = Date.now();
+
+  const avatarUrl = await subirFichero(`${userId}/avatar-${sello}.jpg`, foto);
+  const thumbUrl = await subirFichero(`${userId}/avatar-${sello}-mini.jpg`, miniatura);
 
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ avatar_url: data.publicUrl })
+    .update({ avatar_url: avatarUrl, avatar_thumb_url: thumbUrl })
     .eq('id', userId);
   if (profileError) throw new Error(profileError.message);
 
-  return data.publicUrl;
+  return { avatarUrl, thumbUrl };
 }

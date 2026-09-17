@@ -110,7 +110,7 @@ export default function PresentacionCana() {
           ) : null}
 
           <Card style={styles.tarjetaFoto}>
-            <AvatarCana nombre={nombre} foto={profile?.avatar_url ?? null} tamano={64} />
+            <AvatarCana nombre={nombre} foto={profile?.avatar_thumb_url ?? profile?.avatar_url ?? null} tamano={64} />
             <View style={styles.textoFoto}>
               <Text style={typography.cardTitle}>{nombre}</Text>
               <Pressable accessibilityRole="button" onPress={onFoto} disabled={subiendoFoto}>
