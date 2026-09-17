@@ -19,6 +19,14 @@ import init from 'pg-query-emscripten';
  * (lista de verificacion de docs/SETUP.md): que las tablas referenciadas
  * existan, que las policies dejen pasar a quien deben, y que claim_stamp
  * conceda y niegue sellos como toca.
+ *
+ * IMPORTANTE: este fichero mira SOLO la 0001, y la 0001 ya no describe la app
+ * actual. La 0002 cambio la guarda de roles, la 0003 el nombre visible y la
+ * 0004 el modelo de acceso entero (borra `invites`, reescribe `claim_stamp` y
+ * las policies de `routes`). Aqui se congela lo que se publico, porque una
+ * migracion ya ejecutada en bases de datos reales no se edita nunca. El
+ * comportamiento VIVO lo prueban migration-0002/0003/0004.test.ts contra
+ * Postgres de verdad.
  */
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,7 +85,12 @@ describe('0001_init.sql', () => {
     assert.ok(cuerpo[0].includes('security definer'), 'claim_stamp sin security definer');
   });
 
-  it('invites guarda la huella del token, nunca el token', () => {
+  // OJO al leer esto: describe la 0001 tal y como se publico, NO como funciona
+  // la app hoy. La 0004 borra la tabla `invites` entera y la sustituye por
+  // `route_invites`, que SI guarda el token en claro (a proposito, ver su
+  // cabecera). Esta comprobacion sigue aqui porque una migracion publicada no
+  // se edita: congela lo que ya se ejecuto en bases de datos reales.
+  it('invites (0001, ya retirada) guardaba la huella del token, nunca el token', () => {
     assert.match(migracion, /token_hash text not null unique/);
     assert.ok(
       !/\btoken text\b/.test(migracion),

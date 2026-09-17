@@ -20,31 +20,47 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
 3. [`supabase/migrations/0003_nombre_unico.sql`](../supabase/migrations/0003_nombre_unico.sql)
    y **Run**. Hace el "Nombre de bartalla" unico (sin distinguir mayusculas),
    sin espacios y de hasta 30 caracteres.
+4. [`supabase/migrations/0004_invitaciones_por_ruta.sql`](../supabase/migrations/0004_invitaciones_por_ruta.sql)
+   y **Run**. Cambia el modelo de acceso entero: ver el aviso de abajo antes de
+   pegarla.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
 `avatars`. La 0002 deja que el propio SQL Editor (y la `service_role`) cambien
 el rol de un perfil; un usuario de la app sigue sin poder. La 0003 anade la
 regla de nombre unico y hace que el alta nunca falle por una coincidencia:
-si el nombre por defecto ya esta cogido, le anade "-2", "-3"... Las tres se
+si el nombre por defecto ya esta cogido, le anade "-2", "-3"... Las cuatro se
 pueden volver a ejecutar sin romper nada.
 
-## 2. Cerrar el registro publico
+> **La 0004 borra datos y cambia quien ve que.** Hace tres cosas de las que no
+> hay vuelta atras con solo re-ejecutarla:
+>
+> - **Borra la tabla `invites`** de la 0001. Sus filas eran huellas de tokens
+>   que ya no abren nada, porque la via que los canjeaba desaparece. Si quieres
+>   guardarlas, copia la tabla antes de pegar la migracion.
+> - **Las rutas dejan de verse por estar publicadas**: a partir de aqui solo se
+>   ve una ruta si eres miembro de ella (tabla `route_members` nueva) o admin.
+> - **Mete como miembros a quien ya tenia sellos**, para que nadie que estuviera
+>   a mitad de una ruta se quede sin verla. Si tu proyecto esta vacio, no hace nada.
 
-Este paso es el que hace que la app sea solo por invitacion. Si te lo saltas,
-cualquiera puede crearse una cuenta.
+## 2. Abrir el registro publico
 
-**Project Settings > Authentication > User Signups**: apaga
-**"Allow new users to sign up"** y guarda.
+Desde la 0004 **cualquiera puede crearse una cuenta**: el control ya no esta en
+quien tiene cuenta, sino en a que rutas le invitan. Una cuenta recien creada no
+ve ninguna ruta hasta que canjea una invitacion.
 
-Si en algun momento activas un proveedor OAuth (Google, GitHub), desactiva
-tambien el registro en cada uno: **Authentication > Providers**. Un proveedor
-abierto es otra puerta de alta.
+**Project Settings > Authentication > User Signups**: enciende
+**"Allow new users to sign up"** y guarda. Sin esto, la pantalla de registro
+falla con "El registro esta desactivado en el servidor".
 
-Que esto no rompe el canje de invitaciones: la funcion `redeem-invite` crea la
-cuenta con la API de administracion (`auth.admin.createUser`) usando la
-`service_role`, que no pasa por el endpoint publico de registro. El punto 3 de
-la lista de verificacion comprueba justo eso.
+**Authentication > Providers > Email**: apaga **"Confirm email"** si no tienes
+SMTP configurado. Con la confirmacion encendida y sin SMTP, la gente se registra
+y nunca recibe el correo, asi que no puede entrar. La app lo detecta y dice
+"Revisa tu correo", pero ese correo no llegara.
+
+> Esto es un cambio de postura deliberado respecto a como nacio el proyecto, no
+> un descuido. Antes el registro estaba cerrado porque tener cuenta = ver todo;
+> ahora tener cuenta no da acceso a nada.
 
 ## 3. Tu cuenta de administrador
 
@@ -102,27 +118,15 @@ commit;
 `alter table` toma un bloqueo exclusivo sobre `profiles` hasta el `commit`, asi
 que ninguna peticion de la app se cuela con el trigger apagado.
 
-## 4. Desplegar las dos Edge Functions
+## 4. Edge Functions: ya no hay
 
-Necesitas la [CLI de Supabase](https://supabase.com/docs/guides/local-development/cli/getting-started).
+Este paso existia para desplegar `create-invite` y `redeem-invite`. La 0004 las
+sustituye por dos funciones de Postgres (`create_route_invite` y
+`redeem_route_invite`), asi que **no hay nada que desplegar**: van dentro de la
+migracion que ya pegaste en el paso 1.
 
-```bash
-supabase login
-supabase link --project-ref TU_REF          # la ref sale de la url del dashboard
-
-supabase functions deploy create-invite
-supabase functions deploy redeem-invite --no-verify-jwt
-```
-
-El `--no-verify-jwt` de la segunda es imprescindible y no es un agujero: quien
-canjea una invitacion todavia no tiene cuenta, asi que no puede tener JWT. Lo
-que autoriza la llamada es el token de un solo uso, que la funcion valida
-comparando su sha256 con la tabla `invites`. Si prefieres dejarlo fijado en el
-repositorio en vez de en el comando, ya esta escrito en
-[`supabase/config.toml`](../supabase/config.toml).
-
-`SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` las inyecta Supabase sola en el
-entorno de las funciones. No hay que configurar ningun secreto a mano.
+Ya no hace falta la CLI de Supabase para poner el proyecto en marcha, ni Deno
+para los `npm run check`.
 
 ## 5. Variables de la app
 
@@ -238,8 +242,9 @@ Para publicar sin hacer push: **Actions > Publicar web > Run workflow**, o
 **Limitacion de las invitaciones.** Los enlaces que se comparten son
 `rutadebares://invitacion?token=...` y solo abren la app instalada. Desde la
 web se pueden crear invitaciones, pero abrir el enlace en un navegador no lleva
-a la web. Quien use la web tiene que ir a la pantalla de invitacion y pegar el
-codigo, que el mensaje compartido ya incluye.
+a la web. Quien use la web tiene que ir a **Mi perfil > Entrar en una ruta** y
+pegar el codigo, que el mensaje compartido ya incluye en su propia linea justo
+para eso.
 
 ## 8. Mapa en la web y app instalable
 
@@ -303,27 +308,31 @@ Los iconos salen del sello del login; el origen a 1024 px esta en
 
 ## Lista de verificacion
 
-Hasta que estos seis puntos pasen, el montaje no esta terminado.
+Hasta que estos siete puntos pasen, el montaje no esta terminado.
 
-1. **Entras como admin.** Abres la app con el correo del punto 3 y ves cuatro
-   pestanas, incluida **Editor**.
+1. **Entras como admin.** Abres la app con el correo del punto 3 y ves la barra
+   superior con tu avatar; desde **Mi perfil** llegas a **Editor de rutas**.
 2. **Una ruta publicada aparece.** Creas una ruta, le anades dos bares con sus
    horas, la publicas, y sale en **Sellos** y en **Ruta** con la linea uniendo
    los pines.
-3. **El registro publico esta cerrado pero la invitacion funciona.** Desde
-   **Mi perfil > Invitaciones** creas un enlace, lo abres en otro movil y creas
-   una cuenta. Si falla con "signups not allowed", la funcion `redeem-invite`
-   no esta desplegada o esta desplegada con `verify_jwt` activado.
-4. **El invitado NO ve el editor.** Esa cuenta nueva ve tres pestanas, no
-   cuatro.
-5. **El enlace no vale dos veces.** Vuelve a abrir el mismo enlace: tiene que
-   decir que ya se ha usado.
-6. **La geocerca muerde.** Intenta sellar un bar estando lejos: te dice a
+3. **Cualquiera puede registrarse.** Desde otro navegador creas una cuenta con
+   **Crear cuenta**. Si falla con "El registro esta desactivado en el servidor",
+   te falta el paso 2 de esta guia.
+4. **Esa cuenta nueva NO ve ninguna ruta.** Es el punto mas importante de todos:
+   entra y las pestanas Sellos y Ruta tienen que estar vacias, aunque la ruta
+   del punto 2 este publicada. Si la ve, la 0004 no se ha aplicado.
+5. **La invitacion mete en la ruta.** Desde **Mi perfil > Invitaciones** creas
+   un enlace para esa ruta, copias el codigo y lo pegas en la otra cuenta en
+   **Mi perfil > Entrar en una ruta**. Ahora si ve la ruta.
+6. **El tope se respeta.** Crea una invitacion de 1 plaza, gastala, e intenta
+   entrar con una tercera cuenta: tiene que decir que ya no quedan plazas.
+7. **La geocerca muerde.** Intenta sellar un bar estando lejos: te dice a
    cuantos metros estas y el boton no deja. Prueba tambien fuera de la ventana
    horaria: te dice cuanto falta para que abra.
 
-Los puntos 3, 5 y 6 son los que de verdad hay que probar: son las tres reglas
-que sostienen todo lo demas.
+Los puntos 4, 6 y 7 son los que de verdad hay que probar: son las tres reglas
+que sostienen todo lo demas. El 4 es el que confirma que el cambio de modelo
+esta vivo en tu base de datos y no solo en el codigo.
 
 ---
 

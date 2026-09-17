@@ -74,12 +74,13 @@ export default function LoginScreen() {
 
           <View style={styles.pie}>
             <Text style={[typography.muted, styles.centrado]}>
-              Esta app es solo por invitacion. No hay registro abierto.
+              Aun no tienes cuenta? Crearla es gratis. Para ver una ruta necesitaras que te pasen
+              su invitacion.
             </Text>
             <Button
-              title="Tengo una invitacion"
+              title="Crear cuenta"
               variant="ghost"
-              onPress={() => router.push('/invitacion')}
+              onPress={() => router.push('/registro')}
               disabled={enviando}
             />
           </View>

@@ -1,9 +1,10 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, EmptyState, Loading } from '../../../src/components/ui';
+import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
 import { useActiveRoute } from '../../../src/features/routes/ActiveRouteProvider';
 import {
   deleteBar,
@@ -31,6 +32,8 @@ export default function EditorDeRuta() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardandoOrden, setGuardandoOrden] = useState(false);
+  const [borrando, setBorrando] = useState<RouteBarRow | null>(null);
+  const [borrandoEnCurso, setBorrandoEnCurso] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!routeId) return;
@@ -94,33 +97,29 @@ export default function EditorDeRuta() {
     }
   }
 
-  function onBorrar(bar: RouteBarRow) {
-    Alert.alert('Quitar el bar', `Se quita "${bar.name}" de la ruta y sus sellos se pierden.`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Quitar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteBar(bar.id);
-            const quedan = bares.filter((b) => b.id !== bar.id);
-            // Renumerar: si no, queda un hueco en sort_order y el siguiente bar
-            // nuevo chocaria con la unique al reutilizar un numero.
-            if (routeId && quedan.length > 0) {
-              await persistOrder(
-                routeId,
-                assignSortOrder(quedan),
-                new Map(quedan.map((b) => [b.id, b.sort_order])),
-              );
-            }
-            await cargar();
-            await refrescarRutaActiva();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'No se pudo quitar el bar.');
-          }
-        },
-      },
-    ]);
+  async function onBorrarConfirmado() {
+    if (!borrando) return;
+    setBorrandoEnCurso(true);
+    try {
+      await deleteBar(borrando.id);
+      const quedan = bares.filter((b) => b.id !== borrando.id);
+      // Renumerar: si no, queda un hueco en sort_order y el siguiente bar
+      // nuevo chocaria con la unique al reutilizar un numero.
+      if (routeId && quedan.length > 0) {
+        await persistOrder(
+          routeId,
+          assignSortOrder(quedan),
+          new Map(quedan.map((b) => [b.id, b.sort_order])),
+        );
+      }
+      setBorrando(null);
+      await cargar();
+      await refrescarRutaActiva();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo quitar el bar.');
+    } finally {
+      setBorrandoEnCurso(false);
+    }
   }
 
   async function onPublicar() {
@@ -230,7 +229,7 @@ export default function EditorDeRuta() {
                 >
                   <Text style={styles.accionTexto}>Editar</Text>
                 </Pressable>
-                <Pressable style={styles.accion} onPress={() => onBorrar(bar)}>
+                <Pressable style={styles.accion} onPress={() => setBorrando(bar)}>
                   <Text style={[styles.accionTexto, styles.accionPeligro]}>Quitar</Text>
                 </Pressable>
               </View>
@@ -245,6 +244,24 @@ export default function EditorDeRuta() {
           }
         />
       </ScrollView>
+
+      {/*
+        Con Alert.alert este boton no hacia NADA en web: react-native-web lo
+        define como `static alert() {}`. Cuarto sitio con el mismo fallo; lo
+        vigila ahora tests/sin-alert.test.ts en TODA la app.
+      */}
+      <DialogoConfirmar
+        visible={borrando !== null}
+        titulo="Quitar el bar"
+        mensaje={
+          borrando ? `Se quita "${borrando.name}" de la ruta y sus sellos se pierden.` : ''
+        }
+        textoConfirmar="Quitar"
+        destructivo
+        ocupado={borrandoEnCurso}
+        onConfirmar={onBorrarConfirmado}
+        onCancelar={() => setBorrando(null)}
+      />
     </SafeAreaView>
   );
 }

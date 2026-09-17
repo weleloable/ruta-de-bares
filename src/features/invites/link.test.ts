@@ -76,17 +76,25 @@ describe('parseInviteToken', () => {
 });
 
 describe('buildShareMessage', () => {
-  it('incluye enlace y codigo, y avisa del uso unico', () => {
-    const mensaje = buildShareMessage(TOKEN, 'Marta');
+  it('nombra la ruta, y lleva enlace y codigo', () => {
+    const mensaje = buildShareMessage(TOKEN, 'Ruta de La Latina');
     assert.ok(mensaje.includes(buildInviteUrl(TOKEN)));
     assert.ok(mensaje.includes(TOKEN));
-    assert.ok(mensaje.includes('Marta'));
-    assert.ok(mensaje.includes('una vez'));
+    assert.ok(mensaje.includes('Ruta de La Latina'));
   });
 
-  it('sin etiqueta no deja un "para" colgando', () => {
+  it('sin nombre de ruta no deja unas comillas vacias colgando', () => {
     const mensaje = buildShareMessage(TOKEN, '   ');
-    assert.ok(!mensaje.includes('para'));
-    assert.ok(mensaje.startsWith('Invitacion a Ruta de Bares.'));
+    assert.ok(!mensaje.includes('""'));
+    assert.ok(mensaje.startsWith('Te apuntas a la ruta?'));
+  });
+
+  it('el codigo va aparte del enlace: en la web el deep link no abre nada', () => {
+    const mensaje = buildShareMessage(TOKEN, 'Ruta');
+    const lineas = mensaje.split('\n');
+    assert.ok(
+      lineas.some((l) => l === TOKEN),
+      'el token tiene que ir en su propia linea para poder copiarlo suelto',
+    );
   });
 });

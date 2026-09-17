@@ -53,15 +53,31 @@ export type StampRow = {
   distance_m: number;
 };
 
-export type InviteRow = {
+/**
+ * Invitacion a UNA ruta (migracion 0004). No da cuenta: el alta es abierta.
+ * Multiuso hasta agotar `max_uses` o caducar.
+ *
+ * El token va EN CLARO (a diferencia de las invitaciones de cuenta de 0001,
+ * que guardaban su sha256): el historial tiene que poder volver a enseñar el
+ * enlace. Lo unico que lo protege es la RLS, que solo deja leer a un admin.
+ */
+export type RouteInviteRow = {
   id: string;
-  token_hash: string;
-  label: string;
+  route_id: string;
+  token: string;
+  max_uses: number;
   created_by: string;
   created_at: string;
   expires_at: string;
-  used_at: string | null;
-  used_by: string | null;
+  revoked_at: string | null;
+};
+
+/** Pertenencia a una ruta. Es lo que decide que rutas ve cada usuario. */
+export type RouteMemberRow = {
+  route_id: string;
+  user_id: string;
+  invite_id: string | null;
+  joined_at: string;
 };
 
 type Insert<T, Opcionales extends keyof T> = Omit<T, Opcionales> & Partial<Pick<T, Opcionales>>;
@@ -94,10 +110,19 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
-      invites: {
-        Row: InviteRow;
-        Insert: Insert<InviteRow, 'id' | 'label' | 'created_at' | 'used_at' | 'used_by'>;
-        Update: Partial<InviteRow>;
+      route_invites: {
+        Row: RouteInviteRow;
+        // Sin Insert util a proposito: solo las crea create_route_invite(), que
+        // es quien genera el token. El UPDATE existe para anular (revoked_at).
+        Insert: never;
+        Update: Partial<Pick<RouteInviteRow, 'revoked_at'>>;
+        Relationships: [];
+      };
+      route_members: {
+        Row: RouteMemberRow;
+        // Igual que stamps: la unica via de entrada es redeem_route_invite().
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
     };
@@ -114,6 +139,20 @@ export type Database = {
       claim_stamp: {
         Args: { p_route_bar_id: string; p_lat: number; p_lng: number };
         Returns: StampRow;
+      };
+      is_route_member: {
+        Args: { p_route_id: string };
+        Returns: boolean;
+      };
+      /** El token vuelve aqui UNA sola vez: la tabla solo guarda su sha256. */
+      create_route_invite: {
+        Args: { p_route_id: string; p_max_uses: number; p_expires_in_hours: number };
+        Returns: { invite_id: string; invite_token: string; invite_expires_at: string }[];
+      };
+      /** Devuelve el id de la ruta a la que acaba de entrar quien llama. */
+      redeem_route_invite: {
+        Args: { p_token: string };
+        Returns: string;
       };
     };
     Enums: {

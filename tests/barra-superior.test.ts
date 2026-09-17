@@ -82,16 +82,36 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
       return m[1];
     };
 
-    it('editor y perfil no tienen boton abajo (href: null sin condicion)', () => {
-      for (const nombre of ['editor', 'perfil']) assert.match(opciones(nombre), /\bhref:\s*null\s*,/);
+    it('perfil no tiene boton abajo (href: null sin condicion)', () => {
+      assert.match(opciones('perfil'), /\bhref:\s*null\s*,/);
     });
 
     it('sellos y ruta si lo tienen', () => {
       for (const nombre of ['index', 'ruta']) assert.doesNotMatch(opciones(nombre), /\bhref:/);
     });
 
-    it('href: null no protege el editor: lo hace su propio if (!isAdmin)', () => {
-      assert.match(sinComentarios(leer('app/(tabs)/editor.tsx')), /if\s*\(\s*!isAdmin\s*\)\s*\{\s*return/);
+    it('editor ya no es una pestana: no hay Tabs.Screen para el', () => {
+      assert.doesNotMatch(layout.replace(/"/g, "'"), /<Tabs\.Screen\s+name='editor'/);
+    });
+  });
+
+  describe('editor de rutas: pantalla del Stack raiz, con flecha atras', () => {
+    it('vive en app/editor.tsx y no en app/(tabs)/', () => {
+      assert.doesNotMatch(
+        sinComentarios(leer('app/(tabs)/_layout.tsx')),
+        /<Tabs\.Screen\s+name="editor"/,
+      );
+    });
+
+    it('el Stack raiz la registra con su titulo', () => {
+      assert.match(
+        sinComentarios(leer('app/_layout.tsx')),
+        /<Stack\.Screen\s+name="editor"\s+options=\{\{\s*title:\s*'Editor de rutas'\s*\}\}\s*\/>/,
+      );
+    });
+
+    it('el if (!isAdmin) sigue siendo quien protege la pantalla, no la navegacion', () => {
+      assert.match(sinComentarios(leer('app/editor.tsx')), /if\s*\(\s*!isAdmin\s*\)\s*\{\s*return/);
     });
 
     it('el boton del editor en Perfil solo se pinta para admins', () => {
@@ -99,8 +119,20 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
       const perfil = sinComentarios(leer('app/(tabs)/perfil.tsx')).replace(/["`]/g, "'");
       const bloqueAdmin = /\{isAdmin \? \(([\s\S]*?)\) : null\}/.exec(perfil);
       assert.ok(bloqueAdmin, 'no hay bloque {isAdmin ? (...) : null} en perfil.tsx');
-      assert.match(bloqueAdmin[1], /router\.navigate\('\/editor'\)/);
+      assert.match(bloqueAdmin[1], /router\.push\('\/editor'\)/);
       assert.equal(perfil.split("'/editor'").length - 1, 1, 'el editor se enlaza tambien fuera del bloque de admins');
+    });
+  });
+
+  describe('titulos del Stack: mismo color que "Detras de la barra"', () => {
+    it('headerTitleStyle fija el color, no solo headerTintColor', () => {
+      const codigo = sinComentarios(leer('app/_layout.tsx'));
+      assert.match(codigo, /headerTitleStyle:\s*\{[^}]*color:\s*'#8A7A69'[^}]*\}/);
+    });
+
+    it('es el mismo color que perfil.tsx usa para "Detras de la barra"', () => {
+      const perfil = sinComentarios(leer('app/(tabs)/perfil.tsx'));
+      assert.match(perfil, /tituloTarjeta:\s*\{[^}]*color:\s*'#8A7A69'[^}]*\}/);
     });
   });
 

@@ -1,9 +1,14 @@
 /**
- * Enlaces de invitacion de un solo uso.
+ * Enlaces de invitacion a una ruta.
  *
  * El token son 32 bytes aleatorios en base64url (43 caracteres) generados por
- * la Edge Function `create-invite`. La base de datos guarda su sha256, nunca el
- * token: ver supabase/migrations/0001_init.sql.
+ * create_route_invite() en Postgres. La base de datos guarda su sha256, nunca
+ * el token: ver supabase/migrations/0004_invitaciones_por_ruta.sql.
+ *
+ * El enlace es un deep link `rutadebares://`, que solo abre la app instalada:
+ * en la web no hace nada. Por eso la pantalla de canje acepta TAMBIEN el codigo
+ * pegado a mano (parseInviteToken traga las dos formas), que es la via que
+ * funciona en la PWA.
  */
 
 export const INVITE_SCHEME = 'rutadebares';
@@ -45,18 +50,21 @@ export function parseInviteToken(input: string): string | null {
   return null;
 }
 
-/** Texto que el admin comparte por WhatsApp. */
-export function buildShareMessage(token: string, label: string): string {
-  const saludo = label.trim().length > 0 ? `Invitacion para ${label.trim()}` : 'Invitacion';
+/**
+ * Texto que el admin comparte por WhatsApp.
+ *
+ * Nombra la ruta porque ahora la invitacion es A UNA RUTA, no a la app: quien
+ * lo recibe ya puede tener cuenta, y lo que necesita saber es a que le apuntan.
+ */
+export function buildShareMessage(token: string, routeName: string): string {
+  const ruta = routeName.trim();
   return [
-    `${saludo} a Ruta de Bares.`,
+    ruta.length > 0 ? `Te apuntas a "${ruta}"?` : 'Te apuntas a la ruta?',
     '',
     'Abre este enlace en el movil con la app instalada:',
     buildInviteUrl(token),
     '',
-    'Si el enlace no abre la app, pega este codigo en la pantalla de invitacion:',
+    'Si el enlace no abre la app, entra en la app y pega este codigo:',
     token,
-    '',
-    'El enlace solo sirve una vez.',
   ].join('\n');
 }

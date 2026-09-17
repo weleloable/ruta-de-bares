@@ -1,95 +1,87 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
-import { redeemInvite } from '../../src/features/invites/api';
-import { isValidTokenShape, parseInviteToken } from '../../src/features/invites/link';
 import { space, typography } from '../../src/lib/theme';
 
 /**
- * Canje de invitacion. Es la UNICA pantalla que crea cuentas: el registro
- * publico esta desactivado en Supabase Auth.
+ * Alta abierta.
  *
- * Se llega aqui de dos formas: abriendo el deep link
- * rutadebares://invitacion?token=... (expo-router rellena el parametro solo,
- * tambien en arranque en frio), o pulsando "Tengo una invitacion" y pegando
- * el codigo a mano.
+ * Hasta la migracion 0004 esta pantalla no existia: la unica via de entrada era
+ * canjear una invitacion, que creaba la cuenta. Ahora la cuenta se crea sola y
+ * lo que reparten las invitaciones son RUTAS, no cuentas. Crear una cuenta no
+ * da acceso a nada todavia: hay que canjear una invitacion a una ruta.
  */
-export default function InvitacionScreen() {
+export default function RegistroScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
-  const params = useLocalSearchParams<{ token?: string }>();
+  const { signUp } = useAuth();
 
-  const tokenDelEnlace = useMemo(
-    () => (params.token ? parseInviteToken(params.token) : null),
-    [params.token],
-  );
-
-  const [token, setToken] = useState(tokenDelEnlace ?? '');
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repetir, setRepetir] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [revisaCorreo, setRevisaCorreo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  const tokenLimpio = parseInviteToken(token) ?? token.trim();
-  const tokenValido = isValidTokenShape(tokenLimpio);
   const passwordValida = password.length >= 8;
   const coinciden = password === repetir;
-  const puedeEnviar =
-    tokenValido && email.trim().length > 0 && passwordValida && coinciden && !enviando;
+  const puedeEnviar = email.trim().length > 0 && passwordValida && coinciden && !enviando;
 
   async function onSubmit() {
     if (!puedeEnviar) return;
     setEnviando(true);
     setError(null);
     try {
-      await redeemInvite({
-        token: tokenLimpio,
-        email: email.trim(),
-        password,
-        displayName: nombre.trim(),
-      });
-      // La cuenta ya existe y esta confirmada: se entra directo, sin pedirle
-      // que vuelva a teclear lo mismo en la pantalla de login.
-      await signIn(email, password);
+      const conSesion = await signUp(email, password, nombre);
+      // Con sesion no se navega desde aqui: AuthGate reacciona al cambio.
+      // Sin ella, Supabase esta pidiendo confirmar el correo y hay que decirlo,
+      // o la pantalla se queda quieta sin explicar por que.
+      if (!conSesion) {
+        setRevisaCorreo(true);
+        setEnviando(false);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo canjear la invitacion.');
+      setError(e instanceof Error ? e.message : 'No se pudo crear la cuenta.');
       setEnviando(false);
     }
+  }
+
+  if (revisaCorreo) {
+    return (
+      <Screen scroll>
+        <View style={styles.cabecera}>
+          <Text style={typography.screenTitle}>Revisa tu correo</Text>
+          <Text style={typography.muted}>
+            Te hemos mandado un enlace a {email.trim()}. Abrelo para confirmar la cuenta y luego
+            inicia sesion.
+          </Text>
+        </View>
+        <Button title="Ir al inicio de sesion" onPress={() => router.replace('/login')} />
+      </Screen>
+    );
   }
 
   return (
     <Screen scroll>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.cabecera}>
-          <Text style={typography.screenTitle}>Tu invitacion</Text>
+          <Text style={typography.screenTitle}>Crear cuenta</Text>
           <Text style={typography.muted}>
-            {tokenDelEnlace
-              ? 'Enlace reconocido. Crea tu cuenta para unirte a la ruta.'
-              : 'Pega el codigo que te han pasado y crea tu cuenta.'}
+            Con la cuenta ya puedes entrar. Para ver una ruta necesitas que te pasen su invitacion.
           </Text>
         </View>
 
         <View style={styles.formulario}>
           <Field
-            label="Codigo de invitacion"
-            value={token}
-            onChangeText={setToken}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="43 caracteres"
-            editable={!enviando && tokenDelEnlace === null}
-            error={token.length > 0 && !tokenValido ? 'Este codigo no tiene el formato correcto.' : null}
-            hint={tokenDelEnlace ? 'Viene del enlace que has abierto.' : undefined}
-          />
-          <Field
             label="Como quieres que te llamemos"
             value={nombre}
-            onChangeText={setNombre}
+            // Sin espacios: lo rechaza el servidor (migracion 0003), asi que
+            // aqui ni se dejan escribir.
+            onChangeText={(texto) => setNombre(texto.replace(/\s/g, ''))}
+            maxLength={30}
             placeholder="Tu nombre"
             editable={!enviando}
             hint="Opcional. Si lo dejas vacio usamos tu correo."
@@ -101,6 +93,7 @@ export default function InvitacionScreen() {
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
+            textContentType="emailAddress"
             placeholder="tu@correo.com"
             editable={!enviando}
           />
@@ -121,18 +114,15 @@ export default function InvitacionScreen() {
             secureTextEntry
             editable={!enviando}
             error={repetir.length > 0 && !coinciden ? 'Las contrasenas no coinciden.' : null}
+            returnKeyType="go"
+            onSubmitEditing={onSubmit}
           />
 
           {error ? <Banner tone="error">{error}</Banner> : null}
 
+          <Button title="Crear cuenta" onPress={onSubmit} disabled={!puedeEnviar} loading={enviando} />
           <Button
-            title="Crear mi cuenta"
-            onPress={onSubmit}
-            disabled={!puedeEnviar}
-            loading={enviando}
-          />
-          <Button
-            title="Volver al inicio de sesion"
+            title="Ya tengo cuenta"
             variant="ghost"
             onPress={() => router.replace('/login')}
             disabled={enviando}
