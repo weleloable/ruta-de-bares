@@ -1,12 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { useAuth } from '../../src/features/auth/AuthProvider';
-import { colors, fonts } from '../../src/lib/theme';
+import { BarraSuperior } from '../../src/components/BarraSuperior';
+import { colors } from '../../src/lib/theme';
 
 export default function TabsLayout() {
-  const { isAdmin } = useAuth();
-
   return (
     <Tabs
       screenOptions={{
@@ -14,10 +12,9 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.inkFaint,
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        headerStyle: { backgroundColor: colors.paper },
-        headerTintColor: colors.ink,
-        headerTitleStyle: { fontFamily: fonts.title, fontSize: 18 },
-        headerShadowVisible: false,
+        // Misma barra en todas las pestanas, titulada con el title de cada una
+        // (el mismo texto que su boton en la barra de abajo).
+        header: ({ options }) => <BarraSuperior titulo={options.title ?? ''} />,
         sceneStyle: { backgroundColor: colors.paper },
       }}
     >
@@ -25,7 +22,6 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Sellos',
-          headerTitle: 'Compostelana',
           tabBarIcon: ({ color, size }) => <Ionicons name="ribbon" color={color} size={size} />,
         }}
       />
@@ -33,7 +29,6 @@ export default function TabsLayout() {
         name="ruta"
         options={{
           title: 'Ruta',
-          headerShown: false,
           tabBarIcon: ({ color, size }) => <Ionicons name="map" color={color} size={size} />,
         }}
       />
@@ -41,23 +36,19 @@ export default function TabsLayout() {
         name="editor"
         options={{
           title: 'Editor',
-          headerTitle: 'Editor de ruta',
-          // href: null saca la pestana de la barra Y bloquea la navegacion a
-          // ella. Un usuario normal no ve el editor ni escribiendo la url.
-          href: isAdmin ? '/editor' : null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="construct" color={color} size={size} />
-          ),
+          // Sin boton abajo: se entra desde la tarjeta de admins de Perfil ("Detrás de la barra").
+          // href: null SOLO oculta el boton, la url /editor sigue abriendo la
+          // pantalla. Quien impide entrar a un no-admin es el if (!isAdmin) de
+          // editor.tsx, y la RLS de la base de datos quien impide escribir.
+          href: null,
         }}
       />
       <Tabs.Screen
         name="perfil"
         options={{
           title: 'Mi perfil',
-          // Sin cabecera: la pantalla llega hasta arriba del todo y el margen
-          // del notch se lo come su propio SafeAreaView, como hace 'ruta'.
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
+          // Sin boton abajo: se entra por el avatar de BarraSuperior.
+          href: null,
         }}
       />
     </Tabs>

@@ -7,14 +7,25 @@ export { initials } from './initials';
 
 const AVATAR_BUCKET = 'avatars';
 
+/**
+ * Espejo de la regla real: profiles_display_name_formato y el indice unico de
+ * lower(display_name) en supabase/migrations/0003_nombre_unico.sql son quienes
+ * de verdad la imponen. Sin espacios (el input tampoco deja escribirlos) y
+ * <= 30 caracteres.
+ */
 export async function updateDisplayName(userId: string, displayName: string): Promise<ProfileRow> {
+  const nombre = displayName.replace(/\s/g, '').slice(0, 30);
   const { data, error } = await supabase
     .from('profiles')
-    .update({ display_name: displayName.trim() })
+    .update({ display_name: nombre })
     .eq('id', userId)
     .select('*')
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    // 23505 = unique_violation: el indice de lower(display_name) es quien lo sabe de verdad.
+    if (error.code === '23505') throw new Error('Ya hay un rutero con ese nombre, melón.');
+    throw new Error(error.message);
+  }
   return data;
 }
 

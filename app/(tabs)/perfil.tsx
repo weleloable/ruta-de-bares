@@ -8,14 +8,11 @@ import { Banner, Button, Card, Field } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
-import { useInstalacion } from '../../src/features/pwa/pwa';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const router = useRouter();
-  // En la app nativa devuelve 'no-web' y la tarjeta no se pinta.
-  const { estado: instalacion, instalando, instalar } = useInstalacion();
 
   const [nombre, setNombre] = useState(profile?.display_name ?? '');
   const [guardando, setGuardando] = useState(false);
@@ -84,9 +81,9 @@ export default function PerfilScreen() {
   }
 
   return (
-    // 'top' porque esta pantalla ya no tiene cabecera: sin el, el contenido se
-    // mete debajo de la hora y el notch. Abajo manda la barra de pestanas.
-    <SafeAreaView style={styles.pantalla} edges={['top', 'left', 'right']}>
+    // Sin 'top': el margen del notch ya lo pone BarraSuperior, y pedirlo aqui
+    // dejaria un hueco doble. Abajo manda la barra de pestanas.
+    <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
         <Card style={styles.cabecera}>
           <Pressable onPress={onCambiarFoto} disabled={subiendo} style={styles.avatarPulsable}>
@@ -121,11 +118,14 @@ export default function PerfilScreen() {
         {exito ? <Banner tone="success">{exito}</Banner> : null}
 
         <Card>
-          <Text style={styles.tituloNombre}>Nombre de bartalla</Text>
+          <Text style={styles.tituloTarjeta}>Nombre de bartalla</Text>
           <Field
             label=""
             value={nombre}
-            onChangeText={setNombre}
+            // Sin espacios: profiles_display_name_formato (migracion 0003) los
+            // rechaza en el servidor, asi que aqui ni se dejan escribir.
+            onChangeText={(texto) => setNombre(texto.replace(/\s/g, ''))}
+            maxLength={30}
             placeholder="Como quieres que te llamemos"
             editable={!guardando}
             style={styles.inputCentrado}
@@ -138,38 +138,16 @@ export default function PerfilScreen() {
           />
         </Card>
 
-        {instalacion.tipo !== 'no-web' ? (
-          <Card>
-            <Text style={typography.sectionTitle}>Instalar la app</Text>
-            {instalacion.tipo === 'instalada' ? (
-              <Text style={typography.muted}>
-                Ya esta instalada en este dispositivo. Abrela desde el icono de tu pantalla de inicio.
-              </Text>
-            ) : (
-              <Text style={typography.muted}>
-                Anade Ruta de Bares a tu pantalla de inicio: se abre a pantalla completa, como una app,
-                sin pasar por ninguna tienda.
-              </Text>
-            )}
-            {instalacion.tipo === 'boton' ? (
-              <Button title="Instalar app" onPress={() => void instalar()} loading={instalando} />
-            ) : null}
-            {instalacion.tipo === 'instrucciones'
-              ? instalacion.pasos.map((paso, indice) => (
-                  <Text key={paso} style={typography.body}>
-                    {`${indice + 1}. ${paso}`}
-                  </Text>
-                ))
-              : null}
-          </Card>
-        ) : null}
-
         {isAdmin ? (
           <Card>
-            <Text style={typography.sectionTitle}>Administracion</Text>
-            <Text style={typography.muted}>
-              Crea enlaces de invitacion de un solo uso para dar de alta a gente nueva.
-            </Text>
+            <Text style={styles.tituloTarjeta}>Detrás de la barra</Text>
+            <Button
+              title="Editor de rutas"
+              variant="secondary"
+              // navigate y no push: el editor es una pestana (oculta), se cambia a
+              // ella en vez de apilar otra copia.
+              onPress={() => router.navigate('/editor')}
+            />
             <Button
               title="Invitaciones"
               variant="secondary"
@@ -201,10 +179,12 @@ export default function PerfilScreen() {
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
+  // Titulo de "Nombre de bartalla" y "Detrás de la barra": se comparte para que
+  // las tarjetas de Perfil se titulen igual.
   // Georgia, peso normal, sin mayusculas: decision final tras comparar varias
   // combinaciones en vivo. Tamano igual que "Tus datos" antes de quitarlo;
   // color colors.inkFaint (#A2907C) bajado ~15% para que lea como titulo.
-  tituloNombre: {
+  tituloTarjeta: {
     fontFamily: fonts.title,
     fontSize: 19,
     color: '#8A7A69',
