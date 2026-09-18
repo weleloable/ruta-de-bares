@@ -76,6 +76,8 @@ function AuthGate() {
       <Stack.Screen name="cana/persona/[userId]" options={{ title: 'Tírate una caña' }} />
       <Stack.Screen name="cana/chat/[connectionId]" options={{ title: 'Chat' }} />
       <Stack.Screen name="cana/bloqueados" options={{ title: 'Personas bloqueadas' }} />
+      <Stack.Screen name="cana/condiciones" options={{ title: 'Cómo funciona la caña' }} />
+      <Stack.Screen name="cana/mis-datos" options={{ title: 'Mis datos' }} />
     </Stack>
   );
 }

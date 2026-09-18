@@ -252,6 +252,13 @@ export default function CanaScreen() {
               <Pressable
                 accessibilityRole="button"
                 style={styles.accion}
+                onPress={() => router.push('/cana/mis-datos')}
+              >
+                <Text style={styles.accionTexto}>Mis datos</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.accion}
                 onPress={() => setConfirmandoDesactivar(true)}
                 disabled={cambiando}
               >

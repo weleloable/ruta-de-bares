@@ -185,6 +185,15 @@ export function desdeParaSondeo(hilo: HiloChat<MensajeOrdenable>): string | null
   return new Date(Date.parse(hilo.ultimoSondeado) - SOLAPE_SONDEO_MS).toISOString();
 }
 
+// --- Consentimiento ---------------------------------------------------------
+
+/**
+ * Version de las condiciones de la cana que se guarda al activar (0009).
+ * Se sube la fecha SOLO si cambia lo que se acepta, no con cada retoque de
+ * redaccion: es lo que permite saber que acepto cada persona.
+ */
+export const CONSENTIMIENTO_VERSION = '2026-09-18';
+
 // --- Bloquear y denunciar ---------------------------------------------------
 
 /** Caracteres del detalle opcional de una denuncia (0008). */

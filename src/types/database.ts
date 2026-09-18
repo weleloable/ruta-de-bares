@@ -104,6 +104,8 @@ export type MatchProfileState = {
   tag_ids: string[];
   adult_confirmed: boolean;
   has_activated_before: boolean;
+  /** Version de las condiciones que acepto al activar; null si nunca activo (0009). */
+  consent_version: string | null;
 };
 
 export type MatchGridRow = {
@@ -263,8 +265,21 @@ export type Database = {
         Returns: MatchProfileState[];
       };
       match_activate: {
-        Args: { p_adult_confirmed?: boolean; p_bio?: string | null; p_tag_ids?: string[] | null };
+        Args: {
+          p_adult_confirmed?: boolean;
+          p_bio?: string | null;
+          p_tag_ids?: string[] | null;
+          p_consent_version?: string | null;
+        };
         Returns: undefined;
+      };
+      match_export_my_data: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      match_delete_my_data: {
+        Args: Record<string, never>;
+        Returns: { conexiones: number; votos: number; mensajes: number };
       };
       match_deactivate: {
         Args: Record<string, never>;

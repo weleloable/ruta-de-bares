@@ -71,6 +71,7 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Las actuales son provisionales. |
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
 | D13 | ~~Catalogo propio de GIFs~~. **Retirada en la 0007**: no hay GIFs ni zumbidos, solo la pregunta de la cerveza. |
+| D16 | **Activar es un si explicito** (0009): se guarda la version de las condiciones aceptadas, y cualquiera puede descargar o borrar sus datos de la cana. |
 | D15 | **Bloquear y denunciar** (0008): bloquear es entre personas, no por ruta; denunciar avisa a quien organiza, bloquea a la vez y se lleva copiados los mensajes de esa persona. |
 | D14 | **Sin "No me gusta"** (17-09-2026): la unica accion es Me gusta. Abrir la ficha o quitar un Me gusta deja a la persona en **Visto**, que la otra persona no ve. Los No me gusta que hubiera pasan a Visto (0005). |
 
@@ -124,6 +125,33 @@ siguiente volviais a cruzaros. Los dos botones estan en la ficha y en el chat
 
 Los motivos (`foto`, `acoso`, `suplantacion`, `menor`, `otro`) estan en el SQL
 y repetidos en `reglas.ts`; `tests/match-espejo.test.ts` compara las dos listas.
+
+## Consentimiento, y llevarte o borrar tus datos
+
+A quien das Me gusta y lo que escribis permiten deducir la vida afectiva de
+una persona, asi que activar la cana no puede ser pulsar un boton: es un si
+explicito e informado, y queda guardado con la version de lo que se acepto
+(`match_profiles.consent_version` / `consent_at`, 0009). La version esta en
+`CONSENTIMIENTO_VERSION` (`reglas.ts`) y a la vista en `app/cana/condiciones.tsx`;
+se sube solo cuando cambia lo que se acepta, no con cada retoque de redaccion.
+Volver de una pausa no vuelve a pedirlo: el si ya esta dado.
+
+Desde "Mis datos" (`app/cana/mis-datos.tsx`):
+
+- **Ver y copiar** lo que la cana guarda (`match_export_my_data`): perfil,
+  Me gusta y Vistos, conexiones y **los mensajes que escribiste tu**. Los de la
+  otra persona son suyos y no se entregan aqui.
+- **Borrar** (`match_delete_my_data`), que no es desactivar: no deja perfil, ni
+  etiquetas, ni votos (en los dos sentidos), ni conexiones, ni mensajes. **No**
+  se lleva los bloqueos que otras personas te pusieron (es su decision de no
+  volver a verte) ni las denuncias sobre ti (pueden estar sin resolver y quien
+  organiza tiene que poder responder de ellas).
+
+Conservacion: `match_admin_purge_route(p_route_id, p_days default 30)` borra
+votos, conexiones y denuncias de una ruta cuyo evento fue hace mas de N dias.
+Solo admins, y falla si la ruta no tiene fecha (`ROUTE_WITHOUT_DATE`) o es
+reciente (`ROUTE_TOO_RECENT`). **No hay tarea programada**: la llama el panel o
+un cron; es lo que falta para que el plazo se cumpla solo.
 
 ## Contrato con el panel de administracion
 

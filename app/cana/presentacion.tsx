@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, Card, Field, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { activateMatch, getMatchProfile, listMatchTags, updateMatchProfile } from '../../src/features/match/api';
-import { AvatarCana, ChipEtiqueta } from '../../src/features/match/piezas';
+import { AvatarCana, Casilla, ChipEtiqueta } from '../../src/features/match/piezas';
 import { BIO_MAX, ETIQUETAS_MAX, alternarEtiqueta, validarPresentacion } from '../../src/features/match/reglas';
 import { pickAvatar, uploadAvatar } from '../../src/features/profile/api';
 import { colors, space, typography } from '../../src/lib/theme';
@@ -33,6 +33,8 @@ export default function PresentacionCana() {
   const [guardando, setGuardando] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [intentado, setIntentado] = useState(false);
+  // Solo en el alta: activar la cana es un si explicito e informado (0009).
+  const [acepta, setAcepta] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function PresentacionCana() {
 
   async function onGuardar() {
     setIntentado(true);
-    if (errores.length > 0) return;
+    if (errores.length > 0 || (alta && !acepta)) return;
     setGuardando(true);
     setError(null);
     try {
@@ -158,6 +160,22 @@ export default function PresentacionCana() {
               })}
             </View>
           </View>
+
+          {alta ? (
+            <View style={styles.bloque}>
+              <Casilla
+                marcada={acepta}
+                onCambiar={setAcepta}
+                texto="He leído cómo funciona la caña y acepto que se active"
+              />
+              <Pressable accessibilityRole="button" onPress={() => router.push('/cana/condiciones')}>
+                <Text style={styles.enlace}>Leer cómo funciona y qué se recoge</Text>
+              </Pressable>
+              {intentado && !acepta ? (
+                <Text style={typography.error}>Tienes que aceptarlo para activarlo.</Text>
+              ) : null}
+            </View>
+          ) : null}
 
           {intentado
             ? errores.map((mensaje) => (

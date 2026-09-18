@@ -12,7 +12,7 @@ import type {
   MatchReportReason,
   MatchVote,
 } from '../../types/database';
-import { codigoErrorCana, describirErrorCana } from './reglas';
+import { CONSENTIMIENTO_VERSION, codigoErrorCana, describirErrorCana } from './reglas';
 
 /**
  * Llamadas de "Tirate una cana". Solo funciones match_* y los catalogos: las
@@ -55,7 +55,13 @@ export async function activateMatch(primeraVez?: {
   const { error } = await supabase.rpc(
     'match_activate',
     primeraVez
-      ? { p_adult_confirmed: primeraVez.mayorDeEdad, p_bio: primeraVez.bio, p_tag_ids: primeraVez.etiquetas }
+      ? {
+          p_adult_confirmed: primeraVez.mayorDeEdad,
+          p_bio: primeraVez.bio,
+          p_tag_ids: primeraVez.etiquetas,
+          // Queda guardado que acepto ESTA version de las condiciones (0009).
+          p_consent_version: CONSENTIMIENTO_VERSION,
+        }
       : {},
   );
   if (error) fallo(error);
@@ -182,6 +188,24 @@ export async function reportMatch(opciones: {
   });
   if (error) fallo(error);
   return data as unknown as string;
+}
+
+/** Todo lo que la cana guarda de ti, en un JSON (acceso y portabilidad). */
+export async function exportMyMatchData(): Promise<unknown> {
+  const { data, error } = await supabase.rpc('match_export_my_data');
+  if (error) fallo(error);
+  return data;
+}
+
+/**
+ * Borra tu perfil de la cana y todo lo que cuelga de el. No es desactivar, que
+ * es una pausa (D8). No se llevan los bloqueos que OTRAS personas te pusieron
+ * ni las denuncias sobre ti: ver 0009.
+ */
+export async function deleteMyMatchData(): Promise<{ conexiones: number; votos: number; mensajes: number }> {
+  const { data, error } = await supabase.rpc('match_delete_my_data');
+  if (error) fallo(error);
+  return data as unknown as { conexiones: number; votos: number; mensajes: number };
 }
 
 export function sendMatchText(connectionId: string, body: string): Promise<MatchMessageRow> {
