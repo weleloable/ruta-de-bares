@@ -210,7 +210,7 @@ export default function CanaScreen() {
               <Text style={typography.body}>Quienes también lo tengan activado en esta ruta podrán:</Text>
               <Punto icono="person-circle-outline" texto="ver tu nombre y tu foto" />
               <Punto icono="beer-outline" texto="ofrecerte tomar una cerveza" />
-              <Punto icono="beer-outline" texto="ofrecerte tomar una cerveza" />
+              <Punto icono="chatbubble-outline" texto="escribirte un mensaje, solo si aceptas la cerveza" />
               <Text style={typography.muted}>
                 Mientras esté desactivado nadie te ve. Puedes activarlo y desactivarlo cuando quieras.
               </Text>
@@ -238,6 +238,19 @@ export default function CanaScreen() {
               <Pressable
                 accessibilityRole="button"
                 style={styles.accion}
+                onPress={() => setConfirmandoDesactivar(true)}
+                disabled={cambiando}
+              >
+                <Text style={styles.accionTexto}>Desactivar</Text>
+              </Pressable>
+            </View>
+
+            {/* Fila aparte: desactivar va pegado al estado, y lo demas son
+                sitios a los que ir, que no urgen. */}
+            <View style={styles.enlaces}>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.accion}
                 onPress={() => router.push({ pathname: '/cana/presentacion', params: { modo: 'editar' } })}
               >
                 <Text style={styles.accionTexto}>Editar perfil</Text>
@@ -255,14 +268,6 @@ export default function CanaScreen() {
                 onPress={() => router.push('/cana/mis-datos')}
               >
                 <Text style={styles.accionTexto}>Mis datos</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.accion}
-                onPress={() => setConfirmandoDesactivar(true)}
-                disabled={cambiando}
-              >
-                <Text style={styles.accionTexto}>Desactivar</Text>
               </Pressable>
             </View>
 
@@ -432,6 +437,7 @@ const styles = StyleSheet.create({
   punto: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: colors.beer },
   activadoTexto: { fontSize: 13, fontWeight: '700', color: colors.beerDark },
   hueco: { flex: 1 },
+  enlaces: { flexDirection: 'row', gap: space.xs, flexWrap: 'wrap' },
   accion: {
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
