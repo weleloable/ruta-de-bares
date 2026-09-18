@@ -1,6 +1,6 @@
 /**
- * Tipos del esquema. Escritos a mano contra
- * supabase/migrations/0001_init.sql: si cambia el SQL, cambia este fichero.
+ * Tipos del esquema. Escritos a mano contra supabase/migrations/ (0001 y
+ * 0003): si cambia el SQL, cambia este fichero.
  *
  * Se puede regenerar con:
  *   npx supabase gen types typescript --project-id TU_REF > src/types/database.ts
@@ -80,6 +80,81 @@ export type RouteMemberRow = {
   joined_at: string;
 };
 
+// --- Tirate una cana (0003_tirate_una_cana.sql) -----------------------------
+
+export type MatchVote = 'like' | 'dislike';
+export type BeerQuestionState = 'none' | 'pending' | 'postponed' | 'accepted' | 'rejected';
+export type BeerAnswer = 'yes' | 'no' | 'later';
+export type MatchMessageKind = 'gif' | 'buzz' | 'question' | 'answer' | 'text';
+
+/** Catalogo de etiquetas y de GIFs: las dos unicas tablas match_* que la app lee. */
+export type MatchCatalogRow = {
+  id: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type MatchProfileState = {
+  is_active: boolean;
+  bio: string;
+  tag_ids: string[];
+  adult_confirmed: boolean;
+  has_activated_before: boolean;
+};
+
+export type MatchGridRow = {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  bio: string;
+  tag_ids: string[];
+  my_vote: MatchVote | null;
+  connection_id: string | null;
+  unread_count: number;
+};
+
+export type MatchInboxRow = {
+  connection_id: string;
+  other_user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  question_state: BeerQuestionState;
+  question_asked_by: string | null;
+  last_kind: MatchMessageKind | null;
+  last_sender_id: string | null;
+  last_at: string;
+  unread_count: number;
+};
+
+export type MatchConnectionDetail = {
+  connection_id: string;
+  route_id: string;
+  other_user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  question_state: BeerQuestionState;
+  question_asked_by: string | null;
+  question_asked_at: string | null;
+  question_answered_at: string | null;
+  postpone_count: number;
+  my_texts_sent: number;
+  other_texts_sent: number;
+  my_last_buzz_at: string | null;
+  server_now: string;
+};
+
+export type MatchMessageRow = {
+  id: string;
+  connection_id: string;
+  sender_id: string;
+  kind: MatchMessageKind;
+  gif_id: string | null;
+  answer: BeerAnswer | null;
+  body: string | null;
+  created_at: string;
+};
+
 type Insert<T, Opcionales extends keyof T> = Omit<T, Opcionales> & Partial<Pick<T, Opcionales>>;
 
 export type Database = {
@@ -125,6 +200,21 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      // Del resto de tablas match_* no hay entrada a proposito: no tienen
+      // privilegios para la app y todo pasa por las funciones de abajo, asi
+      // que un supabase.from('match_votes') ni siquiera compila.
+      match_tags: {
+        Row: MatchCatalogRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      match_gifs: {
+        Row: MatchCatalogRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -153,6 +243,65 @@ export type Database = {
       redeem_route_invite: {
         Args: { p_token: string };
         Returns: string;
+      is_route_participant: {
+        Args: { p_route_id: string; p_user_id: string };
+        Returns: boolean;
+      };
+      match_get_profile: {
+        Args: Record<string, never>;
+        Returns: MatchProfileState[];
+      };
+      match_activate: {
+        Args: { p_adult_confirmed?: boolean; p_bio?: string | null; p_tag_ids?: string[] | null };
+        Returns: undefined;
+      };
+      match_deactivate: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      match_update_profile: {
+        Args: { p_bio: string; p_tag_ids?: string[] | null };
+        Returns: undefined;
+      };
+      match_grid: {
+        Args: { p_route_id: string };
+        Returns: MatchGridRow[];
+      };
+      match_vote: {
+        Args: { p_route_id: string; p_target_id: string; p_value: MatchVote };
+        Returns: { my_vote: MatchVote; connection_id: string | null }[];
+      };
+      match_inbox: {
+        Args: { p_route_id: string };
+        Returns: MatchInboxRow[];
+      };
+      match_get_connection: {
+        Args: { p_connection_id: string };
+        Returns: MatchConnectionDetail[];
+      };
+      match_fetch_messages: {
+        Args: { p_connection_id: string; p_after?: string | null };
+        Returns: MatchMessageRow[];
+      };
+      match_send_gif: {
+        Args: { p_connection_id: string; p_gif_id: string };
+        Returns: MatchMessageRow[];
+      };
+      match_send_buzz: {
+        Args: { p_connection_id: string };
+        Returns: MatchMessageRow[];
+      };
+      match_send_text: {
+        Args: { p_connection_id: string; p_body: string };
+        Returns: MatchMessageRow[];
+      };
+      match_ask_beer: {
+        Args: { p_connection_id: string };
+        Returns: MatchMessageRow[];
+      };
+      match_answer_beer: {
+        Args: { p_connection_id: string; p_answer: BeerAnswer };
+        Returns: { question_state: BeerQuestionState; is_open: boolean }[];
       };
     };
     Enums: {
