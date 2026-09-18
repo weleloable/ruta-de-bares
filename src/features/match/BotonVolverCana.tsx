@@ -41,6 +41,7 @@ export function BotonVolverCana() {
 }
 
 const styles = StyleSheet.create({
-  boton: { paddingRight: space.md, paddingVertical: 4 },
+  // El mismo margen que deja la flecha por defecto (medido: empieza en x=19).
+  boton: { paddingLeft: 15, paddingRight: space.md, paddingVertical: 4 },
   pulsado: { opacity: 0.6 },
 });
