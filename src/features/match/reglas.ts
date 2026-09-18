@@ -238,7 +238,9 @@ export const TEXTO_MAX = 120;
  */
 export function textoRestante(restantes: number): string {
   if (restantes === 0) {
-    return TEXTOS_POR_PERSONA === 1 ? 'Ya has enviado tu mensaje.' : `Ya has enviado tus ${TEXTOS_POR_PERSONA} mensajes.`;
+    return TEXTOS_POR_PERSONA === 1
+      ? 'Ya has enviado tu único mensaje.'
+      : `Ya has enviado tus ${TEXTOS_POR_PERSONA} mensajes.`;
   }
   if (TEXTOS_POR_PERSONA === 1) return 'Solo puedes enviar 1 mensaje, y se envía entero';
   return restantes === 1 ? 'Te queda 1 mensaje' : `Te quedan ${restantes} mensajes`;
@@ -347,7 +349,7 @@ const MENSAJES: Record<string, string> = {
   TEXT_LOCKED: 'Podréis escribir cuando se acepte la cerveza.',
   TEXT_EMPTY: 'Escribe algo antes de enviar.',
   TEXT_TOO_LONG: 'El mensaje no puede pasar de 120 caracteres.',
-  TEXT_LIMIT_REACHED: 'Ya has enviado tu mensaje.',
+  TEXT_LIMIT_REACHED: 'Ya has enviado tu único mensaje.',
   QUESTION_ALREADY_PENDING: 'Ya hay una pregunta esperando respuesta.',
   QUESTION_ALREADY_ANSWERED: 'La pregunta ya tiene respuesta.',
   QUESTION_TOO_SOON: 'Todavía no puedes volver a preguntar.',

@@ -300,7 +300,7 @@ export default function ChatCana() {
                 </Text>
               </View>
             ) : (
-              <Text style={styles.nota}>{textoRestante(0)} Buscaos en el bar.</Text>
+              <Text style={styles.nota}>{textoRestante(0)}</Text>
             )
           ) : null}
 

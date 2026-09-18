@@ -322,7 +322,7 @@ describe('estadoPestana', () => {
 describe('describirErrorCana', () => {
   it('traduce los codigos del SQL aunque lleguen con prefijo', () => {
     assert.equal(describirErrorCana('TEXT_LOCKED'), 'Podréis escribir cuando se acepte la cerveza.');
-    assert.equal(describirErrorCana('ERROR: P0001: TEXT_LIMIT_REACHED'), 'Ya has enviado tu mensaje.');
+    assert.equal(describirErrorCana('ERROR: P0001: TEXT_LIMIT_REACHED'), 'Ya has enviado tu único mensaje.');
   });
 
   it('no confunde un codigo con otro que lo contiene', () => {
@@ -373,6 +373,6 @@ describe('textoRestante', () => {
   });
 
   it('gastado, lo dice en singular', () => {
-    assert.equal(textoRestante(0), 'Ya has enviado tu mensaje.');
+    assert.equal(textoRestante(0), 'Ya has enviado tu único mensaje.');
   });
 });
