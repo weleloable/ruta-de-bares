@@ -292,9 +292,11 @@ export function estadoPregunta(
 export type FilaBandeja = {
   question_state: 'none' | 'pending' | 'postponed' | 'accepted' | 'rejected';
   question_asked_by: string | null;
-  last_kind: 'gif' | 'buzz' | 'question' | 'answer' | 'text' | null;
+  last_kind: 'question' | 'answer' | 'text' | null;
   last_sender_id: string | null;
   unread_count: number;
+  /** Nunca has abierto este chat: conexion nueva (0010). */
+  never_opened?: boolean;
 };
 
 /** La otra persona te ha preguntado y te toca responder. */
@@ -302,9 +304,17 @@ export function teTocaResponder(fila: FilaBandeja, yo: string): boolean {
   return fila.question_state === 'pending' && fila.question_asked_by !== yo;
 }
 
-/** Conversaciones que piden atencion: para el contador de la pestana Chats. */
+/**
+ * Conversaciones que piden atencion, para las dos burbujitas: la de "Chats" y
+ * la del icono de la pestana Cana.
+ *
+ * Cuenta conversaciones, no mensajes, y una conexion recien abierta cuenta
+ * aunque nadie haya escrito: es justo lo que hay que ir a mirar.
+ */
 export function chatsPendientes(filas: readonly FilaBandeja[], yo: string): number {
-  return filas.filter((fila) => teTocaResponder(fila, yo) || fila.unread_count > 0).length;
+  return filas.filter(
+    (fila) => teTocaResponder(fila, yo) || fila.unread_count > 0 || fila.never_opened === true,
+  ).length;
 }
 
 /** Una linea bajo el nombre en la lista de chats. */

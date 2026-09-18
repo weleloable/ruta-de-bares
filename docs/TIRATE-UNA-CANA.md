@@ -215,6 +215,25 @@ ficha y 400 px para la casilla, que es la que devuelven `match_grid`,
 `match_inbox` y `match_get_connection` (0006). Con fotos reales de movil eso
 baja una grilla de 200 personas de ~574 MB a ~4 MB.
 
+## Avisos dentro de la app
+
+Dos burbujitas con el mismo numero (`chatsPendientes` en `reglas.ts`): cuenta
+**conversaciones**, no mensajes, y suma las que esperan tu respuesta a la
+cerveza, las que tienen algo sin leer y **las conexiones que aun no has
+abierto** (`never_opened`, 0010: la pista es `last_read_at = '-infinity'`).
+
+- En el selector **Chats** de la pestana, mientras estas en la cana.
+- En el **icono de la pestana Cana**, para que se vea desde Sellos o Ruta.
+  Lo alimenta `AvisosCanaProvider` (`src/features/match/AvisosCana.tsx`), que
+  vive por encima del Stack y pregunta **cada 60 s**, no cada 15: son 200
+  personas preguntando aunque no esten en la cana. Se calla en segundo plano y
+  mira nada mas volver al primer plano. Cuando la pantalla de la cana pide la
+  bandeja le pasa la cuenta, asi que la burbujita se apaga al leer sin esperar
+  al siguiente minuto ni pedir la bandeja dos veces.
+
+No hay notificaciones fuera de la app: con el movil en el bolsillo no se
+entera nadie de nada. Ver "Sin tiempo real".
+
 ## Sin tiempo real
 
 El chat pregunta cada 4 s (polling) mientras esta abierto y visible; la

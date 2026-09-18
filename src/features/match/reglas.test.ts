@@ -165,6 +165,11 @@ describe('bandeja de chats', () => {
     assert.equal(vistaPreviaChat(fila({}), YO), 'Nueva conexión: ofrécele una caña');
   });
 
+  it('una conexion nueva sin mensajes tambien cuenta: hay que ir a mirarla', () => {
+    assert.equal(chatsPendientes([fila({ never_opened: true })], YO), 1);
+    assert.equal(chatsPendientes([fila({ never_opened: false })], YO), 0);
+  });
+
   it('cuenta conversaciones pendientes, no mensajes', () => {
     const filas = [
       fila({ unread_count: 3 }),

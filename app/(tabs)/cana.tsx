@@ -13,6 +13,7 @@ import {
   getMatchInbox,
   getMatchProfile,
 } from '../../src/features/match/api';
+import { useAvisosCana } from '../../src/features/match/AvisosCana';
 import { ListaChats } from '../../src/features/match/ListaChats';
 import { Casilla } from '../../src/features/match/piezas';
 import {
@@ -89,6 +90,8 @@ export default function CanaScreen() {
   const [cambiando, setCambiando] = useState(false);
   const [confirmandoDesactivar, setConfirmandoDesactivar] = useState(false);
 
+  const { fijar: fijarAvisos } = useAvisosCana();
+
   const rutaId = activeRoute?.id ?? null;
 
   const cargar = useCallback(async () => {
@@ -101,12 +104,13 @@ export default function CanaScreen() {
         actual.is_active && rutaId ? await Promise.all([getMatchGrid(rutaId), getMatchInbox(rutaId)]) : [[], []];
       setTarjetas(grilla);
       setBandeja(chats);
+      fijarAvisos(chatsPendientes(chats, yo));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cargar Tírate una caña.');
     } finally {
       setCargando(false);
     }
-  }, [rutaId]);
+  }, [rutaId, yo, fijarAvisos]);
 
   // Al volver de la presentacion o de una ficha, perfil y votos han cambiado.
   useFocusEffect(
@@ -125,10 +129,11 @@ export default function CanaScreen() {
       const [grilla, chats] = await Promise.all([getMatchGrid(rutaId), getMatchInbox(rutaId)]);
       setTarjetas(grilla);
       setBandeja(chats);
+      fijarAvisos(chatsPendientes(chats, yo));
     } catch {
       // El siguiente tick lo reintenta.
     }
-  }, [rutaId]);
+  }, [rutaId, yo, fijarAvisos]);
   useSondeo(
     refrescar,
     vista === 'chats' ? REFRESCO_CHATS_MS : REFRESCO_PERFILES_MS,

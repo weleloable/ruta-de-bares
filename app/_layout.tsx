@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
 import { leerInvitacionPendiente } from '../src/features/invites/pendiente';
+import { AvisosCanaProvider } from '../src/features/match/AvisosCana';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
 import { iniciarPwa } from '../src/lib/pwa';
 import { colors, fonts } from '../src/lib/theme';
@@ -98,8 +99,12 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ActiveRouteProvider>
-        <StatusBar style="dark" />
-        <AuthGate />
+        {/* Encima del Stack: la burbujita de la cana tiene que verse desde
+            cualquier pestana, no solo desde la de la cana. */}
+        <AvisosCanaProvider>
+          <StatusBar style="dark" />
+          <AuthGate />
+        </AvisosCanaProvider>
       </ActiveRouteProvider>
     </AuthProvider>
   );

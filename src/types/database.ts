@@ -133,6 +133,8 @@ export type MatchInboxRow = {
   last_sender_id: string | null;
   last_at: string;
   unread_count: number;
+  /** Nunca has abierto este chat: conexion nueva (0010). */
+  never_opened: boolean;
 };
 
 export type MatchConnectionDetail = {
