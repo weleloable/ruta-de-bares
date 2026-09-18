@@ -102,7 +102,9 @@ function Opcion({
 
 /** Lo que queda por escribir tras el Si. */
 export function textoRestante(restantes: number): string {
-  if (restantes === 0) return `Ya has enviado tus ${TEXTOS_POR_PERSONA} mensajes.`;
+  if (restantes === 0) {
+    return TEXTOS_POR_PERSONA === 1 ? 'Ya has enviado tu mensaje.' : `Ya has enviado tus ${TEXTOS_POR_PERSONA} mensajes.`;
+  }
   return restantes === 1 ? 'Te queda 1 mensaje' : `Te quedan ${restantes} mensajes`;
 }
 

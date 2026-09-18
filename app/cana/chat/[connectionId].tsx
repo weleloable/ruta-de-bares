@@ -1,9 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState, type ComponentProps } from 'react';
 import {
-  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,7 +9,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  Vibration,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,25 +21,20 @@ import {
   askBeer,
   fetchMatchMessages,
   getMatchConnection,
-  sendMatchBuzz,
-  sendMatchGif,
   sendMatchText,
 } from '../../../src/features/match/api';
-import { gifPorId } from '../../../src/features/match/gifs';
 import { AvatarCana } from '../../../src/features/match/piezas';
 import { FranjaCerveza, ResponderCerveza, textoRestante } from '../../../src/features/match/PreguntaCerveza';
 import {
   CONEXION_PERDIDA,
   TEXTO_MAX,
   desdeParaSondeo,
-  esperaZumbidoMs,
   estadoPregunta,
   hiloVacio,
   recibirDelSondeo,
   recibirEnviado,
   type HiloChat,
 } from '../../../src/features/match/reglas';
-import { SelectorGif } from '../../../src/features/match/SelectorGif';
 import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
 import { formatDuration } from '../../../src/features/stamps/rules';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
@@ -50,15 +42,15 @@ import { useNow } from '../../../src/lib/useNow';
 import { useSondeo } from '../../../src/lib/useSondeo';
 import type { BeerAnswer, MatchConnectionDetail, MatchMessageRow } from '../../../src/types/database';
 
-/** Con el chat a la vista se pregunta cada 4 s: un zumbido llega con ese retraso como mucho. */
+/** Con el chat a la vista se pregunta cada 4 s: una respuesta llega con ese retraso como mucho. */
 const SONDEO_CHAT_MS = 4_000;
 
 /**
- * Chat de una conexion de Tirate una cana: GIFs del catalogo, zumbidos y la
- * pregunta de la cerveza, que desbloquea dos textos por persona si es un Si.
- * Todo lo que se puede o no se puede enviar lo decide el servidor; la pantalla
- * solo deshabilita lo que ya sabe que va a fallar (p. ej. el zumbido en espera)
- * con el espejo de reglas.ts.
+ * Conexion de Tirate una cana. Lo unico que se puede hacer es ofrecer la cana
+ * ("Te tomas una cerveza conmigo?") y responder Si, No o "dentro de un rato";
+ * tras el Si, cada persona manda UN mensaje de hasta 120 caracteres (0007: se
+ * retiraron los GIFs y los zumbidos). Todo lo decide el servidor; la pantalla
+ * solo deshabilita lo que ya sabe que va a fallar, con el espejo de reglas.ts.
  */
 export default function ChatCana() {
   const { connectionId } = useLocalSearchParams<{ connectionId: string }>();
@@ -73,7 +65,6 @@ export default function ChatCana() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [confirmandoNo, setConfirmandoNo] = useState(false);
-  const [eligiendoGif, setEligiendoGif] = useState(false);
   const [texto, setTexto] = useState('');
 
   // Refs y no estado: el sondeo necesita lo ultimo sin volver a crearse.
@@ -82,15 +73,7 @@ export default function ChatCana() {
   // Diferencia entre el reloj del servidor y el del movil, para las esperas.
   const desfase = useRef(0);
   const scroll = useRef<ScrollView>(null);
-  const temblor = useRef(new Animated.Value(0)).current;
   const ahora = useNow(1_000);
-
-  const zumbar = useCallback(() => {
-    Vibration.vibrate(400);
-    const paso = (hacia: number) =>
-      Animated.timing(temblor, { toValue: hacia, duration: 45, useNativeDriver: Platform.OS !== 'web' });
-    Animated.sequence([paso(12), paso(-12), paso(10), paso(-10), paso(6), paso(-6), paso(0)]).start();
-  }, [temblor]);
 
   const pintar = useCallback((siguiente: HiloChat<MatchMessageRow>) => {
     hilo.current = siguiente;
@@ -114,12 +97,7 @@ export default function ChatCana() {
       ]);
       desfase.current = Date.parse(actual.server_now) - Date.now();
       setDetalle(actual);
-      const vistos = new Set(hilo.current.mensajes.map((m) => m.id));
       pintar(recibirDelSondeo(hilo.current, nuevos));
-      // Solo zumba lo que llega con el chat abierto, no el historial al entrar.
-      if (!primeraCarga.current && nuevos.some((m) => !vistos.has(m.id) && m.kind === 'buzz' && m.sender_id !== yo)) {
-        zumbar();
-      }
       primeraCarga.current = false;
       setError(null);
     } catch (e) {
@@ -127,7 +105,7 @@ export default function ChatCana() {
     } finally {
       setCargando(false);
     }
-  }, [connectionId, perdida, pintar, fallo, yo, zumbar]);
+  }, [connectionId, perdida, pintar, fallo]);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,7 +114,7 @@ export default function ChatCana() {
   );
   useSondeo(traer, SONDEO_CHAT_MS, perdida === null);
 
-  /** Envia, pinta el mensaje al momento y vuelve a leer el estado (pregunta, textos, zumbido). */
+  /** Envia, pinta el mensaje al momento y vuelve a leer el estado de la pregunta. */
   async function enviar(accion: () => Promise<MatchMessageRow>): Promise<boolean> {
     setEnviando(true);
     setError(null);
@@ -202,7 +180,6 @@ export default function ChatCana() {
   }
 
   const ahoraServidor = new Date(ahora.getTime() + desfase.current);
-  const esperaZumbido = esperaZumbidoMs(detalle.my_last_buzz_at, ahoraServidor);
   const pregunta = estadoPregunta(detalle, yo, ahoraServidor);
   const nombre = detalle.display_name;
 
@@ -228,7 +205,7 @@ export default function ChatCana() {
 
         <FranjaCerveza estado={pregunta} nombre={nombre} />
 
-        <Animated.View style={[styles.hilo, { transform: [{ translateX: temblor }] }]}>
+        <View style={styles.hilo}>
           <ScrollView
             ref={scroll}
             contentContainerStyle={styles.mensajes}
@@ -236,7 +213,7 @@ export default function ChatCana() {
           >
             {mensajes.length === 0 ? (
               <Text style={[typography.muted, styles.centrado]}>
-                Sois una conexión. Rompe el hielo con un GIF o un zumbido.
+                Sois una conexión. Ofrécele una caña cuando quieras.
               </Text>
             ) : (
               mensajes.map((mensaje) => (
@@ -244,7 +221,7 @@ export default function ChatCana() {
               ))
             )}
           </ScrollView>
-        </Animated.View>
+        </View>
 
         {error ? (
           <View style={styles.aviso}>
@@ -291,25 +268,18 @@ export default function ChatCana() {
                 </Text>
               </View>
             ) : (
-              <Text style={styles.nota}>{textoRestante(0)} Seguid con GIFs y zumbidos.</Text>
+              <Text style={styles.nota}>{textoRestante(0)} Buscaos en el bar.</Text>
             )
           ) : null}
 
           <View style={styles.acciones}>
-            <BotonChat icono="images" texto="GIF" onPress={() => setEligiendoGif(true)} desactivado={enviando} />
-            <BotonChat
-              icono="flash"
-              texto={esperaZumbido > 0 ? `Zumbido (${Math.ceil(esperaZumbido / 1000)} s)` : 'Zumbido'}
-              onPress={() => void enviar(() => sendMatchBuzz(detalle.connection_id))}
-              desactivado={enviando || esperaZumbido > 0}
-            />
             {pregunta.tipo === 'disponible' ||
             pregunta.tipo === 'aplazada' ||
             pregunta.tipo === 'esperando-respuesta' ? (
               <BotonChat
                 icono="beer"
-                // En un tercio de ancho "Preguntar en 30 min" se corta: se ve
-                // la espera y el lector de pantalla recibe la frase entera.
+                // "Preguntar en 30 min" no cabe: se ve la espera y el lector
+                // de pantalla recibe la frase entera.
                 texto={
                   pregunta.tipo === 'aplazada'
                     ? `En ${formatDuration(pregunta.disponibleEnMs)}`
@@ -329,15 +299,6 @@ export default function ChatCana() {
         </View>
       </KeyboardAvoidingView>
 
-      <SelectorGif
-        visible={eligiendoGif}
-        onCerrar={() => setEligiendoGif(false)}
-        onElegir={(gifId) => {
-          setEligiendoGif(false);
-          void enviar(() => sendMatchGif(detalle.connection_id, gifId));
-        }}
-      />
-
       <DialogoConfirmar
         visible={confirmandoNo}
         titulo={`Decir que no a ${nombre}`}
@@ -354,26 +315,6 @@ export default function ChatCana() {
 
 function Mensaje({ mensaje, mio, nombreOtro }: { mensaje: MatchMessageRow; mio: boolean; nombreOtro: string }) {
   switch (mensaje.kind) {
-    case 'gif': {
-      const gif = gifPorId(mensaje.gif_id);
-      return (
-        <View
-          accessible
-          accessibilityLabel={`${mio ? 'Has enviado' : `${nombreOtro} ha enviado`} el GIF ${gif?.etiqueta ?? ''}`}
-          style={[styles.burbuja, mio ? styles.mia : styles.suya]}
-        >
-          {gif ? (
-            <Image source={gif.fuente} style={styles.gif} contentFit="cover" />
-          ) : (
-            <Text style={typography.muted}>GIF no disponible en esta versión de la app</Text>
-          )}
-        </View>
-      );
-    }
-    case 'buzz':
-      return (
-        <Evento icono="flash">{mio ? 'Has mandado un zumbido' : `${nombreOtro} te ha mandado un zumbido`}</Evento>
-      );
     case 'question':
       return (
         <View style={styles.pregunta}>
@@ -486,7 +427,6 @@ const styles = StyleSheet.create({
   burbuja: { maxWidth: '72%', borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1 },
   mia: { alignSelf: 'flex-end', borderColor: colors.beer, backgroundColor: colors.beerSoft },
   suya: { alignSelf: 'flex-start', borderColor: colors.border, backgroundColor: colors.card },
-  gif: { width: 200, height: 150 },
   evento: {
     alignSelf: 'center',
     flexDirection: 'row',

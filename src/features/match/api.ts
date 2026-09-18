@@ -136,14 +136,6 @@ async function enviado(
   return mensaje;
 }
 
-export function sendMatchGif(connectionId: string, gifId: string): Promise<MatchMessageRow> {
-  return enviado(supabase.rpc('match_send_gif', { p_connection_id: connectionId, p_gif_id: gifId }));
-}
-
-export function sendMatchBuzz(connectionId: string): Promise<MatchMessageRow> {
-  return enviado(supabase.rpc('match_send_buzz', { p_connection_id: connectionId }));
-}
-
 export function sendMatchText(connectionId: string, body: string): Promise<MatchMessageRow> {
   return enviado(supabase.rpc('match_send_text', { p_connection_id: connectionId, p_body: body }));
 }

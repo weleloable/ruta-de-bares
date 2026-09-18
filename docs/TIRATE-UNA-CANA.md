@@ -11,8 +11,8 @@ ya esta decidido y lo que hace falta para trabajar en el codigo.
 ## Como funciona
 
 1. **Desactivado por defecto.** La pestana explica que, si lo activas, quienes
-   tambien lo tengan activado en tu ruta podran ver tu nombre y tu foto,
-   enviarte GIFs y zumbidos y ofrecerte una cerveza.
+   tambien lo tengan activado en tu ruta podran ver tu nombre y tu foto y
+   ofrecerte una cerveza.
 2. **Primera activacion:** confirmar mayoria de edad y presentarse con una frase
    de hasta 120 caracteres y hasta 5 etiquetas. Se puede editar despues.
 3. **Grilla** con foto y nombre de quien lo tiene activado en la ruta. Al tocar
@@ -22,10 +22,13 @@ ya esta decidido y lo que hace falta para trabajar en el codigo.
    vuelve a Visto). Me gusta mutuo = conexion. Quitar el Me gusta de una
    conexion pide confirmar: la cierra y borra el chat.
    Filtros: Todos, Me gusta, Visto, Conexiones, Nuevos.
-5. **Chat** solo con conexion: GIFs del catalogo y zumbidos. La pregunta
-   "Te tomas una cerveza conmigo?" se responde Si, No o "Preguntamelo dentro de
-   un rato". Tras el Si cada persona puede mandar 2 textos de hasta 120
-   caracteres.
+5. **Conexion: solo la pregunta** (0007). Lo unico que se puede hacer es
+   ofrecer la cana: "Te tomas una cerveza conmigo?", que se responde Si, No o
+   "Preguntamelo dentro de un rato". Tras el Si cada persona manda **un**
+   mensaje de hasta 120 caracteres. No hay GIFs ni zumbidos: se retiraron
+   porque dan de sobra para molestar a alguien toda una noche y no hacen falta
+   para quedar. Con un solo mensaje por persona, ademas, una denuncia sobre un
+   texto tiene exactamente un mensaje por lado que mirar.
 
 ## Como se ve cada estado: "la cana se llena"
 
@@ -61,13 +64,13 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D4 | Pregunta cualquiera de los dos, con **una sola pregunta viva** a la vez. |
 | D5 | "Dentro de un rato": se puede volver a preguntar a los **30 min**, con **2 aplazamientos** como maximo. |
 | D6 | El filtro Me gusta **incluye las conexiones**. |
-| D7 | Tras el Si, **2 textos por persona** de hasta 120 caracteres. |
+| D7 | Tras el Si, **1 texto por persona** de hasta 120 caracteres (eran 2 hasta la 0007). |
 | D8 | Desactivar es una **pausa**: desapareces de grillas y chats y todo vuelve al reactivar. |
 | D9 | La foto **no es obligatoria**; sin ella se ven las iniciales. |
 | D10 | Los **admins no leen chats**. |
 | D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Las actuales son provisionales. |
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
-| D13 | **Catalogo propio de GIFs** dentro de la app, sin buscador externo. |
+| D13 | ~~Catalogo propio de GIFs~~. **Retirada en la 0007**: no hay GIFs ni zumbidos, solo la pregunta de la cerveza. |
 | D14 | **Sin "No me gusta"** (17-09-2026): la unica accion es Me gusta. Abrir la ficha o quitar un Me gusta deja a la persona en **Visto**, que la otra persona no ve. Los No me gusta que hubiera pasan a Visto (0005). |
 
 ## Probarlo en local
@@ -83,15 +86,14 @@ update public.match_connections
  where id = '<id de la conexion>';
 ```
 
-Lo mismo con `match_connection_members.last_buzz_at` para el zumbido.
-
 ## Donde esta cada regla
 
 Todas las reglas viven en `supabase/migrations/0004_tirate_una_cana.sql`, con
 los cambios de `0005_cana_visto.sql` (Visto en lugar de No me gusta:
 `match_set_like` y `match_mark_seen` sustituyen a `match_vote`). La app no lee
-ni escribe ninguna tabla `match_*` salvo los catalogos de etiquetas y GIFs;
-todo pasa por funciones `SECURITY DEFINER`, como `claim_stamp`.
+ni escribe ninguna tabla `match_*` salvo el catalogo de etiquetas; todo pasa
+por funciones `SECURITY DEFINER`, como `claim_stamp`. La `0007_cana_solo_la_pregunta.sql`
+retira GIFs y zumbidos y baja a un texto por persona.
 `tests/migration-0004.test.ts` y `tests/migration-0004.test.ts` las ejecutan
 sobre Postgres real (PGlite).
 
@@ -113,17 +115,6 @@ se aplica antes. La migracion de pertenencia la sustituye con
 `create or replace`, sin cambiar la firma. Hay que acordar la numeracion de las
 migraciones para no usar las dos el mismo numero.
 
-## GIFs
-
-Catalogo propio dentro de la app (D13): `assets/gifs/<id>.gif`, listados en
-`src/features/match/gifs.ts` y en la tabla `match_gifs` de la migracion. El
-chat guarda solo el id. `tests/match-gifs.test.ts` comprueba que los dos
-catalogos coinciden y que cada fichero existe y pesa menos de 200 KB.
-
-Los 8 actuales son **provisionales**: dibujados para el prototipo con la paleta
-de la app, sin derechos de terceros. Para cambiarlos, mismo id o una migracion
-nueva que actualice `match_gifs`.
-
 ## Fotos
 
 La grilla pinta la foto de todas las personas de la ruta a la vez, asi que la
@@ -135,9 +126,7 @@ baja una grilla de 200 personas de ~574 MB a ~4 MB.
 ## Sin tiempo real
 
 El chat pregunta cada 4 s (polling) mientras esta abierto y visible; la
-pestana, al entrar y cada 45 s (15 s en Chats). Un zumbido que llega con el chat
-abierto hace temblar la pantalla y vibrar el movil donde se puede (Android si,
-Safari en iPhone no). No usa Supabase Realtime. Si se
+pestana, al entrar y cada 45 s (15 s en Chats). No usa Supabase Realtime. Si se
 queda corto, las tablas y funciones no cambian. Las notificaciones estan
 aparcadas.
 

@@ -128,9 +128,6 @@ export function hayQueMarcarVisto(estado: EstadoTarjeta): boolean {
 
 // --- Chat -------------------------------------------------------------------
 
-/** Un zumbido cada 30 s por persona y conexion. */
-export const ZUMBIDO_ESPERA_MS = 30_000;
-
 /**
  * Cuanto se solapa cada consulta de mensajes con la anterior. Un mensaje
  * insertado antes puede confirmarse despues de otro ya recibido; sin solape el
@@ -188,20 +185,14 @@ export function desdeParaSondeo(hilo: HiloChat<MensajeOrdenable>): string | null
   return new Date(Date.parse(hilo.ultimoSondeado) - SOLAPE_SONDEO_MS).toISOString();
 }
 
-/** Milisegundos que faltan para poder mandar otro zumbido (0 = ya se puede). */
-export function esperaZumbidoMs(ultimoZumbido: string | null, ahora: Date): number {
-  if (!ultimoZumbido) return 0;
-  return Math.max(0, Date.parse(ultimoZumbido) + ZUMBIDO_ESPERA_MS - ahora.getTime());
-}
-
 // --- La pregunta de la cerveza ---------------------------------------------
 
 /** Tras "dentro de un rato" se puede volver a preguntar pasado este tiempo (D5). */
 export const PREGUNTA_ESPERA_MS = 30 * 60_000;
 /** Aplazamientos como maximo; despues ya no se pregunta mas en la pareja (D5). */
 export const APLAZAMIENTOS_MAX = 2;
-/** Textos que puede mandar cada persona tras el Si (D7). */
-export const TEXTOS_POR_PERSONA = 2;
+/** Textos que puede mandar cada persona tras el Si (D7, 0007: era 2). */
+export const TEXTOS_POR_PERSONA = 1;
 export const TEXTO_MAX = 120;
 
 export type EstadoPregunta =
@@ -271,10 +262,6 @@ export function vistaPreviaChat(fila: FilaBandeja, yo: string): string {
   if (fila.question_state === 'pending') return 'Esperando su respuesta a la cerveza';
   const mio = fila.last_sender_id === yo;
   switch (fila.last_kind) {
-    case 'gif':
-      return mio ? 'Tú: un GIF' : 'Te ha mandado un GIF';
-    case 'buzz':
-      return mio ? 'Tú: un zumbido' : 'Te ha mandado un zumbido';
     case 'text':
       return mio ? 'Tú: un mensaje' : 'Te ha escrito';
     case 'answer':
@@ -283,7 +270,7 @@ export function vistaPreviaChat(fila: FilaBandeja, yo: string): string {
     case 'question':
       return mio ? 'Le has preguntado por una cerveza' : 'Te ha preguntado por una cerveza';
     default:
-      return 'Nueva conexión: saluda con un GIF';
+      return 'Nueva conexión: ofrécele una caña';
   }
 }
 
@@ -303,12 +290,10 @@ const MENSAJES: Record<string, string> = {
   CONNECTION_NOT_FOUND: 'Esta conversación no existe.',
   CONNECTION_CLOSED: 'Esta conexión se ha cerrado.',
   CONNECTION_UNAVAILABLE: 'La otra persona ha pausado Tírate una caña.',
-  GIF_NOT_FOUND: 'Ese GIF ya no está disponible.',
-  BUZZ_TOO_SOON: 'Espera un poco antes de otro zumbido.',
   TEXT_LOCKED: 'Podréis escribir cuando se acepte la cerveza.',
   TEXT_EMPTY: 'Escribe algo antes de enviar.',
   TEXT_TOO_LONG: 'El mensaje no puede pasar de 120 caracteres.',
-  TEXT_LIMIT_REACHED: 'Ya has enviado tus dos mensajes.',
+  TEXT_LIMIT_REACHED: 'Ya has enviado tu mensaje.',
   QUESTION_ALREADY_PENDING: 'Ya hay una pregunta esperando respuesta.',
   QUESTION_ALREADY_ANSWERED: 'La pregunta ya tiene respuesta.',
   QUESTION_TOO_SOON: 'Todavía no puedes volver a preguntar.',

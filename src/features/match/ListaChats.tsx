@@ -25,7 +25,7 @@ export function ListaChats({
     return (
       <EmptyState
         title="Sin chats todavía"
-        body="Cuando alguien a quien has dado Me gusta te lo devuelva, podréis hablar aquí con GIFs y zumbidos."
+        body="Cuando alguien a quien has dado Me gusta te lo devuelva, aparecerá aquí para ofrecerle una caña."
       />
     );
   }

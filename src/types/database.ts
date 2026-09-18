@@ -88,9 +88,9 @@ export type RouteMemberRow = {
 export type MatchVote = 'like' | 'dislike';
 export type BeerQuestionState = 'none' | 'pending' | 'postponed' | 'accepted' | 'rejected';
 export type BeerAnswer = 'yes' | 'no' | 'later';
-export type MatchMessageKind = 'gif' | 'buzz' | 'question' | 'answer' | 'text';
+export type MatchMessageKind = 'question' | 'answer' | 'text';
 
-/** Catalogo de etiquetas y de GIFs: las dos unicas tablas match_* que la app lee. */
+/** Catalogo de etiquetas: la unica tabla match_* que la app lee. */
 export type MatchCatalogRow = {
   id: string;
   label: string;
@@ -146,7 +146,6 @@ export type MatchConnectionDetail = {
   postpone_count: number;
   my_texts_sent: number;
   other_texts_sent: number;
-  my_last_buzz_at: string | null;
   server_now: string;
 };
 
@@ -155,7 +154,6 @@ export type MatchMessageRow = {
   connection_id: string;
   sender_id: string;
   kind: MatchMessageKind;
-  gif_id: string | null;
   answer: BeerAnswer | null;
   body: string | null;
   created_at: string;
@@ -213,12 +211,6 @@ export type Database = {
       // privilegios para la app y todo pasa por las funciones de abajo, asi
       // que un supabase.from('match_votes') ni siquiera compila.
       match_tags: {
-        Row: MatchCatalogRow;
-        Insert: never;
-        Update: never;
-        Relationships: [];
-      };
-      match_gifs: {
         Row: MatchCatalogRow;
         Insert: never;
         Update: never;
@@ -290,14 +282,6 @@ export type Database = {
       };
       match_fetch_messages: {
         Args: { p_connection_id: string; p_after?: string | null };
-        Returns: MatchMessageRow[];
-      };
-      match_send_gif: {
-        Args: { p_connection_id: string; p_gif_id: string };
-        Returns: MatchMessageRow[];
-      };
-      match_send_buzz: {
-        Args: { p_connection_id: string };
         Returns: MatchMessageRow[];
       };
       match_send_text: {

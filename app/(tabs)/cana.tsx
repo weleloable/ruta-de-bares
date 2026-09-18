@@ -209,7 +209,7 @@ export default function CanaScreen() {
               <Text style={typography.sectionTitle}>Si lo activas</Text>
               <Text style={typography.body}>Quienes también lo tengan activado en esta ruta podrán:</Text>
               <Punto icono="person-circle-outline" texto="ver tu nombre y tu foto" />
-              <Punto icono="images-outline" texto="enviarte GIFs y zumbidos" />
+              <Punto icono="beer-outline" texto="ofrecerte tomar una cerveza" />
               <Punto icono="beer-outline" texto="ofrecerte tomar una cerveza" />
               <Text style={typography.muted}>
                 Mientras esté desactivado nadie te ve. Puedes activarlo y desactivarlo cuando quieras.

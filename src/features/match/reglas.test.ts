@@ -10,13 +10,11 @@ import {
   SOLAPE_SONDEO_MS,
   TEXTOS_POR_PERSONA,
   TEXTO_MAX,
-  ZUMBIDO_ESPERA_MS,
   alternarEtiqueta,
   chatsPendientes,
   contarPorFiltro,
   describirErrorCana,
   desdeParaSondeo,
-  esperaZumbidoMs,
   estadoPestana,
   estadoPregunta,
   estadoTarjeta,
@@ -133,18 +131,6 @@ describe('mensajes del chat por polling', () => {
   });
 });
 
-describe('esperaZumbidoMs', () => {
-  const ahora = new Date(Date.UTC(2026, 8, 19, 20, 0, 40));
-  it('sin zumbido previo o pasados 30 s, se puede ya', () => {
-    assert.equal(esperaZumbidoMs(null, ahora), 0);
-    assert.equal(esperaZumbidoMs(new Date(Date.UTC(2026, 8, 19, 20, 0, 10)).toISOString(), ahora), 0);
-  });
-  it('dentro de los 30 s dice cuanto falta', () => {
-    assert.equal(esperaZumbidoMs(new Date(Date.UTC(2026, 8, 19, 20, 0, 30)).toISOString(), ahora), 20_000);
-    assert.equal(ZUMBIDO_ESPERA_MS, 30_000);
-  });
-});
-
 describe('bandeja de chats', () => {
   const YO = 'yo';
   const fila = (cambios: Partial<FilaBandeja>): FilaBandeja => ({
@@ -157,7 +143,7 @@ describe('bandeja de chats', () => {
   });
 
   it('una pregunta que te han hecho manda sobre el ultimo mensaje', () => {
-    const f = fila({ question_state: 'pending', question_asked_by: 'otra', last_kind: 'gif', last_sender_id: 'otra' });
+    const f = fila({ question_state: 'pending', question_asked_by: 'otra', last_kind: 'text', last_sender_id: 'otra' });
     assert.equal(teTocaResponder(f, YO), true);
     assert.equal(vistaPreviaChat(f, YO), 'Te ha preguntado si os tomáis una cerveza');
   });
@@ -169,9 +155,9 @@ describe('bandeja de chats', () => {
   });
 
   it('distingue lo que has mandado tu de lo que te han mandado', () => {
-    assert.equal(vistaPreviaChat(fila({ last_kind: 'buzz', last_sender_id: YO }), YO), 'Tú: un zumbido');
-    assert.equal(vistaPreviaChat(fila({ last_kind: 'buzz', last_sender_id: 'otra' }), YO), 'Te ha mandado un zumbido');
-    assert.equal(vistaPreviaChat(fila({}), YO), 'Nueva conexión: saluda con un GIF');
+    assert.equal(vistaPreviaChat(fila({ last_kind: 'text', last_sender_id: YO }), YO), 'Tú: un mensaje');
+    assert.equal(vistaPreviaChat(fila({ last_kind: 'text', last_sender_id: 'otra' }), YO), 'Te ha escrito');
+    assert.equal(vistaPreviaChat(fila({}), YO), 'Nueva conexión: ofrécele una caña');
   });
 
   it('cuenta conversaciones pendientes, no mensajes', () => {
@@ -240,8 +226,8 @@ describe('estadoPregunta', () => {
 
   it(`aceptada: ${TEXTOS_POR_PERSONA} textos por persona (D7)`, () => {
     const aceptada = conexion({ question_state: 'accepted' });
-    assert.deepEqual(estadoPregunta(aceptada, YO, ahora), { tipo: 'aceptada', textosRestantes: 2 });
-    assert.deepEqual(estadoPregunta({ ...aceptada, my_texts_sent: 2 }, YO, ahora), {
+    assert.deepEqual(estadoPregunta(aceptada, YO, ahora), { tipo: 'aceptada', textosRestantes: 1 });
+    assert.deepEqual(estadoPregunta({ ...aceptada, my_texts_sent: 1 }, YO, ahora), {
       tipo: 'aceptada',
       textosRestantes: 0,
     });
@@ -330,8 +316,8 @@ describe('estadoPestana', () => {
 
 describe('describirErrorCana', () => {
   it('traduce los codigos del SQL aunque lleguen con prefijo', () => {
-    assert.equal(describirErrorCana('BUZZ_TOO_SOON'), 'Espera un poco antes de otro zumbido.');
-    assert.equal(describirErrorCana('ERROR: P0001: TEXT_LIMIT_REACHED'), 'Ya has enviado tus dos mensajes.');
+    assert.equal(describirErrorCana('TEXT_LOCKED'), 'Podréis escribir cuando se acepte la cerveza.');
+    assert.equal(describirErrorCana('ERROR: P0001: TEXT_LIMIT_REACHED'), 'Ya has enviado tu mensaje.');
   });
 
   it('no confunde un codigo con otro que lo contiene', () => {

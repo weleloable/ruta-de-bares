@@ -8,7 +8,6 @@ import {
   PREGUNTA_ESPERA_MS,
   TEXTOS_POR_PERSONA,
   TEXTO_MAX,
-  ZUMBIDO_ESPERA_MS,
 } from '../src/features/match/reglas.ts';
 import { leerFichero } from './pglite-supabase.ts';
 
@@ -20,6 +19,9 @@ import { leerFichero } from './pglite-supabase.ts';
  */
 
 const sql = leerFichero('supabase/migrations/0004_tirate_una_cana.sql').replace(/--.*$/gm, '');
+// La 0007 rehizo match_send_text (un solo texto por persona) y retiro GIFs y
+// zumbidos, asi que esos limites hay que buscarlos alli.
+const sql0007 = leerFichero('supabase/migrations/0007_cana_solo_la_pregunta.sql').replace(/--.*$/gm, '');
 
 describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
   it('longitud maxima de la frase', () => {
@@ -31,10 +33,6 @@ describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
     assert.match(sql, new RegExp(`cardinality\\(v_tags\\) > ${ETIQUETAS_MAX}\\b`));
   });
 
-  it('espera entre zumbidos', () => {
-    assert.match(sql, new RegExp(`last_buzz_at <= now\\(\\) - interval '${ZUMBIDO_ESPERA_MS / 1000} seconds'`));
-  });
-
   it('espera y limite de aplazamientos de la pregunta (D5)', () => {
     assert.match(sql, new RegExp(`question_answered_at \\+ interval '${PREGUNTA_ESPERA_MS / 60_000} minutes'`));
     assert.match(sql, new RegExp(`postpone_count >= ${APLAZAMIENTOS_MAX}\\b`));
@@ -42,8 +40,17 @@ describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
   });
 
   it('textos tras el Si: cuantos por persona y cuantos caracteres (D7)', () => {
-    assert.match(sql, new RegExp(`cm\\.texts_sent < ${TEXTOS_POR_PERSONA}\\b`));
-    assert.match(sql, new RegExp(`char_length\\(v_body\\) > ${TEXTO_MAX}\\b`));
+    assert.match(sql0007, new RegExp(`cm\\.texts_sent < ${TEXTOS_POR_PERSONA}\\b`));
+    assert.match(sql0007, new RegExp(`check \\(texts_sent between 0 and ${TEXTOS_POR_PERSONA}\\)`));
+    assert.match(sql0007, new RegExp(`char_length\\(v_body\\) > ${TEXTO_MAX}\\b`));
     assert.match(sql, new RegExp(`check \\(char_length\\(body\\) between 1 and ${TEXTO_MAX}\\)`));
+  });
+
+  it('la cana se queda sin GIFs ni zumbidos (0007)', () => {
+    assert.match(sql0007, /drop function if exists public\.match_send_gif/);
+    assert.match(sql0007, /drop function if exists public\.match_send_buzz/);
+    assert.match(sql0007, /drop table if exists public\.match_gifs/);
+    assert.match(sql0007, /drop column if exists last_buzz_at/);
+    assert.match(sql0007, /check \(kind in \('question', 'answer', 'text'\)\)/);
   });
 });
