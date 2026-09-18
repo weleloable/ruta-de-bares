@@ -9,6 +9,18 @@ import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider'
 import { iniciarPwa } from '../src/lib/pwa';
 import { colors, fonts } from '../src/lib/theme';
 
+/**
+ * Con que pantalla "debajo" se abre una ruta a la que se entra directamente.
+ *
+ * Al recargar (F5) o abrir un enlace a /cana/persona/<id>, la app arranca en
+ * esa pantalla y la pila esta vacia: sin esto no hay flecha de volver y la
+ * persona se queda encerrada ahi. Con el ancla, expo-router mete las pestanas
+ * debajo y la flecha aparece.
+ */
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
+
 // Al cargar el modulo y no en un efecto: el service worker se registra en
 // cuanto la pagina termina de cargar, sin esperar a que monte ningun
 // componente. En nativo no hace nada.
