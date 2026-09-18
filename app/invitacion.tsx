@@ -5,8 +5,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Banner, Button, Field, Screen } from '../src/components/ui';
 import { useAuth } from '../src/features/auth/AuthProvider';
 import { redeemRouteInvite } from '../src/features/invites/api';
-import { isValidTokenShape, parseInviteToken } from '../src/features/invites/link';
-import { guardarInvitacionPendiente } from '../src/features/invites/pendiente';
+import {
+  isValidTokenShape,
+  parseInviteParam,
+  parseInviteToken,
+} from '../src/features/invites/link';
+import {
+  guardarInvitacionPendiente,
+  olvidarInvitacionPendiente,
+} from '../src/features/invites/pendiente';
 import { useActiveRoute } from '../src/features/routes/ActiveRouteProvider';
 import { getRouteWithBars } from '../src/features/routes/api';
 import { space, typography } from '../src/lib/theme';
@@ -14,10 +21,11 @@ import { space, typography } from '../src/lib/theme';
 /**
  * Canje de una invitacion a una ruta.
  *
- * Se llega de dos formas: abriendo el deep link rutadebares://invitacion?token=
- * (expo-router rellena el parametro solo, tambien en arranque en frio), o
- * pegando el codigo a mano, que es la unica via que funciona en la web porque
- * alli ese esquema no abre nada.
+ * Se llega de dos formas: abriendo el enlace que reparte el admin
+ * (https://weleloable.github.io/ruta-de-bares/invitacion?token=..., ver
+ * buildInviteUrl; expo-router rellena el parametro solo, tambien en arranque en
+ * frio y desde la PWA instalada), o pegando el codigo a mano en Mi perfil. El
+ * deep link rutadebares://invitacion?token= sigue funcionando en nativo.
  *
  * Es publica a proposito (ver AuthGate en app/_layout.tsx): si exigiera sesion,
  * abrir el enlace sin haberla iniciado acabaria en /login con el token perdido.
@@ -28,12 +36,11 @@ export default function InvitacionScreen() {
   const router = useRouter();
   const { session, loading } = useAuth();
   const { refresh, selectRoute } = useActiveRoute();
-  const params = useLocalSearchParams<{ token?: string }>();
+  const params = useLocalSearchParams<{ token?: string | string[] }>();
 
-  const tokenDelEnlace = useMemo(
-    () => (params.token ? parseInviteToken(params.token) : null),
-    [params.token],
-  );
+  // Puede llegar como array (?token=a&token=b) y es la entrada publica de la
+  // pantalla: parseInviteParam lo traga sin lanzar.
+  const tokenDelEnlace = useMemo(() => parseInviteParam(params.token), [params.token]);
 
   const [token, setToken] = useState(tokenDelEnlace ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +59,13 @@ export default function InvitacionScreen() {
   useEffect(() => {
     if (!loading && !session && tokenValido) guardarInvitacionPendiente(tokenLimpio);
   }, [loading, session, tokenValido, tokenLimpio]);
+
+  // Con sesion la invitacion ya esta delante del usuario (viene en la URL): el
+  // pendiente cumplio su funcion. AuthGate solo lo lee, asi que se borra aqui,
+  // y no reaparece si luego cierra sesion y vuelve a entrar sin haber canjeado.
+  useEffect(() => {
+    if (!loading && session) olvidarInvitacionPendiente();
+  }, [loading, session]);
 
   async function onCanjear() {
     if (!tokenValido || enviando) return;
@@ -122,20 +136,20 @@ export default function InvitacionScreen() {
         <Text style={typography.muted}>
           {tokenDelEnlace
             ? 'Enlace reconocido. Confirma para entrar en la ruta.'
-            : 'Pega el codigo que te han pasado.'}
+            : 'Pega el enlace o el codigo que te han pasado.'}
         </Text>
       </View>
 
       <View style={styles.formulario}>
         <Field
-          label="Codigo de invitacion"
+          label="Enlace o codigo de invitacion"
           value={token}
           onChangeText={setToken}
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="43 caracteres"
+          placeholder="Pega aqui el enlace"
           editable={!enviando && tokenDelEnlace === null}
-          error={token.length > 0 && !tokenValido ? 'Este codigo no tiene el formato correcto.' : null}
+          error={token.length > 0 && !tokenValido ? 'Este enlace o codigo no tiene el formato correcto.' : null}
           hint={tokenDelEnlace ? 'Viene del enlace que has abierto.' : undefined}
         />
 

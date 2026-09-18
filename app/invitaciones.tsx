@@ -14,7 +14,11 @@ import {
   type CreatedInvite,
   type InviteConRuta,
 } from '../src/features/invites/api';
-import { buildInviteUrl, buildShareMessage } from '../src/features/invites/link';
+import {
+  buildInviteUrl,
+  buildShareMessage,
+  debeCopiarTrasFalloDeCompartir,
+} from '../src/features/invites/link';
 import { DialogoConfirmar } from '../src/features/profile/DialogoConfirmar';
 import { listRoutes } from '../src/features/routes/api';
 import { diaLargo } from '../src/lib/fechas';
@@ -101,8 +105,19 @@ export default function InvitacionesScreen() {
     setCopiado(id);
   }
 
-  async function onCompartir(token: string, nombreRuta: string) {
-    await Share.share({ message: buildShareMessage(token, nombreRuta) });
+  async function onCompartir(id: string, token: string, nombreRuta: string) {
+    const mensaje = buildShareMessage(token, nombreRuta);
+    try {
+      await Share.share({ message: mensaje });
+    } catch (e) {
+      // react-native-web rechaza Share.share cuando el navegador no tiene
+      // navigator.share (escritorio). Sin esto el boton no hacia nada visible:
+      // se copia el mensaje entero y se avisa con el mismo "Copiado". Cerrar la
+      // hoja de compartir no cuenta: es cancelar, no fallar.
+      if (!debeCopiarTrasFalloDeCompartir(e)) return;
+      await Clipboard.setStringAsync(mensaje);
+      setCopiado(id);
+    }
   }
 
   async function onAnularConfirmado() {
@@ -195,7 +210,7 @@ export default function InvitacionesScreen() {
             <Button
               title="Compartir"
               variant="secondary"
-              onPress={() => onCompartir(recienCreada.token, rutaCreada)}
+              onPress={() => onCompartir(recienCreada.id, recienCreada.token, rutaCreada)}
             />
             <Button
               title="Ya lo tengo, ocultar"

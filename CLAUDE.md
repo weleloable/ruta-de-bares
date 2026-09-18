@@ -146,6 +146,19 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   Es un cambio consciente respecto a las invitaciones de cuenta de `0001`, que
   guardaban el sha256; entonces una fuga repartía CUENTAS, ahora como mucho deja
   colarse en una ruta unas horas y ocupando plaza del tope.
+- **El enlace de invitacion es una URL https de la web, no un deep link**
+  (`buildInviteUrl` en `src/features/invites/link.ts`,
+  `https://weleloable.github.io/ruta-de-bares/invitacion?token=...`).
+  `rutadebares://` no es pulsable en todos los chats y no abre nada sin la app
+  nativa; https abre siempre la PWA. NO abre la app nativa: Android exige
+  `assetlinks.json` en la raiz del dominio y una pagina de proyecto de Pages no
+  lo controla. `WEB_APP_URL` debe coincidir con `WEB_BASE_URL` del workflow
+  (lo vigila `tests/deploy-web.test.ts`). El token pendiente de quien abre el
+  enlace sin sesion se refleja en `localStorage` (24 h, un solo uso) porque
+  confirmar el correo recarga la pagina y la memoria del modulo se pierde.
+  `AuthGate` solo LEE el pendiente (su efecto se repite con cada evento de
+  sesion de supabase-js; consumirlo ahi lo perdia); lo borra `/invitacion`.
+  Requiere que la Site URL de Supabase Auth sea la web (ver `docs/SETUP.md`).
 - **`redeem_route_invite()` bloquea la fila con `FOR UPDATE`**: sin eso, dos
   canjes simultáneos leen el mismo recuento y el tope de plazas se pasa por uno.
   Ojo: eso NO está probado, PGlite es de una sola conexión y no puede abrir dos

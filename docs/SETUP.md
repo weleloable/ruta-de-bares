@@ -239,12 +239,49 @@ Configuracion del repositorio, una sola vez:
 Para publicar sin hacer push: **Actions > Publicar web > Run workflow**, o
 `gh workflow run deploy-web.yml`.
 
-**Limitacion de las invitaciones.** Los enlaces que se comparten son
-`rutadebares://invitacion?token=...` y solo abren la app instalada. Desde la
-web se pueden crear invitaciones, pero abrir el enlace en un navegador no lleva
-a la web. Quien use la web tiene que ir a **Mi perfil > Entrar en una ruta** y
-pegar el codigo, que el mensaje compartido ya incluye en su propia linea justo
-para eso.
+**Enlaces de invitacion.** El enlace que se comparte es una URL normal de esta
+web: `https://weleloable.github.io/ruta-de-bares/invitacion?token=...`. Al
+abrirla:
+
+- **Sin cuenta o sin sesion**: sale "Te han invitado a una ruta" con *Crear
+  cuenta* / *Ya tengo cuenta*. El token se guarda (en `localStorage`, 24 h, un
+  solo uso) y, en cuanto hay sesion, la app vuelve a la invitacion, aunque por
+  el camino se recargue la pagina (abrir el enlace de confirmacion del correo
+  carga la web de nuevo). `localStorage` es de UN navegador/contexto: si el
+  usuario confirma el correo o inicia sesion en otro (Safari y la PWA
+  instalada de iPhone no lo comparten, ni el navegador interno de WhatsApp o
+  Gmail, ni una ventana privada), el token pendiente no viaja. Queda entonces
+  el enlace original (vuelve a abrirlo) o pegarlo en **Mi perfil > Entrar en
+  una ruta**.
+- **Con sesion**: sale el enlace reconocido y un boton *Entrar en la ruta*.
+  Un toque y ya eres miembro (el servidor decide si la invitacion sigue
+  valiendo: caducidad y plazas).
+- **Con la web instalada como app** (seccion 8): en Android, un enlace que cae
+  dentro del ambito de la PWA instalada (`/ruta-de-bares/`) *deberia* abrirla,
+  pero **no esta verificado en un dispositivo**. En iPhone abre Safari.
+
+**Requisito en Supabase para quien se registra desde el enlace.** Si tienes la
+confirmacion de correo activada, el enlace del correo de confirmacion lleva a
+la **Site URL** de *Authentication > URL Configuration*. Tiene que ser
+`https://weleloable.github.io/ruta-de-bares/` (y esa misma en *Redirect
+URLs*). Con el valor por defecto (`localhost`) la persona invitada confirma en
+una pagina que no existe y no llega a entrar. La app no fija `emailRedirectTo`:
+manda esa configuracion.
+
+**Vista previa.** GitHub Pages sirve el fallback `404.html` con estado HTTP 404
+para `/invitacion`. Los navegadores lo pintan igual y el enlace funciona, pero
+WhatsApp y Telegram pueden no montar tarjeta de vista previa: el enlace se ve
+como texto pulsable y ya esta.
+
+La URL vive en `WEB_APP_URL` (`src/features/invites/link.ts`) y tiene que
+coincidir con `WEB_BASE_URL` del workflow: `tests/deploy-web.test.ts` lo
+comprueba. Si algun dia cambia el dominio o la subruta, se cambian los dos.
+
+Los enlaces con el esquema antiguo `rutadebares://` y el codigo pelado
+(**Mi perfil > Entrar en una ruta**) siguen valiendo. El enlace https **no**
+abre la app nativa (development build): para eso Android exige verificar el
+dominio con un `assetlinks.json` en la raiz de `weleloable.github.io`, que
+una pagina de proyecto de GitHub Pages no controla.
 
 ## 8. Mapa en la web y app instalable
 
@@ -322,8 +359,14 @@ Hasta que estos siete puntos pasen, el montaje no esta terminado.
    entra y las pestanas Sellos y Ruta tienen que estar vacias, aunque la ruta
    del punto 2 este publicada. Si la ve, la 0004 no se ha aplicado.
 5. **La invitacion mete en la ruta.** Desde **Mi perfil > Invitaciones** creas
-   un enlace para esa ruta, copias el codigo y lo pegas en la otra cuenta en
-   **Mi perfil > Entrar en una ruta**. Ahora si ve la ruta.
+   un enlace para esa ruta y lo abres en el movil de la otra cuenta (o en una
+   ventana de incognito): tiene que cargar la web en
+   `.../ruta-de-bares/invitacion?token=...`, pedir sesion si no la hay y, con
+   *Entrar en la ruta*, meterte en ella. Ahora si ve la ruta. El enlace o el
+   codigo pelado pegado en **Mi perfil > Entrar en una ruta** hace lo mismo.
+   Si la otra cuenta es nueva y tienes la confirmacion de correo activada,
+   comprueba tambien que el correo de confirmacion lleva a la web y no a
+   `localhost` (Site URL de Supabase, seccion 7).
 6. **El tope se respeta.** Crea una invitacion de 1 plaza, gastala, e intenta
    entrar con una tercera cuenta: tiene que decir que ya no quedan plazas.
 7. **La geocerca muerde.** Intenta sellar un bar estando lejos: te dice a

@@ -8,8 +8,12 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import { INVITE_PATH, WEB_APP_URL, buildInviteUrl } from '../src/features/invites/link.ts';
+
+const TOKEN = 'aB3-_dEfGhIjKlMnOpQrStUvWxYz0123456789abcde';
 
 const raiz = fileURLToPath(new URL('..', import.meta.url));
 const workflow = readFileSync(`${raiz}.github/workflows/deploy-web.yml`, 'utf8');
@@ -57,6 +61,24 @@ test('workflow: las variables de Supabase salen de vars. y se comprueban antes d
 
 test('workflow: no necesita la clave de Google Maps', () => {
   assert.doesNotMatch(workflow, /GOOGLE_MAPS/);
+});
+
+test('el enlace de invitacion apunta a la subruta que exporta el workflow', () => {
+  // Si se cambia WEB_BASE_URL (o el dominio de Pages) y no WEB_APP_URL, todos
+  // los enlaces que se repartan llevarian a una pagina que no existe.
+  const subruta = /WEB_BASE_URL:\s*(\S+)/.exec(codigo)?.[1];
+  assert.ok(subruta, 'el workflow define WEB_BASE_URL');
+  const url = new URL(buildInviteUrl(TOKEN));
+  assert.equal(url.origin + url.pathname, `${WEB_APP_URL}/invitacion`);
+  assert.equal(new URL(WEB_APP_URL).pathname, subruta);
+  assert.equal(url.pathname, `${subruta}/invitacion`);
+});
+
+test('la pagina de invitacion existe como ruta del router (app/invitacion.tsx)', () => {
+  // El enlace compartido acaba en /invitacion: si se renombra la pantalla el
+  // enlace cae en "no encontrada" sin que ningun otro test lo note.
+  assert.ok(existsSync(`${raiz}app/invitacion.tsx`));
+  assert.equal(INVITE_PATH, 'invitacion');
 });
 
 let importaciones = 0;

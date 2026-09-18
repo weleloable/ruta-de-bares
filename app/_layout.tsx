@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
-import { tomarInvitacionPendiente } from '../src/features/invites/pendiente';
+import { leerInvitacionPendiente } from '../src/features/invites/pendiente';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
 import { iniciarPwa } from '../src/lib/pwa';
 import { colors, fonts } from '../src/lib/theme';
@@ -41,8 +41,11 @@ function AuthGate() {
     } else if (session && enAuth) {
       // Si se llego aqui por un enlace de ruta, se vuelve a el en vez de a la
       // pantalla de inicio: el usuario venia a entrar en esa ruta.
-      const pendiente = tomarInvitacionPendiente();
-      if (pendiente) router.replace(`/invitacion?token=${pendiente}`);
+      // Solo se LEE: este efecto se repite (supabase-js reemite la sesion) y un
+      // borrado aqui haria que la segunda pasada mandase a "/". La borra
+      // /invitacion cuando se muestra con sesion.
+      const pendiente = leerInvitacionPendiente();
+      if (pendiente) router.replace({ pathname: '/invitacion', params: { token: pendiente } });
       else router.replace('/');
     }
   }, [session, loading, segments, router]);

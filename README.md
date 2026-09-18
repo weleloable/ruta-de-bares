@@ -13,7 +13,7 @@ han invitado**.
 | **Sellos** | todos | La compostelana: un hueco por bar, se rellena al sellar |
 | **Ruta** | todos | Mapa con los bares numerados y el trazado que los une (Google Maps en la app nativa, OpenStreetMap en la web) |
 | **Editor** | solo admins | Crear rutas, anadir bares tocando el mapa (o pegando coordenadas en web), ordenarlos, fijar horarios, publicar |
-| **Mi perfil** | todos | Foto, nombre, entrar en una ruta con un codigo, y para admins el editor de rutas y el panel de invitaciones |
+| **Mi perfil** | todos | Foto, nombre, entrar en una ruta con un enlace o un codigo, y para admins el editor de rutas y el panel de invitaciones |
 
 ## Como se consigue un sello
 

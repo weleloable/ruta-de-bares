@@ -139,9 +139,9 @@ export default function PerfilScreen() {
         </Card>
 
         {/*
-          La via de canje que funciona en la web: el enlace rutadebares:// solo
-          abre la app instalada, asi que en la PWA hay que poder pegar el codigo
-          a mano. Para todos, no solo admins.
+          Via de canje a mano: si el enlace https no se puede abrir (el mensaje
+          llego cortado, se copio solo el codigo...), se pega aqui el enlace o el
+          codigo. Para todos, no solo admins.
         */}
         <Card>
           <Text style={styles.tituloTarjeta}>Rutas</Text>
