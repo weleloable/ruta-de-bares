@@ -270,7 +270,7 @@ export default function ChatCana() {
                   <Ionicons name="alert-circle-outline" size={16} color={colors.beerDark} />
                   <Text style={styles.avisoUnicoTexto}>
                     {TEXTOS_POR_PERSONA === 1
-                      ? 'Es tu único mensaje: dile dónde estás o cómo reconocerte. Luego ya no podrás escribir más.'
+                      ? 'Es tu único mensaje. Luego ya no podrás escribir más.'
                       : `Tienes ${TEXTOS_POR_PERSONA} mensajes en total con esta persona.`}
                   </Text>
                 </View>
