@@ -83,6 +83,7 @@ supabase/
   migrations/0011_*.sql     saber que chats no has abierto nunca (burbujita)
   migrations/0012_*.sql     la cana usa route_members en vez de la regla provisional
   migrations/0013_*.sql     lo que le faltaba al panel: reclamar, leer y contar
+  migrations/0014_*.sql     expulsar de una ruta desde la bandeja de alertas
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -131,7 +132,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   para la UI y debe decir explícitamente que es un espejo (ver `rules.ts`).
 - Rutas de import con alias `@/*` → `src/*` (`tsconfig.json`).
 
-- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0013):
+- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0014):
   tinder cervecero por ruta, en la pestana Cana. Las tablas `match_*` no tienen
   privilegios para la app y todo pasa por funciones `SECURITY DEFINER`, asi que
   un `supabase.from('match_votes')` ni compila. Ni los admins leen los chats.
@@ -144,6 +145,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   vez de con un boton: con dos admins en la misma bandeja, si no, los dos se
   ponen con la misma denuncia. Y esconder el boton de Mi perfil a quien no es
   admin es comodidad: quien protege es `match_admin_require()` en Postgres.
+- **Expulsar de una ruta borra de `route_members` y nada mas** (0014): no toca
+  la cuenta ni los sellos (son historial de lo que paso, no un permiso) y no
+  impide volver con otra invitacion, porque no hay lista de vetados. Es la
+  UNICA via para borrar de esa tabla: la 0004 le quito el delete a
+  `authenticated` a proposito. A un admin no se le puede expulsar
+  (`TARGET_IS_ADMIN`), o un resbalon en la pantalla dejaria la ruta sin quien
+  la lleva.
 - **La cana pregunta por la pertenencia con `is_route_participant(ruta, persona)`**
   (0012): la 0004 del remoto decide con `route_members` y expone
   `is_route_member(ruta)`, que mira `auth.uid()`; la cana necesita preguntar

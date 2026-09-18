@@ -206,11 +206,11 @@ export type MotivoDenuncia = 'foto' | 'acoso' | 'suplantacion' | 'menor' | 'otro
  * match_report: si se cambia uno, cambia tambien la migracion.
  */
 export const MOTIVOS_DENUNCIA: readonly { id: MotivoDenuncia; etiqueta: string; ayuda: string }[] = [
-  { id: 'foto', etiqueta: 'La foto', ayuda: 'No es suya, o no deberia estar aqui' },
+  { id: 'foto', etiqueta: 'La foto', ayuda: 'No es suya, o no debería estar aquí' },
   { id: 'acoso', etiqueta: 'Acoso o insultos', ayuda: 'Lo que ha escrito o lo que hace en la ruta' },
   { id: 'suplantacion', etiqueta: 'Se hace pasar por otra persona', ayuda: '' },
-  { id: 'menor', etiqueta: 'Creo que es menor de edad', ayuda: 'La cana es solo para mayores' },
-  { id: 'otro', etiqueta: 'Otra cosa', ayuda: 'Cuentanoslo abajo' },
+  { id: 'menor', etiqueta: 'Creo que es menor de edad', ayuda: 'La caña es solo para mayores' },
+  { id: 'otro', etiqueta: 'Otra cosa', ayuda: 'Cuéntanoslo abajo' },
 ];
 
 /** Problemas que el servidor rechazaria al denunciar. Vacio = se puede enviar. */

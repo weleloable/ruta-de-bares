@@ -90,11 +90,11 @@ export default function AlertasAdmin() {
 
         {visibles.length === 0 ? (
           <EmptyState
-            title={filtro === 'resuelta' ? 'Nada cerrado todavia' : 'No hay nada pendiente'}
+            title={filtro === 'resuelta' ? 'Nada cerrado todavía' : 'No hay nada pendiente'}
             body={
               filtro === 'resuelta'
-                ? 'Aqui quedara lo que vayais resolviendo, con quien lo hizo y cuando.'
-                : 'Cuando alguien denuncie a otra persona en la cana, el aviso aparecera aqui.'
+                ? 'Aquí quedará lo que vayáis resolviendo, con quién lo hizo y cuándo.'
+                : 'Cuando alguien denuncie a otra persona en Tírate una caña, el aviso aparecerá aquí.'
             }
           />
         ) : (
@@ -135,7 +135,7 @@ function FilaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir(alertaId: str
 
       <Text style={styles.pie}>
         {alerta.mensajes > 0
-          ? `${alerta.mensajes} ${alerta.mensajes === 1 ? 'mensaje' : 'mensajes'} de prueba`
+          ? `${alerta.mensajes} ${alerta.mensajes === 1 ? 'mensaje copiado' : 'mensajes copiados'}`
           : 'Sin mensajes'}
         {alerta.resolucion ? ` · ${etiquetaResolucion(alerta.resolucion)}` : ''}
       </Text>

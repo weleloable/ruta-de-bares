@@ -177,7 +177,12 @@ export type MatchMessageRow = {
 export type MatchReportStatus = 'pendiente' | 'en_revision' | 'resuelta';
 
 /** Como se cierra una denuncia (0009). */
-export type MatchReportResolution = 'sin_accion' | 'foto_retirada' | 'cana_desactivada' | 'otra';
+export type MatchReportResolution =
+  | 'sin_accion'
+  | 'foto_retirada'
+  | 'cana_desactivada'
+  | 'expulsada_de_ruta'
+  | 'otra';
 
 /** Una fila de la bandeja: match_admin_reports (0009). Solo para admins. */
 export type MatchAdminReportRow = {
@@ -198,12 +203,15 @@ export type MatchAdminReportRow = {
   resolution: MatchReportResolution | null;
 };
 
-/** El ticket abierto: match_admin_report (0013). Solo para admins. */
+/** El ticket abierto: match_admin_report (0013, ampliada en la 0014). */
 export type MatchAdminTicketRow = MatchAdminReportRow & {
   route_name: string;
   reported_avatar_url: string | null;
   reported_bio: string;
   reported_active: boolean;
+  /** Si sigue en la ruta: sin esto se ofreceria expulsar a quien ya no esta. */
+  reported_in_route: boolean;
+  reported_is_admin: boolean;
   handled_by_name: string | null;
   handler_note: string;
 };
@@ -430,6 +438,12 @@ export type Database = {
       match_admin_resolve: {
         Args: { p_report_id: string; p_resolution: MatchReportResolution; p_note?: string };
         Returns: undefined;
+      };
+      // 0014: la medida para cuando lo demas se queda corto. Devuelve si de
+      // verdad estaba dentro de la ruta.
+      match_admin_remove_from_route: {
+        Args: { p_user_id: string; p_route_id: string; p_report_id?: string | null; p_note?: string };
+        Returns: boolean;
       };
     };
     Enums: {

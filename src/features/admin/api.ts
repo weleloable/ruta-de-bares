@@ -29,20 +29,25 @@ export class ErrorAdmin extends Error {
 
 /** El codigo que grito el SQL, para decidir que hacer sin mirar el texto. */
 function codigo(mensaje: string): string | null {
-  const encontrado = /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION)\b/.exec(mensaje);
+  const encontrado =
+    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION|TARGET_IS_ADMIN|INVALID_TARGET)\b/.exec(mensaje);
   return encontrado ? encontrado[1] : null;
 }
 
 function describirError(mensaje: string): string {
   switch (codigo(mensaje)) {
     case 'NOT_ADMIN':
-      return 'Esto es solo para quien esta detras de la barra.';
+      return 'Esto es solo para quien está detrás de la barra.';
     case 'NOT_AUTHENTICATED':
       return 'Vuelve a entrar en tu cuenta.';
     case 'REPORT_NOT_FOUND':
       return 'Esa alerta ya no existe.';
     case 'INVALID_RESOLUTION':
       return 'Esa forma de cerrar la alerta no vale.';
+    case 'TARGET_IS_ADMIN':
+      return 'A un administrador no se le expulsa desde aquí.';
+    case 'INVALID_TARGET':
+      return 'Falta saber a quién y de qué ruta.';
     default:
       return mensaje;
   }
@@ -100,6 +105,28 @@ export async function retirarFoto(userId: string, reportId: string, nota: string
     p_note: nota,
   });
   if (error) fallo(error);
+}
+
+/**
+ * Expulsa de la ruta en la que se le denuncio (0014). Devuelve si de verdad
+ * estaba dentro: si otra persona se adelanto, no es un fallo.
+ *
+ * No borra su cuenta ni sus sellos, y no impide que vuelva con otra invitacion.
+ */
+export async function expulsarDeRuta(
+  userId: string,
+  routeId: string,
+  reportId: string,
+  nota: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('match_admin_remove_from_route', {
+    p_user_id: userId,
+    p_route_id: routeId,
+    p_report_id: reportId,
+    p_note: nota,
+  });
+  if (error) fallo(error);
+  return data ?? false;
 }
 
 export async function desactivarCana(userId: string, reportId: string, nota: string): Promise<void> {

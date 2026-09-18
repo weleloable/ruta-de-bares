@@ -41,6 +41,8 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**. La cana pasa a usar `route_members` en vez de la regla provisional.
 13. [`supabase/migrations/0013_cana_alertas_admin.sql`](../supabase/migrations/0013_cana_alertas_admin.sql)
    y **Run**. Reclamar, leer y contar denuncias para la bandeja de alertas.
+14. [`supabase/migrations/0014_admin_expulsar_de_ruta.sql`](../supabase/migrations/0014_admin_expulsar_de_ruta.sql)
+   y **Run**. Expulsar de una ruta desde la bandeja, sin borrar la cuenta.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket

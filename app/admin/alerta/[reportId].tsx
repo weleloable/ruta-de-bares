@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, Card, Field, Loading } from '../../../src/components/ui';
 import {
   desactivarCana,
+  expulsarDeRuta,
   leerMensajesDenunciados,
   leerTicket,
   reclamarAlerta,
@@ -57,7 +58,7 @@ export default function AlertaAdmin() {
   const [resolucion, setResolucion] = useState<MatchReportResolution | null>(null);
   const [hechas, setHechas] = useState<MatchReportResolution[]>([]);
   const [ocupado, setOcupado] = useState(false);
-  const [confirmando, setConfirmando] = useState<'foto' | 'desactivar' | 'resolver' | null>(null);
+  const [confirmando, setConfirmando] = useState<'foto' | 'desactivar' | 'expulsar' | 'resolver' | null>(null);
 
   const cargar = useCallback(async () => {
     if (!reportId) return;
@@ -95,7 +96,9 @@ export default function AlertaAdmin() {
   );
 
   const ejecutar = useCallback(
-    async (accion: () => Promise<void>, hecho: MatchReportResolution | null, mensaje: string) => {
+    // `unknown` y no `void`: expulsar devuelve si de verdad estaba en la ruta, y
+    // aqui da igual (el ticket se recarga y lo cuenta el).
+    async (accion: () => Promise<unknown>, hecho: MatchReportResolution | null, mensaje: string) => {
       setOcupado(true);
       try {
         await accion();
@@ -104,7 +107,7 @@ export default function AlertaAdmin() {
         setError(null);
         await cargar();
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'No se pudo completar la accion.');
+        setError(e instanceof Error ? e.message : 'No se pudo completar la acción.');
       } finally {
         setOcupado(false);
         setConfirmando(null);
@@ -143,19 +146,20 @@ export default function AlertaAdmin() {
         </View>
 
         <Card>
-          <Text style={typography.overline}>Sobre quien</Text>
+          <Text style={typography.overline}>Sobre quién</Text>
           <View style={styles.persona}>
             <AvatarCana nombre={ticket.reported_name} foto={ticket.reported_avatar_url} tamano={64} />
             <View style={styles.personaDatos}>
               <Text style={styles.nombre}>{ticket.reported_name}</Text>
               {ticket.reported_bio ? <Text style={typography.muted}>{ticket.reported_bio}</Text> : null}
               <Text style={styles.dato}>
-                Su cana esta {ticket.reported_active ? 'activada' : 'apagada'}
+                Su caña está {ticket.reported_active ? 'activada' : 'apagada'}
+                {ticket.reported_in_route ? '' : ' · ya no está en la ruta'}
               </Text>
             </View>
           </View>
           <Text style={styles.dato}>Ruta: {ticket.route_name}</Text>
-          <Text style={styles.dato}>Denunciada por: {ticket.reporter_name}</Text>
+          <Text style={styles.dato}>Quien denuncia: {ticket.reporter_name}</Text>
         </Card>
 
         <Card>
@@ -166,22 +170,30 @@ export default function AlertaAdmin() {
 
         {mensajes.length > 0 ? (
           <Card>
-            <Text style={typography.overline}>
-              Lo que escribió {ticket.reported_name} ({mensajes.length})
-            </Text>
+            <Text style={typography.overline}>Mensajes de {ticket.reported_name} ({mensajes.length})</Text>
             {/*
-              No es el chat: es lo que la denuncia se llevo copiado, y la copia
-              solo trae los mensajes de quien esta denunciado (match_report, en
-              la 0009). El chat no se puede leer desde aqui ni desde ningun
-              sitio, tampoco siendo admin (D10). Por eso no se repite el nombre
-              en cada burbuja: son todas suyas.
+              Decir de quien son NO es un adorno: al leerlos seguidos parecen una
+              conversacion entre dos, y no lo son. La denuncia solo copia los
+              mensajes de quien esta denunciado (match_report, 0009), asi que lo
+              que escribio la otra persona no esta aqui ni se puede pedir: el
+              chat esta cerrado tambien para los admins (D10).
             */}
-            {mensajes.map((mensaje) => (
-              <View key={mensaje.message_id} style={styles.mensaje}>
-                <Text style={styles.mensajeCuerpo}>{textoMensaje(mensaje)}</Text>
-                <Text style={styles.mensajeCuando}>{hora(new Date(mensaje.created_at))}</Text>
-              </View>
-            ))}
+            <Text style={typography.muted}>
+              Solo se copian los suyos. Lo que escribió {ticket.reporter_name} no se guarda, y los chats
+              no se pueden leer.
+            </Text>
+            {mensajes.map((mensaje) => {
+              const suceso = mensaje.kind !== 'text';
+              return (
+                <View key={mensaje.message_id} style={suceso ? styles.suceso : styles.mensaje}>
+                  {suceso ? null : <Text style={styles.mensajeQuien}>{ticket.reported_name}</Text>}
+                  <Text style={suceso ? styles.sucesoTexto : styles.mensajeCuerpo}>
+                    {textoMensaje(mensaje, ticket.reported_name)}
+                  </Text>
+                  <Text style={styles.mensajeCuando}>{hora(new Date(mensaje.created_at))}</Text>
+                </View>
+              );
+            })}
           </Card>
         ) : null}
 
@@ -204,10 +216,20 @@ export default function AlertaAdmin() {
               onPress={() => setConfirmando('foto')}
             />
             <Button
-              title="Desactivar su cana"
+              title="Desactivar su caña"
               variant="secondary"
               disabled={!puede.puedeDesactivar || ocupado}
               onPress={() => setConfirmando('desactivar')}
+            />
+            {/*
+              La medida gorda, y por eso va en rojo y la ultima: le quita el
+              acceso a ESTA ruta. No borra su cuenta ni sus sellos.
+            */}
+            <Button
+              title="Expulsar de la ruta"
+              variant="danger"
+              disabled={!puede.puedeExpulsar || ocupado}
+              onPress={() => setConfirmando('expulsar')}
             />
 
             <Text style={[typography.overline, styles.separado]}>Nota interna</Text>
@@ -216,7 +238,7 @@ export default function AlertaAdmin() {
               value={nota}
               onChangeText={setNota}
               maxLength={NOTA_MAX}
-              placeholder="Queda en el registro de moderacion"
+              placeholder="Queda en el registro de moderación"
               multiline
               editable={!ocupado}
             />
@@ -259,7 +281,7 @@ export default function AlertaAdmin() {
       <DialogoConfirmar
         visible={confirmando === 'foto'}
         titulo="¿Retirar la foto?"
-        mensaje={`${ticket.reported_name} se queda sin foto de perfil y quedara apuntado quien lo hizo.`}
+        mensaje={`${ticket.reported_name} se queda sin foto de perfil y quedará apuntado quién lo hizo.`}
         textoConfirmar="Retirar"
         destructivo
         ocupado={ocupado}
@@ -275,8 +297,8 @@ export default function AlertaAdmin() {
 
       <DialogoConfirmar
         visible={confirmando === 'desactivar'}
-        titulo="¿Desactivar su cana?"
-        mensaje={`${ticket.reported_name} desaparece de la cana y de sus chats. No se borra su perfil.`}
+        titulo="¿Desactivar su caña?"
+        mensaje={`${ticket.reported_name} desaparece de Tírate una caña y de sus chats. No se borra su perfil ni sale de la ruta.`}
         textoConfirmar="Desactivar"
         destructivo
         ocupado={ocupado}
@@ -284,7 +306,24 @@ export default function AlertaAdmin() {
           void ejecutar(
             () => desactivarCana(ticket.reported_id, ticket.id, nota),
             'cana_desactivada',
-            'Cana desactivada.',
+            'Caña desactivada.',
+          )
+        }
+        onCancelar={() => setConfirmando(null)}
+      />
+
+      <DialogoConfirmar
+        visible={confirmando === 'expulsar'}
+        titulo="¿Expulsar de la ruta?"
+        mensaje={`${ticket.reported_name} deja de ver «${ticket.route_name}», sus bares y a su gente, y no podrá sellar. No se borra su cuenta ni sus sellos, y podría volver con otra invitación.`}
+        textoConfirmar="Expulsar"
+        destructivo
+        ocupado={ocupado}
+        onConfirmar={() =>
+          void ejecutar(
+            () => expulsarDeRuta(ticket.reported_id, ticket.route_id, ticket.id, nota),
+            'expulsada_de_ruta',
+            `${ticket.reported_name} ya no está en la ruta.`,
           )
         }
         onCancelar={() => setConfirmando(null)}
@@ -293,7 +332,7 @@ export default function AlertaAdmin() {
       <DialogoConfirmar
         visible={confirmando === 'resolver'}
         titulo="¿Cerrar la alerta?"
-        mensaje={`Se cerrara como "${etiquetaResolucion(elegida)}". Despues ya no se puede tocar.`}
+        mensaje={`Se cerrará como «${etiquetaResolucion(elegida)}». Después ya no se puede tocar.`}
         textoConfirmar="Cerrar"
         ocupado={ocupado}
         onConfirmar={() =>
@@ -306,16 +345,19 @@ export default function AlertaAdmin() {
 }
 
 /**
- * La copia de un mensaje, en una linea. La pregunta y la respuesta son eventos
- * sin texto (el cuerpo va vacio), asi que aqui se cuentan con palabras: quien
- * lee la denuncia necesita saber si hubo un si de por medio.
+ * La copia de un mensaje. La pregunta de la cerveza y su respuesta no son texto
+ * escrito sino sucesos del chat (el cuerpo va vacio), y se cuentan con palabras
+ * y con el nombre delante: quien lee la denuncia necesita saber si hubo un si
+ * de por medio, y no confundirlos con lo que la persona escribio.
  */
-function textoMensaje(mensaje: MatchAdminReportMessageRow): string {
+function textoMensaje(mensaje: MatchAdminReportMessageRow, nombre: string): string {
   switch (mensaje.kind) {
     case 'question':
-      return 'Le pregunto si se tomaban una cerveza';
+      return `${nombre} ofreció tomar una caña`;
     case 'answer':
-      return mensaje.answer === 'yes' ? 'Dijo que si a la cerveza' : 'Pidio que se lo preguntaran mas tarde';
+      return mensaje.answer === 'yes'
+        ? `${nombre} aceptó la caña`
+        : `${nombre} pidió que se lo preguntaran más tarde`;
     default:
       return mensaje.body ?? '';
   }
@@ -344,7 +386,12 @@ const styles = StyleSheet.create({
     padding: space.md,
     gap: 2,
   },
+  mensajeQuien: { fontSize: 11, fontWeight: '800', color: colors.inkSoft },
   mensajeCuando: { fontSize: 11, color: colors.inkFaint, alignSelf: 'flex-end' },
+  // Un suceso del chat (ofrecer la cana, aceptarla) no es algo que se escribiera:
+  // sin burbuja y en cursiva, para que no se lea como un mensaje mas.
+  suceso: { paddingHorizontal: space.md, paddingVertical: space.xs, gap: 2 },
+  sucesoTexto: { fontSize: 13, color: colors.inkSoft, fontStyle: 'italic' },
   mensajeCuerpo: { fontSize: 14, color: colors.ink },
   separado: { marginTop: space.sm },
   resoluciones: { gap: space.sm },

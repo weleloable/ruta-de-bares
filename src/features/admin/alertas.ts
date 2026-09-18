@@ -11,10 +11,10 @@ import type {
  * servidor en tickets, filtrarlos y decidir que se puede hacer con cada uno.
  *
  * Por que una capa propia y no pintar las denuncias tal cual: la seccion nace
- * para las denuncias de la cana, pero esta pensada para que quepa lo siguiente
- * (invitaciones agotadas, una ruta sin publicar el dia del evento...). La
- * pantalla habla de ALERTAS y no sabe de match_reports; para anadir otra fuente
- * solo hay que anadir un `tipo` y su funcion de conversion aqui.
+ * para las denuncias de Tirate una cana, pero esta pensada para que quepa lo
+ * siguiente (invitaciones agotadas, una ruta sin publicar el dia del evento...).
+ * La pantalla habla de ALERTAS y no sabe de match_reports; para anadir otra
+ * fuente solo hay que anadir un `tipo` y su funcion de conversion aqui.
  *
  * Nada de esto es autoridad: quien decide si puedes ver o tocar una denuncia es
  * `match_admin_require()` en Postgres (0009). Aqui solo se decide que pintar.
@@ -48,7 +48,7 @@ export type Alerta = {
 const MOTIVO: Record<MatchReportReason, string> = {
   foto: 'La foto',
   acoso: 'Acoso o insultos',
-  suplantacion: 'Suplantacion de identidad',
+  suplantacion: 'Suplantación de identidad',
   menor: 'Posible menor de edad',
   otro: 'Otra cosa',
 };
@@ -58,9 +58,10 @@ export function etiquetaMotivo(motivo: MatchReportReason): string {
 }
 
 const RESOLUCION: Record<MatchReportResolution, string> = {
-  sin_accion: 'Sin accion',
+  sin_accion: 'Sin acción',
   foto_retirada: 'Foto retirada',
-  cana_desactivada: 'Cana desactivada',
+  cana_desactivada: 'Caña desactivada',
+  expulsada_de_ruta: 'Expulsada de la ruta',
   otra: 'Otra',
 };
 
@@ -68,21 +69,25 @@ export function etiquetaResolucion(resolucion: MatchReportResolution | null): st
   return resolucion ? RESOLUCION[resolucion] : '';
 }
 
-/** Las cuatro formas de cerrar una denuncia, en el orden en que se ofrecen. */
+/**
+ * Las formas de cerrar una denuncia, de menos a mas grave. El orden importa:
+ * es el que se ofrece y el que decide cual se propone sola.
+ */
 export const RESOLUCIONES: readonly { id: MatchReportResolution; etiqueta: string; ayuda: string }[] = [
-  { id: 'sin_accion', etiqueta: 'Sin accion', ayuda: 'Revisada y no habia nada que hacer' },
+  { id: 'sin_accion', etiqueta: 'Sin acción', ayuda: 'Revisada y no había nada que hacer' },
   { id: 'foto_retirada', etiqueta: 'Foto retirada', ayuda: 'Le he quitado la foto de perfil' },
-  { id: 'cana_desactivada', etiqueta: 'Cana desactivada', ayuda: 'Ya no aparece en la cana' },
-  { id: 'otra', etiqueta: 'Otra', ayuda: 'Cuentalo en la nota' },
+  { id: 'cana_desactivada', etiqueta: 'Caña desactivada', ayuda: 'Ya no aparece en Tírate una caña' },
+  { id: 'expulsada_de_ruta', etiqueta: 'Expulsada de la ruta', ayuda: 'Fuera de esta ruta, sin borrar su cuenta' },
+  { id: 'otra', etiqueta: 'Otra', ayuda: 'Cuéntalo en la nota' },
 ];
 
 export const ESTADOS: Record<EstadoAlerta, { etiqueta: string; tono: 'aviso' | 'curso' | 'hecho' }> = {
   pendiente: { etiqueta: 'Pendiente', tono: 'aviso' },
-  en_revision: { etiqueta: 'En revision', tono: 'curso' },
+  en_revision: { etiqueta: 'En revisión', tono: 'curso' },
   resuelta: { etiqueta: 'Resuelta', tono: 'hecho' },
 };
 
-/** Una denuncia de la cana, vista como alerta. */
+/** Una denuncia de Tirate una cana, vista como alerta. */
 export function alertaDeDenuncia(fila: MatchAdminReportRow): Alerta {
   return {
     id: fila.id,
@@ -102,7 +107,7 @@ export type FiltroAlerta = 'abiertas' | 'pendiente' | 'en_revision' | 'resuelta'
 export const FILTROS: readonly { id: FiltroAlerta; etiqueta: string }[] = [
   { id: 'abiertas', etiqueta: 'Sin cerrar' },
   { id: 'pendiente', etiqueta: 'Pendientes' },
-  { id: 'en_revision', etiqueta: 'En revision' },
+  { id: 'en_revision', etiqueta: 'En revisión' },
   { id: 'resuelta', etiqueta: 'Resueltas' },
 ];
 
@@ -144,23 +149,28 @@ export function hace(iso: string, ahora: Date): string {
   const horas = Math.floor(minutos / 60);
   if (horas < 24) return `hace ${horas} h`;
   const dias = Math.floor(horas / 24);
-  return dias === 1 ? 'ayer' : `hace ${dias} dias`;
+  return dias === 1 ? 'ayer' : `hace ${dias} días`;
 }
 
 /**
  * Que acciones tiene sentido ofrecer sobre un ticket. Retirar una foto que ya
- * no esta, o desactivar una cana ya apagada, solo sirve para ensuciar el
- * registro de moderacion con apuntes que no hicieron nada.
+ * no esta, desactivar una cana ya apagada o expulsar a quien ya no esta en la
+ * ruta solo sirve para ensuciar el registro de moderacion con apuntes que no
+ * hicieron nada.
  */
 export function accionesTicket(ticket: MatchAdminTicketRow): {
   puedeRetirarFoto: boolean;
   puedeDesactivar: boolean;
+  puedeExpulsar: boolean;
   puedeResolver: boolean;
 } {
   const cerrada = ticket.status === 'resuelta';
   return {
     puedeRetirarFoto: !cerrada && ticket.reported_avatar_url !== null,
     puedeDesactivar: !cerrada && ticket.reported_active,
+    // A un admin no se le expulsa desde aqui: el servidor lo rechaza
+    // (TARGET_IS_ADMIN, 0014) y ofrecerlo seria mentir.
+    puedeExpulsar: !cerrada && ticket.reported_in_route && !ticket.reported_is_admin,
     puedeResolver: !cerrada,
   };
 }
@@ -168,11 +178,13 @@ export function accionesTicket(ticket: MatchAdminTicketRow): {
 /**
  * La resolucion que se propone sola al abrir el desplegable, segun lo que ya se
  * haya hecho: asi cerrar no obliga a repetir a mano lo que el registro ya sabe.
+ * Manda la medida mas grave de las tomadas.
  */
 export function resolucionSugerida(
   ticket: MatchAdminTicketRow,
   hechas: readonly MatchReportResolution[],
 ): MatchReportResolution {
+  if (hechas.includes('expulsada_de_ruta')) return 'expulsada_de_ruta';
   if (hechas.includes('cana_desactivada')) return 'cana_desactivada';
   if (hechas.includes('foto_retirada')) return 'foto_retirada';
   return ticket.reason === 'otro' ? 'otra' : 'sin_accion';

@@ -42,6 +42,8 @@ function ticket(parcial: Partial<MatchAdminTicketRow> = {}): MatchAdminTicketRow
     reported_avatar_url: 'https://ejemplo.test/foto.jpg',
     reported_bio: 'Hola',
     reported_active: true,
+    reported_in_route: true,
+    reported_is_admin: false,
     handled_by_name: null,
     handler_note: '',
     ...parcial,
@@ -52,7 +54,7 @@ describe('alertas: una denuncia vista como ticket', () => {
   it('el titulo es el motivo dicho para quien modera', () => {
     assert.equal(alertaDeDenuncia(denuncia({ reason: 'acoso' })).titulo, 'Acoso o insultos');
     assert.equal(alertaDeDenuncia(denuncia({ reason: 'menor' })).titulo, 'Posible menor de edad');
-    assert.equal(alertaDeDenuncia(denuncia({ reason: 'suplantacion' })).titulo, 'Suplantacion de identidad');
+    assert.equal(alertaDeDenuncia(denuncia({ reason: 'suplantacion' })).titulo, 'Suplantación de identidad');
   });
 
   it('lleva quien y sobre quien, que es lo que se lee de un vistazo', () => {
@@ -105,7 +107,7 @@ describe('alertas: cuanto lleva esperando', () => {
     assert.equal(hace('2026-09-18T20:35:00.000Z', AHORA), 'hace 25 min');
     assert.equal(hace('2026-09-18T19:00:00.000Z', AHORA), 'hace 2 h');
     assert.equal(hace('2026-09-17T19:00:00.000Z', AHORA), 'ayer');
-    assert.equal(hace('2026-09-15T19:00:00.000Z', AHORA), 'hace 3 dias');
+    assert.equal(hace('2026-09-15T19:00:00.000Z', AHORA), 'hace 3 días');
   });
 });
 
@@ -115,20 +117,39 @@ describe('alertas: que se puede hacer con un ticket', () => {
     assert.equal(accionesTicket(ticket({ reported_avatar_url: null })).puedeRetirarFoto, false);
   });
 
-  it('no se ofrece desactivar una cana ya apagada', () => {
+  it('no se ofrece desactivar una caña ya apagada', () => {
     assert.equal(accionesTicket(ticket({ reported_active: false })).puedeDesactivar, false);
+  });
+
+  it('no se ofrece expulsar a quien ya no esta en la ruta', () => {
+    assert.equal(accionesTicket(ticket()).puedeExpulsar, true);
+    assert.equal(accionesTicket(ticket({ reported_in_route: false })).puedeExpulsar, false);
+  });
+
+  it('a un admin no se le ofrece expulsar: el servidor lo rechazaria', () => {
+    assert.equal(accionesTicket(ticket({ reported_is_admin: true })).puedeExpulsar, false);
   });
 
   it('una denuncia cerrada no admite nada mas', () => {
     const cerrada = accionesTicket(ticket({ status: 'resuelta', resolution: 'sin_accion' }));
-    assert.deepEqual(cerrada, { puedeRetirarFoto: false, puedeDesactivar: false, puedeResolver: false });
+    assert.deepEqual(cerrada, {
+      puedeRetirarFoto: false,
+      puedeDesactivar: false,
+      puedeExpulsar: false,
+      puedeResolver: false,
+    });
   });
 });
 
 describe('alertas: como se propone cerrar', () => {
-  it('propone lo que ya se ha hecho, y desactivar manda sobre retirar la foto', () => {
+  it('propone la medida mas grave de las tomadas', () => {
     assert.equal(resolucionSugerida(ticket(), ['foto_retirada']), 'foto_retirada');
     assert.equal(resolucionSugerida(ticket(), ['foto_retirada', 'cana_desactivada']), 'cana_desactivada');
+    assert.equal(
+      resolucionSugerida(ticket(), ['cana_desactivada', 'foto_retirada', 'expulsada_de_ruta']),
+      'expulsada_de_ruta',
+      'expulsar es lo mas grave, aunque se hiciera antes',
+    );
   });
 
   it('sin acciones, propone cerrar sin accion', () => {

@@ -199,6 +199,15 @@ public.match_admin_report(p_report_id uuid)
 
 -- Solo el numero, para la burbujita del boton de Mi perfil.
 public.match_admin_alert_count() -> integer  -- las que no estan resueltas
+
+-- 0014. La medida para cuando retirar la foto o apagar la cana se quedan
+-- cortas: le saca de LA RUTA en la que se le denuncio, borrando su fila de
+-- route_members. Devuelve si de verdad estaba dentro.
+public.match_admin_remove_from_route(p_user_id uuid, p_route_id uuid,
+                                     p_report_id uuid default null,
+                                     p_note text default '') -> boolean
+  -- falla con TARGET_IS_ADMIN si se apunta a un admin
+  -- match_admin_resolve acepta ademas 'expulsada_de_ruta'
 ```
 
 Tres cosas que el panel tiene que saber:
@@ -214,6 +223,9 @@ Tres cosas que el panel tiene que saber:
 3. Reclamar tambien deja apunte en `match_moderation_log`
    (`denuncia_en_revision`): es la prueba de cuanto se tardo en atenderla, que
    es lo que mide el DSA.
+4. Expulsar de una ruta NO borra la cuenta, ni el perfil, ni los sellos, y no
+   impide volver con otra invitacion: no hay lista de vetados. Si hace falta
+   que no vuelva, la decision es de quien reparte invitaciones.
 
 ## Contrato con la pertenencia a rutas
 
