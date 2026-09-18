@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, Card, Field } from '../../src/components/ui';
 import { contarAlertas } from '../../src/features/admin/api';
 import { useAuth } from '../../src/features/auth/AuthProvider';
+import { contarAvisos } from '../../src/features/notices/api';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
@@ -23,6 +24,28 @@ export default function PerfilScreen() {
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   const [alertas, setAlertas] = useState(0);
+  const [avisos, setAvisos] = useState(0);
+
+  /*
+    Los avisos de moderacion son de todo el mundo, no solo de admins: si alguien
+    tiene una decision sin leer, se entera aqui. Es lo que hace que la
+    comunicacion del art. 17 del DSA llegue de verdad.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      let vivo = true;
+      void contarAvisos()
+        .then((total) => {
+          if (vivo) setAvisos(total);
+        })
+        .catch(() => {
+          // Sin numero se entra igual: la burbujita avisa, no es la puerta.
+        });
+      return () => {
+        vivo = false;
+      };
+    }, []),
+  );
 
   /*
     Cuantas alertas quedan sin cerrar. Solo para admins y solo al mirar esta
@@ -164,6 +187,27 @@ export default function PerfilScreen() {
             disabled={!cambiado || guardando}
             loading={guardando}
           />
+        </Card>
+
+        {/*
+          Antes que las rutas: una decision sobre tu cuenta es lo primero que
+          tienes que ver al entrar aqui, y llega igual estando suspendida.
+        */}
+        <Card>
+          <Text style={styles.tituloTarjeta}>Avisos</Text>
+          <View>
+            <Button
+              title="Decisiones sobre tu cuenta"
+              variant="secondary"
+              textStyle={styles.textoAccionBarra}
+              onPress={() => router.push('/avisos')}
+            />
+            {avisos > 0 ? (
+              <View style={styles.burbuja} pointerEvents="none">
+                <Text style={styles.burbujaTexto}>{avisos > 99 ? '99+' : avisos}</Text>
+              </View>
+            ) : null}
+          </View>
         </Card>
 
         {/*

@@ -43,6 +43,10 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**. Reclamar, leer y contar denuncias para la bandeja de alertas.
 14. [`supabase/migrations/0014_admin_expulsar_de_ruta.sql`](../supabase/migrations/0014_admin_expulsar_de_ruta.sql)
    y **Run**. Expulsar de una ruta desde la bandeja, sin borrar la cuenta.
+15. [`supabase/migrations/0015_vetos_y_avisos.sql`](../supabase/migrations/0015_vetos_y_avisos.sql)
+   y **Run**. Los vetos aguantan, y toda sancion exige motivo y avisa a la
+   persona. Genera una clave en `app_secrets`: **no se borra ni se regenera**,
+   o los vetos puestos dejarian de reconocer el correo.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket

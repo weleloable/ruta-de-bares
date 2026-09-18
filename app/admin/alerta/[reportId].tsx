@@ -9,9 +9,13 @@ import {
   expulsarDeRuta,
   leerMensajesDenunciados,
   leerTicket,
+  reactivarCuenta,
   reclamarAlerta,
   resolverAlerta,
   retirarFoto,
+  retirarVetoCana,
+  retirarVetoRuta,
+  suspenderCuenta,
 } from '../../../src/features/admin/api';
 import {
   accionesTicket,
@@ -19,6 +23,8 @@ import {
   etiquetaMotivo,
   etiquetaResolucion,
   hace,
+  MOTIVO_MAX,
+  motivoValido,
   RESOLUCIONES,
   resolucionSugerida,
 } from '../../../src/features/admin/alertas';
@@ -32,7 +38,7 @@ import type {
   MatchReportResolution,
 } from '../../../src/types/database';
 
-/** Lo que la persona denunciante escribio al denunciar, mas lo que copio. */
+/** Tope de la nota interna, el mismo que acepta el servidor. */
 const NOTA_MAX = 500;
 
 /**
@@ -55,10 +61,15 @@ export default function AlertaAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [nota, setNota] = useState('');
+  // Dos textos distintos a proposito: `motivo` se le ENSENA a la persona en su
+  // aviso y es obligatorio; `nota` es interna y no sale de aqui.
+  const [motivo, setMotivo] = useState('');
   const [resolucion, setResolucion] = useState<MatchReportResolution | null>(null);
   const [hechas, setHechas] = useState<MatchReportResolution[]>([]);
   const [ocupado, setOcupado] = useState(false);
-  const [confirmando, setConfirmando] = useState<'foto' | 'desactivar' | 'expulsar' | 'resolver' | null>(null);
+  const [confirmando, setConfirmando] = useState<
+    'foto' | 'desactivar' | 'expulsar' | 'suspender' | 'resolver' | 'veto-cana' | 'veto-ruta' | 'reactivar' | null
+  >(null);
 
   const cargar = useCallback(async () => {
     if (!reportId) return;
@@ -129,6 +140,7 @@ export default function AlertaAdmin() {
 
   const estado = ESTADOS[ticket.status];
   const puede = accionesTicket(ticket);
+  const hayMotivo = motivoValido(motivo);
   const elegida = resolucion ?? resolucionSugerida(ticket, hechas);
 
   return (
@@ -197,6 +209,41 @@ export default function AlertaAdmin() {
           </Card>
         ) : null}
 
+        {puede.puedeRetirarVetoCana || puede.puedeRetirarVetoRuta || puede.puedeReactivarCuenta ? (
+          <Card>
+            <Text style={typography.overline}>Vetos puestos</Text>
+            {/*
+              Se pueden retirar aunque la denuncia este cerrada: el DSA da 6
+              meses para reclamar, y una sancion que nadie puede deshacer deja
+              ese derecho en nada.
+            */}
+            {puede.puedeRetirarVetoCana ? (
+              <Button
+                title="Retirar el veto de la caña"
+                variant="secondary"
+                disabled={ocupado}
+                onPress={() => setConfirmando('veto-cana')}
+              />
+            ) : null}
+            {puede.puedeRetirarVetoRuta ? (
+              <Button
+                title="Retirar el veto de la ruta"
+                variant="secondary"
+                disabled={ocupado}
+                onPress={() => setConfirmando('veto-ruta')}
+              />
+            ) : null}
+            {puede.puedeReactivarCuenta ? (
+              <Button
+                title="Levantar la suspensión"
+                variant="secondary"
+                disabled={ocupado}
+                onPress={() => setConfirmando('reactivar')}
+              />
+            ) : null}
+          </Card>
+        ) : null}
+
         {ticket.status === 'resuelta' ? (
           <Card>
             <Text style={typography.overline}>Resuelta</Text>
@@ -209,27 +256,55 @@ export default function AlertaAdmin() {
         ) : (
           <Card>
             <Text style={typography.overline}>Acciones</Text>
+
+            {/*
+              El motivo va ARRIBA y no al final: es lo primero que hay que
+              escribir porque sin el no hay sancion (art. 17 del DSA), y los
+              botones estan apagados hasta que lo haya.
+            */}
+            <Text style={typography.overline}>Motivo para la persona</Text>
+            <Field
+              label=""
+              value={motivo}
+              onChangeText={setMotivo}
+              maxLength={MOTIVO_MAX}
+              placeholder="Por qué se toma la medida"
+              multiline
+              editable={!ocupado}
+              hint={
+                hayMotivo
+                  ? 'Se le enseñará tal cual en su aviso.'
+                  : 'Obligatorio: se le tiene que decir por qué.'
+              }
+            />
+
             <Button
               title="Retirar la foto"
               variant="secondary"
-              disabled={!puede.puedeRetirarFoto || ocupado}
+              disabled={!puede.puedeRetirarFoto || !hayMotivo || ocupado}
               onPress={() => setConfirmando('foto')}
             />
             <Button
               title="Desactivar su caña"
               variant="secondary"
-              disabled={!puede.puedeDesactivar || ocupado}
+              disabled={!puede.puedeDesactivar || !hayMotivo || ocupado}
               onPress={() => setConfirmando('desactivar')}
             />
             {/*
-              La medida gorda, y por eso va en rojo y la ultima: le quita el
-              acceso a ESTA ruta. No borra su cuenta ni sus sellos.
+              Las dos gordas, en rojo y al final, de menos a mas: fuera de ESTA
+              ruta, o fuera de todas. Ninguna borra la cuenta ni los sellos.
             */}
             <Button
               title="Expulsar de la ruta"
               variant="danger"
-              disabled={!puede.puedeExpulsar || ocupado}
+              disabled={!puede.puedeExpulsar || !hayMotivo || ocupado}
               onPress={() => setConfirmando('expulsar')}
+            />
+            <Button
+              title="Suspender la cuenta"
+              variant="danger"
+              disabled={!puede.puedeSuspender || !hayMotivo || ocupado}
+              onPress={() => setConfirmando('suspender')}
             />
 
             <Text style={[typography.overline, styles.separado]}>Nota interna</Text>
@@ -238,7 +313,7 @@ export default function AlertaAdmin() {
               value={nota}
               onChangeText={setNota}
               maxLength={NOTA_MAX}
-              placeholder="Queda en el registro de moderación"
+              placeholder="Solo para admins: no se le enseña"
               multiline
               editable={!ocupado}
             />
@@ -281,13 +356,13 @@ export default function AlertaAdmin() {
       <DialogoConfirmar
         visible={confirmando === 'foto'}
         titulo="¿Retirar la foto?"
-        mensaje={`${ticket.reported_name} se queda sin foto de perfil y quedará apuntado quién lo hizo.`}
+        mensaje={`${ticket.reported_name} se queda sin foto de perfil, y se le avisa con el motivo que has escrito.`}
         textoConfirmar="Retirar"
         destructivo
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => retirarFoto(ticket.reported_id, ticket.id, nota),
+            () => retirarFoto(ticket.reported_id, motivo, ticket.id, nota),
             'foto_retirada',
             'Foto retirada.',
           )
@@ -298,13 +373,13 @@ export default function AlertaAdmin() {
       <DialogoConfirmar
         visible={confirmando === 'desactivar'}
         titulo="¿Desactivar su caña?"
-        mensaje={`${ticket.reported_name} desaparece de Tírate una caña y de sus chats. No se borra su perfil ni sale de la ruta.`}
+        mensaje={`${ticket.reported_name} desaparece de Tírate una caña y no podrá volver a activarla hasta que un admin retire el veto. Se le avisa con el motivo.`}
         textoConfirmar="Desactivar"
         destructivo
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => desactivarCana(ticket.reported_id, ticket.id, nota),
+            () => desactivarCana(ticket.reported_id, motivo, ticket.id, nota),
             'cana_desactivada',
             'Caña desactivada.',
           )
@@ -315,16 +390,73 @@ export default function AlertaAdmin() {
       <DialogoConfirmar
         visible={confirmando === 'expulsar'}
         titulo="¿Expulsar de la ruta?"
-        mensaje={`${ticket.reported_name} deja de ver «${ticket.route_name}», sus bares y a su gente, y no podrá sellar. No se borra su cuenta ni sus sellos, y podría volver con otra invitación.`}
+        mensaje={`${ticket.reported_name} deja de ver «${ticket.route_name}» y no podrá volver a entrar aunque tenga el enlace. No se borra su cuenta ni sus sellos. Se le avisa con el motivo.`}
         textoConfirmar="Expulsar"
         destructivo
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => expulsarDeRuta(ticket.reported_id, ticket.route_id, ticket.id, nota),
+            () => expulsarDeRuta(ticket.reported_id, ticket.route_id, motivo, ticket.id, nota),
             'expulsada_de_ruta',
             `${ticket.reported_name} ya no está en la ruta.`,
           )
+        }
+        onCancelar={() => setConfirmando(null)}
+      />
+
+      <DialogoConfirmar
+        visible={confirmando === 'suspender'}
+        titulo="¿Suspender la cuenta?"
+        mensaje={`${ticket.reported_name} sale de TODAS las rutas y no podrá entrar en ninguna. Su cuenta no se borra: podrá entrar a leer el aviso, reclamar y llevarse o borrar sus datos.`}
+        textoConfirmar="Suspender"
+        destructivo
+        ocupado={ocupado}
+        onConfirmar={() =>
+          void ejecutar(
+            () => suspenderCuenta(ticket.reported_id, motivo, ticket.id, nota),
+            'cuenta_suspendida',
+            `La cuenta de ${ticket.reported_name} queda suspendida.`,
+          )
+        }
+        onCancelar={() => setConfirmando(null)}
+      />
+
+      <DialogoConfirmar
+        visible={confirmando === 'veto-cana'}
+        titulo="¿Retirar el veto de la caña?"
+        mensaje={`${ticket.reported_name} podrá volver a activar su caña cuando quiera. No se le activa sola.`}
+        textoConfirmar="Retirar"
+        ocupado={ocupado}
+        onConfirmar={() =>
+          void ejecutar(() => retirarVetoCana(ticket.reported_id, nota), null, 'Veto retirado.')
+        }
+        onCancelar={() => setConfirmando(null)}
+      />
+
+      <DialogoConfirmar
+        visible={confirmando === 'veto-ruta'}
+        titulo="¿Retirar el veto de la ruta?"
+        mensaje={`${ticket.reported_name} podrá volver a entrar en «${ticket.route_name}», pero necesitará una invitación: retirar el veto no le mete de vuelta.`}
+        textoConfirmar="Retirar"
+        ocupado={ocupado}
+        onConfirmar={() =>
+          void ejecutar(
+            () => retirarVetoRuta(ticket.reported_id, ticket.route_id, nota),
+            null,
+            'Veto retirado.',
+          )
+        }
+        onCancelar={() => setConfirmando(null)}
+      />
+
+      <DialogoConfirmar
+        visible={confirmando === 'reactivar'}
+        titulo="¿Levantar la suspensión?"
+        mensaje={`${ticket.reported_name} podrá volver a entrar en rutas. Las que tuviera antes no se le devuelven: hará falta invitarle otra vez.`}
+        textoConfirmar="Levantar"
+        ocupado={ocupado}
+        onConfirmar={() =>
+          void ejecutar(() => reactivarCuenta(ticket.reported_id, nota), null, 'Suspensión levantada.')
         }
         onCancelar={() => setConfirmando(null)}
       />

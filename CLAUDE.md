@@ -57,12 +57,13 @@ app/                      pantallas (Expo Router)
   (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
   cana/                   presentacion, ficha, chat, bloqueados, mis datos, condiciones
   admin/                  bandeja de alertas de administracion y su ficha
+  avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
 src/
   features/<dominio>/     reglas + llamadas a datos + componentes por dominio
-                           (auth, routes, stamps, invites, profile, pwa, match, admin)
+                           (auth, routes, stamps, invites, profile, pwa, match, admin, notices)
   components/             UI compartida (StampSeal, ui.tsx, RutaMapa, SelectorPosicion
                            con variantes .web.tsx)
   lib/                    cliente Supabase, secure-session-store, tema, fechas,
@@ -84,6 +85,7 @@ supabase/
   migrations/0012_*.sql     la cana usa route_members en vez de la regla provisional
   migrations/0013_*.sql     lo que le faltaba al panel: reclamar, leer y contar
   migrations/0014_*.sql     expulsar de una ruta desde la bandeja de alertas
+  migrations/0015_*.sql     los vetos aguantan y a la persona se le dice por que
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -132,7 +134,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   para la UI y debe decir explícitamente que es un espejo (ver `rules.ts`).
 - Rutas de import con alias `@/*` → `src/*` (`tsconfig.json`).
 
-- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0014):
+- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0015):
   tinder cervecero por ruta, en la pestana Cana. Las tablas `match_*` no tienen
   privilegios para la app y todo pasa por funciones `SECURITY DEFINER`, asi que
   un `supabase.from('match_votes')` ni compila. Ni los admins leen los chats.
@@ -145,13 +147,35 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   vez de con un boton: con dos admins en la misma bandeja, si no, los dos se
   ponen con la misma denuncia. Y esconder el boton de Mi perfil a quien no es
   admin es comodidad: quien protege es `match_admin_require()` en Postgres.
-- **Expulsar de una ruta borra de `route_members` y nada mas** (0014): no toca
-  la cuenta ni los sellos (son historial de lo que paso, no un permiso) y no
-  impide volver con otra invitacion, porque no hay lista de vetados. Es la
-  UNICA via para borrar de esa tabla: la 0004 le quito el delete a
-  `authenticated` a proposito. A un admin no se le puede expulsar
-  (`TARGET_IS_ADMIN`), o un resbalon en la pantalla dejaria la ruta sin quien
-  la lleva.
+- **Sancionar NO es borrar la cuenta, es suspenderla** (0015): borrarla haria
+  imposible comunicarselo (`profiles` cae en cascada desde `auth.users`, y sin
+  cuenta no puede entrar a leer nada) y la dejaria sin a quien reclamar. Quien
+  esta suspendida entra, lee su aviso, reclama y puede llevarse o borrar sus
+  datos; nada mas. La escalera es: retirar foto -> desactivar cana -> expulsar
+  de la ruta -> suspender la cuenta.
+- **Un veto no se puede esquivar, y se pone en un trigger** (0015): la puerta
+  es `route_members_veto`, un BEFORE INSERT sobre `route_members`, y no un
+  `if` dentro de `redeem_route_invite`. Asi vale para CUALQUIER via que meta a
+  alguien en una ruta sin tocar codigo del remoto, y no se puede olvidar.
+  Expulsar sin veto no servia de nada: el enlace es multiuso y circula por el
+  grupo, asi que la persona volvia a canjearlo.
+- **El veto de ruta guarda un HMAC del correo** (0015), no el correo ni un
+  sha256 pelado: el espacio de correos es pequeno y un hash a secas se
+  revierte por fuerza bruta. Sirve para que borrarse la cuenta y registrarse
+  otra vez con el mismo correo no salte el veto esa misma noche. La clave la
+  genera la propia migracion en `app_secrets` y no sale de la base. **Muere al
+  purgar la ruta** (`match_admin_purge_route`): dura lo que dura el motivo por
+  el que existe, que es lo que hace defendible conservarlo tras una peticion
+  de supresion (art. 17.3 RGPD y art. 32 LOPDGDD, bloqueo de datos).
+- **Toda sancion exige un motivo y genera un aviso** (`user_notices`, 0015):
+  el art. 17 del DSA obliga a decir QUE se ha decidido y POR QUE en cuanto se
+  restringe el servicio. El servidor lo exige (`REASON_REQUIRED`), no solo la
+  pantalla. Son DOS textos distintos: `p_reason` se le ensena a la persona,
+  `p_note` es interna y se queda en `match_moderation_log`. Y por eso TODOS
+  los vetos se pueden levantar: el art. 20 da seis meses para reclamar, y una
+  sancion que nadie puede deshacer deja ese derecho en nada.
+- **A un admin no se le veta** (`TARGET_IS_ADMIN`), o un resbalon en la
+  pantalla dejaria la ruta sin quien la lleva.
 - **La cana pregunta por la pertenencia con `is_route_participant(ruta, persona)`**
   (0012): la 0004 del remoto decide con `route_members` y expone
   `is_route_member(ruta)`, que mira `auth.uid()`; la cana necesita preguntar

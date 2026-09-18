@@ -5,6 +5,8 @@ import type { MatchAdminReportRow, MatchAdminTicketRow } from '../../types/datab
 import {
   accionesTicket,
   alertaDeDenuncia,
+  MOTIVO_MAX,
+  motivoValido,
   cuentaPorFiltro,
   filtrarAlertas,
   hace,
@@ -44,6 +46,9 @@ function ticket(parcial: Partial<MatchAdminTicketRow> = {}): MatchAdminTicketRow
     reported_active: true,
     reported_in_route: true,
     reported_is_admin: false,
+    reported_cana_blocked: false,
+    reported_route_banned: false,
+    reported_suspended: false,
     handled_by_name: null,
     handler_note: '',
     ...parcial,
@@ -117,27 +122,64 @@ describe('alertas: que se puede hacer con un ticket', () => {
     assert.equal(accionesTicket(ticket({ reported_avatar_url: null })).puedeRetirarFoto, false);
   });
 
-  it('no se ofrece desactivar una caña ya apagada', () => {
-    assert.equal(accionesTicket(ticket({ reported_active: false })).puedeDesactivar, false);
+  it('desactivar se ofrece aunque la caña ya este apagada: lo que anade es el veto', () => {
+    // Apagada pero sin veto, la persona le da a "Activar" y vuelve.
+    assert.equal(accionesTicket(ticket({ reported_active: false })).puedeDesactivar, true);
   });
 
-  it('no se ofrece expulsar a quien ya no esta en la ruta', () => {
-    assert.equal(accionesTicket(ticket()).puedeExpulsar, true);
-    assert.equal(accionesTicket(ticket({ reported_in_route: false })).puedeExpulsar, false);
+  it('se puede vetar a quien ya salio de la ruta', () => {
+    // Justo el caso que importa: si no, se le expulsa, se sale, y vuelve a
+    // entrar con el enlace, que es multiuso y circula por el grupo.
+    assert.equal(accionesTicket(ticket({ reported_in_route: false })).puedeExpulsar, true);
   });
 
-  it('a un admin no se le ofrece expulsar: el servidor lo rechazaria', () => {
-    assert.equal(accionesTicket(ticket({ reported_is_admin: true })).puedeExpulsar, false);
-  });
-
-  it('una denuncia cerrada no admite nada mas', () => {
+  it('una denuncia cerrada no admite sancionar mas', () => {
     const cerrada = accionesTicket(ticket({ status: 'resuelta', resolution: 'sin_accion' }));
     assert.deepEqual(cerrada, {
       puedeRetirarFoto: false,
       puedeDesactivar: false,
       puedeExpulsar: false,
+      puedeSuspender: false,
       puedeResolver: false,
+      puedeRetirarVetoCana: false,
+      puedeRetirarVetoRuta: false,
+      puedeReactivarCuenta: false,
     });
+  });
+
+  it('pero un veto se retira aunque la denuncia este cerrada', () => {
+    // El DSA da 6 meses para reclamar: una sancion que no se puede deshacer
+    // deja ese derecho en nada.
+    const cerrada = accionesTicket(
+      ticket({ status: 'resuelta', resolution: 'expulsada_de_ruta', reported_route_banned: true }),
+    );
+    assert.equal(cerrada.puedeRetirarVetoRuta, true);
+    assert.equal(cerrada.puedeExpulsar, false, 'expulsar dos veces no tiene sentido');
+  });
+
+  it('no se ofrece vetar dos veces lo mismo', () => {
+    assert.equal(accionesTicket(ticket({ reported_cana_blocked: true })).puedeDesactivar, false);
+    assert.equal(accionesTicket(ticket({ reported_route_banned: true })).puedeExpulsar, false);
+    assert.equal(accionesTicket(ticket({ reported_suspended: true })).puedeSuspender, false);
+  });
+
+  it('a un admin no se le veta de ninguna forma', () => {
+    const contraAdmin = accionesTicket(ticket({ reported_is_admin: true }));
+    assert.equal(contraAdmin.puedeExpulsar, false);
+    assert.equal(contraAdmin.puedeSuspender, false);
+  });
+});
+
+describe('alertas: el motivo es obligatorio', () => {
+  it('vacio o solo espacios no vale: sin motivo no hay sancion', () => {
+    assert.equal(motivoValido(''), false);
+    assert.equal(motivoValido('   '), false);
+    assert.equal(motivoValido('Acoso repetido'), true);
+  });
+
+  it('tampoco vale pasarse del tope que acepta el servidor', () => {
+    assert.equal(motivoValido('a'.repeat(MOTIVO_MAX)), true);
+    assert.equal(motivoValido('a'.repeat(MOTIVO_MAX + 1)), false);
   });
 });
 
@@ -148,7 +190,12 @@ describe('alertas: como se propone cerrar', () => {
     assert.equal(
       resolucionSugerida(ticket(), ['cana_desactivada', 'foto_retirada', 'expulsada_de_ruta']),
       'expulsada_de_ruta',
-      'expulsar es lo mas grave, aunque se hiciera antes',
+      'expulsar es mas grave, aunque se hiciera antes',
+    );
+    assert.equal(
+      resolucionSugerida(ticket(), ['expulsada_de_ruta', 'cuenta_suspendida']),
+      'cuenta_suspendida',
+      'suspender la cuenta es lo mas grave de todo',
     );
   });
 

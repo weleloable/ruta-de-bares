@@ -62,6 +62,7 @@ const RESOLUCION: Record<MatchReportResolution, string> = {
   foto_retirada: 'Foto retirada',
   cana_desactivada: 'Caña desactivada',
   expulsada_de_ruta: 'Expulsada de la ruta',
+  cuenta_suspendida: 'Cuenta suspendida',
   otra: 'Otra',
 };
 
@@ -78,6 +79,7 @@ export const RESOLUCIONES: readonly { id: MatchReportResolution; etiqueta: strin
   { id: 'foto_retirada', etiqueta: 'Foto retirada', ayuda: 'Le he quitado la foto de perfil' },
   { id: 'cana_desactivada', etiqueta: 'Caña desactivada', ayuda: 'Ya no aparece en Tírate una caña' },
   { id: 'expulsada_de_ruta', etiqueta: 'Expulsada de la ruta', ayuda: 'Fuera de esta ruta, sin borrar su cuenta' },
+  { id: 'cuenta_suspendida', etiqueta: 'Cuenta suspendida', ayuda: 'Fuera de todas las rutas' },
   { id: 'otra', etiqueta: 'Otra', ayuda: 'Cuéntalo en la nota' },
 ];
 
@@ -152,26 +154,52 @@ export function hace(iso: string, ahora: Date): string {
   return dias === 1 ? 'ayer' : `hace ${dias} días`;
 }
 
+/** Lo que se le ensena a la persona no puede pasar de aqui (0015). */
+export const MOTIVO_MAX = 500;
+
+/**
+ * El motivo es obligatorio en toda accion que restrinja el servicio: lo exige
+ * el servidor (REASON_REQUIRED) porque lo exige el art. 17 del DSA. Aqui solo
+ * se adelanta, para poder apagar el boton antes de llamar.
+ */
+export function motivoValido(motivo: string): boolean {
+  const limpio = motivo.trim();
+  return limpio.length > 0 && limpio.length <= MOTIVO_MAX;
+}
+
 /**
  * Que acciones tiene sentido ofrecer sobre un ticket. Retirar una foto que ya
  * no esta, desactivar una cana ya apagada o expulsar a quien ya no esta en la
  * ruta solo sirve para ensuciar el registro de moderacion con apuntes que no
  * hicieron nada.
+ *
+ * Los "retirar veto" NO dependen de que la denuncia siga abierta: un veto se
+ * levanta meses despues de cerrarla, y tiene que poder levantarse (el DSA da 6
+ * meses para reclamar).
  */
 export function accionesTicket(ticket: MatchAdminTicketRow): {
   puedeRetirarFoto: boolean;
   puedeDesactivar: boolean;
   puedeExpulsar: boolean;
+  puedeSuspender: boolean;
   puedeResolver: boolean;
+  puedeRetirarVetoCana: boolean;
+  puedeRetirarVetoRuta: boolean;
+  puedeReactivarCuenta: boolean;
 } {
   const cerrada = ticket.status === 'resuelta';
+  // A un admin no se le veta desde aqui: el servidor lo rechaza
+  // (TARGET_IS_ADMIN) y ofrecerlo seria mentir.
+  const vetable = !cerrada && !ticket.reported_is_admin;
   return {
     puedeRetirarFoto: !cerrada && ticket.reported_avatar_url !== null,
-    puedeDesactivar: !cerrada && ticket.reported_active,
-    // A un admin no se le expulsa desde aqui: el servidor lo rechaza
-    // (TARGET_IS_ADMIN, 0014) y ofrecerlo seria mentir.
-    puedeExpulsar: !cerrada && ticket.reported_in_route && !ticket.reported_is_admin,
+    puedeDesactivar: !cerrada && !ticket.reported_cana_blocked,
+    puedeExpulsar: vetable && !ticket.reported_route_banned,
+    puedeSuspender: vetable && !ticket.reported_suspended,
     puedeResolver: !cerrada,
+    puedeRetirarVetoCana: ticket.reported_cana_blocked,
+    puedeRetirarVetoRuta: ticket.reported_route_banned,
+    puedeReactivarCuenta: ticket.reported_suspended,
   };
 }
 
@@ -184,6 +212,7 @@ export function resolucionSugerida(
   ticket: MatchAdminTicketRow,
   hechas: readonly MatchReportResolution[],
 ): MatchReportResolution {
+  if (hechas.includes('cuenta_suspendida')) return 'cuenta_suspendida';
   if (hechas.includes('expulsada_de_ruta')) return 'expulsada_de_ruta';
   if (hechas.includes('cana_desactivada')) return 'cana_desactivada';
   if (hechas.includes('foto_retirada')) return 'foto_retirada';

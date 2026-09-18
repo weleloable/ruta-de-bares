@@ -182,6 +182,7 @@ export type MatchReportResolution =
   | 'foto_retirada'
   | 'cana_desactivada'
   | 'expulsada_de_ruta'
+  | 'cuenta_suspendida'
   | 'otra';
 
 /** Una fila de la bandeja: match_admin_reports (0009). Solo para admins. */
@@ -212,8 +213,56 @@ export type MatchAdminTicketRow = MatchAdminReportRow & {
   /** Si sigue en la ruta: sin esto se ofreceria expulsar a quien ya no esta. */
   reported_in_route: boolean;
   reported_is_admin: boolean;
+  /** Vetos vigentes (0015): deciden si se ofrece vetar o retirar el veto. */
+  reported_cana_blocked: boolean;
+  reported_route_banned: boolean;
+  reported_suspended: boolean;
   handled_by_name: string | null;
   handler_note: string;
+};
+
+/** Acciones de moderacion que se le comunican a la persona (0015). */
+export type NoticeAction =
+  | 'foto_retirada'
+  | 'cana_desactivada'
+  | 'expulsada_de_ruta'
+  | 'cuenta_suspendida'
+  | 'cana_reactivada'
+  | 'veto_de_ruta_retirado'
+  | 'cuenta_reactivada';
+
+/**
+ * Un aviso al usuario: my_notices (0015). `reason` es el motivo que se le
+ * ensena; la nota interna de quien modera NO viaja aqui.
+ */
+export type UserNoticeRow = {
+  id: string;
+  action: NoticeAction;
+  route_id: string | null;
+  route_name: string;
+  reason: string;
+  created_at: string;
+  read_at: string | null;
+};
+
+/** Lo que le impide usar la app ahora mismo: my_restrictions (0015). */
+export type MyRestrictionsRow = {
+  suspended: boolean;
+  suspended_reason: string;
+  suspended_at: string | null;
+  cana_blocked: boolean;
+  cana_reason: string;
+};
+
+/** Un veto vigente, para poder retirarlo: match_admin_bans (0015). */
+export type AdminBanRow = {
+  tipo: 'cuenta' | 'ruta' | 'cana';
+  user_id: string;
+  user_name: string;
+  route_id: string | null;
+  route_name: string;
+  reason: string;
+  created_at: string;
 };
 
 /**
@@ -427,13 +476,52 @@ export type Database = {
         Args: { p_report_id: string };
         Returns: undefined;
       };
+      // 0015: p_reason es el motivo que se le ensena a la persona y es
+      // OBLIGATORIO (el servidor grita REASON_REQUIRED); p_note es la nota
+      // interna, que no sale del panel.
       match_admin_remove_photo: {
-        Args: { p_user_id: string; p_report_id?: string | null; p_note?: string };
+        Args: { p_user_id: string; p_reason: string; p_report_id?: string | null; p_note?: string };
         Returns: undefined;
       };
       match_admin_deactivate: {
-        Args: { p_user_id: string; p_report_id?: string | null; p_note?: string };
+        Args: { p_user_id: string; p_reason: string; p_report_id?: string | null; p_note?: string };
         Returns: undefined;
+      };
+      match_admin_suspend: {
+        Args: { p_user_id: string; p_reason: string; p_report_id?: string | null; p_note?: string };
+        Returns: undefined;
+      };
+      match_admin_lift_cana: {
+        Args: { p_user_id: string; p_note?: string };
+        Returns: boolean;
+      };
+      match_admin_lift_route_ban: {
+        Args: { p_user_id: string; p_route_id: string; p_note?: string };
+        Returns: boolean;
+      };
+      match_admin_unsuspend: {
+        Args: { p_user_id: string; p_note?: string };
+        Returns: boolean;
+      };
+      match_admin_bans: {
+        Args: Record<string, never>;
+        Returns: AdminBanRow[];
+      };
+      my_notices: {
+        Args: Record<string, never>;
+        Returns: UserNoticeRow[];
+      };
+      my_notice_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      mark_notices_read: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      my_restrictions: {
+        Args: Record<string, never>;
+        Returns: MyRestrictionsRow[];
       };
       match_admin_resolve: {
         Args: { p_report_id: string; p_resolution: MatchReportResolution; p_note?: string };
@@ -442,7 +530,13 @@ export type Database = {
       // 0014: la medida para cuando lo demas se queda corto. Devuelve si de
       // verdad estaba dentro de la ruta.
       match_admin_remove_from_route: {
-        Args: { p_user_id: string; p_route_id: string; p_report_id?: string | null; p_note?: string };
+        Args: {
+          p_user_id: string;
+          p_route_id: string;
+          p_reason: string;
+          p_report_id?: string | null;
+          p_note?: string;
+        };
         Returns: boolean;
       };
     };

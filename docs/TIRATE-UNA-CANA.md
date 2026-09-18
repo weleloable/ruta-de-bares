@@ -200,14 +200,31 @@ public.match_admin_report(p_report_id uuid)
 -- Solo el numero, para la burbujita del boton de Mi perfil.
 public.match_admin_alert_count() -> integer  -- las que no estan resueltas
 
--- 0014. La medida para cuando retirar la foto o apagar la cana se quedan
--- cortas: le saca de LA RUTA en la que se le denuncio, borrando su fila de
--- route_members. Devuelve si de verdad estaba dentro.
-public.match_admin_remove_from_route(p_user_id uuid, p_route_id uuid,
-                                     p_report_id uuid default null,
-                                     p_note text default '') -> boolean
-  -- falla con TARGET_IS_ADMIN si se apunta a un admin
-  -- match_admin_resolve acepta ademas 'expulsada_de_ruta'
+-- 0015. TODA sancion lleva p_reason: es el motivo que SE LE ENSENA a la
+-- persona, es obligatorio (REASON_REQUIRED) y no es lo mismo que p_note, que
+-- es la nota interna del panel. Las tres restrictivas dejan ademas un veto.
+public.match_admin_remove_photo(p_user_id uuid, p_reason text,
+                                p_report_id uuid default null, p_note text default '')
+public.match_admin_deactivate(p_user_id uuid, p_reason text,
+                              p_report_id uuid default null, p_note text default '')
+  -- ademas de apagarla, VETA: la persona no puede volver a activarla
+public.match_admin_remove_from_route(p_user_id uuid, p_route_id uuid, p_reason text,
+                                     p_report_id uuid default null, p_note text default '') -> boolean
+  -- ademas de sacarle, VETA esa ruta: ni con el enlace vuelve a entrar
+public.match_admin_suspend(p_user_id uuid, p_reason text,
+                           p_report_id uuid default null, p_note text default '')
+  -- la mas dura: fuera de TODAS las rutas. NO borra la cuenta (ver abajo)
+  -- las cuatro fallan con TARGET_IS_ADMIN si se apunta a un admin
+  -- match_admin_resolve acepta 'expulsada_de_ruta' y 'cuenta_suspendida'
+
+-- Retirar los vetos. Devuelven si habia algo que retirar.
+public.match_admin_lift_cana(p_user_id uuid, p_note text default '') -> boolean
+public.match_admin_lift_route_ban(p_user_id uuid, p_route_id uuid, p_note text default '') -> boolean
+public.match_admin_unsuspend(p_user_id uuid, p_note text default '') -> boolean
+
+-- Los vetos vigentes, para retirarlos mucho despues de cerrar la denuncia.
+public.match_admin_bans() -> tipo ('cuenta'|'ruta'|'cana'), user_id, user_name,
+                             route_id, route_name, reason, created_at
 ```
 
 Tres cosas que el panel tiene que saber:
@@ -223,9 +240,50 @@ Tres cosas que el panel tiene que saber:
 3. Reclamar tambien deja apunte en `match_moderation_log`
    (`denuncia_en_revision`): es la prueba de cuanto se tardo en atenderla, que
    es lo que mide el DSA.
-4. Expulsar de una ruta NO borra la cuenta, ni el perfil, ni los sellos, y no
-   impide volver con otra invitacion: no hay lista de vetados. Si hace falta
-   que no vuelva, la decision es de quien reparte invitaciones.
+4. Expulsar de una ruta NO borra la cuenta, ni el perfil, ni los sellos. Lo que
+   SI hace es dejar un veto: no vuelve a entrar en esa ruta aunque tenga el
+   enlace, que es multiuso y circula por el grupo.
+
+## Los vetos y lo que se le dice a la persona (0015)
+
+Tres vetos, de menos a mas:
+
+| Veto | Donde vive | Que le impide |
+|---|---|---|
+| Cana | `match_profiles.blocked_at` | Volver a activar Tirate una cana |
+| Ruta | `route_bans` | Entrar en ESA ruta, con cualquier enlace |
+| Cuenta | `account_suspensions` | Entrar en NINGUNA ruta |
+
+La puerta de los dos ultimos es el trigger `route_members_veto` (BEFORE INSERT
+sobre `route_members`), no un `if` dentro de `redeem_route_invite`: asi vale
+para cualquier via que meta a alguien en una ruta, incluida la del remoto, sin
+tocar su codigo.
+
+**Suspender, nunca borrar.** Borrar la cuenta haria imposible comunicar la
+decision (`profiles` cae en cascada desde `auth.users`) y dejaria a la persona
+sin a quien reclamar. Quien esta suspendida entra, lee su aviso, reclama y puede
+llevarse o borrar sus datos. Nada mas.
+
+**El HMAC del correo.** `route_bans` guarda ademas un HMAC del correo, para que
+borrarse la cuenta y registrarse otra vez con el mismo correo no salte el veto
+esa misma noche. Es HMAC con una clave de `app_secrets` (generada por la propia
+migracion, nunca sale de la base) y no un sha256 pelado, que se revertiria por
+fuerza bruta. **Se purga con la ruta**: dura lo que dura el motivo por el que
+existe, que es lo que hace defendible conservarlo tras una peticion de supresion
+(art. 17.3 RGPD, y el bloqueo de datos del art. 32 LOPDGDD).
+
+**El aviso.** Cada sancion escribe una fila en `user_notices` con el motivo que
+escribio quien modera, y la persona la lee en Mi perfil > Avisos
+(`app/avisos.tsx`). Lo pide el art. 17 del DSA: hay que decir QUE se ha decidido
+y POR QUE en cuanto se restringe el servicio. La nota interna NO viaja ahi.
+Retirar un veto tambien se comunica.
+
+```sql
+public.my_notices()       -> id, action, route_id, route_name, reason, created_at, read_at
+public.my_notice_count()  -> integer   -- los sin leer, para la burbujita
+public.mark_notices_read()-> integer   -- al ABRIR la pantalla: es la prueba de que se comunico
+public.my_restrictions()  -> suspended, suspended_reason, suspended_at, cana_blocked, cana_reason
+```
 
 ## Contrato con la pertenencia a rutas
 

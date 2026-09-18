@@ -338,6 +338,10 @@ export function vistaPreviaChat(fila: FilaBandeja, yo: string): string {
 const MENSAJES: Record<string, string> = {
   NOT_AUTHENTICATED: 'Tu sesión ha caducado. Vuelve a entrar.',
   NOT_PARTICIPANT: 'No participas en esta ruta.',
+  // Los dos vetos de la 0015. El motivo concreto no viaja en el error: esta en
+  // Mi perfil > Avisos, que es donde la ley obliga a contarlo entero.
+  CANA_BLOCKED: 'Un administrador ha desactivado tu caña. Mira el motivo en Mi perfil > Avisos.',
+  ACCOUNT_SUSPENDED: 'Tu cuenta está suspendida. Mira el motivo en Mi perfil > Avisos.',
   MATCH_NOT_ACTIVE: 'Activa Tírate una caña para ver a la gente de tu ruta.',
   MATCH_PROFILE_MISSING: 'Todavía no te has presentado.',
   ADULT_CONFIRMATION_REQUIRED: 'Confirma que eres mayor de edad para activarlo.',
