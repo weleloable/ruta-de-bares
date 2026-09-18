@@ -239,7 +239,7 @@ export const TEXTO_MAX = 120;
 export function textoRestante(restantes: number): string {
   if (restantes === 0) {
     return TEXTOS_POR_PERSONA === 1
-      ? 'Ya has enviado tu único mensaje.'
+      ? 'Ya has enviado tu único mensaje. Disfruta de la cerveza.'
       : `Ya has enviado tus ${TEXTOS_POR_PERSONA} mensajes.`;
   }
   if (TEXTOS_POR_PERSONA === 1) return 'Solo puedes enviar 1 mensaje, y se envía entero';

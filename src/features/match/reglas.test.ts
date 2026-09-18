@@ -373,6 +373,6 @@ describe('textoRestante', () => {
   });
 
   it('gastado, lo dice en singular', () => {
-    assert.equal(textoRestante(0), 'Ya has enviado tu único mensaje.');
+    assert.equal(textoRestante(0), 'Ya has enviado tu único mensaje. Disfruta de la cerveza.');
   });
 });
