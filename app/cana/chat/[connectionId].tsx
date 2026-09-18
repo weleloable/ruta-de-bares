@@ -25,12 +25,14 @@ import {
 } from '../../../src/features/match/api';
 import { AccionesPersona } from '../../../src/features/match/AccionesPersona';
 import { AvatarCana } from '../../../src/features/match/piezas';
-import { FranjaCerveza, ResponderCerveza, textoRestante } from '../../../src/features/match/PreguntaCerveza';
+import { FranjaCerveza, ResponderCerveza } from '../../../src/features/match/PreguntaCerveza';
 import {
   CONEXION_PERDIDA,
   TEXTO_MAX,
+  TEXTOS_POR_PERSONA,
   desdeParaSondeo,
   estadoPregunta,
+  textoRestante,
   hiloVacio,
   recibirDelSondeo,
   recibirEnviado,
@@ -66,6 +68,10 @@ export default function ChatCana() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [confirmandoNo, setConfirmandoNo] = useState(false);
+  // El texto se gasta y no vuelve: se confirma antes de enviarlo. Se guarda
+  // aparte lo que se va a enviar, porque al enviar se vacia el campo y el
+  // dialogo, mientras se cierra, ensenaba unas comillas vacias.
+  const [textoAConfirmar, setTextoAConfirmar] = useState('');
   const [texto, setTexto] = useState('');
 
   // Refs y no estado: el sondeo necesita lo ultimo sin volver a crearse.
@@ -161,9 +167,16 @@ export default function ChatCana() {
     }
   }
 
+  function pedirConfirmacion() {
+    if (texto.trim().length === 0) return;
+    setTextoAConfirmar(texto.trim());
+  }
+
   async function enviarTexto() {
-    if (!detalle || texto.trim().length === 0) return;
-    if (await enviar(() => sendMatchText(detalle.connection_id, texto))) setTexto('');
+    if (!detalle || textoAConfirmar.length === 0) return;
+    const aEnviar = textoAConfirmar;
+    setTextoAConfirmar('');
+    if (await enviar(() => sendMatchText(detalle.connection_id, aEnviar))) setTexto('');
   }
 
   if (cargando) return <Loading label="Abriendo el chat..." />;
@@ -253,23 +266,31 @@ export default function ChatCana() {
           {pregunta.tipo === 'aceptada' ? (
             pregunta.textosRestantes > 0 ? (
               <View style={styles.escribir}>
+                <View style={styles.avisoUnico} accessibilityRole="summary">
+                  <Ionicons name="alert-circle-outline" size={16} color={colors.beerDark} />
+                  <Text style={styles.avisoUnicoTexto}>
+                    {TEXTOS_POR_PERSONA === 1
+                      ? 'Es tu único mensaje: dile dónde estás o cómo reconocerte. Luego ya no podrás escribir más.'
+                      : `Tienes ${TEXTOS_POR_PERSONA} mensajes en total con esta persona.`}
+                  </Text>
+                </View>
                 <View style={styles.filaTexto}>
                   <TextInput
                     value={texto}
                     onChangeText={setTexto}
                     maxLength={TEXTO_MAX}
-                    placeholder="¿Dónde quedamos?"
+                    placeholder="Estoy en la barra del fondo, camiseta roja"
                     placeholderTextColor={colors.inkFaint}
                     editable={!enviando}
                     accessibilityLabel="Mensaje"
                     style={styles.campo}
-                    onSubmitEditing={() => void enviarTexto()}
+                    onSubmitEditing={pedirConfirmacion}
                     returnKeyType="send"
                   />
                   <BotonChat
                     icono="send"
                     texto="Enviar"
-                    onPress={() => void enviarTexto()}
+                    onPress={pedirConfirmacion}
                     desactivado={enviando || texto.trim().length === 0}
                     compacto
                   />
@@ -309,6 +330,17 @@ export default function ChatCana() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <DialogoConfirmar
+        visible={textoAConfirmar.length > 0}
+        titulo="¿Enviamos tu único mensaje?"
+        mensaje={`Se enviará "${textoAConfirmar}". Después ya no podrás escribir más a ${nombre}.`}
+        textoConfirmar="Enviar"
+        textoCancelar="Seguir escribiendo"
+        ocupado={enviando}
+        onConfirmar={() => void enviarTexto()}
+        onCancelar={() => setTextoAConfirmar('')}
+      />
 
       <DialogoConfirmar
         visible={confirmandoNo}
@@ -479,6 +511,15 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   nota: { fontSize: 12, color: colors.inkSoft, fontVariant: ['tabular-nums'] },
+  avisoUnico: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    padding: space.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.beerSoft,
+  },
+  avisoUnicoTexto: { flex: 1, fontSize: 12, fontWeight: '600', color: colors.beerDark },
   botonCompacto: { flex: 0, paddingHorizontal: space.lg },
   botonDestacado: { backgroundColor: colors.beer, borderColor: colors.beerDark },
   botonTextoDestacado: { color: colors.white },

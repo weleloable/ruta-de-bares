@@ -25,7 +25,7 @@ function franja(estado: EstadoPregunta, nombre: string): { texto: string; tono: 
     case 'sin-mas-preguntas':
       return { texto: 'Ya no se puede volver a preguntar en esta conexión', tono: 'neutro' };
     case 'aceptada':
-      return { texto: '¡Cerveza aceptada! Ya podéis escribiros', tono: 'aceptada' };
+      return { texto: '¡Cerveza aceptada! Un mensaje cada uno', tono: 'aceptada' };
     case 'rechazada':
       return { texto: 'La cerveza ya tuvo respuesta', tono: 'neutro' };
   }
@@ -98,14 +98,6 @@ function Opcion({
       <Text style={[styles.opcionTexto, principal && styles.opcionTextoPrincipal]}>{texto}</Text>
     </Pressable>
   );
-}
-
-/** Lo que queda por escribir tras el Si. */
-export function textoRestante(restantes: number): string {
-  if (restantes === 0) {
-    return TEXTOS_POR_PERSONA === 1 ? 'Ya has enviado tu mensaje.' : `Ya has enviado tus ${TEXTOS_POR_PERSONA} mensajes.`;
-  }
-  return restantes === 1 ? 'Te queda 1 mensaje' : `Te quedan ${restantes} mensajes`;
 }
 
 const styles = StyleSheet.create({

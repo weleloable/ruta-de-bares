@@ -27,6 +27,7 @@ import {
   recibirDelSondeo,
   recibirEnviado,
   teTocaResponder,
+  textoRestante,
   validarDenuncia,
   validarPresentacion,
   vistaPreviaChat,
@@ -363,5 +364,15 @@ describe('denunciar', () => {
       describirErrorCana('REPORT_ALREADY_PENDING'),
       'Ya has denunciado a esta persona y lo estamos revisando.',
     );
+  });
+});
+
+describe('textoRestante', () => {
+  it('avisa de que es uno y de que se envia entero, no de "te queda 1"', () => {
+    assert.equal(textoRestante(1), 'Solo puedes enviar 1 mensaje, y se envía entero');
+  });
+
+  it('gastado, lo dice en singular', () => {
+    assert.equal(textoRestante(0), 'Ya has enviado tu mensaje.');
   });
 });

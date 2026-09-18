@@ -231,6 +231,19 @@ export const APLAZAMIENTOS_MAX = 2;
 export const TEXTOS_POR_PERSONA = 1;
 export const TEXTO_MAX = 120;
 
+/**
+ * Lo que se puede escribir tras el Si, dicho para que nadie gaste su unico
+ * mensaje en un "hola". Con TEXTOS_POR_PERSONA = 1 es lo mas importante de la
+ * pantalla: no hay segunda oportunidad.
+ */
+export function textoRestante(restantes: number): string {
+  if (restantes === 0) {
+    return TEXTOS_POR_PERSONA === 1 ? 'Ya has enviado tu mensaje.' : `Ya has enviado tus ${TEXTOS_POR_PERSONA} mensajes.`;
+  }
+  if (TEXTOS_POR_PERSONA === 1) return 'Solo puedes enviar 1 mensaje, y se envía entero';
+  return restantes === 1 ? 'Te queda 1 mensaje' : `Te quedan ${restantes} mensajes`;
+}
+
 export type EstadoPregunta =
   /** Cualquiera de los dos puede preguntar (D4). */
   | { tipo: 'disponible'; tuvoAplazamiento: boolean }
