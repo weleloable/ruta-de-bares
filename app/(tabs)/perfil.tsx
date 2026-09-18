@@ -138,19 +138,34 @@ export default function PerfilScreen() {
           />
         </Card>
 
+        {/*
+          Via de canje a mano: si el enlace https no se puede abrir (el mensaje
+          llego cortado, se copio solo el codigo...), se pega aqui el enlace o el
+          codigo. Para todos, no solo admins.
+        */}
+        <Card>
+          <Text style={styles.tituloTarjeta}>Rutas</Text>
+          <Button
+            title="Entrar en una ruta"
+            variant="secondary"
+            textStyle={styles.textoAccionBarra}
+            onPress={() => router.push('/invitacion')}
+          />
+        </Card>
+
         {isAdmin ? (
           <Card>
             <Text style={styles.tituloTarjeta}>Detrás de la barra</Text>
             <Button
               title="Editor de rutas"
               variant="secondary"
-              // navigate y no push: el editor es una pestana (oculta), se cambia a
-              // ella en vez de apilar otra copia.
-              onPress={() => router.navigate('/editor')}
+              textStyle={styles.textoAccionBarra}
+              onPress={() => router.push('/editor')}
             />
             <Button
               title="Invitaciones"
               variant="secondary"
+              textStyle={styles.textoAccionBarra}
               onPress={() => router.push('/invitaciones')}
             />
           </Card>
@@ -190,6 +205,10 @@ const styles = StyleSheet.create({
     color: '#8A7A69',
     textAlign: 'center',
   },
+  // Misma familia que tituloTarjeta, pero sin bajar el 15%: en negrita (el peso
+  // de los botones) el tono oscuro leia como negro, casi igual al resto de
+  // texto de la app.
+  textoAccionBarra: { color: colors.inkFaint },
   inputCentrado: { textAlign: 'center' },
   cabecera: { alignItems: 'center', gap: space.xs },
   avatarPulsable: { alignItems: 'center', gap: space.xs },

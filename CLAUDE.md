@@ -15,14 +15,23 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
   Mi perfil (+ editor de rutas y panel de invitaciones para admins).
 - **App instalable (PWA)**: la web se instala desde el navegador en Android e
   iPhone, sin APK ni tienda. Ver seccion 8 de `docs/SETUP.md`.
-- **Sellar un bar** exige tres cosas a la vez: ruta publicada, dentro de la
-  ventana horaria del bar, y dentro del radio (`radius_m`) por geocerca
-  haversine. Las tres se comprueban **en el servidor** (`claim_stamp` en
-  Postgres); el cliente (`src/features/stamps/rules.ts`) es solo un espejo
-  para la UI ("te faltan 40 m"), nunca la autoridad.
-- **Invitaciones de un solo uso**: un admin genera un link desde el panel;
-  la DB guarda el sha256 del token, nunca el token. El canje usa `UPDATE ...
-  WHERE used_at IS NULL` para que dos aperturas simultaneas no den dos cuentas.
+- **Sellar un bar** exige cuatro cosas a la vez: ser miembro de la ruta, ruta
+  publicada, dentro de la ventana horaria del bar, y dentro del radio
+  (`radius_m`) por geocerca haversine. Las cuatro se comprueban **en el
+  servidor** (`claim_stamp` en Postgres); el cliente
+  (`src/features/stamps/rules.ts`) es solo un espejo para la UI ("te faltan
+  40 m"), nunca la autoridad.
+- **El alta es abierta y las invitaciones son POR RUTA** (migracion 0004).
+  Cualquiera se registra; una cuenta nueva no ve NADA hasta que canjea una
+  invitacion a una ruta concreta (`route_members`). Un enlace sirve para varias
+  personas hasta agotar `max_uses` o caducar (2/4/8 h). Todo vive en Postgres:
+  `create_route_invite()` y `redeem_route_invite()`, sin Edge Functions.
+  El canje bloquea la fila con `FOR UPDATE` para que dos simultaneos no se
+  salten el tope, y es idempotente (canjear dos veces no gasta dos plazas).
+- **El token de invitacion se guarda EN CLARO**, al contrario que las viejas
+  invitaciones de cuenta. Es deliberado: el historial tiene que poder volver a
+  enseñar el enlace. Lo unico que los protege es la policy `route_invites_admin`,
+  asi que esa policy es critica y tiene test propio.
 - **Admins se crean a mano en Supabase**, nunca desde una pantalla de la app
   (no hay superficie de ataque para escalar privilegio).
 
@@ -44,8 +53,10 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 
 ```
 app/                      pantallas (Expo Router)
-  (auth)/                 login, canje de invitacion
-  (tabs)/                 las 4 pestanas
+  (auth)/                 login, registro (alta abierta)
+  (tabs)/                 las 4 pestanas (Editor y Perfil sin boton abajo)
+  invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
+  invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
 src/
   features/<dominio>/     reglas + llamadas a datos + componentes por dominio
@@ -60,12 +71,14 @@ supabase/
   migrations/0001_init.sql  tablas, RLS, claim_stamp, bucket avatars
   migrations/0002_*.sql     el SQL Editor y service_role pueden cambiar roles
   migrations/0003_*.sql     nombre visible unico, sin espacios, <= 30 caracteres
-  functions/                create-invite, redeem-invite (Edge Functions)
+  migrations/0004_*.sql     invitaciones POR RUTA + alta abierta + route_members
+                            (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
 ```
 
-Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `invites`. Todas con RLS.
+Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `route_invites`,
+`route_members`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -74,22 +87,22 @@ npm install
 cp .env.example .env                # EXPO_PUBLIC_SUPABASE_URL / _PUBLISHABLE_KEY / _GOOGLE_MAPS_API_KEY
 npx expo start --dev-client         # Expo Go NO sirve (mapa nativo)
 
-npm run check           # typecheck + tests + check:functions — correr antes de cualquier PR
+npm run check           # typecheck + tests — correr antes de cualquier PR
 npm test                # node --test sobre src/**/*.test.ts y tests/**/*.test.ts, sin Jest
 npm run typecheck       # tsc --noEmit (app) + tsconfig.tests.json
-npm run check:functions # typecheck de las Edge Functions con Deno (via npx)
 npm run doctor          # expo-doctor
 
 eas build --profile development --platform android   # development build (obligatorio por el mapa nativo)
 eas env:set --name EXPO_PUBLIC_... --environment development   # las env vars no viajan solas a EAS
-supabase functions deploy redeem-invite --no-verify-jwt        # obligatorio en esta funcion, no es un fallo
 ```
 
 Deploy = 1) pegar en el SQL Editor de Supabase cada fichero de
 `supabase/migrations/` en orden (`0001_init.sql`, `0002_guard_role_sql_editor.sql`,
-`0003_nombre_unico.sql`),
-2) desplegar las dos Edge Functions, 3) build con EAS. Paso a paso
-en [docs/SETUP.md](docs/SETUP.md).
+`0003_nombre_unico.sql`, `0004_invitaciones_por_ruta.sql` — esta ultima borra la
+tabla `invites` y cambia quien ve que, leer su cabecera antes),
+2) activar el registro publico en Supabase Auth (lo exige la 0004), 3) build con
+EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
+[docs/SETUP.md](docs/SETUP.md).
 
 ## Convenciones
 
@@ -122,10 +135,34 @@ en [docs/SETUP.md](docs/SETUP.md).
   nunca a una sesión a medio escribir.
 - **`app.config.ts` en vez de `app.json`**: la API key de Google Maps se lee
   de `process.env` para que nunca quede hardcodeada en git.
-- **`redeem-invite` se despliega con `--no-verify-jwt`**: quien canjea una
-  invitación todavía no tiene cuenta, así que no puede tener JWT. No es un
-  agujero — la autorización real es el token de un solo uso, validado por su
-  sha256 contra la tabla `invites` dentro de la función.
+- **Las invitaciones no usan Edge Functions, son funciones de Postgres**
+  (`0004`): `create_route_invite()` genera el token con `gen_random_bytes(32)`
+  de pgcrypto y `redeem_route_invite()` lo canjea. Se hizo así porque quita una
+  pieza entera del despliegue (ya no hace falta la CLI de Supabase ni Deno) y
+  porque la regla vive donde manda. Verificado que PGlite soporta pgcrypto, así
+  que se puede probar contra Postgres real en los tests.
+- **El token de invitación se guarda en claro y su única protección es la RLS**
+  (`0004`): hacía falta para que el historial pueda volver a enseñar el enlace.
+  Es un cambio consciente respecto a las invitaciones de cuenta de `0001`, que
+  guardaban el sha256; entonces una fuga repartía CUENTAS, ahora como mucho deja
+  colarse en una ruta unas horas y ocupando plaza del tope.
+- **El enlace de invitacion es una URL https de la web, no un deep link**
+  (`buildInviteUrl` en `src/features/invites/link.ts`,
+  `https://weleloable.github.io/ruta-de-bares/invitacion?token=...`).
+  `rutadebares://` no es pulsable en todos los chats y no abre nada sin la app
+  nativa; https abre siempre la PWA. NO abre la app nativa: Android exige
+  `assetlinks.json` en la raiz del dominio y una pagina de proyecto de Pages no
+  lo controla. `WEB_APP_URL` debe coincidir con `WEB_BASE_URL` del workflow
+  (lo vigila `tests/deploy-web.test.ts`). El token pendiente de quien abre el
+  enlace sin sesion se refleja en `localStorage` (24 h, un solo uso) porque
+  confirmar el correo recarga la pagina y la memoria del modulo se pierde.
+  `AuthGate` solo LEE el pendiente (su efecto se repite con cada evento de
+  sesion de supabase-js; consumirlo ahi lo perdia); lo borra `/invitacion`.
+  Requiere que la Site URL de Supabase Auth sea la web (ver `docs/SETUP.md`).
+- **`redeem_route_invite()` bloquea la fila con `FOR UPDATE`**: sin eso, dos
+  canjes simultáneos leen el mismo recuento y el tope de plazas se pasa por uno.
+  Ojo: eso NO está probado, PGlite es de una sola conexión y no puede abrir dos
+  transacciones a la vez. Está anotado como tal en `tests/migration-0004.test.ts`.
 - **Claves de Supabase en formato nuevo** (`sb_publishable_...` / `sb_secret_...`),
   no el antiguo `anon`/`service_role`. Ver equivalencia en `docs/SETUP.md`.
 - **`guard_profile_role` deja cambiar `role` al SQL Editor y a la `service_role`**

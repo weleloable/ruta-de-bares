@@ -90,7 +90,7 @@ export default function RutaScreen() {
       <SafeAreaView style={styles.pantalla} edges={['bottom', 'left', 'right']}>
         <EmptyState
           title="Sin ruta que dibujar"
-          body="Cuando haya una ruta publicada veras aqui sus bares y el trazado que los une."
+          body="Desde que las invitaciones son por ruta, aqui solo salen las rutas a las que te han invitado. Abre el enlace que te pasen, o entra en una desde Mi perfil con su codigo."
         />
       </SafeAreaView>
     );

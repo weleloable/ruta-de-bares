@@ -15,6 +15,9 @@ export default function TabsLayout() {
         // Misma barra en todas las pestanas, titulada con el title de cada una
         // (el mismo texto que su boton en la barra de abajo).
         header: ({ options }) => <BarraSuperior titulo={options.title ?? ''} />,
+        // React Navigation reserva el hueco del notch con este color aunque el
+        // header sea propio: sin esto se ve mas claro que el resto de la barra.
+        headerStyle: { backgroundColor: colors.paperDeep },
         sceneStyle: { backgroundColor: colors.paper },
       }}
     >
@@ -30,17 +33,6 @@ export default function TabsLayout() {
         options={{
           title: 'Ruta',
           tabBarIcon: ({ color, size }) => <Ionicons name="map" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="editor"
-        options={{
-          title: 'Editor',
-          // Sin boton abajo: se entra desde la tarjeta de admins de Perfil ("Detrás de la barra").
-          // href: null SOLO oculta el boton, la url /editor sigue abriendo la
-          // pantalla. Quien impide entrar a un no-admin es el if (!isAdmin) de
-          // editor.tsx, y la RLS de la base de datos quien impide escribir.
-          href: null,
         }}
       />
       <Tabs.Screen

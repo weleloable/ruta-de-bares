@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
+import { leerInvitacionPendiente } from '../src/features/invites/pendiente';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
 import { iniciarPwa } from '../src/lib/pwa';
 import { colors, fonts } from '../src/lib/theme';
@@ -29,12 +30,23 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
 
-    const enZonaPublica = segments[0] === '(auth)';
+    const enAuth = segments[0] === '(auth)';
+    // /invitacion es publica a proposito: si exigiera sesion, abrir el enlace
+    // de una ruta sin haberla iniciado acabaria en /login y el token se
+    // perderia por el camino. La pantalla se apana sola con y sin sesion.
+    const enInvitacion = segments[0] === 'invitacion';
 
-    if (!session && !enZonaPublica) {
+    if (!session && !enAuth && !enInvitacion) {
       router.replace('/login');
-    } else if (session && enZonaPublica) {
-      router.replace('/');
+    } else if (session && enAuth) {
+      // Si se llego aqui por un enlace de ruta, se vuelve a el en vez de a la
+      // pantalla de inicio: el usuario venia a entrar en esa ruta.
+      // Solo se LEE: este efecto se repite (supabase-js reemite la sesion) y un
+      // borrado aqui haria que la segunda pasada mandase a "/". La borra
+      // /invitacion cuando se muestra con sesion.
+      const pendiente = leerInvitacionPendiente();
+      if (pendiente) router.replace({ pathname: '/invitacion', params: { token: pendiente } });
+      else router.replace('/');
     }
   }, [session, loading, segments, router]);
 
@@ -45,13 +57,18 @@ function AuthGate() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.paper },
         headerTintColor: colors.ink,
-        headerTitleStyle: { fontFamily: fonts.title, fontSize: 18 },
+        // Mismo color que "Detras de la barra" en Mi perfil (perfil.tsx,
+        // styles.tituloTarjeta): headerTintColor por si solo no siempre llega
+        // al texto del titulo en Android nativo, hay que fijarlo aqui tambien.
+        headerTitleStyle: { fontFamily: fonts.title, fontSize: 18, color: '#8A7A69' },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.paper },
       }}
     >
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="editor" options={{ title: 'Editor de rutas' }} />
+      <Stack.Screen name="invitacion" options={{ title: 'Entrar en una ruta' }} />
       <Stack.Screen name="editor/[routeId]/index" options={{ title: 'Editar ruta' }} />
       <Stack.Screen name="editor/[routeId]/bar" options={{ title: 'Bar de la ruta' }} />
       <Stack.Screen name="invitaciones" options={{ title: 'Invitaciones' }} />

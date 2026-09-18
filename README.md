@@ -3,7 +3,8 @@
 App movil para organizar una ruta de bares y llevar la cuenta de los sellos,
 al estilo de la compostelana del Camino.
 
-Solo se entra por invitacion. No hay registro abierto.
+Cualquiera puede crearse una cuenta, pero **solo ves las rutas a las que te
+han invitado**.
 
 ## Las cuatro pestanas
 
@@ -12,19 +13,20 @@ Solo se entra por invitacion. No hay registro abierto.
 | **Sellos** | todos | La compostelana: un hueco por bar, se rellena al sellar |
 | **Ruta** | todos | Mapa con los bares numerados y el trazado que los une (Google Maps en la app nativa, OpenStreetMap en la web) |
 | **Editor** | solo admins | Crear rutas, anadir bares tocando el mapa (o pegando coordenadas en web), ordenarlos, fijar horarios, publicar |
-| **Mi perfil** | todos | Foto, nombre, y para admins el editor de rutas y el panel de invitaciones |
+| **Mi perfil** | todos | Foto, nombre, entrar en una ruta con un enlace o un codigo, y para admins el editor de rutas y el panel de invitaciones |
 
 ## Como se consigue un sello
 
-El usuario pulsa **Sellar** y el servidor comprueba tres cosas antes de
+El usuario pulsa **Sellar** y el servidor comprueba cuatro cosas antes de
 concederlo:
 
-1. La ruta esta publicada.
-2. Es la hora: `now()` cae dentro de la ventana `opens_at` - `closes_at` de ese bar.
-3. Esta alli: la distancia haversine a las coordenadas del bar no pasa de su
+1. Es miembro de esa ruta (le invitaron y canjeo la invitacion).
+2. La ruta esta publicada.
+3. Es la hora: `now()` cae dentro de la ventana `opens_at` - `closes_at` de ese bar.
+4. Esta alli: la distancia haversine a las coordenadas del bar no pasa de su
    `radius_m`.
 
-Las tres viven en la funcion `claim_stamp` de Postgres, y es el **unico** camino
+Las cuatro viven en la funcion `claim_stamp` de Postgres, y es el **unico** camino
 para crear un sello: la tabla `stamps` no tiene politica de `INSERT` y al rol
 `authenticated` se le ha revocado el privilegio. El cliente no puede inventarse
 sellos ni con la clave en la mano.
@@ -35,22 +37,24 @@ Si las dos discrepan, manda el SQL.
 
 ## Como entra la gente
 
-- **Administradores**: la cuenta se crea a mano en el panel de Supabase y se
-  asciende con una linea de SQL. No hay ninguna pantalla que conceda el rol.
-- **Participantes**: un admin genera un enlace de un solo uso desde
-  **Mi perfil > Invitaciones**. Quien lo abre elige correo y contrasena y entra
-  como participante, sin acceso al editor.
+- **Cuenta**: cualquiera se registra con correo y contrasena. Una cuenta recien
+  creada no ve ninguna ruta: el registro no da acceso a nada.
+- **Ruta**: un admin genera un enlace desde **Mi perfil > Invitaciones**
+  eligiendo la ruta, cuantas horas dura (2, 4 u 8) y cuantas plazas tiene. El
+  mismo enlace sirve para todo el grupo hasta agotar las plazas o caducar.
+- **Administradores**: la cuenta se asciende a mano con una linea de SQL en el
+  panel de Supabase. No hay ninguna pantalla que conceda el rol.
 
-La base de datos guarda el **sha256** del token, nunca el token. Se ve una sola
-vez, al crearlo. El canje reclama la invitacion con un `UPDATE ... WHERE
-used_at IS NULL` antes de crear nada: de dos personas que abran el mismo enlace
-a la vez, solo una consigue cuenta.
+Quien canjea entra en `route_members`, que es lo unico que hace visible una
+ruta. Anular un enlace lo mata para los que vengan, pero no echa a quien ya
+entro. Todo esto son dos funciones de Postgres (`create_route_invite` y
+`redeem_route_invite`), no hay Edge Functions.
 
 ## Stack
 
 - [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) + React Native 0.86, TypeScript estricto
 - [Expo Router](https://docs.expo.dev/router/introduction/) para la navegacion
-- [Supabase](https://supabase.com/) para auth, Postgres con RLS, Storage y Edge Functions
+- [Supabase](https://supabase.com/) para auth, Postgres con RLS y Storage
 - [react-native-maps](https://docs.expo.dev/versions/v57.0.0/sdk/map-view/) con Google Maps
 - En web: [Leaflet](https://leafletjs.com/) + [react-leaflet](https://react-leaflet.js.org/) con teselas de OpenStreetMap, y app instalable (PWA): ver seccion 8 de [docs/SETUP.md](docs/SETUP.md)
 - Sesion en el keystore del sistema via `expo-secure-store`, troceada porque
@@ -60,7 +64,7 @@ a la vez, solo una consigue cuenta.
 
 ```
 app/                      pantallas (Expo Router; la carpeta ES el mapa de rutas)
-  (auth)/                 login y canje de invitacion
+  (auth)/                 login y registro
   (tabs)/                 las cuatro pestanas
   editor/[routeId]/       lista de bares de una ruta y formulario de bar
 src/
@@ -70,7 +74,6 @@ src/
   types/database.ts       espejo en TypeScript del esquema SQL
 supabase/
   migrations/0001_init.sql  tablas, RLS, claim_stamp, bucket de avatares
-  functions/                create-invite y redeem-invite
 docs/SETUP.md             puesta en marcha, de cero a la app corriendo
 ```
 
@@ -95,7 +98,6 @@ en cada push a `master` (ver "Publicar la web en GitHub Pages" en [docs/SETUP.md
 ```bash
 npm test         # ~250 tests, sin red, en segundos
 npm run typecheck
-npm run check:functions   # typecheck de las Edge Functions con Deno (via npx, no hay que instalarlo)
 npm run check    # typecheck + tests + funciones (gate de cada commit)
 npm run doctor   # expo-doctor: versiones y dependencias nativas
 npm run verificar:web     # mapa web en Chrome headless: comprueba en pixeles que no se reencuadra de mas (20 s - 1 min)

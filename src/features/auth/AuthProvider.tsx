@@ -21,6 +21,13 @@ type AuthState = {
   /** true hasta que se sabe si hay sesion Y se ha resuelto su perfil. */
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  /**
+   * Alta abierta (migracion 0004). Devuelve false cuando Supabase exige
+   * confirmar el correo y por tanto NO deja sesion abierta: la pantalla tiene
+   * que decir "mira tu correo" en vez de quedarse esperando a un AuthGate que
+   * no va a disparar.
+   */
+  signUp: (email: string, password: string, displayName: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -31,8 +38,17 @@ const AuthContext = createContext<AuthState | null>(null);
 export function translateAuthError(message: string): string {
   if (/invalid login credentials/i.test(message)) return 'Correo o contrasena incorrectos.';
   if (/email not confirmed/i.test(message)) return 'Esta cuenta aun no esta confirmada.';
+  // Desde 0004 el alta es abierta, asi que este error ya no es una regla del
+  // producto sino un despiste de configuracion: falta activar el registro en
+  // Supabase Auth (ver docs/SETUP.md).
   if (/signups? not allowed|signup is disabled/i.test(message)) {
-    return 'El registro esta cerrado. Necesitas una invitacion.';
+    return 'El registro esta desactivado en el servidor. Avisa a un administrador.';
+  }
+  if (/user already registered|already registered/i.test(message)) {
+    return 'Ese correo ya tiene cuenta. Inicia sesion.';
+  }
+  if (/password.*(6|8|at least|should be)/i.test(message)) {
+    return 'La contrasena es demasiado corta.';
   }
   if (/rate limit|too many requests/i.test(message)) {
     return 'Demasiados intentos. Prueba en unos minutos.';
@@ -107,6 +123,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(translateAuthError(error.message));
   }, []);
 
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
+    // Sin espacios y <= 30: lo exige profiles_display_name_formato (0003). Si
+    // el nombre ya lo tiene otro rutero, handle_new_user le pone "-2", "-3"...
+    // y el alta no falla, solo cambia el nombre final.
+    const nombre = displayName.replace(/\s/g, '').slice(0, 30);
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: { data: nombre.length > 0 ? { display_name: nombre } : undefined },
+    });
+    if (error) throw new Error(translateAuthError(error.message));
+    // Con la confirmacion por correo activada, Supabase crea el usuario pero no
+    // devuelve sesion. Distinguirlo es lo que evita dejar la pantalla colgada.
+    return data.session !== null;
+  }, []);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(translateAuthError(error.message));
@@ -124,10 +156,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: profile?.role === 'admin',
       loading,
       signIn,
+      signUp,
       signOut,
       refreshProfile,
     }),
-    [session, profile, loading, signIn, signOut, refreshProfile],
+    [session, profile, loading, signIn, signUp, signOut, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

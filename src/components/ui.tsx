@@ -8,7 +8,9 @@ import {
   TextInput,
   View,
   type PressableProps,
+  type StyleProp,
   type TextInputProps,
+  type TextStyle,
   type ViewProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,9 +50,21 @@ type ButtonProps = Omit<PressableProps, 'children'> & {
   title: string;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   loading?: boolean;
+  // Para casos puntuales (p.ej. los botones de "Detras de la barra" en Perfil)
+  // que necesitan un color de texto distinto al del variant, sin crear uno
+  // nuevo solo para ese sitio.
+  textStyle?: StyleProp<TextStyle>;
 };
 
-export function Button({ title, variant = 'primary', loading = false, disabled, style, ...rest }: ButtonProps) {
+export function Button({
+  title,
+  variant = 'primary',
+  loading = false,
+  disabled,
+  style,
+  textStyle,
+  ...rest
+}: ButtonProps) {
   const inactivo = disabled || loading;
   return (
     <Pressable
@@ -69,7 +83,7 @@ export function Button({ title, variant = 'primary', loading = false, disabled, 
       {loading ? (
         <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? colors.ink : colors.white} />
       ) : (
-        <Text style={[styles.buttonText, styles[`buttonText_${variant}`]]}>{title}</Text>
+        <Text style={[styles.buttonText, styles[`buttonText_${variant}`], textStyle]}>{title}</Text>
       )}
     </Pressable>
   );

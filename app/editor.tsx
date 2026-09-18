@@ -1,16 +1,17 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Button, Card, EmptyState, Field, Loading } from '../../src/components/ui';
-import { useAuth } from '../../src/features/auth/AuthProvider';
-import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
-import { createRoute, deleteRoute, listRoutes, updateRoute } from '../../src/features/routes/api';
-import { validateRouteDraft } from '../../src/features/routes/validation';
-import { aFechaISO, desdeFechaISO, diaLargo } from '../../src/lib/fechas';
-import { colors, radius, space, typography } from '../../src/lib/theme';
-import type { RouteRow } from '../../src/types/database';
+import { Banner, Button, Card, EmptyState, Field, Loading } from '../src/components/ui';
+import { useAuth } from '../src/features/auth/AuthProvider';
+import { DialogoConfirmar } from '../src/features/profile/DialogoConfirmar';
+import { useActiveRoute } from '../src/features/routes/ActiveRouteProvider';
+import { createRoute, deleteRoute, listRoutes, updateRoute } from '../src/features/routes/api';
+import { validateRouteDraft } from '../src/features/routes/validation';
+import { aFechaISO, desdeFechaISO, diaLargo } from '../src/lib/fechas';
+import { colors, radius, space, typography } from '../src/lib/theme';
+import type { RouteRow } from '../src/types/database';
 
 /**
  * Editor de rutas, solo administradores.
@@ -35,6 +36,8 @@ export default function EditorScreen() {
   const [fecha, setFecha] = useState(aFechaISO(new Date()));
   const [guardando, setGuardando] = useState(false);
   const [erroresFormulario, setErroresFormulario] = useState<string[]>([]);
+  const [borrando, setBorrando] = useState<RouteRow | null>(null);
+  const [borrandoEnCurso, setBorrandoEnCurso] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -89,27 +92,19 @@ export default function EditorScreen() {
     }
   }
 
-  function onBorrar(ruta: RouteRow) {
-    Alert.alert(
-      'Borrar la ruta',
-      `Se borra "${ruta.name}" con todos sus bares y los sellos que la gente ya tenga. No hay vuelta atras.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Borrar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteRoute(ruta.id);
-              await cargar();
-              await refrescarRutaActiva();
-            } catch (e) {
-              setError(e instanceof Error ? e.message : 'No se pudo borrar la ruta.');
-            }
-          },
-        },
-      ],
-    );
+  async function onBorrarConfirmado() {
+    if (!borrando) return;
+    setBorrandoEnCurso(true);
+    try {
+      await deleteRoute(borrando.id);
+      setBorrando(null);
+      await cargar();
+      await refrescarRutaActiva();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo borrar la ruta.');
+    } finally {
+      setBorrandoEnCurso(false);
+    }
   }
 
   if (!isAdmin) {
@@ -219,7 +214,7 @@ export default function EditorScreen() {
                       {ruta.is_published ? 'Despublicar' : 'Publicar'}
                     </Text>
                   </Pressable>
-                  <Pressable style={styles.accion} onPress={() => onBorrar(ruta)}>
+                  <Pressable style={styles.accion} onPress={() => setBorrando(ruta)}>
                     <Text style={[styles.accionTexto, styles.accionPeligro]}>Borrar</Text>
                   </Pressable>
                 </View>
@@ -228,6 +223,26 @@ export default function EditorScreen() {
           })
         )}
       </ScrollView>
+
+      {/*
+        Con Alert.alert este boton no hacia NADA en web: react-native-web lo
+        define como `static alert() {}`. Mismo fallo y misma solucion que en
+        "Cerrar sesion" (PR #8) y en "Anular" de Invitaciones.
+      */}
+      <DialogoConfirmar
+        visible={borrando !== null}
+        titulo="Borrar la ruta"
+        mensaje={
+          borrando
+            ? `Se borra "${borrando.name}" con todos sus bares y los sellos que la gente ya tenga. No hay vuelta atras.`
+            : ''
+        }
+        textoConfirmar="Borrar"
+        destructivo
+        ocupado={borrandoEnCurso}
+        onConfirmar={onBorrarConfirmado}
+        onCancelar={() => setBorrando(null)}
+      />
     </SafeAreaView>
   );
 }

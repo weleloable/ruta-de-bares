@@ -61,7 +61,7 @@ export default function SellosScreen() {
         {!activeRoute ? (
           <EmptyState
             title="Todavia no hay ruta"
-            body="Cuando un administrador publique una ruta, sus bares apareceran aqui como huecos que ir sellando."
+            body="Solo ves las rutas a las que te han invitado. Cuando te pasen una, entra desde Mi perfil y sus bares apareceran aqui como huecos que ir sellando."
           />
         ) : (
           <>
