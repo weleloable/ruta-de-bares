@@ -9,7 +9,7 @@ import { colors, radius, space, typography } from '../../src/lib/theme';
 /**
  * Lo que se acepta al activar la cana: que se recoge, quien lo ve y que no se
  * puede hacer. Es la pantalla a la que apunta el consentimiento que guarda
- * match_activate, y por eso lleva su version a la vista (0009).
+ * match_activate, y por eso lleva su version a la vista (0010).
  *
  * PENDIENTE: la politica de privacidad general de la app (quien responde de
  * los datos y como ejercer los derechos) no existe todavia, porque falta

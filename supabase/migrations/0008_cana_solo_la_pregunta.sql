@@ -1,5 +1,5 @@
--- Ruta de Bares - 0007: la cana se queda solo con la pregunta de la cerveza.
--- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0006.
+-- Ruta de Bares - 0008: la cana se queda solo con la pregunta de la cerveza.
+-- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0007.
 -- Idempotente: se puede re-ejecutar.
 --
 -- Cambio de producto: desaparecen los GIFs y los zumbidos. Lo unico que se

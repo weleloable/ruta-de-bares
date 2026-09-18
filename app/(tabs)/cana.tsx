@@ -71,7 +71,7 @@ const VACIO: Record<Filtro, { title: string; body: string }> = {
  *
  * Desactivado por defecto. La pantalla de desactivado explica ANTES de activar
  * que veran los demas, porque pulsar Activar es el consentimiento. Todas las
- * reglas estan en el servidor (0003_tirate_una_cana.sql); aqui solo se pinta.
+ * reglas estan en el servidor (0005_tirate_una_cana.sql); aqui solo se pinta.
  */
 export default function CanaScreen() {
   const router = useRouter();

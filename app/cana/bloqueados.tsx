@@ -14,7 +14,7 @@ import type { MatchBlockedRow } from '../../src/types/database';
 /**
  * Personas que has bloqueado, con la opcion de deshacerlo.
  *
- * Desbloquear NO devuelve la conexion ni el Me gusta (0008): si quieres volver
+ * Desbloquear NO devuelve la conexion ni el Me gusta (0009): si quieres volver
  * a hablar con alguien, tienes que dar Me gusta otra vez desde su ficha. Se
  * avisa aqui para que nadie desbloquee esperando recuperar el chat.
  */

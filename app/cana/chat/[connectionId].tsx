@@ -52,7 +52,7 @@ const SONDEO_CHAT_MS = 4_000;
 /**
  * Conexion de Tirate una cana. Lo unico que se puede hacer es ofrecer la cana
  * ("Te tomas una cerveza conmigo?") y responder Si, No o "dentro de un rato";
- * tras el Si, cada persona manda UN mensaje de hasta 120 caracteres (0007: se
+ * tras el Si, cada persona manda UN mensaje de hasta 120 caracteres (0008: se
  * retiraron los GIFs y los zumbidos). Todo lo decide el servidor; la pantalla
  * solo deshabilita lo que ya sabe que va a fallar, con el espejo de reglas.ts.
  */

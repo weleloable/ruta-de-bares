@@ -1,5 +1,5 @@
--- Ruta de Bares - 0006: miniatura de la foto de perfil.
--- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0005.
+-- Ruta de Bares - 0007: miniatura de la foto de perfil.
+-- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0006.
 -- Idempotente: se puede re-ejecutar.
 --
 -- Por que existe: la grilla de "Tirate una cana" pinta la foto de todas las

@@ -23,6 +23,22 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
 4. [`supabase/migrations/0004_invitaciones_por_ruta.sql`](../supabase/migrations/0004_invitaciones_por_ruta.sql)
    y **Run**. Cambia el modelo de acceso entero: ver el aviso de abajo antes de
    pegarla.
+5. [`supabase/migrations/0005_tirate_una_cana.sql`](../supabase/migrations/0005_tirate_una_cana.sql)
+   y **Run**. Tirate una cana: tablas `match_*` y sus funciones.
+6. [`supabase/migrations/0006_cana_visto.sql`](../supabase/migrations/0006_cana_visto.sql)
+   y **Run**. Quita el "No me gusta": solo Me gusta y Visto.
+7. [`supabase/migrations/0007_avatar_miniatura.sql`](../supabase/migrations/0007_avatar_miniatura.sql)
+   y **Run**. Miniatura de la foto de perfil para las listas.
+8. [`supabase/migrations/0008_cana_solo_la_pregunta.sql`](../supabase/migrations/0008_cana_solo_la_pregunta.sql)
+   y **Run**. Retira GIFs y zumbidos: solo la pregunta de la cerveza.
+9. [`supabase/migrations/0009_cana_bloqueos_denuncias.sql`](../supabase/migrations/0009_cana_bloqueos_denuncias.sql)
+   y **Run**. Bloquear y denunciar, con las funciones del panel de administracion.
+10. [`supabase/migrations/0010_cana_consentimiento_y_datos.sql`](../supabase/migrations/0010_cana_consentimiento_y_datos.sql)
+   y **Run**. Consentimiento al activar, y descargar o borrar tus datos.
+11. [`supabase/migrations/0011_cana_chat_sin_abrir.sql`](../supabase/migrations/0011_cana_chat_sin_abrir.sql)
+   y **Run**. Marca los chats que nunca has abierto (la burbujita de la pestana).
+12. [`supabase/migrations/0012_cana_pertenencia_real.sql`](../supabase/migrations/0012_cana_pertenencia_real.sql)
+   y **Run**. La cana pasa a usar `route_members` en vez de la regla provisional.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket

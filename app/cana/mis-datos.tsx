@@ -10,7 +10,7 @@ import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 /**
- * Tus datos de la cana: verlos, copiarlos y borrarlos (0009).
+ * Tus datos de la cana: verlos, copiarlos y borrarlos (0010).
  *
  * Borrar NO es desactivar: desactivar es una pausa y lo guarda todo (D8), esto
  * no deja perfil, ni votos, ni conexiones, ni mensajes. Lo que no se lleva son

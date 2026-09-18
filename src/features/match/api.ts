@@ -16,7 +16,7 @@ import { CONSENTIMIENTO_VERSION, codigoErrorCana, describirErrorCana } from './r
 
 /**
  * Llamadas de "Tirate una cana". Solo funciones match_* y los catalogos: las
- * tablas no tienen privilegios para la app (ver 0004_tirate_una_cana.sql).
+ * tablas no tienen privilegios para la app (ver 0005_tirate_una_cana.sql).
  * Cada error sale ya traducido para ensenarlo tal cual.
  */
 
@@ -59,7 +59,7 @@ export async function activateMatch(primeraVez?: {
           p_adult_confirmed: primeraVez.mayorDeEdad,
           p_bio: primeraVez.bio,
           p_tag_ids: primeraVez.etiquetas,
-          // Queda guardado que acepto ESTA version de las condiciones (0009).
+          // Queda guardado que acepto ESTA version de las condiciones (0010).
           p_consent_version: CONSENTIMIENTO_VERSION,
         }
       : {},
@@ -147,7 +147,7 @@ async function enviado(
 /**
  * Bloquear: os escondeis mutuamente en la grilla y en los chats, se cierra la
  * conexion (con lo que el chat se borra) y tu Me gusta baja a Visto. No es por
- * ruta: sigue en pie en la siguiente (0008).
+ * ruta: sigue en pie en la siguiente (0009).
  */
 export async function blockMatch(targetId: string): Promise<void> {
   const { error } = await supabase.rpc('match_block', { p_target_id: targetId });
@@ -200,7 +200,7 @@ export async function exportMyMatchData(): Promise<unknown> {
 /**
  * Borra tu perfil de la cana y todo lo que cuelga de el. No es desactivar, que
  * es una pausa (D8). No se llevan los bloqueos que OTRAS personas te pusieron
- * ni las denuncias sobre ti: ver 0009.
+ * ni las denuncias sobre ti: ver 0010.
  */
 export async function deleteMyMatchData(): Promise<{ conexiones: number; votos: number; mensajes: number }> {
   const { data, error } = await supabase.rpc('match_delete_my_data');

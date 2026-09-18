@@ -1,5 +1,5 @@
 /**
- * Reglas de "Tirate una cana". Espejo de supabase/migrations/0004_tirate_una_cana.sql.
+ * Reglas de "Tirate una cana". Espejo de supabase/migrations/0005_tirate_una_cana.sql.
  *
  * El servidor es la autoridad: decide si activas, si hay conexion, si puedes
  * preguntar o escribir. Esta copia existe solo para la interfaz (deshabilitar
@@ -63,7 +63,7 @@ export function estadoPestana(
 /**
  * Lo que ve cada persona de una tarjeta. El voto de la otra persona no llega
  * nunca al cliente: solo se nota como conexion cuando los dos coinciden.
- * No hay "No me gusta" (0004): quien abrio la ficha y no dio Me gusta, o lo
+ * No hay "No me gusta" (0005): quien abrio la ficha y no dio Me gusta, o lo
  * quito, queda como Visto.
  */
 export type EstadoTarjeta = 'nuevo' | 'me-gusta' | 'visto' | 'conexion';
@@ -188,7 +188,7 @@ export function desdeParaSondeo(hilo: HiloChat<MensajeOrdenable>): string | null
 // --- Consentimiento ---------------------------------------------------------
 
 /**
- * Version de las condiciones de la cana que se guarda al activar (0009).
+ * Version de las condiciones de la cana que se guarda al activar (0010).
  * Se sube la fecha SOLO si cambia lo que se acepta, no con cada retoque de
  * redaccion: es lo que permite saber que acepto cada persona.
  */
@@ -196,7 +196,7 @@ export const CONSENTIMIENTO_VERSION = '2026-09-18';
 
 // --- Bloquear y denunciar ---------------------------------------------------
 
-/** Caracteres del detalle opcional de una denuncia (0008). */
+/** Caracteres del detalle opcional de una denuncia (0009). */
 export const DETALLE_MAX = 500;
 
 export type MotivoDenuncia = 'foto' | 'acoso' | 'suplantacion' | 'menor' | 'otro';
@@ -227,7 +227,7 @@ export function validarDenuncia(motivo: MotivoDenuncia | null, detalle: string):
 export const PREGUNTA_ESPERA_MS = 30 * 60_000;
 /** Aplazamientos como maximo; despues ya no se pregunta mas en la pareja (D5). */
 export const APLAZAMIENTOS_MAX = 2;
-/** Textos que puede mandar cada persona tras el Si (D7, 0007: era 2). */
+/** Textos que puede mandar cada persona tras el Si (D7, 0008: era 2). */
 export const TEXTOS_POR_PERSONA = 1;
 export const TEXTO_MAX = 120;
 
@@ -295,7 +295,7 @@ export type FilaBandeja = {
   last_kind: 'question' | 'answer' | 'text' | null;
   last_sender_id: string | null;
   unread_count: number;
-  /** Nunca has abierto este chat: conexion nueva (0010). */
+  /** Nunca has abierto este chat: conexion nueva (0011). */
   never_opened?: boolean;
 };
 

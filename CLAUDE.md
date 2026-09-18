@@ -9,7 +9,7 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 
 ## Funcionalidades clave
 
-- **4 pestanas** (`app/(tabs)/`): Sellos (compostelana), Ruta (mapa con los
+- **Pestanas** (`app/(tabs)/`): Sellos (compostelana), Ruta (mapa con los
   bares numerados y el trazado: Google en nativo, OpenStreetMap en web), Editor
   (solo admins: crear rutas, anadir bares tocando el mapa, horarios, publicar),
   Mi perfil (+ editor de rutas y panel de invitaciones para admins).
@@ -54,7 +54,8 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 ```
 app/                      pantallas (Expo Router)
   (auth)/                 login, registro (alta abierta)
-  (tabs)/                 las 4 pestanas (Editor y Perfil sin boton abajo)
+  (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
+  cana/                   presentacion, ficha, chat, bloqueados, mis datos, condiciones
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
@@ -72,6 +73,14 @@ supabase/
   migrations/0002_*.sql     el SQL Editor y service_role pueden cambiar roles
   migrations/0003_*.sql     nombre visible unico, sin espacios, <= 30 caracteres
   migrations/0004_*.sql     invitaciones POR RUTA + alta abierta + route_members
+  migrations/0005_*.sql     "Tirate una cana": tablas match_* y sus funciones
+  migrations/0006_*.sql     la cana sin No me gusta: Me gusta y Visto
+  migrations/0007_*.sql     miniatura de la foto de perfil para las listas
+  migrations/0008_*.sql     la cana se queda solo con la pregunta de la cerveza
+  migrations/0009_*.sql     bloquear y denunciar, con el contrato del panel de admins
+  migrations/0010_*.sql     consentimiento guardado, y descargar o borrar tus datos
+  migrations/0011_*.sql     saber que chats no has abierto nunca (burbujita)
+  migrations/0012_*.sql     la cana usa route_members en vez de la regla provisional
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -119,6 +128,16 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   medio (sellar, invitar) vive primero en SQL; la copia en TypeScript es solo
   para la UI y debe decir explícitamente que es un espejo (ver `rules.ts`).
 - Rutas de import con alias `@/*` → `src/*` (`tsconfig.json`).
+
+- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0012):
+  tinder cervecero por ruta, en la pestana Cana. Las tablas `match_*` no tienen
+  privilegios para la app y todo pasa por funciones `SECURITY DEFINER`, asi que
+  un `supabase.from('match_votes')` ni compila. Ni los admins leen los chats.
+- **La cana pregunta por la pertenencia con `is_route_participant(ruta, persona)`**
+  (0012): la 0004 del remoto decide con `route_members` y expone
+  `is_route_member(ruta)`, que mira `auth.uid()`; la cana necesita preguntar
+  tambien por otras personas (pintar la grilla, votar, abrir un chat), asi que
+  conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
 

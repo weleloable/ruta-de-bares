@@ -1,5 +1,5 @@
--- Ruta de Bares - 0008: bloquear y denunciar en "Tirate una cana".
--- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0007.
+-- Ruta de Bares - 0009: bloquear y denunciar en "Tirate una cana".
+-- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0008.
 -- Idempotente: se puede re-ejecutar.
 --
 -- Por que existe:

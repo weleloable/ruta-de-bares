@@ -20,13 +20,13 @@ import { leerFichero } from './pglite-supabase.ts';
  * los compara leyendo el SQL real.
  */
 
-const sql = leerFichero('supabase/migrations/0004_tirate_una_cana.sql').replace(/--.*$/gm, '');
-// La 0007 rehizo match_send_text (un solo texto por persona) y retiro GIFs y
+const sql = leerFichero('supabase/migrations/0005_tirate_una_cana.sql').replace(/--.*$/gm, '');
+// La 0008 rehizo match_send_text (un solo texto por persona) y retiro GIFs y
 // zumbidos, asi que esos limites hay que buscarlos alli.
-const sql0007 = leerFichero('supabase/migrations/0007_cana_solo_la_pregunta.sql').replace(/--.*$/gm, '');
-const sql0008 = leerFichero('supabase/migrations/0008_cana_bloqueos_denuncias.sql').replace(/--.*$/gm, '');
+const sql0007 = leerFichero('supabase/migrations/0008_cana_solo_la_pregunta.sql').replace(/--.*$/gm, '');
+const sql0008 = leerFichero('supabase/migrations/0009_cana_bloqueos_denuncias.sql').replace(/--.*$/gm, '');
 
-describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
+describe('reglas.ts es espejo de 0005_tirate_una_cana.sql', () => {
   it('longitud maxima de la frase', () => {
     assert.match(sql, new RegExp(`bio\\s+text not null default '' check \\(char_length\\(bio\\) <= ${BIO_MAX}\\)`));
     assert.match(sql, new RegExp(`char_length\\(v_bio\\) > ${BIO_MAX}\\b`));
@@ -49,7 +49,7 @@ describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
     assert.match(sql, new RegExp(`check \\(char_length\\(body\\) between 1 and ${TEXTO_MAX}\\)`));
   });
 
-  it('la cana se queda sin GIFs ni zumbidos (0007)', () => {
+  it('la cana se queda sin GIFs ni zumbidos (0008)', () => {
     assert.match(sql0007, /drop function if exists public\.match_send_gif/);
     assert.match(sql0007, /drop function if exists public\.match_send_buzz/);
     assert.match(sql0007, /drop table if exists public\.match_gifs/);
@@ -57,7 +57,7 @@ describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
     assert.match(sql0007, /check \(kind in \('question', 'answer', 'text'\)\)/);
   });
 
-  it('los motivos de denuncia son los mismos que acepta el SQL (0008)', () => {
+  it('los motivos de denuncia son los mismos que acepta el SQL (0009)', () => {
     const enSql = sql0008.match(/reason in \(([^)]+)\)/)?.[1] ?? '';
     const motivos = [...enSql.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
     assert.deepEqual(MOTIVOS_DENUNCIA.map((m) => m.id), motivos);

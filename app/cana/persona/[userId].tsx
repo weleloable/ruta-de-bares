@@ -23,7 +23,7 @@ import type { MatchGridRow } from '../../../src/types/database';
 
 /**
  * Ficha de una persona en Tirate una cana: foto grande, frase, etiquetas y un
- * unico boton, Me gusta, que se da y se quita. No hay "No me gusta" (0004):
+ * unico boton, Me gusta, que se da y se quita. No hay "No me gusta" (0005):
  * abrir la ficha ya la deja como Visto, y quitar el Me gusta tambien.
  *
  * Los datos salen de la misma grilla (match_grid): son pocas filas por ruta y

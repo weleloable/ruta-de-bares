@@ -7,23 +7,27 @@ import init from 'pg-query-emscripten';
 import { crearBase, escenario, leerFichero, type Actor } from './pglite-supabase.ts';
 
 /**
- * 0007 deja la cana con una sola cosa que hacer: ofrecer la cerveza. Lo que
- * hay que asegurar sobre Postgres real es que GIFs y zumbidos no se pueden
- * enviar ni a mano, que los que hubiera se han borrado, y que tras el Si cada
- * persona manda UN mensaje (antes dos).
+ * 0007 anade la miniatura de la foto de perfil. Lo que hay que asegurar sobre
+ * Postgres real es que las tres funciones que pintan varias fotos a la vez
+ * devuelven la miniatura, que la ficha sigue recibiendo la foto grande, y que
+ * una foto subida antes de la migracion (sin miniatura) no deja a nadie sin
+ * foto: cae en avatar_url.
  */
 
 const m0001 = leerFichero('supabase/migrations/0001_init.sql');
 const m0002 = leerFichero('supabase/migrations/0002_guard_role_sql_editor.sql');
-const m0004 = leerFichero('supabase/migrations/0004_tirate_una_cana.sql');
-const m0005 = leerFichero('supabase/migrations/0005_cana_visto.sql');
-const m0006 = leerFichero('supabase/migrations/0006_avatar_miniatura.sql');
-const m0007 = leerFichero('supabase/migrations/0007_cana_solo_la_pregunta.sql');
+const m0005 = leerFichero('supabase/migrations/0005_tirate_una_cana.sql');
+const m0006 = leerFichero('supabase/migrations/0006_cana_visto.sql');
+const m0007 = leerFichero('supabase/migrations/0007_avatar_miniatura.sql');
 
 const ANA = '00000000-0000-4000-8000-00000000000a';
 const LUIS = '00000000-0000-4000-8000-00000000000b';
 const ADMIN = '00000000-0000-4000-8000-00000000000d';
 const RUTA = '00000000-0000-4000-8000-0000000000f1';
+
+const GRANDE = 'https://ejemplo.test/avatars/ana/avatar-1.jpg';
+const MINI = 'https://ejemplo.test/avatars/ana/avatar-1-mini.jpg';
+const VIEJA = 'https://ejemplo.test/avatars/luis/avatar-antigua.jpg';
 
 const DATOS = `
   insert into auth.users (id, email) values
@@ -33,26 +37,24 @@ const DATOS = `
   update public.profiles set role = 'admin' where id = '${ADMIN}';
   insert into public.routes (id, name, is_published, created_by)
   values ('${RUTA}', 'Ruta publicada', true, '${ADMIN}');
+  -- Ana subio la foto con la app nueva; Luis tiene una de antes (sin miniatura).
+  update public.profiles set avatar_url = '${GRANDE}', avatar_thumb_url = '${MINI}' where id = '${ANA}';
+  update public.profiles set avatar_url = '${VIEJA}' where id = '${LUIS}';
 `;
 
 type Fila = Record<string, unknown>;
 const filas = async (db: PGlite, sql: string, params: unknown[] = []): Promise<Fila[]> =>
   (await db.query<Fila>(sql, params)).rows;
-const rpc = (db: PGlite, sql: string, params: unknown[] = []) => () => db.query(sql, params);
 
-async function conexion(db: PGlite, a: Actor): Promise<string> {
-  for (const uid of [ANA, LUIS]) {
+
+async function activar(db: PGlite, a: Actor, ...uids: string[]) {
+  for (const uid of uids) {
     await a.como(uid);
     await db.query(`select public.match_activate(true, 'Hola')`);
   }
-  await a.como(ANA);
-  await db.query('select * from public.match_set_like($1, $2, true)', [RUTA, LUIS]);
-  await a.como(LUIS);
-  const [fila] = await filas(db, 'select * from public.match_set_like($1, $2, true)', [RUTA, ANA]);
-  return fila.connection_id as string;
 }
 
-describe('0007_cana_solo_la_pregunta.sql: forma', () => {
+describe('0007_avatar_miniatura.sql: forma', () => {
   it('la gramatica es valida y los cuerpos plpgsql compilan', async () => {
     const resultado = (await init()).parse(m0007);
     assert.ok(!resultado.error, `error de sintaxis: ${JSON.stringify(resultado.error)}`);
@@ -60,85 +62,61 @@ describe('0007_cana_solo_la_pregunta.sql: forma', () => {
     const plpgsql = (await init()).parsePlpgsql(m0007);
     assert.ok(!plpgsql.error, `plpgsql no compila: ${JSON.stringify(plpgsql.error)}`);
   });
+
+  it('vuelve a dar permiso a authenticated: drop function se lo lleva por delante', () => {
+    const sinComentarios = m0007.replace(/--.*$/gm, '');
+    for (const funcion of ['match_grid', 'match_inbox', 'match_get_connection']) {
+      assert.match(sinComentarios, new RegExp(`drop function if exists public\\.${funcion}`));
+    }
+    assert.match(sinComentarios, /grant execute on function[\s\S]*match_grid\(uuid\)[\s\S]*to authenticated/);
+  });
 });
 
 describe('0007 sobre Postgres real', async () => {
   // La 0007 dos veces: tiene que poder re-ejecutarse como las demas.
-  const db = await crearBase([m0001, m0002, m0004, m0005, m0006, m0007, m0007]);
+  const db = await crearBase([m0001, m0002, m0005, m0006, m0007, m0007]);
   await db.exec(DATOS);
 
-  it('las funciones de GIF y zumbido ya no existen', async () => {
+  it('la grilla da la miniatura, y la foto grande aparte para la ficha', async () => {
     await escenario(db, async (a) => {
-      const id = await conexion(db, a);
-      await a.como(ANA);
-      await a.falla(rpc(db, `select * from public.match_send_gif($1, 'salud')`, [id]), /does not exist/);
-      await a.falla(rpc(db, 'select * from public.match_send_buzz($1)', [id]), /does not exist/);
-    });
-  });
-
-  it('un GIF o un zumbido no se pueden colar ni escribiendo en la tabla', async () => {
-    await escenario(db, async (a) => {
-      const id = await conexion(db, a);
-      // Un bloque por intento: `falla` devuelve la identidad al usuario normal
-      // despues de cada error esperado, y sin volver a postgres el segundo
-      // insert fallaria por permisos y no por el check.
-      for (const kind of ['gif', 'buzz']) {
-        await a.comoPostgres(async () => {
-          await a.falla(
-            rpc(db, 'insert into public.match_messages (connection_id, sender_id, kind) values ($1, $2, $3)', [
-              id,
-              ANA,
-              kind,
-            ]),
-            /match_messages_kind_check/,
-          );
-        });
-      }
-    });
-  });
-
-  it('el catalogo de GIFs y la columna del zumbido han desaparecido', async () => {
-    await escenario(db, async (a) => {
-      await a.comoPostgres(async () => {
-        await a.falla(rpc(db, 'select * from public.match_gifs'), /does not exist/);
-        await a.falla(rpc(db, 'select last_buzz_at from public.match_connection_members'), /does not exist/);
-      });
-    });
-  });
-
-  it('tras el Si cada persona manda un solo mensaje (D7)', async () => {
-    await escenario(db, async (a) => {
-      const id = await conexion(db, a);
-      await a.como(ANA);
-      await db.query('select * from public.match_ask_beer($1)', [id]);
+      await activar(db, a, ANA, LUIS);
       await a.como(LUIS);
-      await db.query(`select * from public.match_answer_beer($1, 'yes')`, [id]);
-
-      await a.como(ANA);
-      await db.query('select * from public.match_send_text($1, $2)', [id, 'Estoy en la barra del fondo']);
-      await a.falla(rpc(db, 'select * from public.match_send_text($1, $2)', [id, 'Y otro mas']), /TEXT_LIMIT_REACHED/);
-
-      // El limite es por persona: a Luis le queda el suyo.
-      await a.como(LUIS);
-      await db.query('select * from public.match_send_text($1, $2)', [id, 'Voy para alla']);
-      await a.falla(rpc(db, 'select * from public.match_send_text($1, $2)', [id, 'Otro']), /TEXT_LIMIT_REACHED/);
-
-      await a.como(ANA);
-      const mensajes = await filas(db, 'select kind, body from public.match_fetch_messages($1)', [id]);
-      assert.deepEqual(
-        mensajes.map((m) => m.kind),
-        ['question', 'answer', 'text', 'text'],
-      );
+      const [ana] = await filas(db, 'select * from public.match_grid($1)', [RUTA]);
+      assert.equal(ana.avatar_thumb_url, MINI);
+      assert.equal(ana.avatar_url, GRANDE);
     });
   });
 
-  it('la pantalla de chat ya no recibe la hora del ultimo zumbido', async () => {
+  it('una foto de antes de la 0007 no deja la casilla vacia', async () => {
     await escenario(db, async (a) => {
-      const id = await conexion(db, a);
+      await activar(db, a, ANA, LUIS);
       await a.como(ANA);
-      const [detalle] = await filas(db, 'select * from public.match_get_connection($1)', [id]);
-      assert.ok(!('my_last_buzz_at' in detalle), 'my_last_buzz_at sigue en match_get_connection');
-      assert.equal(detalle.my_texts_sent, 0);
+      const [luis] = await filas(db, 'select * from public.match_grid($1)', [RUTA]);
+      assert.equal(luis.avatar_thumb_url, VIEJA);
+      assert.equal(luis.avatar_url, VIEJA);
     });
+  });
+
+  it('la bandeja y la cabecera del chat tambien dan la miniatura', async () => {
+    await escenario(db, async (a) => {
+      await activar(db, a, ANA, LUIS);
+      await a.como(ANA);
+      await db.query('select * from public.match_set_like($1, $2, true)', [RUTA, LUIS]);
+      await a.como(LUIS);
+      await db.query('select * from public.match_set_like($1, $2, true)', [RUTA, ANA]);
+
+      const [chat] = await filas(db, 'select * from public.match_inbox($1)', [RUTA]);
+      assert.equal(chat.avatar_url, MINI, 'la lista de chats pinta la foto a 52 pt');
+      const [detalle] = await filas(db, 'select * from public.match_get_connection($1)', [chat.connection_id]);
+      assert.equal(detalle.avatar_url, MINI, 'la cabecera del chat la pinta a 36 pt');
+    });
+  });
+  it('la columna admite NULL: nadie tiene que resubir su foto', async () => {
+    const [columna] = await filas(
+      db,
+      `select is_nullable from information_schema.columns
+        where table_schema = 'public' and table_name = 'profiles' and column_name = 'avatar_thumb_url'`,
+    );
+    assert.equal(columna?.is_nullable, 'YES');
   });
 });

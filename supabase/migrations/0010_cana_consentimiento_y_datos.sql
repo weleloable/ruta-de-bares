@@ -1,5 +1,5 @@
--- Ruta de Bares - 0009: consentimiento, y borrar o descargar tus datos de la cana.
--- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0008.
+-- Ruta de Bares - 0010: consentimiento, y borrar o descargar tus datos de la cana.
+-- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0009.
 -- Idempotente: se puede re-ejecutar.
 --
 -- Por que existe, en una frase por pieza:
