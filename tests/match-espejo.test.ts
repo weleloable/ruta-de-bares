@@ -8,6 +8,8 @@ import {
   PREGUNTA_ESPERA_MS,
   TEXTOS_POR_PERSONA,
   TEXTO_MAX,
+  DETALLE_MAX,
+  MOTIVOS_DENUNCIA,
 } from '../src/features/match/reglas.ts';
 import { leerFichero } from './pglite-supabase.ts';
 
@@ -22,6 +24,7 @@ const sql = leerFichero('supabase/migrations/0004_tirate_una_cana.sql').replace(
 // La 0007 rehizo match_send_text (un solo texto por persona) y retiro GIFs y
 // zumbidos, asi que esos limites hay que buscarlos alli.
 const sql0007 = leerFichero('supabase/migrations/0007_cana_solo_la_pregunta.sql').replace(/--.*$/gm, '');
+const sql0008 = leerFichero('supabase/migrations/0008_cana_bloqueos_denuncias.sql').replace(/--.*$/gm, '');
 
 describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
   it('longitud maxima de la frase', () => {
@@ -52,5 +55,16 @@ describe('reglas.ts es espejo de 0004_tirate_una_cana.sql', () => {
     assert.match(sql0007, /drop table if exists public\.match_gifs/);
     assert.match(sql0007, /drop column if exists last_buzz_at/);
     assert.match(sql0007, /check \(kind in \('question', 'answer', 'text'\)\)/);
+  });
+
+  it('los motivos de denuncia son los mismos que acepta el SQL (0008)', () => {
+    const enSql = sql0008.match(/reason in \(([^)]+)\)/)?.[1] ?? '';
+    const motivos = [...enSql.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+    assert.deepEqual(MOTIVOS_DENUNCIA.map((m) => m.id), motivos);
+  });
+
+  it('longitud del detalle de la denuncia', () => {
+    assert.match(sql0008, new RegExp(`check \\(char_length\\(detail\\) <= ${DETALLE_MAX}\\)`));
+    assert.match(sql0008, new RegExp(`char_length\\(coalesce\\(p_detail, ''\\)\\) > ${DETALLE_MAX}`));
   });
 });

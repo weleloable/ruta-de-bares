@@ -4,6 +4,9 @@ import { describe, it } from 'node:test';
 import {
   APLAZAMIENTOS_MAX,
   BIO_MAX,
+  CONEXION_PERDIDA,
+  DETALLE_MAX,
+  MOTIVOS_DENUNCIA,
   ETIQUETAS_MAX,
   FILTROS,
   PREGUNTA_ESPERA_MS,
@@ -24,6 +27,7 @@ import {
   recibirDelSondeo,
   recibirEnviado,
   teTocaResponder,
+  validarDenuncia,
   validarPresentacion,
   vistaPreviaChat,
   hayQueMarcarVisto,
@@ -327,5 +331,37 @@ describe('describirErrorCana', () => {
 
   it('deja pasar lo que no es un codigo', () => {
     assert.equal(describirErrorCana('Failed to fetch'), 'Failed to fetch');
+  });
+});
+
+describe('denunciar', () => {
+  it('sin motivo no se puede enviar', () => {
+    assert.deepEqual(validarDenuncia(null, ''), ['Elige un motivo.']);
+  });
+
+  it('con motivo y sin detalle vale: el detalle es opcional', () => {
+    assert.deepEqual(validarDenuncia('acoso', ''), []);
+    assert.deepEqual(validarDenuncia('foto', '  '), []);
+  });
+
+  it('el detalle tiene tope', () => {
+    assert.deepEqual(validarDenuncia('otro', 'x'.repeat(DETALLE_MAX)), []);
+    assert.deepEqual(validarDenuncia('otro', 'x'.repeat(DETALLE_MAX + 1)), [
+      `El detalle no puede pasar de ${DETALLE_MAX} caracteres.`,
+    ]);
+  });
+
+  it('los motivos se ensenan con su etiqueta y sin repetirse', () => {
+    assert.equal(new Set(MOTIVOS_DENUNCIA.map((m) => m.id)).size, MOTIVOS_DENUNCIA.length);
+    assert.ok(MOTIVOS_DENUNCIA.every((m) => m.etiqueta.length > 0));
+  });
+
+  it('un bloqueo cierra el chat como cualquier otra conexion perdida', () => {
+    assert.ok(CONEXION_PERDIDA.has('BLOCKED'));
+    assert.equal(describirErrorCana('ERROR: P0001: BLOCKED'), 'Ya no podéis veros: hay un bloqueo entre vosotros.');
+    assert.equal(
+      describirErrorCana('REPORT_ALREADY_PENDING'),
+      'Ya has denunciado a esta persona y lo estamos revisando.',
+    );
   });
 });

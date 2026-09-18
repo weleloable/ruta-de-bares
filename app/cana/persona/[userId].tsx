@@ -14,6 +14,7 @@ import {
 } from '../../../src/features/match/reglas';
 import { ASPECTO } from '../../../src/features/match/TarjetaPersona';
 import { VasoCana } from '../../../src/features/match/VasoCana';
+import { AccionesPersona } from '../../../src/features/match/AccionesPersona';
 import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
 import { useActiveRoute } from '../../../src/features/routes/ActiveRouteProvider';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
@@ -212,6 +213,18 @@ export default function PersonaCana() {
             </Text>
           </Pressable>
         ) : null}
+
+        <View style={styles.acciones}>
+          <AccionesPersona
+            routeId={rutaId}
+            userId={persona.user_id}
+            nombre={persona.display_name}
+            connectionId={persona.connection_id}
+            // Bloqueada o denunciada, deja de estar disponible: la ficha ya no
+            // tiene nada que ensenar.
+            onHecho={() => router.back()}
+          />
+        </View>
       </ScrollView>
 
       <DialogoConfirmar
@@ -258,6 +271,8 @@ function BotonMeGusta({ activo, ocupado, onPress }: { activo: boolean; ocupado: 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
+  // Separadas del resto: no son parte de lo que se hace con la ficha.
+  acciones: { marginTop: space.lg, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space.md },
   anillo: {
     alignSelf: 'center',
     width: '100%',

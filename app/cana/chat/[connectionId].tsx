@@ -23,6 +23,7 @@ import {
   getMatchConnection,
   sendMatchText,
 } from '../../../src/features/match/api';
+import { AccionesPersona } from '../../../src/features/match/AccionesPersona';
 import { AvatarCana } from '../../../src/features/match/piezas';
 import { FranjaCerveza, ResponderCerveza, textoRestante } from '../../../src/features/match/PreguntaCerveza';
 import {
@@ -237,6 +238,16 @@ export default function ChatCana() {
             onResponder={responder}
           />
         ) : null}
+
+        <View style={styles.acciones2}>
+          <AccionesPersona
+            routeId={detalle.route_id}
+            userId={detalle.other_user_id}
+            nombre={nombre}
+            connectionId={detalle.connection_id}
+            onHecho={() => setPerdida('Ya no podéis veros. La conexión se ha cerrado y el chat se ha borrado.')}
+          />
+        </View>
 
         <View style={styles.composer}>
           {pregunta.tipo === 'aceptada' ? (
@@ -471,6 +482,7 @@ const styles = StyleSheet.create({
   botonCompacto: { flex: 0, paddingHorizontal: space.lg },
   botonDestacado: { backgroundColor: colors.beer, borderColor: colors.beerDark },
   botonTextoDestacado: { color: colors.white },
+  acciones2: { paddingBottom: space.xs },
   composer: {
     borderTopWidth: 1,
     borderTopColor: colors.border,

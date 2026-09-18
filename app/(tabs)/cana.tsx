@@ -245,6 +245,13 @@ export default function CanaScreen() {
               <Pressable
                 accessibilityRole="button"
                 style={styles.accion}
+                onPress={() => router.push('/cana/bloqueados')}
+              >
+                <Text style={styles.accionTexto}>Bloqueados</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.accion}
                 onPress={() => setConfirmandoDesactivar(true)}
                 disabled={cambiando}
               >

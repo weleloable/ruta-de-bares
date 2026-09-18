@@ -71,6 +71,7 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Las actuales son provisionales. |
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
 | D13 | ~~Catalogo propio de GIFs~~. **Retirada en la 0007**: no hay GIFs ni zumbidos, solo la pregunta de la cerveza. |
+| D15 | **Bloquear y denunciar** (0008): bloquear es entre personas, no por ruta; denunciar avisa a quien organiza, bloquea a la vez y se lleva copiados los mensajes de esa persona. |
 | D14 | **Sin "No me gusta"** (17-09-2026): la unica accion es Me gusta. Abrir la ficha o quitar un Me gusta deja a la persona en **Visto**, que la otra persona no ve. Los No me gusta que hubiera pasan a Visto (0005). |
 
 ## Probarlo en local
@@ -99,6 +100,69 @@ sobre Postgres real (PGlite).
 
 La copia en TypeScript (`src/features/match/reglas.ts`) es un espejo para la
 interfaz ("podras volver a preguntar en 12 min"). Si discrepan, manda el SQL.
+
+## Bloquear y denunciar
+
+Quitar el Me gusta ya cerraba la conexion y borraba el chat, pero la otra
+persona te seguia viendo en la grilla y podia abrir tu ficha, y en la ruta
+siguiente volviais a cruzaros. Los dos botones estan en la ficha y en el chat
+(`src/features/match/AccionesPersona.tsx`), y la lista de bloqueados en
+`app/cana/bloqueados.tsx`.
+
+- **Bloquear** (`match_block`) hace tres cosas a la vez: os esconde a los dos
+  en grilla y bandeja, cierra la conexion (con lo que el chat se borra) y baja
+  tu Me gusta a **Visto**, para que no se reabra sola si la otra persona sigue
+  dandotelo. Es **entre personas y no por ruta**: sigue en pie en el siguiente
+  evento, al reves que los votos (D1).
+- **Desbloquear** (`match_unblock`) no devuelve ni la conexion ni el Me gusta:
+  hay que darlo otra vez desde su ficha. La pantalla lo avisa antes.
+- **Denunciar** (`match_report`) manda motivo y un detalle opcional, bloquea en
+  la misma llamada y, si viene de un chat, **copia los mensajes** que esa
+  persona escribio. La copia es lo importante: bloquear borra el chat, asi que
+  sin ella la prueba desaparece justo cuando hace falta. Una denuncia viva por
+  pareja (`REPORT_ALREADY_PENDING`).
+
+Los motivos (`foto`, `acoso`, `suplantacion`, `menor`, `otro`) estan en el SQL
+y repetidos en `reglas.ts`; `tests/match-espejo.test.ts` compara las dos listas.
+
+## Contrato con el panel de administracion
+
+El panel y los avisos a quien organiza los construye otra persona. Aqui estan
+solo los datos y las funciones, todas con `is_admin()` y ninguna con acceso a
+los chats: el panel lee lo que la denuncia copio, nunca la conversacion (D10).
+
+```sql
+-- Bandeja. p_solo_pendientes = false para ver tambien el historico.
+public.match_admin_reports(p_solo_pendientes boolean default true)
+  -> id, created_at, status, reason, detail, route_id,
+     reporter_id, reporter_name, reported_id, reported_name,
+     mensajes (cuantos acompanan la denuncia), notified_at,
+     handled_by, handled_at, resolution
+
+-- Los mensajes copiados de UNA denuncia.
+public.match_admin_report_messages(p_report_id uuid)
+  -> message_id, sender_id, kind, body, answer, created_at
+
+-- Para el sistema de avisos: lo que aun no se ha comunicado, y como marcarlo.
+public.match_admin_reports_sin_avisar() -> id, created_at, reason, reported_id, reported_name
+public.match_admin_mark_notified(p_report_id uuid)
+
+-- Lo que puede hacer quien revisa. Las tres dejan rastro en match_moderation_log.
+public.match_admin_remove_photo(p_user_id uuid, p_report_id uuid default null, p_note text default '')
+public.match_admin_deactivate(p_user_id uuid, p_report_id uuid default null, p_note text default '')
+public.match_admin_resolve(p_report_id uuid, p_resolution text, p_note text default '')
+  -- p_resolution: 'sin_accion' | 'foto_retirada' | 'cana_desactivada' | 'otra'
+```
+
+Dos cosas que el panel tiene que saber:
+
+1. `match_admin_remove_photo` deja `avatar_url` y `avatar_thumb_url` a NULL,
+   pero **no borra el fichero del Storage**: el bucket `avatars` es publico y
+   la URL sigue viva. Borrarlo pide la clave de servicio, que no puede estar en
+   la app. Hasta que el bucket sea privado, ese paso es manual.
+2. Estados de una denuncia: `pendiente` -> `en_revision` -> `resuelta`. Hoy
+   solo `match_admin_resolve` la cierra; si el panel quiere el estado
+   intermedio, que anada una funcion, sin escribir la tabla directamente.
 
 ## Contrato con la pertenencia a rutas
 

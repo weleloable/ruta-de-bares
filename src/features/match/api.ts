@@ -8,6 +8,8 @@ import type {
   MatchInboxRow,
   MatchMessageRow,
   MatchProfileState,
+  MatchBlockedRow,
+  MatchReportReason,
   MatchVote,
 } from '../../types/database';
 import { codigoErrorCana, describirErrorCana } from './reglas';
@@ -134,6 +136,52 @@ async function enviado(
   const [mensaje] = data ?? [];
   if (!mensaje) throw new Error('No se pudo enviar.');
   return mensaje;
+}
+
+/**
+ * Bloquear: os escondeis mutuamente en la grilla y en los chats, se cierra la
+ * conexion (con lo que el chat se borra) y tu Me gusta baja a Visto. No es por
+ * ruta: sigue en pie en la siguiente (0008).
+ */
+export async function blockMatch(targetId: string): Promise<void> {
+  const { error } = await supabase.rpc('match_block', { p_target_id: targetId });
+  if (error) fallo(error);
+}
+
+export async function unblockMatch(targetId: string): Promise<void> {
+  const { error } = await supabase.rpc('match_unblock', { p_target_id: targetId });
+  if (error) fallo(error);
+}
+
+export async function getBlockedList(): Promise<MatchBlockedRow[]> {
+  const { data, error } = await supabase.rpc('match_blocked_list');
+  if (error) fallo(error);
+  return data ?? [];
+}
+
+/**
+ * Denunciar. Con `connectionId` se copian en la denuncia los mensajes que esa
+ * persona mando en ese chat: bloquear los borra, asi que sin copia la prueba
+ * desaparece. Por eso el servidor denuncia y bloquea en la misma llamada.
+ */
+export async function reportMatch(opciones: {
+  routeId: string;
+  targetId: string;
+  motivo: MatchReportReason;
+  detalle?: string;
+  connectionId?: string | null;
+  bloquear?: boolean;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('match_report', {
+    p_route_id: opciones.routeId,
+    p_target_id: opciones.targetId,
+    p_reason: opciones.motivo,
+    p_detail: opciones.detalle ?? '',
+    p_connection_id: opciones.connectionId ?? null,
+    p_block: opciones.bloquear ?? true,
+  });
+  if (error) fallo(error);
+  return data as unknown as string;
 }
 
 export function sendMatchText(connectionId: string, body: string): Promise<MatchMessageRow> {

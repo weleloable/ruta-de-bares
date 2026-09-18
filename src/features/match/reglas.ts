@@ -185,6 +185,33 @@ export function desdeParaSondeo(hilo: HiloChat<MensajeOrdenable>): string | null
   return new Date(Date.parse(hilo.ultimoSondeado) - SOLAPE_SONDEO_MS).toISOString();
 }
 
+// --- Bloquear y denunciar ---------------------------------------------------
+
+/** Caracteres del detalle opcional de una denuncia (0008). */
+export const DETALLE_MAX = 500;
+
+export type MotivoDenuncia = 'foto' | 'acoso' | 'suplantacion' | 'menor' | 'otro';
+
+/**
+ * Los motivos, en el orden en que se ensenan. Son los mismos que acepta
+ * match_report: si se cambia uno, cambia tambien la migracion.
+ */
+export const MOTIVOS_DENUNCIA: readonly { id: MotivoDenuncia; etiqueta: string; ayuda: string }[] = [
+  { id: 'foto', etiqueta: 'La foto', ayuda: 'No es suya, o no deberia estar aqui' },
+  { id: 'acoso', etiqueta: 'Acoso o insultos', ayuda: 'Lo que ha escrito o lo que hace en la ruta' },
+  { id: 'suplantacion', etiqueta: 'Se hace pasar por otra persona', ayuda: '' },
+  { id: 'menor', etiqueta: 'Creo que es menor de edad', ayuda: 'La cana es solo para mayores' },
+  { id: 'otro', etiqueta: 'Otra cosa', ayuda: 'Cuentanoslo abajo' },
+];
+
+/** Problemas que el servidor rechazaria al denunciar. Vacio = se puede enviar. */
+export function validarDenuncia(motivo: MotivoDenuncia | null, detalle: string): string[] {
+  const errores: string[] = [];
+  if (motivo === null) errores.push('Elige un motivo.');
+  if (detalle.trim().length > DETALLE_MAX) errores.push(`El detalle no puede pasar de ${DETALLE_MAX} caracteres.`);
+  return errores;
+}
+
 // --- La pregunta de la cerveza ---------------------------------------------
 
 /** Tras "dentro de un rato" se puede volver a preguntar pasado este tiempo (D5). */
@@ -290,6 +317,11 @@ const MENSAJES: Record<string, string> = {
   CONNECTION_NOT_FOUND: 'Esta conversación no existe.',
   CONNECTION_CLOSED: 'Esta conexión se ha cerrado.',
   CONNECTION_UNAVAILABLE: 'La otra persona ha pausado Tírate una caña.',
+  BLOCKED: 'Ya no podéis veros: hay un bloqueo entre vosotros.',
+  REPORT_ALREADY_PENDING: 'Ya has denunciado a esta persona y lo estamos revisando.',
+  INVALID_REASON: 'Elige un motivo de la lista.',
+  DETAIL_TOO_LONG: `El detalle no puede pasar de ${DETALLE_MAX} caracteres.`,
+  NOT_ADMIN: 'Esto solo lo puede hacer quien organiza la ruta.',
   TEXT_LOCKED: 'Podréis escribir cuando se acepte la cerveza.',
   TEXT_EMPTY: 'Escribe algo antes de enviar.',
   TEXT_TOO_LONG: 'El mensaje no puede pasar de 120 caracteres.',
@@ -325,4 +357,6 @@ export const CONEXION_PERDIDA: ReadonlySet<string> = new Set([
   'CONNECTION_UNAVAILABLE',
   'MATCH_NOT_ACTIVE',
   'NOT_PARTICIPANT',
+  // Tras bloquear (o que te bloqueen) el chat deja de existir para los dos.
+  'BLOCKED',
 ]);

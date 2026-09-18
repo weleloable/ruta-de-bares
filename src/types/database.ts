@@ -149,6 +149,16 @@ export type MatchConnectionDetail = {
   server_now: string;
 };
 
+/** Motivos que acepta match_report (0008). */
+export type MatchReportReason = 'foto' | 'acoso' | 'suplantacion' | 'menor' | 'otro';
+
+export type MatchBlockedRow = {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  created_at: string;
+};
+
 export type MatchMessageRow = {
   id: string;
   connection_id: string;
@@ -283,6 +293,29 @@ export type Database = {
       match_fetch_messages: {
         Args: { p_connection_id: string; p_after?: string | null };
         Returns: MatchMessageRow[];
+      };
+      match_block: {
+        Args: { p_target_id: string };
+        Returns: undefined;
+      };
+      match_unblock: {
+        Args: { p_target_id: string };
+        Returns: undefined;
+      };
+      match_blocked_list: {
+        Args: Record<string, never>;
+        Returns: MatchBlockedRow[];
+      };
+      match_report: {
+        Args: {
+          p_route_id: string;
+          p_target_id: string;
+          p_reason: MatchReportReason;
+          p_detail?: string;
+          p_connection_id?: string | null;
+          p_block?: boolean;
+        };
+        Returns: string;
       };
       match_send_text: {
         Args: { p_connection_id: string; p_body: string };
