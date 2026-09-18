@@ -173,6 +173,54 @@ export type MatchMessageRow = {
   created_at: string;
 };
 
+/** En que punto esta una denuncia (0009). */
+export type MatchReportStatus = 'pendiente' | 'en_revision' | 'resuelta';
+
+/** Como se cierra una denuncia (0009). */
+export type MatchReportResolution = 'sin_accion' | 'foto_retirada' | 'cana_desactivada' | 'otra';
+
+/** Una fila de la bandeja: match_admin_reports (0009). Solo para admins. */
+export type MatchAdminReportRow = {
+  id: string;
+  created_at: string;
+  status: MatchReportStatus;
+  reason: MatchReportReason;
+  detail: string;
+  route_id: string;
+  reporter_id: string;
+  reporter_name: string;
+  reported_id: string;
+  reported_name: string;
+  mensajes: number;
+  notified_at: string | null;
+  handled_by: string | null;
+  handled_at: string | null;
+  resolution: MatchReportResolution | null;
+};
+
+/** El ticket abierto: match_admin_report (0013). Solo para admins. */
+export type MatchAdminTicketRow = MatchAdminReportRow & {
+  route_name: string;
+  reported_avatar_url: string | null;
+  reported_bio: string;
+  reported_active: boolean;
+  handled_by_name: string | null;
+  handler_note: string;
+};
+
+/**
+ * Un mensaje COPIADO al denunciar: match_admin_report_messages (0009). No es
+ * una lectura del chat, que sigue cerrado tambien para los admins (D10).
+ */
+export type MatchAdminReportMessageRow = {
+  message_id: string;
+  sender_id: string;
+  kind: MatchMessageKind;
+  body: string | null;
+  answer: BeerAnswer | null;
+  created_at: string;
+};
+
 type Insert<T, Opcionales extends keyof T> = Omit<T, Opcionales> & Partial<Pick<T, Opcionales>>;
 
 export type Database = {
@@ -344,6 +392,44 @@ export type Database = {
       match_answer_beer: {
         Args: { p_connection_id: string; p_answer: BeerAnswer };
         Returns: { question_state: BeerQuestionState; is_open: boolean }[];
+      };
+      // Bandeja de "Alertas de administracion" (0009 y 0013). Todas exigen
+      // is_admin() en el servidor; el rol del cliente solo decide que se pinta.
+      match_admin_reports: {
+        Args: { p_solo_pendientes?: boolean };
+        Returns: MatchAdminReportRow[];
+      };
+      match_admin_report: {
+        Args: { p_report_id: string };
+        Returns: MatchAdminTicketRow[];
+      };
+      match_admin_report_messages: {
+        Args: { p_report_id: string };
+        Returns: MatchAdminReportMessageRow[];
+      };
+      match_admin_alert_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      match_admin_take: {
+        Args: { p_report_id: string };
+        Returns: boolean;
+      };
+      match_admin_mark_notified: {
+        Args: { p_report_id: string };
+        Returns: undefined;
+      };
+      match_admin_remove_photo: {
+        Args: { p_user_id: string; p_report_id?: string | null; p_note?: string };
+        Returns: undefined;
+      };
+      match_admin_deactivate: {
+        Args: { p_user_id: string; p_report_id?: string | null; p_note?: string };
+        Returns: undefined;
+      };
+      match_admin_resolve: {
+        Args: { p_report_id: string; p_resolution: MatchReportResolution; p_note?: string };
+        Returns: undefined;
       };
     };
     Enums: {

@@ -56,12 +56,13 @@ app/                      pantallas (Expo Router)
   (auth)/                 login, registro (alta abierta)
   (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
   cana/                   presentacion, ficha, chat, bloqueados, mis datos, condiciones
+  admin/                  bandeja de alertas de administracion y su ficha
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
 src/
   features/<dominio>/     reglas + llamadas a datos + componentes por dominio
-                           (auth, routes, stamps, invites, profile, pwa)
+                           (auth, routes, stamps, invites, profile, pwa, match, admin)
   components/             UI compartida (StampSeal, ui.tsx, RutaMapa, SelectorPosicion
                            con variantes .web.tsx)
   lib/                    cliente Supabase, secure-session-store, tema, fechas,
@@ -81,6 +82,7 @@ supabase/
   migrations/0010_*.sql     consentimiento guardado, y descargar o borrar tus datos
   migrations/0011_*.sql     saber que chats no has abierto nunca (burbujita)
   migrations/0012_*.sql     la cana usa route_members en vez de la regla provisional
+  migrations/0013_*.sql     lo que le faltaba al panel: reclamar, leer y contar
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -129,10 +131,19 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   para la UI y debe decir explícitamente que es un espejo (ver `rules.ts`).
 - Rutas de import con alias `@/*` → `src/*` (`tsconfig.json`).
 
-- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0012):
+- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0013):
   tinder cervecero por ruta, en la pestana Cana. Las tablas `match_*` no tienen
   privilegios para la app y todo pasa por funciones `SECURITY DEFINER`, asi que
   un `supabase.from('match_votes')` ni compila. Ni los admins leen los chats.
+- **"Alertas de administracion" pinta ALERTAS, no denuncias** (`app/admin/`,
+  `src/features/admin/alertas.ts`): hoy la unica fuente son las denuncias de la
+  cana, pero la seccion nace para que quepa lo siguiente (invitaciones agotadas,
+  una ruta sin publicar el dia del evento). La pantalla no sabe de
+  `match_reports`; anadir otra fuente es anadir un `tipo` y su conversion en
+  `alertas.ts`. El ticket se RECLAMA al abrirlo (`match_admin_take`, 0013) en
+  vez de con un boton: con dos admins en la misma bandeja, si no, los dos se
+  ponen con la misma denuncia. Y esconder el boton de Mi perfil a quien no es
+  admin es comodidad: quien protege es `match_admin_require()` en Postgres.
 - **La cana pregunta por la pertenencia con `is_route_participant(ruta, persona)`**
   (0012): la 0004 del remoto decide con `route_members` y expone
   `is_route_member(ruta)`, que mira `auth.uid()`; la cana necesita preguntar

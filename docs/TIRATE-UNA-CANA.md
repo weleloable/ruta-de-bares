@@ -155,9 +155,14 @@ un cron; es lo que falta para que el plazo se cumpla solo.
 
 ## Contrato con el panel de administracion
 
-El panel y los avisos a quien organiza los construye otra persona. Aqui estan
-solo los datos y las funciones, todas con `is_admin()` y ninguna con acceso a
-los chats: el panel lee lo que la denuncia copio, nunca la conversacion (D10).
+Las denuncias ya se revisan desde la app: **Mi perfil > Detras de la barra >
+Alertas de administracion** (`app/admin/`). Los avisos automaticos a quien
+organiza (correo, notificacion push) siguen siendo de otra persona, y para eso
+estan `match_admin_reports_sin_avisar()` y `match_admin_mark_notified()`, que la
+bandeja no usa.
+
+Todas las funciones exigen `is_admin()` y ninguna da acceso a los chats: se lee
+lo que la denuncia copio, nunca la conversacion (D10).
 
 ```sql
 -- Bandeja. p_solo_pendientes = false para ver tambien el historico.
@@ -180,17 +185,35 @@ public.match_admin_remove_photo(p_user_id uuid, p_report_id uuid default null, p
 public.match_admin_deactivate(p_user_id uuid, p_report_id uuid default null, p_note text default '')
 public.match_admin_resolve(p_report_id uuid, p_resolution text, p_note text default '')
   -- p_resolution: 'sin_accion' | 'foto_retirada' | 'cana_desactivada' | 'otra'
+
+-- 0013, lo que pidio la bandeja al construirla.
+-- Reclamar: pendiente -> en_revision. Devuelve false si ya la tenia otra
+-- persona o si estaba cerrada, y entonces NO es un error.
+public.match_admin_take(p_report_id uuid) -> boolean
+
+-- Un ticket entero, con lo que hace falta para decidir y no trae la bandeja.
+public.match_admin_report(p_report_id uuid)
+  -> todo lo de match_admin_reports, mas route_name, reported_avatar_url (la
+     foto GRANDE: sobre 400 px no se decide retirar una foto), reported_bio,
+     reported_active, handled_by_name y handler_note
+
+-- Solo el numero, para la burbujita del boton de Mi perfil.
+public.match_admin_alert_count() -> integer  -- las que no estan resueltas
 ```
 
-Dos cosas que el panel tiene que saber:
+Tres cosas que el panel tiene que saber:
 
 1. `match_admin_remove_photo` deja `avatar_url` y `avatar_thumb_url` a NULL,
    pero **no borra el fichero del Storage**: el bucket `avatars` es publico y
    la URL sigue viva. Borrarlo pide la clave de servicio, que no puede estar en
    la app. Hasta que el bucket sea privado, ese paso es manual.
-2. Estados de una denuncia: `pendiente` -> `en_revision` -> `resuelta`. Hoy
-   solo `match_admin_resolve` la cierra; si el panel quiere el estado
-   intermedio, que anada una funcion, sin escribir la tabla directamente.
+2. Estados de una denuncia: `pendiente` -> `en_revision` -> `resuelta`. La
+   bandeja reclama con `match_admin_take` al ABRIR el ticket, no con un boton:
+   con varios admins mirando la misma lista desde el movil, dos pueden ponerse
+   con la misma denuncia sin enterarse, y asi consta quien se puso primero.
+3. Reclamar tambien deja apunte en `match_moderation_log`
+   (`denuncia_en_revision`): es la prueba de cuanto se tardo en atenderla, que
+   es lo que mide el DSA.
 
 ## Contrato con la pertenencia a rutas
 

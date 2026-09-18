@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, Field } from '../../src/components/ui';
+import { contarAlertas } from '../../src/features/admin/api';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
@@ -21,6 +22,33 @@ export default function PerfilScreen() {
   const [exito, setExito] = useState<string | null>(null);
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
+  const [alertas, setAlertas] = useState(0);
+
+  /*
+    Cuantas alertas quedan sin cerrar. Solo para admins y solo al mirar esta
+    pantalla: quien no lo es no debe preguntar nada (el servidor le diria
+    NOT_ADMIN), y aqui no hace falta sondeo porque no es una pantalla en la que
+    nadie se quede.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAdmin) {
+        setAlertas(0);
+        return;
+      }
+      let vivo = true;
+      void contarAlertas()
+        .then((total) => {
+          if (vivo) setAlertas(total);
+        })
+        .catch(() => {
+          // Sin numero se entra igual: la burbujita es un aviso, no la puerta.
+        });
+      return () => {
+        vivo = false;
+      };
+    }, [isAdmin]),
+  );
 
   // El perfil llega despues del primer render (lo carga AuthProvider): sin esto
   // el campo se queda vacio aunque el usuario tenga nombre.
@@ -168,6 +196,23 @@ export default function PerfilScreen() {
               textStyle={styles.textoAccionBarra}
               onPress={() => router.push('/invitaciones')}
             />
+            {/*
+              La burbujita va superpuesta y no dentro del texto para que el
+              boton siga leyendose igual que los otros dos cuando no hay nada.
+            */}
+            <View>
+              <Button
+                title="Alertas de administración"
+                variant="secondary"
+                textStyle={styles.textoAccionBarra}
+                onPress={() => router.push('/admin/alertas')}
+              />
+              {alertas > 0 ? (
+                <View style={styles.burbuja} pointerEvents="none">
+                  <Text style={styles.burbujaTexto}>{alertas > 99 ? '99+' : alertas}</Text>
+                </View>
+              ) : null}
+            </View>
           </Card>
         ) : null}
 
@@ -193,6 +238,20 @@ export default function PerfilScreen() {
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
+  // Misma burbujita que la de los chats sin leer de la cana.
+  burbuja: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.stamp,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  burbujaTexto: { color: colors.white, fontSize: 11, fontWeight: '800' },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   // Titulo de "Nombre de bartalla" y "Detrás de la barra": se comparte para que
   // las tarjetas de Perfil se titulen igual.
