@@ -225,11 +225,15 @@ abierto** (`never_opened`, 0010: la pista es `last_read_at = '-infinity'`).
 - En el selector **Chats** de la pestana, mientras estas en la cana.
 - En el **icono de la pestana Cana**, para que se vea desde Sellos o Ruta.
   Lo alimenta `AvisosCanaProvider` (`src/features/match/AvisosCana.tsx`), que
-  vive por encima del Stack y pregunta **cada 60 s**, no cada 15: son 200
-  personas preguntando aunque no esten en la cana. Se calla en segundo plano y
-  mira nada mas volver al primer plano. Cuando la pantalla de la cana pide la
-  bandeja le pasa la cuenta, asi que la burbujita se apaga al leer sin esperar
-  al siguiente minuto ni pedir la bandeja dos veces.
+  vive por encima del Stack. **Quien no tiene la cana activada no pregunta
+  nada**: al arrancar se mira el perfil una vez y ahi acaba. Con la cana
+  activada pregunta **cada 60 s**, no cada 15 como la pantalla abierta: son 200
+  personas preguntando aunque no esten dentro. Se calla en segundo plano y mira
+  nada mas volver al primer plano. Cuando la pantalla de la cana pide la
+  bandeja le pasa la cuenta y el estado, asi que la burbujita se apaga al leer
+  (y arranca al activar) sin esperar al siguiente minuto ni pedir la bandeja
+  dos veces. Medido en Chrome, 75 s en la pestana Sellos: con la cana apagada,
+  1 consulta del perfil y 0 de la bandeja; encendida, 1 y 2.
 
 No hay notificaciones fuera de la app: con el movil en el bolsillo no se
 entera nadie de nada. Ver "Sin tiempo real".

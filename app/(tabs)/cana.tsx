@@ -90,7 +90,7 @@ export default function CanaScreen() {
   const [cambiando, setCambiando] = useState(false);
   const [confirmandoDesactivar, setConfirmandoDesactivar] = useState(false);
 
-  const { fijar: fijarAvisos } = useAvisosCana();
+  const { fijar: fijarAvisos, fijarEstado: fijarCanaActiva } = useAvisosCana();
 
   const rutaId = activeRoute?.id ?? null;
 
@@ -100,6 +100,9 @@ export default function CanaScreen() {
     try {
       const actual = await getMatchProfile();
       setPerfil(actual);
+      // Activar o desactivar aqui arranca o para las consultas del proveedor,
+      // sin que nadie tenga que recargar la app.
+      fijarCanaActiva(actual.is_active);
       const [grilla, chats] =
         actual.is_active && rutaId ? await Promise.all([getMatchGrid(rutaId), getMatchInbox(rutaId)]) : [[], []];
       setTarjetas(grilla);
@@ -110,7 +113,7 @@ export default function CanaScreen() {
     } finally {
       setCargando(false);
     }
-  }, [rutaId, yo, fijarAvisos]);
+  }, [rutaId, yo, fijarAvisos, fijarCanaActiva]);
 
   // Al volver de la presentacion o de una ficha, perfil y votos han cambiado.
   useFocusEffect(
