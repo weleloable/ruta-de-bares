@@ -24,6 +24,7 @@ import {
   sendMatchText,
 } from '../../../src/features/match/api';
 import { AccionesPersona } from '../../../src/features/match/AccionesPersona';
+import { BotonVolverCana } from '../../../src/features/match/BotonVolverCana';
 import { AvatarCana } from '../../../src/features/match/piezas';
 import { FranjaCerveza, ResponderCerveza } from '../../../src/features/match/PreguntaCerveza';
 import {
@@ -184,7 +185,7 @@ export default function ChatCana() {
   if (perdida || !detalle) {
     return (
       <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
-        <Stack.Screen options={{ title: 'Chat' }} />
+        <Stack.Screen options={{ title: 'Chat', headerLeft: () => <BotonVolverCana /> }} />
         <View style={styles.cuerpoVacio}>
           <EmptyState title="Este chat ya no está disponible" body={perdida ?? error ?? 'No se pudo abrir.'} />
           <Button title="Volver a Tírate una caña" variant="secondary" onPress={() => router.back()} />
@@ -199,7 +200,7 @@ export default function ChatCana() {
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right', 'bottom']}>
-      <Stack.Screen options={{ title: nombre }} />
+      <Stack.Screen options={{ title: nombre, headerLeft: () => <BotonVolverCana /> }} />
       <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         <Pressable

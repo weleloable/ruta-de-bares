@@ -15,6 +15,7 @@ import {
 import { ASPECTO } from '../../../src/features/match/TarjetaPersona';
 import { VasoCana } from '../../../src/features/match/VasoCana';
 import { AccionesPersona } from '../../../src/features/match/AccionesPersona';
+import { BotonVolverCana } from '../../../src/features/match/BotonVolverCana';
 import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
 import { useActiveRoute } from '../../../src/features/routes/ActiveRouteProvider';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
@@ -76,7 +77,7 @@ export default function PersonaCana() {
   if (!persona || !rutaId) {
     return (
       <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
-        <Stack.Screen options={{ title: 'Tírate una caña' }} />
+        <Stack.Screen options={{ title: 'Tírate una caña', headerLeft: () => <BotonVolverCana /> }} />
         <View style={styles.cuerpo}>
           {error ? <Banner tone="error">{error}</Banner> : null}
           <EmptyState
@@ -125,7 +126,7 @@ export default function PersonaCana() {
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
-      <Stack.Screen options={{ title: persona.display_name }} />
+      <Stack.Screen options={{ title: persona.display_name, headerLeft: () => <BotonVolverCana /> }} />
       <ScrollView contentContainerStyle={styles.cuerpo}>
         {/* Mismo lenguaje que la tarjeta de la grilla, sin apagar la foto: aqui se viene a mirarla. */}
         <View style={[styles.anillo, aspecto.anillo ? { borderColor: aspecto.anillo } : null]}>
