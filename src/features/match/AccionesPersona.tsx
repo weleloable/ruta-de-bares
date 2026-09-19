@@ -17,6 +17,11 @@ import { DETALLE_MAX, MOTIVOS_DENUNCIA, validarDenuncia, type MotivoDenuncia } f
  * ademas avisa a quien organiza la ruta, y que el servidor copia en la
  * denuncia los mensajes de esa persona ANTES de borrarlos (por eso hace falta
  * pasarle `connectionId` cuando se denuncia desde un chat).
+ *
+ * De ahi que el orden importe, y por eso se avisa: quien bloquea primero y
+ * denuncia despues manda una denuncia SIN pruebas, porque al bloquear ya se han
+ * borrado los mensajes. Denunciar bloquea igual, asi que no se pierde nada por
+ * hacerlo en ese orden.
  */
 export function AccionesPersona({
   routeId,
@@ -100,7 +105,11 @@ export function AccionesPersona({
       <DialogoConfirmar
         visible={confirmandoBloqueo}
         titulo={`Bloquear a ${nombre}`}
-        mensaje={`Dejaréis de veros en la ruta, se cerrará vuestra conexión y se borrará el chat. Seguirá bloqueada en las rutas siguientes hasta que la desbloquees.`}
+        mensaje={
+          connectionId
+            ? `Dejaréis de veros y se borrará el chat, con lo que te ha escrito. Si quieres que quien organiza la ruta lo vea, cierra esto y usa Denunciar: eso la bloquea igual, pero antes guarda sus mensajes.`
+            : `Dejaréis de veros en la ruta y seguirá bloqueada en las rutas siguientes hasta que la desbloquees.`
+        }
         textoConfirmar="Bloquear"
         destructivo
         ocupado={ocupado}

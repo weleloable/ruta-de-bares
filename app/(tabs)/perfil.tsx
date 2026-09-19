@@ -257,6 +257,17 @@ export default function PerfilScreen() {
                 </View>
               ) : null}
             </View>
+            {/*
+              Desde aqui se retira un veto aunque la denuncia que lo puso se
+              cerrara hace meses: el DSA da seis meses para reclamar, asi que
+              tiene que haber siempre un sitio desde el que deshacerlo.
+            */}
+            <Button
+              title="Moderación"
+              variant="secondary"
+              textStyle={styles.textoAccionBarra}
+              onPress={() => router.push('/admin/moderacion')}
+            />
           </Card>
         ) : null}
 

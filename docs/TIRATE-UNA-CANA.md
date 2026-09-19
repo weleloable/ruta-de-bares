@@ -223,9 +223,24 @@ public.match_admin_lift_route_ban(p_user_id uuid, p_route_id uuid, p_note text d
 public.match_admin_unsuspend(p_user_id uuid, p_note text default '') -> boolean
 
 -- Los vetos vigentes, para retirarlos mucho despues de cerrar la denuncia.
-public.match_admin_bans() -> tipo ('cuenta'|'ruta'|'cana'), user_id, user_name,
-                             route_id, route_name, reason, created_at
+-- 0018. Todo lo que se le ha hecho a alguien: los vetos VIGENTES ('cuenta',
+-- 'ruta', 'cana', que se pueden levantar) y el historial ('accion': una foto
+-- retirada, una cana apagada...). Sustituye a match_admin_bans.
+public.match_admin_moderaciones()
+  -> tipo, user_id (null si se borro la cuenta), user_name, route_id,
+     route_name, motivo, accion, cuando
 ```
+
+Dos reglas que no se ven en las firmas (0016 y 0017):
+
+* `match_report` y `match_block` exigen que quien llama **este en la ruta y no
+  este suspendido**. No exigen que quien esta denunciado siga dentro: denunciar
+  lo que hizo antes de irse tiene que poder hacerse.
+* Borrarse la cuenta **ya no limpia el expediente**. Las claves ajenas son
+  `set null`, y el nombre visible de entonces se guarda en la propia fila, asi
+  que el registro y las denuncias se siguen leyendo. La suspension guarda el
+  HMAC del correo (y lo borra al levantarse), de modo que la sancion mas dura
+  no se esquiva borrandose la cuenta y volviendo.
 
 Tres cosas que el panel tiene que saber:
 

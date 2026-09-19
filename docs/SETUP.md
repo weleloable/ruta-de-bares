@@ -47,6 +47,12 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**. Los vetos aguantan, y toda sancion exige motivo y avisa a la
    persona. Genera una clave en `app_secrets`: **no se borra ni se regenera**,
    o los vetos puestos dejarian de reconocer el correo.
+16. [`supabase/migrations/0016_denunciar_exige_estar_dentro.sql`](../supabase/migrations/0016_denunciar_exige_estar_dentro.sql)
+   y **Run**. Denunciar y bloquear exigen estar en la ruta y no estar sancionada.
+17. [`supabase/migrations/0017_el_rastro_sobrevive.sql`](../supabase/migrations/0017_el_rastro_sobrevive.sql)
+   y **Run**. El expediente de moderacion deja de borrarse con la cuenta.
+18. [`supabase/migrations/0018_lista_de_moderaciones.sql`](../supabase/migrations/0018_lista_de_moderaciones.sql)
+   y **Run**. La lista de a quien se ha moderado, para poder retirar un veto.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket

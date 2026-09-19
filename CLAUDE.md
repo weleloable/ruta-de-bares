@@ -86,6 +86,9 @@ supabase/
   migrations/0013_*.sql     lo que le faltaba al panel: reclamar, leer y contar
   migrations/0014_*.sql     expulsar de una ruta desde la bandeja de alertas
   migrations/0015_*.sql     los vetos aguantan y a la persona se le dice por que
+  migrations/0016_*.sql     denunciar y bloquear exigen estar dentro y sin sancion
+  migrations/0017_*.sql     el rastro de moderacion sobrevive al borrado de cuenta
+  migrations/0018_*.sql     la lista de a quien se ha moderado (y que sigue puesto)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -134,7 +137,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   para la UI y debe decir explícitamente que es un espejo (ver `rules.ts`).
 - Rutas de import con alias `@/*` → `src/*` (`tsconfig.json`).
 
-- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0015):
+- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0018):
   tinder cervecero por ruta, en la pestana Cana. Las tablas `match_*` no tienen
   privilegios para la app y todo pasa por funciones `SECURITY DEFINER`, asi que
   un `supabase.from('match_votes')` ni compila. Ni los admins leen los chats.
@@ -176,6 +179,26 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   sancion que nadie puede deshacer deja ese derecho en nada.
 - **A un admin no se le veta** (`TARGET_IS_ADMIN`), o un resbalon en la
   pantalla dejaria la ruta sin quien la lleva.
+- **`match_report` y `match_block` exigen estar dentro y sin sancion** (0016):
+  eran las dos unicas funciones de la cana que no comprobaban nada de quien
+  llamaba. Comprobado contra la API: una cuenta recien SUSPENDIDA seguia
+  denunciando y bloqueando a la gente de la ruta de la que se la echo, porque
+  los uuid los tenia de cuando estaba dentro (salen en las respuestas y en la
+  URL de una ficha). NO se exige que quien esta denunciado siga en la ruta:
+  denunciar lo que hizo antes de irse tiene que poder hacerse.
+- **El rastro de moderacion NO se borra con la cuenta** (0017): las claves
+  ajenas son `set null` y no `cascade`, y se guarda el nombre visible de
+  entonces (`target_name`, `reported_name`) con un trigger, para que el
+  historial se pueda leer. Antes, quien se borraba la cuenta se llevaba por
+  delante sus apuntes, las denuncias sobre el y su suspension: la sancion mas
+  dura se esquivaba borrandose la cuenta mientras que el veto de ruta, menor,
+  aguantaba. La suspension guarda ahora tambien el HMAC del correo y **se
+  borra al levantarla**: el dato vive lo que vive la sancion.
+- **Un veto se retira desde `app/admin/moderacion.tsx`**, no solo desde el
+  ticket (0018): la denuncia que lo puso puede estar cerrada hace meses o
+  haber desaparecido con la cuenta, y el art. 20 del DSA da seis meses para
+  reclamar. Esa pantalla lista tambien lo que se hizo y ya no esta vigente
+  (una foto retirada), que es lo que se pregunta al revisar a alguien.
 - **La cana pregunta por la pertenencia con `is_route_participant(ruta, persona)`**
   (0012): la 0004 del remoto decide con `route_members` y expone
   `is_route_member(ruta)`, que mira `auth.uid()`; la cana necesita preguntar

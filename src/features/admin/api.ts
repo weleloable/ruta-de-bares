@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type {
-  AdminBanRow,
+  ModeracionRow,
   MatchAdminReportMessageRow,
   MatchAdminReportRow,
   MatchAdminTicketRow,
@@ -192,9 +192,13 @@ export async function reactivarCuenta(userId: string, nota = ''): Promise<boolea
   return data ?? false;
 }
 
-/** Los vetos vigentes, para retirarlos mucho despues de cerrar la denuncia. */
-export async function listarVetos(): Promise<AdminBanRow[]> {
-  const { data, error } = await supabase.rpc('match_admin_bans');
+/**
+ * Todo lo que se le ha hecho a alguien: los vetos que siguen puestos y lo que
+ * se hizo en su dia. Es la unica via para retirar un veto cuando la denuncia
+ * que lo origino ya se cerro (o desaparecio con la cuenta).
+ */
+export async function listarModeraciones(): Promise<ModeracionRow[]> {
+  const { data, error } = await supabase.rpc('match_admin_moderaciones');
   if (error) fallo(error);
   return data ?? [];
 }
@@ -227,4 +231,4 @@ export async function resolverAlerta(
   if (error) fallo(error);
 }
 
-export type { Alerta, AdminBanRow, MatchAdminReportRow, MatchAdminTicketRow };
+export type { Alerta, ModeracionRow, MatchAdminReportRow, MatchAdminTicketRow };

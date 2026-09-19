@@ -346,7 +346,9 @@ export default function ChatCana() {
       <DialogoConfirmar
         visible={confirmandoNo}
         titulo={`Decir que no a ${nombre}`}
-        mensaje="Se cerrará la conexión y se borrará el chat."
+        // Decir que no tambien borra los mensajes: si lo que ha escrito es para
+        // denunciarlo, hay que hacerlo ANTES o la denuncia va sin pruebas.
+        mensaje={`Se cerrará la conexión y se borrará el chat, con lo que te ha escrito. Si te ha escrito algo que quieres denunciar, hazlo antes.`}
         textoConfirmar="Decir que no"
         destructivo
         ocupado={enviando}

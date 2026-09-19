@@ -141,6 +141,9 @@ export default function AlertaAdmin() {
   const estado = ESTADOS[ticket.status];
   const puede = accionesTicket(ticket);
   const hayMotivo = motivoValido(motivo);
+  // null si esa persona se borro la cuenta: la denuncia se queda como prueba,
+  // pero ya no hay a quien sancionar (0017).
+  const objetivo = ticket.reported_id;
   const elegida = resolucion ?? resolucionSugerida(ticket, hechas);
 
   return (
@@ -170,6 +173,12 @@ export default function AlertaAdmin() {
               </Text>
             </View>
           </View>
+          {objetivo ? null : (
+            <Text style={styles.dato}>
+              Esta persona ha borrado su cuenta. La denuncia y sus pruebas se conservan, pero ya no
+              hay a quien sancionar; lo que siga vigente se retira desde Moderación.
+            </Text>
+          )}
           <Text style={styles.dato}>Ruta: {ticket.route_name}</Text>
           <Text style={styles.dato}>Quien denuncia: {ticket.reporter_name}</Text>
         </Card>
@@ -353,6 +362,8 @@ export default function AlertaAdmin() {
         )}
       </ScrollView>
 
+      {objetivo ? (
+        <>
       <DialogoConfirmar
         visible={confirmando === 'foto'}
         titulo="¿Retirar la foto?"
@@ -362,7 +373,7 @@ export default function AlertaAdmin() {
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => retirarFoto(ticket.reported_id, motivo, ticket.id, nota),
+            () => retirarFoto(objetivo, motivo, ticket.id, nota),
             'foto_retirada',
             'Foto retirada.',
           )
@@ -379,7 +390,7 @@ export default function AlertaAdmin() {
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => desactivarCana(ticket.reported_id, motivo, ticket.id, nota),
+            () => desactivarCana(objetivo, motivo, ticket.id, nota),
             'cana_desactivada',
             'Caña desactivada.',
           )
@@ -396,7 +407,7 @@ export default function AlertaAdmin() {
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => expulsarDeRuta(ticket.reported_id, ticket.route_id, motivo, ticket.id, nota),
+            () => expulsarDeRuta(objetivo, ticket.route_id, motivo, ticket.id, nota),
             'expulsada_de_ruta',
             `${ticket.reported_name} ya no está en la ruta.`,
           )
@@ -413,7 +424,7 @@ export default function AlertaAdmin() {
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => suspenderCuenta(ticket.reported_id, motivo, ticket.id, nota),
+            () => suspenderCuenta(objetivo, motivo, ticket.id, nota),
             'cuenta_suspendida',
             `La cuenta de ${ticket.reported_name} queda suspendida.`,
           )
@@ -428,7 +439,7 @@ export default function AlertaAdmin() {
         textoConfirmar="Retirar"
         ocupado={ocupado}
         onConfirmar={() =>
-          void ejecutar(() => retirarVetoCana(ticket.reported_id, nota), null, 'Veto retirado.')
+          void ejecutar(() => retirarVetoCana(objetivo, nota), null, 'Veto retirado.')
         }
         onCancelar={() => setConfirmando(null)}
       />
@@ -441,7 +452,7 @@ export default function AlertaAdmin() {
         ocupado={ocupado}
         onConfirmar={() =>
           void ejecutar(
-            () => retirarVetoRuta(ticket.reported_id, ticket.route_id, nota),
+            () => retirarVetoRuta(objetivo, ticket.route_id, nota),
             null,
             'Veto retirado.',
           )
@@ -456,10 +467,13 @@ export default function AlertaAdmin() {
         textoConfirmar="Levantar"
         ocupado={ocupado}
         onConfirmar={() =>
-          void ejecutar(() => reactivarCuenta(ticket.reported_id, nota), null, 'Suspensión levantada.')
+          void ejecutar(() => reactivarCuenta(objetivo, nota), null, 'Suspensión levantada.')
         }
         onCancelar={() => setConfirmando(null)}
       />
+
+        </>
+      ) : null}
 
       <DialogoConfirmar
         visible={confirmando === 'resolver'}

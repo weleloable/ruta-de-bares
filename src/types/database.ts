@@ -193,9 +193,10 @@ export type MatchAdminReportRow = {
   reason: MatchReportReason;
   detail: string;
   route_id: string;
-  reporter_id: string;
+  reporter_id: string | null;
   reporter_name: string;
-  reported_id: string;
+  /** null si esa persona se borro la cuenta; el nombre se conserva (0017). */
+  reported_id: string | null;
   reported_name: string;
   mensajes: number;
   notified_at: string | null;
@@ -254,15 +255,19 @@ export type MyRestrictionsRow = {
   cana_reason: string;
 };
 
-/** Un veto vigente, para poder retirarlo: match_admin_bans (0015). */
-export type AdminBanRow = {
-  tipo: 'cuenta' | 'ruta' | 'cana';
-  user_id: string;
+/** Lo que se le ha hecho a alguien: match_admin_moderaciones (0018). */
+export type ModeracionRow = {
+  /** Los tres primeros son vetos VIGENTES y se levantan; 'accion' es historial. */
+  tipo: 'cuenta' | 'ruta' | 'cana' | 'accion';
+  /** null si esa persona se borro la cuenta: el nombre se guardo al sancionar. */
+  user_id: string | null;
   user_name: string;
   route_id: string | null;
   route_name: string;
-  reason: string;
-  created_at: string;
+  motivo: string;
+  /** Solo en 'accion': foto_retirada, expulsada_de_ruta, veto_retirado... */
+  accion: string;
+  cuando: string;
 };
 
 /**
@@ -503,9 +508,9 @@ export type Database = {
         Args: { p_user_id: string; p_note?: string };
         Returns: boolean;
       };
-      match_admin_bans: {
+      match_admin_moderaciones: {
         Args: Record<string, never>;
-        Returns: AdminBanRow[];
+        Returns: ModeracionRow[];
       };
       my_notices: {
         Args: Record<string, never>;

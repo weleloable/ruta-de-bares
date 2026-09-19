@@ -188,18 +188,22 @@ export function accionesTicket(ticket: MatchAdminTicketRow): {
   puedeReactivarCuenta: boolean;
 } {
   const cerrada = ticket.status === 'resuelta';
+  // Si esa persona se borro la cuenta (0017) la denuncia se queda, pero ya no
+  // hay a quien sancionar ni a quien levantarle nada: lo que siga vigente se
+  // retira desde la pantalla de moderacion, que si sabe a que fila apuntar.
+  const existe = ticket.reported_id !== null;
   // A un admin no se le veta desde aqui: el servidor lo rechaza
   // (TARGET_IS_ADMIN) y ofrecerlo seria mentir.
-  const vetable = !cerrada && !ticket.reported_is_admin;
+  const vetable = existe && !cerrada && !ticket.reported_is_admin;
   return {
-    puedeRetirarFoto: !cerrada && ticket.reported_avatar_url !== null,
-    puedeDesactivar: !cerrada && !ticket.reported_cana_blocked,
+    puedeRetirarFoto: existe && !cerrada && ticket.reported_avatar_url !== null,
+    puedeDesactivar: existe && !cerrada && !ticket.reported_cana_blocked,
     puedeExpulsar: vetable && !ticket.reported_route_banned,
     puedeSuspender: vetable && !ticket.reported_suspended,
     puedeResolver: !cerrada,
-    puedeRetirarVetoCana: ticket.reported_cana_blocked,
-    puedeRetirarVetoRuta: ticket.reported_route_banned,
-    puedeReactivarCuenta: ticket.reported_suspended,
+    puedeRetirarVetoCana: existe && ticket.reported_cana_blocked,
+    puedeRetirarVetoRuta: existe && ticket.reported_route_banned,
+    puedeReactivarCuenta: existe && ticket.reported_suspended,
   };
 }
 
