@@ -211,19 +211,12 @@ export default function PerfilScreen() {
         </Card>
 
         {/*
-          Via de canje a mano: si el enlace https no se puede abrir (el mensaje
-          llego cortado, se copio solo el codigo...), se pega aqui el enlace o el
-          codigo. Para todos, no solo admins.
+          Aqui hubo una tarjeta "Rutas > Entrar en una ruta" (canje pegando el
+          enlace o el codigo a mano). Se quito a proposito: la gente entra por
+          el enlace de invitacion y no debe poder pulsar aqui. La pantalla
+          /invitacion sigue existiendo, es el destino de ese enlace. Coste
+          asumido: si el enlace llega cortado ya no hay donde pegar el codigo.
         */}
-        <Card>
-          <Text style={styles.tituloTarjeta}>Rutas</Text>
-          <Button
-            title="Entrar en una ruta"
-            variant="secondary"
-            textStyle={styles.textoAccionBarra}
-            onPress={() => router.push('/invitacion')}
-          />
-        </Card>
 
         {isAdmin ? (
           <Card>

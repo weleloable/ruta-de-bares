@@ -309,8 +309,9 @@ La URL vive en `WEB_APP_URL` (`src/features/invites/link.ts`) y tiene que
 coincidir con `WEB_BASE_URL` del workflow: `tests/deploy-web.test.ts` lo
 comprueba. Si algun dia cambia el dominio o la subruta, se cambian los dos.
 
-Los enlaces con el esquema antiguo `rutadebares://` y el codigo pelado
-(**Mi perfil > Entrar en una ruta**) siguen valiendo. El enlace https **no**
+Los enlaces con el esquema antiguo `rutadebares://` siguen valiendo. Ya no
+hay donde pegar un codigo pelado: la tarjeta **Mi perfil > Entrar en una ruta**
+se quito, la gente entra solo por el enlace. El enlace https **no**
 abre la app nativa (development build): para eso Android exige verificar el
 dominio con un `assetlinks.json` en la raiz de `weleloable.github.io`, que
 una pagina de proyecto de GitHub Pages no controla.
@@ -394,8 +395,9 @@ Hasta que estos siete puntos pasen, el montaje no esta terminado.
    un enlace para esa ruta y lo abres en el movil de la otra cuenta (o en una
    ventana de incognito): tiene que cargar la web en
    `.../ruta-de-bares/invitacion?token=...`, pedir sesion si no la hay y, con
-   *Entrar en la ruta*, meterte en ella. Ahora si ve la ruta. El enlace o el
-   codigo pelado pegado en **Mi perfil > Entrar en una ruta** hace lo mismo.
+   *Entrar en la ruta*, meterte en ella. Ahora si ve la ruta. (Ya no existe
+   el boton **Mi perfil > Entrar en una ruta** para pegar el codigo a mano:
+   solo se entra por el enlace.)
    Si la otra cuenta es nueva y tienes la confirmacion de correo activada,
    comprueba tambien que el correo de confirmacion lleva a la web y no a
    `localhost` (Site URL de Supabase, seccion 7).
