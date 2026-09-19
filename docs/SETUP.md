@@ -53,6 +53,8 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**. El expediente de moderacion deja de borrarse con la cuenta.
 18. [`supabase/migrations/0018_lista_de_moderaciones.sql`](../supabase/migrations/0018_lista_de_moderaciones.sql)
    y **Run**. La lista de a quien se ha moderado, para poder retirar un veto.
+19. [`supabase/migrations/0019_activar_la_cana_arreglado.sql`](../supabase/migrations/0019_activar_la_cana_arreglado.sql)
+   y **Run**. Arregla activar la cana por primera vez, que la 0015 rompio.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket

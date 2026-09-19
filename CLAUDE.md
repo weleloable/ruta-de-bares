@@ -89,6 +89,7 @@ supabase/
   migrations/0016_*.sql     denunciar y bloquear exigen estar dentro y sin sancion
   migrations/0017_*.sql     el rastro de moderacion sobrevive al borrado de cuenta
   migrations/0018_*.sql     la lista de a quien se ha moderado (y que sigue puesto)
+  migrations/0019_*.sql     arregla activar la cana, que la 0015 rompio
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -137,7 +138,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   para la UI y debe decir explícitamente que es un espejo (ver `rules.ts`).
 - Rutas de import con alias `@/*` → `src/*` (`tsconfig.json`).
 
-- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0018):
+- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0019):
   tinder cervecero por ruta, en la pestana Cana. Las tablas `match_*` no tienen
   privilegios para la app y todo pasa por funciones `SECURITY DEFINER`, asi que
   un `supabase.from('match_votes')` ni compila. Ni los admins leen los chats.
@@ -179,6 +180,14 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   sancion que nadie puede deshacer deja ese derecho en nada.
 - **A un admin no se le veta** (`TARGET_IS_ADMIN`), o un resbalon en la
   pantalla dejaria la ruta sin quien la lleva.
+- **Al anadirle algo a una funcion SQL, se parte de su cuerpo, no de la
+  memoria** (0019): la 0015 tenia que meterle dos comprobaciones a
+  `match_activate` y la reescribio entera de cabeza. Resultado: llamaba a
+  `match_set_tags`, que no existe (la buena es `match_save_bio_and_tags(uid,
+  bio, tags)`, que guarda frase y etiquetas juntas), con lo que activar la
+  cana por primera vez reventaba. No lo cogio ningun test porque todos
+  pasaban `p_tag_ids => null` y perfiles ya activados: la rama de la frase y
+  las etiquetas solo entra la PRIMERA vez (`first_activated_at is null`).
 - **`match_report` y `match_block` exigen estar dentro y sin sancion** (0016):
   eran las dos unicas funciones de la cana que no comprobaban nada de quien
   llamaba. Comprobado contra la API: una cuenta recien SUSPENDIDA seguia
