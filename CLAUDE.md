@@ -9,7 +9,7 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 
 ## Funcionalidades clave
 
-- **4 pestanas** (`app/(tabs)/`): Sellos (compostelana), Ruta (mapa con los
+- **Pestanas** (`app/(tabs)/`): Sellos (compostelana), Ruta (mapa con los
   bares numerados y el trazado: Google en nativo, OpenStreetMap en web), Editor
   (solo admins: crear rutas, anadir bares tocando el mapa, horarios, publicar),
   Mi perfil (+ editor de rutas y panel de invitaciones para admins).
@@ -54,13 +54,16 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 ```
 app/                      pantallas (Expo Router)
   (auth)/                 login, registro (alta abierta)
-  (tabs)/                 las 4 pestanas (Editor y Perfil sin boton abajo)
+  (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
+  cana/                   presentacion, ficha, chat, bloqueados, mis datos, condiciones
+  admin/                  bandeja de alertas de administracion y su ficha
+  avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
 src/
   features/<dominio>/     reglas + llamadas a datos + componentes por dominio
-                           (auth, routes, stamps, invites, profile, pwa)
+                           (auth, routes, stamps, invites, profile, pwa, match, admin, notices)
   components/             UI compartida (StampSeal, ui.tsx, RutaMapa, SelectorPosicion
                            con variantes .web.tsx)
   lib/                    cliente Supabase, secure-session-store, tema, fechas,
@@ -72,6 +75,21 @@ supabase/
   migrations/0002_*.sql     el SQL Editor y service_role pueden cambiar roles
   migrations/0003_*.sql     nombre visible unico, sin espacios, <= 30 caracteres
   migrations/0004_*.sql     invitaciones POR RUTA + alta abierta + route_members
+  migrations/0005_*.sql     "Tirate una cana": tablas match_* y sus funciones
+  migrations/0006_*.sql     la cana sin No me gusta: Me gusta y Visto
+  migrations/0007_*.sql     miniatura de la foto de perfil para las listas
+  migrations/0008_*.sql     la cana se queda solo con la pregunta de la cerveza
+  migrations/0009_*.sql     bloquear y denunciar, con el contrato del panel de admins
+  migrations/0010_*.sql     consentimiento guardado, y descargar o borrar tus datos
+  migrations/0011_*.sql     saber que chats no has abierto nunca (burbujita)
+  migrations/0012_*.sql     la cana usa route_members en vez de la regla provisional
+  migrations/0013_*.sql     lo que le faltaba al panel: reclamar, leer y contar
+  migrations/0014_*.sql     expulsar de una ruta desde la bandeja de alertas
+  migrations/0015_*.sql     los vetos aguantan y a la persona se le dice por que
+  migrations/0016_*.sql     denunciar y bloquear exigen estar dentro y sin sancion
+  migrations/0017_*.sql     el rastro de moderacion sobrevive al borrado de cuenta
+  migrations/0018_*.sql     la lista de a quien se ha moderado (y que sigue puesto)
+  migrations/0019_*.sql     arregla activar la cana, que la 0015 rompio
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -119,6 +137,82 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   medio (sellar, invitar) vive primero en SQL; la copia en TypeScript es solo
   para la UI y debe decir explícitamente que es un espejo (ver `rules.ts`).
 - Rutas de import con alias `@/*` → `src/*` (`tsconfig.json`).
+
+- **"Tirate una cana"** (`docs/TIRATE-UNA-CANA.md`, migraciones 0005 a 0019):
+  tinder cervecero por ruta, en la pestana Cana. Las tablas `match_*` no tienen
+  privilegios para la app y todo pasa por funciones `SECURITY DEFINER`, asi que
+  un `supabase.from('match_votes')` ni compila. Ni los admins leen los chats.
+- **"Alertas de administracion" pinta ALERTAS, no denuncias** (`app/admin/`,
+  `src/features/admin/alertas.ts`): hoy la unica fuente son las denuncias de la
+  cana, pero la seccion nace para que quepa lo siguiente (invitaciones agotadas,
+  una ruta sin publicar el dia del evento). La pantalla no sabe de
+  `match_reports`; anadir otra fuente es anadir un `tipo` y su conversion en
+  `alertas.ts`. El ticket se RECLAMA al abrirlo (`match_admin_take`, 0013) en
+  vez de con un boton: con dos admins en la misma bandeja, si no, los dos se
+  ponen con la misma denuncia. Y esconder el boton de Mi perfil a quien no es
+  admin es comodidad: quien protege es `match_admin_require()` en Postgres.
+- **Sancionar NO es borrar la cuenta, es suspenderla** (0015): borrarla haria
+  imposible comunicarselo (`profiles` cae en cascada desde `auth.users`, y sin
+  cuenta no puede entrar a leer nada) y la dejaria sin a quien reclamar. Quien
+  esta suspendida entra, lee su aviso, reclama y puede llevarse o borrar sus
+  datos; nada mas. La escalera es: retirar foto -> desactivar cana -> expulsar
+  de la ruta -> suspender la cuenta.
+- **Un veto no se puede esquivar, y se pone en un trigger** (0015): la puerta
+  es `route_members_veto`, un BEFORE INSERT sobre `route_members`, y no un
+  `if` dentro de `redeem_route_invite`. Asi vale para CUALQUIER via que meta a
+  alguien en una ruta sin tocar codigo del remoto, y no se puede olvidar.
+  Expulsar sin veto no servia de nada: el enlace es multiuso y circula por el
+  grupo, asi que la persona volvia a canjearlo.
+- **El veto de ruta guarda un HMAC del correo** (0015), no el correo ni un
+  sha256 pelado: el espacio de correos es pequeno y un hash a secas se
+  revierte por fuerza bruta. Sirve para que borrarse la cuenta y registrarse
+  otra vez con el mismo correo no salte el veto esa misma noche. La clave la
+  genera la propia migracion en `app_secrets` y no sale de la base. **Muere al
+  purgar la ruta** (`match_admin_purge_route`): dura lo que dura el motivo por
+  el que existe, que es lo que hace defendible conservarlo tras una peticion
+  de supresion (art. 17.3 RGPD y art. 32 LOPDGDD, bloqueo de datos).
+- **Toda sancion exige un motivo y genera un aviso** (`user_notices`, 0015):
+  el art. 17 del DSA obliga a decir QUE se ha decidido y POR QUE en cuanto se
+  restringe el servicio. El servidor lo exige (`REASON_REQUIRED`), no solo la
+  pantalla. Son DOS textos distintos: `p_reason` se le ensena a la persona,
+  `p_note` es interna y se queda en `match_moderation_log`. Y por eso TODOS
+  los vetos se pueden levantar: el art. 20 da seis meses para reclamar, y una
+  sancion que nadie puede deshacer deja ese derecho en nada.
+- **A un admin no se le veta** (`TARGET_IS_ADMIN`), o un resbalon en la
+  pantalla dejaria la ruta sin quien la lleva.
+- **Al anadirle algo a una funcion SQL, se parte de su cuerpo, no de la
+  memoria** (0019): la 0015 tenia que meterle dos comprobaciones a
+  `match_activate` y la reescribio entera de cabeza. Resultado: llamaba a
+  `match_set_tags`, que no existe (la buena es `match_save_bio_and_tags(uid,
+  bio, tags)`, que guarda frase y etiquetas juntas), con lo que activar la
+  cana por primera vez reventaba. No lo cogio ningun test porque todos
+  pasaban `p_tag_ids => null` y perfiles ya activados: la rama de la frase y
+  las etiquetas solo entra la PRIMERA vez (`first_activated_at is null`).
+- **`match_report` y `match_block` exigen estar dentro y sin sancion** (0016):
+  eran las dos unicas funciones de la cana que no comprobaban nada de quien
+  llamaba. Comprobado contra la API: una cuenta recien SUSPENDIDA seguia
+  denunciando y bloqueando a la gente de la ruta de la que se la echo, porque
+  los uuid los tenia de cuando estaba dentro (salen en las respuestas y en la
+  URL de una ficha). NO se exige que quien esta denunciado siga en la ruta:
+  denunciar lo que hizo antes de irse tiene que poder hacerse.
+- **El rastro de moderacion NO se borra con la cuenta** (0017): las claves
+  ajenas son `set null` y no `cascade`, y se guarda el nombre visible de
+  entonces (`target_name`, `reported_name`) con un trigger, para que el
+  historial se pueda leer. Antes, quien se borraba la cuenta se llevaba por
+  delante sus apuntes, las denuncias sobre el y su suspension: la sancion mas
+  dura se esquivaba borrandose la cuenta mientras que el veto de ruta, menor,
+  aguantaba. La suspension guarda ahora tambien el HMAC del correo y **se
+  borra al levantarla**: el dato vive lo que vive la sancion.
+- **Un veto se retira desde `app/admin/moderacion.tsx`**, no solo desde el
+  ticket (0018): la denuncia que lo puso puede estar cerrada hace meses o
+  haber desaparecido con la cuenta, y el art. 20 del DSA da seis meses para
+  reclamar. Esa pantalla lista tambien lo que se hizo y ya no esta vigente
+  (una foto retirada), que es lo que se pregunta al revisar a alguien.
+- **La cana pregunta por la pertenencia con `is_route_participant(ruta, persona)`**
+  (0012): la 0004 del remoto decide con `route_members` y expone
+  `is_route_member(ruta)`, que mira `auth.uid()`; la cana necesita preguntar
+  tambien por otras personas (pintar la grilla, votar, abrir un chat), asi que
+  conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
 

@@ -5,9 +5,22 @@ import { StatusBar } from 'expo-status-bar';
 import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
 import { leerInvitacionPendiente } from '../src/features/invites/pendiente';
+import { AvisosCanaProvider } from '../src/features/match/AvisosCana';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
 import { iniciarPwa } from '../src/lib/pwa';
 import { colors, fonts } from '../src/lib/theme';
+
+/**
+ * Con que pantalla "debajo" se abre una ruta a la que se entra directamente.
+ *
+ * Al recargar (F5) o abrir un enlace a /cana/persona/<id>, la app arranca en
+ * esa pantalla y la pila esta vacia: sin esto no hay flecha de volver y la
+ * persona se queda encerrada ahi. Con el ancla, expo-router mete las pestanas
+ * debajo y la flecha aparece.
+ */
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
 
 // Al cargar el modulo y no en un efecto: el service worker se registra en
 // cuanto la pagina termina de cargar, sin esperar a que monte ningun
@@ -72,6 +85,16 @@ function AuthGate() {
       <Stack.Screen name="editor/[routeId]/index" options={{ title: 'Editar ruta' }} />
       <Stack.Screen name="editor/[routeId]/bar" options={{ title: 'Bar de la ruta' }} />
       <Stack.Screen name="invitaciones" options={{ title: 'Invitaciones' }} />
+      <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
+      <Stack.Screen name="admin/alertas" options={{ title: 'Alertas de administración' }} />
+      <Stack.Screen name="admin/alerta/[reportId]" options={{ title: 'Alerta' }} />
+      <Stack.Screen name="admin/moderacion" options={{ title: 'Moderación' }} />
+      <Stack.Screen name="cana/presentacion" options={{ title: 'Preséntate' }} />
+      <Stack.Screen name="cana/persona/[userId]" options={{ title: 'Tírate una caña' }} />
+      <Stack.Screen name="cana/chat/[connectionId]" options={{ title: 'Chat' }} />
+      <Stack.Screen name="cana/bloqueados" options={{ title: 'Personas bloqueadas' }} />
+      <Stack.Screen name="cana/condiciones" options={{ title: 'Cómo funciona la caña' }} />
+      <Stack.Screen name="cana/mis-datos" options={{ title: 'Mis datos' }} />
     </Stack>
   );
 }
@@ -80,8 +103,12 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ActiveRouteProvider>
-        <StatusBar style="dark" />
-        <AuthGate />
+        {/* Encima del Stack: la burbujita de la cana tiene que verse desde
+            cualquier pestana, no solo desde la de la cana. */}
+        <AvisosCanaProvider>
+          <StatusBar style="dark" />
+          <AuthGate />
+        </AvisosCanaProvider>
       </ActiveRouteProvider>
     </AuthProvider>
   );

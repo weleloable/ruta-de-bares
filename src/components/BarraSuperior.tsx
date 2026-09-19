@@ -67,8 +67,12 @@ export function BarraSuperior({ titulo }: { titulo: string }) {
             accessibilityLabel="Mi perfil"
             hitSlop={6}
           >
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatar} contentFit="cover" />
+            {profile?.avatar_thumb_url ?? profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_thumb_url ?? profile.avatar_url ?? '' }}
+                style={styles.avatar}
+                contentFit="cover"
+              />
             ) : (
               <View style={[styles.avatar, styles.avatarVacio]}>
                 <Text style={styles.iniciales}>{initials(profile?.display_name ?? '', email)}</Text>
