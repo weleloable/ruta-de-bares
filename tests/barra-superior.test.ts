@@ -74,20 +74,29 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
     assert.match(sinComentarios(leer('src/components/BarraSuperior.tsx')), /paddingTop:\s*insets\.top/);
   });
 
-  describe('barra inferior: solo Sellos y Ruta', () => {
+  describe('barra inferior: solo Ruta y Caña', () => {
     const layout = sinComentarios(leer('app/(tabs)/_layout.tsx'));
+    // Se parte por "<Tabs.Screen" y no con un regex hasta el primer "/>": el
+    // icono de la pestana (<Ionicons ... />) cierra antes de llegar a `href`.
     const opciones = (nombre: string) => {
-      const m = new RegExp(`<Tabs\\.Screen\\s+name='${nombre}'([\\s\\S]*?)/>`).exec(layout.replace(/"/g, "'"));
-      assert.ok(m, `no hay Tabs.Screen ${nombre}`);
-      return m[1];
+      const bloque = layout
+        .replace(/"/g, "'")
+        .split('<Tabs.Screen')
+        .find((b) => b.trimStart().startsWith(`name='${nombre}'`));
+      assert.ok(bloque, `no hay Tabs.Screen ${nombre}`);
+      return bloque;
     };
 
     it('perfil no tiene boton abajo (href: null sin condicion)', () => {
       assert.match(opciones('perfil'), /\bhref:\s*null\s*,/);
     });
 
-    it('sellos y ruta si lo tienen', () => {
-      for (const nombre of ['index', 'ruta']) assert.doesNotMatch(opciones(nombre), /\bhref:/);
+    it('sellos tampoco tiene boton abajo: se entra por el boton de la cabecera de Ruta', () => {
+      assert.match(opciones('index'), /\bhref:\s*null\s*,/);
+    });
+
+    it('ruta y cana si lo tienen', () => {
+      for (const nombre of ['ruta', 'cana']) assert.doesNotMatch(opciones(nombre), /\bhref:/);
     });
 
     it('editor ya no es una pestana: no hay Tabs.Screen para el', () => {

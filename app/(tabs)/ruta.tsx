@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -17,7 +18,6 @@ import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { direccionVisible } from '../../src/features/routes/catalogo';
 import { huecosDesdeMedidas } from '../../src/lib/encuadre';
 import { ventana } from '../../src/lib/fechas';
-import { OSM_COPYRIGHT_URL } from '../../src/lib/osm';
 import { colors, radius, shadow, space, typography } from '../../src/lib/theme';
 
 /** Aire entre lo que tapa el mapa y el primer pin que se ve. */
@@ -41,6 +41,7 @@ export default function RutaScreen() {
   const mapaRef = useRef<RutaMapaHandle>(null);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [altoSuperior, setAltoSuperior] = useState(0);
   const [altoPie, setAltoPie] = useState(0);
 
@@ -91,7 +92,7 @@ export default function RutaScreen() {
       <SafeAreaView style={styles.pantalla} edges={['bottom', 'left', 'right']}>
         <EmptyState
           title="Sin ruta que dibujar"
-          body="Desde que las invitaciones son por ruta, aqui solo salen las rutas a las que te han invitado. Abre el enlace que te pasen, o entra en una desde Mi perfil con su codigo."
+          body="Aqui solo salen las rutas a las que te han invitado. Abre el enlace de invitacion que te pasen y su mapa aparecera aqui."
         />
       </SafeAreaView>
     );
@@ -112,23 +113,33 @@ export default function RutaScreen() {
         {/* Cabecera y aviso juntos: los dos tapan la parte de arriba del mapa. */}
         <View pointerEvents="box-none" onLayout={medirSuperior}>
           <View style={styles.cabecera}>
-            <Text style={typography.sectionTitle} numberOfLines={1}>
-              {activeRoute.name}
-            </Text>
-            <Text style={typography.muted}>
-              {bars.length} paradas, {sellados.size} selladas
-            </Text>
-            {Platform.OS === 'web' ? (
-              // En web el mapa es OpenStreetMap, que exige atribucion visible. Va
-              // aqui y no en una esquina del mapa porque cabecera y carrusel las tapan.
-              <Text
-                style={styles.atribucion}
-                accessibilityRole="link"
-                onPress={() => Linking.openURL(OSM_COPYRIGHT_URL)}
-              >
-                Mapa: © OpenStreetMap
+            <View style={styles.cabeceraTexto}>
+              <Text style={typography.sectionTitle} numberOfLines={1}>
+                {activeRoute.name}
               </Text>
-            ) : null}
+              <Text style={typography.muted}>
+                {bars.length} paradas, {sellados.size} selladas
+              </Text>
+              {Platform.OS === 'web' ? (
+                // En web el mapa es OpenStreetMap, que exige atribucion VISIBLE
+                // (su licencia y las condiciones de uso de las teselas). Va aqui y
+                // no en una esquina del mapa porque cabecera y carrusel las tapan.
+                // Es texto sin enlace a proposito: al lado del boton de Sellos, un
+                // toque torcido abria la web de OpenStreetMap y sacaba de la app.
+                // El credito se queda; lo que se quito es que se pueda pulsar.
+                <Text style={styles.atribucion}>Mapa: © OpenStreetMap</Text>
+              ) : null}
+            </View>
+
+            {/* Sellos ya no tiene boton en la barra de abajo: se entra por aqui, con su mismo icono. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ver mis sellos"
+              onPress={() => router.navigate('/')}
+              style={({ pressed }) => [styles.botonSellos, pressed && styles.botonSellosPulsado]}
+            >
+              <Ionicons name="ribbon" size={22} color={colors.stamp} />
+            </Pressable>
           </View>
 
           {error ? (
@@ -194,9 +205,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 253, 248, 0.94)',
     borderWidth: 1,
     borderColor: colors.border,
+    // Texto a la izquierda, boton de Sellos a la derecha.
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
     ...shadow,
   },
+  // minWidth 0: sin el, un nombre de ruta largo empuja el boton fuera de la
+  // cabecera en vez de recortarse con los puntos suspensivos.
+  cabeceraTexto: { flex: 1, minWidth: 0 },
   atribucion: { fontSize: 11, color: colors.inkFaint, marginTop: 2 },
+  // 44 px: el minimo tocable que piden iOS y Android para un boton solo de icono.
+  botonSellos: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+  },
+  botonSellosPulsado: { backgroundColor: colors.paperDeep },
   avisoError: { marginHorizontal: space.lg },
   pie: { gap: space.md, paddingBottom: space.md },
   botonEncuadre: {

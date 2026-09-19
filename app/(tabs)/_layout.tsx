@@ -29,6 +29,10 @@ export default function TabsLayout() {
         options={{
           title: 'Sellos',
           tabBarIcon: ({ color, size }) => <Ionicons name="ribbon" color={color} size={size} />,
+          // Sin boton abajo: se entra desde el boton de la cabecera de Ruta
+          // (app/(tabs)/ruta.tsx), que lleva el mismo icono. La pantalla sigue
+          // siendo una pestana: es a donde llevan '/' y el enlace de invitacion.
+          href: null,
         }}
       />
       <Tabs.Screen
