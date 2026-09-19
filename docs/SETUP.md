@@ -55,6 +55,21 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**. La lista de a quien se ha moderado, para poder retirar un veto.
 19. [`supabase/migrations/0019_activar_la_cana_arreglado.sql`](../supabase/migrations/0019_activar_la_cana_arreglado.sql)
    y **Run**. Arregla activar la cana por primera vez, que la 0015 rompio.
+20. [`supabase/migrations/0020_foto_perfil_con_revision.sql`](../supabase/migrations/0020_foto_perfil_con_revision.sql)
+   y **Run**. La foto de perfil nueva ya no se pone al momento: la aprueba un
+   admin desde **Alertas de administracion**. No toca las fotos que ya estan
+   puestas. Para que cuentas vacias no llenen la bandeja (el alta es abierta),
+   solo pueden enviar fotos quienes estan en alguna ruta, con un maximo de 5 al
+   dia; un admin no tiene ese limite. **Ojo con el orden**: si despliegas la app antes de pegarla, subir
+   una foto falla (la funcion no existe) y la bandeja de alertas avisa de que
+   no puede leer las fotos; pegala primero. Cambia tres cosas del bucket
+   `avatars` que conviene conocer: ya no se puede sobrescribir un fichero
+   enviado ni la foto que ya tienes puesta (se quita la policy de UPDATE y no
+   se admite reusar un nombre); ya no se puede **listar** el bucket con la
+   clave publicable, solo tu propia carpeta (antes cualquiera veia los nombres
+   de las fotos pendientes de todos); y los nombres de foto llevan un sufijo
+   aleatorio, porque la foto pendiente sigue siendo legible por URL hasta que
+   se aprueba (un bucket publico sirve por URL sin policy).
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
@@ -378,7 +393,7 @@ Los iconos salen del sello del login; el origen a 1024 px esta en
 
 ## Lista de verificacion
 
-Hasta que estos siete puntos pasen, el montaje no esta terminado.
+Hasta que estos ocho puntos pasen, el montaje no esta terminado.
 
 1. **Entras como admin.** Abres la app con el correo del punto 3 y ves la barra
    superior con tu avatar; desde **Mi perfil** llegas a **Editor de rutas**.
@@ -406,6 +421,17 @@ Hasta que estos siete puntos pasen, el montaje no esta terminado.
 7. **La geocerca muerde.** Intenta sellar un bar estando lejos: te dice a
    cuantos metros estas y el boton no deja. Prueba tambien fuera de la ventana
    horaria: te dice cuanto falta para que abra.
+8. **Una foto nueva pasa por revision.** Con una cuenta que NO sea admin (y que
+   ya este dentro de una ruta), cambia la foto en **Mi perfil**: tiene que decir "en revision" y seguir viendose la
+   anterior. Con tu cuenta de admin, en **Mi perfil > Alertas de administracion**
+   aparece "Foto de perfil nueva" (y la burbuja cuenta una mas): apruebala y la
+   foto aparece; en otra prueba, rechazala con un motivo y comprueba que la
+   persona lo lee en Mi perfil. Si esa cuenta pudiera cambiar su foto sin que
+   nadie la apruebe, la 0020 no esta aplicada. **Comprueba tambien que las
+   fotos de los demas siguen viendose** (en la grilla de la cana, por ejemplo):
+   la 0020 cierra el listado del bucket, y esto es lo que confirma que una foto
+   por URL publica sigue cargando sin policy de lectura. Si dejasen de verse,
+   hay que devolverle a `avatars_read` el `to public` y avisar.
 
 Los puntos 4, 6 y 7 son los que de verdad hay que probar: son las tres reglas
 que sostienen todo lo demas. El 4 es el que confirma que el cambio de modelo

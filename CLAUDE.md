@@ -57,7 +57,8 @@ app/                      pantallas (Expo Router)
   (auth)/                 login, registro (alta abierta)
   (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
   cana/                   presentacion, ficha, chat, bloqueados, mis datos, condiciones
-  admin/                  bandeja de alertas de administracion y su ficha
+  admin/                  bandeja de alertas de administracion, ficha de una denuncia
+                          (alerta/) y decidir una foto de perfil (foto/)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
@@ -91,13 +92,14 @@ supabase/
   migrations/0017_*.sql     el rastro de moderacion sobrevive al borrado de cuenta
   migrations/0018_*.sql     la lista de a quien se ha moderado (y que sigue puesto)
   migrations/0019_*.sql     arregla activar la cana, que la 0015 rompio
+  migrations/0020_*.sql     la foto de perfil nueva pasa por revision de un admin
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
 ```
 
 Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `route_invites`,
-`route_members`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`route_members`, `avatar_requests`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -333,3 +335,48 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   en nativo la ruta del picker es cache que el sistema borra, y en web es un
   `blob:` que muere al recargar. No hay forma de editar ni borrar un bar propio
   desde la app todavia.
+- **La foto de perfil nueva la aprueba un admin** (`0020`): subirla crea una
+  solicitud (`avatar_requests`, via `avatar_request_submit()`) y la foto
+  anterior se sigue viendo hasta que se aprueba en Alertas de administracion
+  (`avatar_admin_decide()`); rechazar exige un motivo que la persona lee en Mi
+  perfil. Un admin se auto-aprueba y las fotos ya puestas no se tocan. Nadie
+  escribe `avatar_url` a mano: `guard_profile_avatar()` lo rechaza salvo
+  backend, y se decide por `current_user` (lista blanca postgres / supabase_admin
+  / service_role), el contrario del razonamiento de `guard_profile_role`, porque
+  aqui la pregunta es "¿lo hace una funcion mia o la API directamente?". El
+  trigger NO es security definer a proposito: si lo fuera veria siempre al
+  duenio. Solo envian fotos quienes estan en alguna ruta y con un maximo de 5 al
+  dia (los admins, sin limite): el alta es abierta y cada solicitud es trabajo
+  manual. La MINIATURA es un fichero aparte que sube la persona y el servidor no
+  puede saber si es una version de la foto grande, asi que la pantalla del admin
+  ensena las dos; es la unica proteccion y por eso hay un test que la vigila.
+- **Una foto enviada a revision no se puede sobrescribir** (`0020`): sin esto se
+  aprueba una foto y luego se reemplaza el fichero por otro, porque el bucket
+  es publico y la 0001 dejaba actualizar y borrar los propios. Se quita
+  `avatars_update_own` y `avatars_write_own` rechaza un nombre "en uso": el de
+  cualquier solicitud Y el de la foto que la persona YA tiene puesta (las
+  anteriores a la 0020 no tienen solicitud; un critico las reemplazo borrando y
+  subiendo de nuevo antes de esta segunda condicion). Por eso la app sube con
+  `upsert: false` y con nombre nuevo cada vez (`nombresFicheroAvatar`).
+  `avatars_read` pasa de `to public` a solo la carpeta propia: la API de
+  Storage aplicaba esa policy al listar y cualquiera con la clave publicable veia
+  los nombres de las fotos pendientes. La URL publica sigue sirviendo el fichero
+  sin policy (bucket publico); hay que comprobarlo tras aplicar (SETUP.md, punto 8).
+  Limites conocidos: la foto pendiente es legible por URL si se conoce el nombre
+  (sufijo aleatorio, no adivinable), y los ficheros de solicitudes sustituidas o
+  rechazadas se quedan en el bucket.
+  **Riesgo abierto, sin poder probarlo aqui**: si Storage solo comprueba el
+  permiso de INSERT al FIRMAR una URL de subida (`createSignedUploadUrl` con
+  `upsert`) y no al subir con el token (~2 h), un miembro con mala intencion
+  podria sobrescribir una foto ya aprobada. Lo cierra de verdad un bucket privado
+  + copia al publico al aprobar, que pide una Edge Function (quitadas a
+  proposito). Probar en un Supabase real antes de decidir si merece la pieza.
+  Tres rondas de critico adversario no encontraron nada mas demostrable.
+- **La solicitud guarda rutas, no URL** (`0020`): la URL publica depende del
+  proyecto y desde SQL no se conoce, y aceptar una de un usuario dejaria apuntar
+  el perfil a otro sitio cuyo contenido cambia cuando quiere. Las URL las pasa
+  el admin (de confianza) al aprobar, y el servidor comprueba que tengan la
+  forma `<host>/storage/v1/object/public/avatars/<ruta>`, sin query ni
+  fragmento. El HOST no se puede comprobar desde SQL: ese tramo es confianza en
+  el admin. La bandeja saca las pendientes primero y las mas viejas antes, para
+  que muchas cuentas nuevas no entierren lo que lleva mas tiempo esperando.

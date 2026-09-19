@@ -1,12 +1,13 @@
 import { supabase } from '../../lib/supabase';
 import type {
+  AvatarAdminRequestRow,
   ModeracionRow,
   MatchAdminReportMessageRow,
   MatchAdminReportRow,
   MatchAdminTicketRow,
   MatchReportResolution,
 } from '../../types/database';
-import { alertaDeDenuncia, ordenarAlertas, type Alerta } from './alertas';
+import { alertaDeDenuncia, alertaDeSolicitudFoto, ordenarAlertas, type Alerta } from './alertas';
 
 /**
  * Llamadas de "Alertas de administracion". Todas son funciones match_admin_*
@@ -31,7 +32,11 @@ export class ErrorAdmin extends Error {
 /** El codigo que grito el SQL, para decidir que hacer sin mirar el texto. */
 function codigo(mensaje: string): string | null {
   const encontrado =
-    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION|TARGET_IS_ADMIN|INVALID_TARGET)\b/.exec(mensaje);
+    // Incluye REASON_* aunque describirError ya los traducia: este patron no los
+    // dejaba pasar y el mensaje llegaba a la pantalla como texto crudo.
+    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION|TARGET_IS_ADMIN|INVALID_TARGET|REASON_REQUIRED|REASON_TOO_LONG|REQUEST_NOT_FOUND|REQUEST_NOT_PENDING|INVALID_URL|FILE_MISSING)\b/.exec(
+      mensaje,
+    );
   return encontrado ? encontrado[1] : null;
 }
 
@@ -53,6 +58,14 @@ function describirError(mensaje: string): string {
       return 'Escribe el motivo: hay que decirle a la persona por qué.';
     case 'REASON_TOO_LONG':
       return 'El motivo no puede pasar de 500 caracteres.';
+    case 'REQUEST_NOT_FOUND':
+      return 'Esa foto ya no está pendiente: la persona ha subido otra o se ha borrado la cuenta.';
+    case 'REQUEST_NOT_PENDING':
+      return 'Otra persona ya ha decidido esta foto, o la persona ha subido otra.';
+    case 'INVALID_URL':
+      return 'La dirección de la foto no es válida.';
+    case 'FILE_MISSING':
+      return 'La persona ha borrado la foto después de enviarla: no se puede aprobar. Recházala y que suba otra.';
     default:
       return mensaje;
   }
@@ -72,9 +85,26 @@ export async function listarAlertas(incluirCerradas = false): Promise<Alerta[]> 
   return ordenarAlertas((data ?? []).map(alertaDeDenuncia));
 }
 
-/** Solo el numero, para la burbujita del boton de Mi perfil. */
+/**
+ * Solo el numero, para la burbujita del boton de Mi perfil: denuncias sin
+ * cerrar mas fotos de perfil pendientes.
+ */
 export async function contarAlertas(): Promise<number> {
-  const { data, error } = await supabase.rpc('match_admin_alert_count');
+  // Las dos fuentes por separado: si el proyecto aun no tiene la 0020 aplicada
+  // (o cae la consulta de fotos) la burbuja cuenta lo otro en vez de
+  // desaparecer. Un fallo en las denuncias, en cambio, sigue siendo un fallo:
+  // ya lo era antes y no se disimula.
+  const [denuncias, fotos] = await Promise.all([
+    supabase.rpc('match_admin_alert_count'),
+    contarSolicitudesFoto().catch(() => 0),
+  ]);
+  if (denuncias.error) fallo(denuncias.error);
+  return (denuncias.data ?? 0) + fotos;
+}
+
+/** Cuantas fotos de perfil esperan aprobacion (0020). */
+export async function contarSolicitudesFoto(): Promise<number> {
+  const { data, error } = await supabase.rpc('avatar_admin_count');
   if (error) fallo(error);
   return data ?? 0;
 }
@@ -232,3 +262,62 @@ export async function resolverAlerta(
 }
 
 export type { Alerta, ModeracionRow, MatchAdminReportRow, MatchAdminTicketRow };
+
+// ---------------------------------------------------------------------------
+// Fotos de perfil pendientes de aprobar (0020)
+// ---------------------------------------------------------------------------
+
+const AVATAR_BUCKET = 'avatars';
+
+/** URL publica de un fichero del bucket de fotos: la que se ve y la que se guarda al aprobar. */
+export function urlPublicaAvatar(ruta: string): string {
+  return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(ruta).data.publicUrl;
+}
+
+async function leerSolicitudesFoto(incluirCerradas: boolean): Promise<AvatarAdminRequestRow[]> {
+  const { data, error } = await supabase.rpc('avatar_admin_requests', { p_solo_pendientes: !incluirCerradas });
+  if (error) fallo(error);
+  return data ?? [];
+}
+
+/**
+ * Las solicitudes de foto, ya como alertas para mezclarlas con las denuncias en
+ * la bandeja. Sin `incluirCerradas` solo las pendientes.
+ */
+export async function listarSolicitudesFoto(incluirCerradas = false): Promise<Alerta[]> {
+  return (await leerSolicitudesFoto(incluirCerradas)).map(alertaDeSolicitudFoto);
+}
+
+/**
+ * Una solicitud para su pantalla. No hay funcion de "una sola": se pide la
+ * lista (con historico, para poder ensenar una ya decidida) y se busca. Si no
+ * sale es porque la persona subio otra encima o se borro la cuenta.
+ */
+export async function leerSolicitudFoto(requestId: string): Promise<AvatarAdminRequestRow> {
+  const fila = (await leerSolicitudesFoto(true)).find((f) => f.id === requestId);
+  if (!fila) throw new ErrorAdmin('REQUEST_NOT_FOUND');
+  return fila;
+}
+
+/**
+ * Aprueba o rechaza. Al aprobar se mandan las URL publicas de los dos ficheros:
+ * las construye esta app, la del admin (de confianza), porque el servidor no
+ * conoce la URL base del proyecto y no debe fiarse de una que traiga un
+ * usuario. Aun asi comprueba que terminen en la ruta de esa solicitud.
+ * Rechazar exige motivo: es lo que ve la persona.
+ */
+export async function decidirFoto(
+  solicitud: Pick<AvatarAdminRequestRow, 'id' | 'foto_path' | 'thumb_path'>,
+  decision: { aprobar: true } | { aprobar: false; motivo: string },
+): Promise<void> {
+  const { error } = await supabase.rpc('avatar_admin_decide', {
+    p_request_id: solicitud.id,
+    p_approve: decision.aprobar,
+    p_reason: decision.aprobar ? '' : decision.motivo,
+    p_foto_url: decision.aprobar ? urlPublicaAvatar(solicitud.foto_path) : null,
+    p_thumb_url: decision.aprobar ? urlPublicaAvatar(solicitud.thumb_path) : null,
+  });
+  if (error) fallo(error);
+}
+
+export type { AvatarAdminRequestRow };
