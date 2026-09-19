@@ -2,6 +2,12 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
+import {
+  nombresFicheroAvatar,
+  traducirErrorFoto,
+  type ResultadoEnvioFoto,
+  type SolicitudFotoPropia,
+} from './fotoRevision';
 import { prepararAvatar, type FotoLista } from './redimensionar';
 
 export { initials } from './initials';
@@ -64,32 +70,58 @@ async function subirFichero(ruta: string, foto: FotoLista): Promise<string> {
 
   const { error } = await supabase.storage
     .from(AVATAR_BUCKET)
-    .upload(ruta, bytes, { contentType: foto.mimeType, upsert: true });
+    // Sin upsert: un fichero ya enviado a revision no se puede sobrescribir (la
+    // policy de UPDATE se quito en la 0020) y el nombre es nuevo cada vez.
+    .upload(ruta, bytes, { contentType: foto.mimeType, upsert: false });
   if (error) throw new Error(error.message);
 
   return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(ruta).data.publicUrl;
 }
 
 /**
- * Sube la foto en dos tamanos (ficha y miniatura) y devuelve sus URLs.
+ * Sube la foto en dos tamanos (ficha y miniatura) y la ENVIA A REVISION.
  *
- * La ruta es `<uid>/avatar-<timestamp>.jpg`: la policy de storage exige que la
- * primera carpeta sea el uid, y el timestamp evita que la CDN sirva la foto
- * anterior cacheada. La miniatura es la que pinta la grilla de la cana, donde
- * se ven todas las fotos de la ruta a la vez (ver imagenes.ts).
+ * Ya no escribe profiles.avatar_url: el servidor lo impide (0020,
+ * guard_profile_avatar). La foto nueva solo se pone cuando un admin la aprueba,
+ * y hasta entonces se sigue viendo la anterior. Un admin se auto-aprueba: para
+ * eso el servidor necesita las URL, que solo usa si quien llama es admin.
+ *
+ * El nombre es `<uid>/avatar-<hora>-<azar>.jpg` (fotoRevision.ts): la policy de
+ * storage exige el uid como primera carpeta, y el azar hace que la foto
+ * pendiente, ya legible por URL en un bucket publico, no se pueda adivinar.
+ * La miniatura es la que pinta la grilla de la cana (ver imagenes.ts).
  */
-export async function uploadAvatar(userId: string, image: PickedImage): Promise<{ avatarUrl: string; thumbUrl: string }> {
+export async function uploadAvatar(userId: string, image: PickedImage): Promise<ResultadoEnvioFoto> {
   const { foto, miniatura } = await prepararAvatar(image.uri, image.width, image.height);
-  const sello = Date.now();
+  const nombres = nombresFicheroAvatar(userId, Date.now(), Math.random);
 
-  const avatarUrl = await subirFichero(`${userId}/avatar-${sello}.jpg`, foto);
-  const thumbUrl = await subirFichero(`${userId}/avatar-${sello}-mini.jpg`, miniatura);
+  const fotoUrl = await subirFichero(nombres.foto, foto);
+  const thumbUrl = await subirFichero(nombres.miniatura, miniatura);
 
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({ avatar_url: avatarUrl, avatar_thumb_url: thumbUrl })
-    .eq('id', userId);
-  if (profileError) throw new Error(profileError.message);
+  const { data, error } = await supabase.rpc('avatar_request_submit', {
+    p_foto_path: nombres.foto,
+    p_thumb_path: nombres.miniatura,
+    p_foto_url: fotoUrl,
+    p_thumb_url: thumbUrl,
+  });
+  if (error) throw new Error(traducirErrorFoto(error.message));
+  return data;
+}
 
-  return { avatarUrl, thumbUrl };
+/**
+ * La ultima solicitud de foto de esta persona (la RLS solo le deja ver las
+ * suyas), para que Mi perfil diga "en revision" o el motivo del rechazo. Las
+ * sustituidas no cuentan: la persona ya subio otra. null si nunca envio ninguna.
+ */
+export async function ultimaSolicitudFoto(userId: string): Promise<SolicitudFotoPropia | null> {
+  const { data, error } = await supabase
+    .from('avatar_requests')
+    .select('id, status, reason, created_at')
+    .eq('user_id', userId)
+    .neq('status', 'sustituida')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
 }

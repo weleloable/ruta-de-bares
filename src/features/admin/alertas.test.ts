@@ -1,16 +1,19 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { MatchAdminReportRow, MatchAdminTicketRow } from '../../types/database';
+import type { AvatarAdminRequestRow, MatchAdminReportRow, MatchAdminTicketRow } from '../../types/database';
 import {
   accionesTicket,
   alertaDeDenuncia,
+  alertaDeSolicitudFoto,
+  detalleAlerta,
   MOTIVO_MAX,
   motivoValido,
   cuentaPorFiltro,
   filtrarAlertas,
   hace,
   ordenarAlertas,
+  pieAlerta,
   resolucionSugerida,
 } from './alertas.ts';
 
@@ -206,5 +209,97 @@ describe('alertas: como se propone cerrar', () => {
   it('un motivo "otro" se cierra como "otra" salvo que se haya actuado', () => {
     assert.equal(resolucionSugerida(ticket({ reason: 'otro' }), []), 'otra');
     assert.equal(resolucionSugerida(ticket({ reason: 'otro' }), ['cana_desactivada']), 'cana_desactivada');
+  });
+});
+
+function solicitudFoto(parcial: Partial<AvatarAdminRequestRow> = {}): AvatarAdminRequestRow {
+  return {
+    id: 'f1',
+    created_at: '2026-09-18T20:00:00.000Z',
+    status: 'pendiente',
+    reason: null,
+    user_id: 'u-ana',
+    user_name: 'Ana',
+    foto_path: 'u-ana/avatar-x.jpg',
+    thumb_path: 'u-ana/avatar-x-mini.jpg',
+    current_avatar_url: null,
+    current_avatar_thumb_url: null,
+    decided_by: null,
+    decided_by_name: null,
+    decided_at: null,
+    ...parcial,
+  };
+}
+
+describe('alertas: una foto de perfil vista como alerta', () => {
+  it('una pendiente es una alerta pendiente, de tipo foto_perfil, sobre quien la sube', () => {
+    const alerta = alertaDeSolicitudFoto(solicitudFoto());
+    assert.equal(alerta.tipo, 'foto_perfil');
+    assert.equal(alerta.estado, 'pendiente');
+    assert.equal(alerta.sobre, 'Ana');
+    assert.equal(alerta.titulo, 'Foto de perfil nueva');
+    assert.equal(alerta.veredicto, undefined);
+    assert.equal(alerta.cuando, '2026-09-18T20:00:00.000Z');
+  });
+
+  it('aprobada o rechazada cuentan como resueltas y guardan el veredicto', () => {
+    const aprobada = alertaDeSolicitudFoto(solicitudFoto({ status: 'aprobada' }));
+    const rechazada = alertaDeSolicitudFoto(solicitudFoto({ status: 'rechazada', reason: 'Tapada' }));
+    assert.equal(aprobada.estado, 'resuelta');
+    assert.equal(aprobada.veredicto, 'aprobada');
+    assert.equal(rechazada.estado, 'resuelta');
+    assert.equal(rechazada.veredicto, 'rechazada');
+  });
+
+  it('entra en los mismos filtros y cuentas que las denuncias', () => {
+    const mezcla = [
+      alertaDeDenuncia(denuncia({ id: 'r1', status: 'pendiente' })),
+      alertaDeSolicitudFoto(solicitudFoto({ id: 'f1' })),
+      alertaDeSolicitudFoto(solicitudFoto({ id: 'f2', status: 'aprobada' })),
+    ];
+    assert.equal(filtrarAlertas(mezcla, 'abiertas').length, 2);
+    assert.equal(cuentaPorFiltro(mezcla).pendiente, 2);
+    assert.equal(cuentaPorFiltro(mezcla).resuelta, 1);
+  });
+
+  it('se ordena junto a las denuncias: lo abierto primero y lo mas viejo antes', () => {
+    const mezcla = [
+      alertaDeSolicitudFoto(solicitudFoto({ id: 'nueva', created_at: '2026-09-18T20:30:00.000Z' })),
+      alertaDeDenuncia(denuncia({ id: 'vieja', created_at: '2026-09-18T19:00:00.000Z' })),
+      alertaDeSolicitudFoto(solicitudFoto({ id: 'cerrada', status: 'rechazada', created_at: '2026-09-18T10:00:00.000Z' })),
+    ];
+    assert.deepEqual(ordenarAlertas(mezcla).map((a) => a.id), ['vieja', 'nueva', 'cerrada']);
+  });
+
+  it('el mismo id puede existir como denuncia y como foto sin confundirse: manda el tipo', () => {
+    const [d, f] = [alertaDeDenuncia(denuncia({ id: 'x' })), alertaDeSolicitudFoto(solicitudFoto({ id: 'x' }))];
+    assert.notEqual(d.tipo, f.tipo);
+  });
+});
+
+describe('alertas: como se pinta cada fila', () => {
+  it('una denuncia sigue diciendo sobre quien y de quien, y cuantos mensajes trae', () => {
+    const alerta = alertaDeDenuncia(denuncia());
+    assert.equal(detalleAlerta(alerta), 'Sobre Luis · de Ana');
+    assert.equal(pieAlerta(alerta), '2 mensajes copiados');
+  });
+
+  it('una denuncia con un solo mensaje, sin mensajes, o ya cerrada, como antes', () => {
+    assert.equal(pieAlerta(alertaDeDenuncia(denuncia({ mensajes: 1 }))), '1 mensaje copiado');
+    assert.equal(pieAlerta(alertaDeDenuncia(denuncia({ mensajes: 0 }))), 'Sin mensajes');
+    assert.equal(
+      pieAlerta(alertaDeDenuncia(denuncia({ mensajes: 0, status: 'resuelta', resolution: 'foto_retirada' }))),
+      'Sin mensajes · Foto retirada',
+    );
+  });
+
+  it('una foto dice solo de quien es, sin repetir el nombre', () => {
+    assert.equal(detalleAlerta(alertaDeSolicitudFoto(solicitudFoto())), 'Ana');
+  });
+
+  it('una foto pendiente dice que espera; decidida, como acabo', () => {
+    assert.equal(pieAlerta(alertaDeSolicitudFoto(solicitudFoto())), 'Espera que la apruebes');
+    assert.equal(pieAlerta(alertaDeSolicitudFoto(solicitudFoto({ status: 'aprobada' }))), 'Aprobada');
+    assert.equal(pieAlerta(alertaDeSolicitudFoto(solicitudFoto({ status: 'rechazada' }))), 'Rechazada');
   });
 });

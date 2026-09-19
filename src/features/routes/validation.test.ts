@@ -6,6 +6,9 @@ import {
   changedPositions,
   findRouteWarnings,
   moveBar,
+  opcionesDeRadio,
+  RADIO_INICIAL_M,
+  RADIOS_SELECCIONABLES_M,
   validateBarDraft,
   validateRouteDraft,
   type BarDraft,
@@ -208,5 +211,36 @@ describe('changedPositions', () => {
     ]);
     const cambiados = changedPositions(assignSortOrder([{ id: 'b' }, { id: 'c' }]), actuales);
     assert.equal(cambiados.length, 2);
+  });
+});
+
+describe('radios del editor', () => {
+  it('ofrece de 30 a 80 m de 10 en 10', () => {
+    assert.deepEqual([...RADIOS_SELECCIONABLES_M], [30, 40, 50, 60, 70, 80]);
+  });
+
+  it('todos los radios ofrecidos, y el inicial, los acepta el servidor', () => {
+    for (const radiusM of [...RADIOS_SELECCIONABLES_M, RADIO_INICIAL_M]) {
+      assert.deepEqual(validateBarDraft(draft({ radiusM })), [], `${radiusM}`);
+    }
+  });
+
+  it('el radio inicial es uno de los que se ofrecen', () => {
+    assert.ok(RADIOS_SELECCIONABLES_M.includes(RADIO_INICIAL_M));
+  });
+
+  it('opcionesDeRadio devuelve la lista tal cual si el actual esta en ella', () => {
+    assert.deepEqual(opcionesDeRadio(50), [30, 40, 50, 60, 70, 80]);
+  });
+
+  it('opcionesDeRadio anade un radio antiguo fuera de la lista, en su sitio', () => {
+    assert.deepEqual(opcionesDeRadio(120), [30, 40, 50, 60, 70, 80, 120]);
+    assert.deepEqual(opcionesDeRadio(25), [25, 30, 40, 50, 60, 70, 80]);
+  });
+
+  it('opcionesDeRadio no muta la constante y no se inventa un NaN', () => {
+    opcionesDeRadio(120);
+    assert.equal(RADIOS_SELECCIONABLES_M.length, 6);
+    assert.deepEqual(opcionesDeRadio(Number.NaN), [30, 40, 50, 60, 70, 80]);
   });
 });

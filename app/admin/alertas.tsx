@@ -4,14 +4,16 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
-import { listarAlertas } from '../../src/features/admin/api';
+import { listarAlertas, listarSolicitudesFoto } from '../../src/features/admin/api';
 import {
   cuentaPorFiltro,
+  detalleAlerta,
   ESTADOS,
-  etiquetaResolucion,
   FILTROS,
   filtrarAlertas,
   hace,
+  ordenarAlertas,
+  pieAlerta,
   type Alerta,
   type FiltroAlerta,
 } from '../../src/features/admin/alertas';
@@ -20,9 +22,10 @@ import { colors, radius, space, typography } from '../../src/lib/theme';
 /**
  * Bandeja de "Alertas de administracion", solo administradores.
  *
- * Hoy solo hay un tipo de alerta (las denuncias de la cana), pero la pantalla
- * no lo sabe: pinta `Alerta`, y anadir otra fuente es anadir un tipo en
- * src/features/admin/alertas.ts sin tocar esto.
+ * Hay dos tipos de alerta: las denuncias de la cana y las fotos de perfil
+ * pendientes de aprobar (0020). La pantalla pinta `Alerta`; lo unico que sabe
+ * de cada tipo es a que ticket llevar (`abrir`). Anadir otra fuente es anadir un
+ * tipo en src/features/admin/alertas.ts.
  *
  * Quien protege esto de verdad es `match_admin_require()` en Postgres: aunque
  * alguien llegue a /admin/alertas escribiendo la URL, la consulta le falla.
@@ -36,17 +39,40 @@ export default function AlertasAdmin() {
 
   const cargar = useCallback(async () => {
     setCargando(true);
-    try {
-      // Siempre con historico: la bandeja es corta y asi cambiar de chip no
-      // vuelve a pedir nada.
-      setAlertas(await listarAlertas(true));
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudieron leer las alertas.');
-    } finally {
-      setCargando(false);
+    // Siempre con historico: la bandeja es corta y asi cambiar de chip no
+    // vuelve a pedir nada. Las dos fuentes por separado: si una falla (p. ej.
+    // el proyecto aun no tiene la 0020) la otra se ve igual, y el aviso dice
+    // cual ha fallado.
+    const [denuncias, fotos] = await Promise.allSettled([listarAlertas(true), listarSolicitudesFoto(true)]);
+    const mensaje = (r: PromiseRejectedResult) => (r.reason instanceof Error ? r.reason.message : 'error desconocido');
+
+    setAlertas(
+      ordenarAlertas([
+        ...(denuncias.status === 'fulfilled' ? denuncias.value : []),
+        ...(fotos.status === 'fulfilled' ? fotos.value : []),
+      ]),
+    );
+
+    const avisos: string[] = [];
+    if (denuncias.status === 'rejected') avisos.push(`No se pudieron leer las denuncias: ${mensaje(denuncias)}`);
+    if (fotos.status === 'rejected') {
+      avisos.push(`No se pudieron leer las fotos de perfil (¿está aplicada la migración 0020?): ${mensaje(fotos)}`);
     }
+    setError(avisos.length > 0 ? avisos.join(' ') : null);
+    setCargando(false);
   }, []);
+
+  // Cada tipo tiene su ticket: una denuncia lleva a sus mensajes y sanciones, una foto a aprobar o rechazar.
+  const abrir = useCallback(
+    (alerta: Alerta) => {
+      if (alerta.tipo === 'foto_perfil') {
+        router.push({ pathname: '/admin/foto/[requestId]', params: { requestId: alerta.id } });
+      } else {
+        router.push({ pathname: '/admin/alerta/[reportId]', params: { reportId: alerta.id } });
+      }
+    },
+    [router],
+  );
 
   // Al volver de un ticket, el estado ha podido cambiar.
   useFocusEffect(
@@ -94,30 +120,25 @@ export default function AlertasAdmin() {
             body={
               filtro === 'resuelta'
                 ? 'Aquí quedará lo que vayáis resolviendo, con quién lo hizo y cuándo.'
-                : 'Cuando alguien denuncie a otra persona en Tírate una caña, el aviso aparecerá aquí.'
+                : 'Cuando alguien denuncie a otra persona en Tírate una caña, o suba una foto de perfil nueva, el aviso aparecerá aquí.'
             }
           />
         ) : (
-          visibles.map((alerta) => (
-            <FilaAlerta
-              key={alerta.id}
-              alerta={alerta}
-              onAbrir={(id) => router.push({ pathname: '/admin/alerta/[reportId]', params: { reportId: id } })}
-            />
-          ))
+          // La clave lleva el tipo: una denuncia y una foto podrian, en teoria, compartir id.
+          visibles.map((alerta) => <FilaAlerta key={`${alerta.tipo}:${alerta.id}`} alerta={alerta} onAbrir={abrir} />)
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function FilaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir(alertaId: string): void }) {
+function FilaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir(alerta: Alerta): void }) {
   const estado = ESTADOS[alerta.estado];
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${alerta.titulo}, sobre ${alerta.sobre}, ${estado.etiqueta}`}
-      onPress={() => onAbrir(alerta.id)}
+      onPress={() => onAbrir(alerta)}
       style={({ pressed }) => [styles.ticket, pressed && styles.ticketPulsado]}
     >
       <View style={styles.ticketCabecera}>
@@ -129,16 +150,9 @@ function FilaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir(alertaId: str
       </View>
 
       <Text style={styles.titulo}>{alerta.titulo}</Text>
-      <Text style={typography.muted}>
-        Sobre {alerta.sobre} · de {alerta.de}
-      </Text>
+      <Text style={typography.muted}>{detalleAlerta(alerta)}</Text>
 
-      <Text style={styles.pie}>
-        {alerta.mensajes > 0
-          ? `${alerta.mensajes} ${alerta.mensajes === 1 ? 'mensaje copiado' : 'mensajes copiados'}`
-          : 'Sin mensajes'}
-        {alerta.resolucion ? ` · ${etiquetaResolucion(alerta.resolucion)}` : ''}
-      </Text>
+      <Text style={styles.pie}>{pieAlerta(alerta)}</Text>
     </Pressable>
   );
 }

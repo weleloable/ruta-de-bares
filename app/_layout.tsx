@@ -6,6 +6,7 @@ import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
 import { leerInvitacionPendiente } from '../src/features/invites/pendiente';
 import { AvisosCanaProvider } from '../src/features/match/AvisosCana';
+import { NotificacionesProvider } from '../src/features/notificaciones/Notificaciones';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
 import { iniciarPwa } from '../src/lib/pwa';
 import { colors, fonts } from '../src/lib/theme';
@@ -84,10 +85,12 @@ function AuthGate() {
       <Stack.Screen name="invitacion" options={{ title: 'Entrar en una ruta' }} />
       <Stack.Screen name="editor/[routeId]/index" options={{ title: 'Editar ruta' }} />
       <Stack.Screen name="editor/[routeId]/bar" options={{ title: 'Bar de la ruta' }} />
+      <Stack.Screen name="editor/[routeId]/bar-nuevo" options={{ title: 'Bar nuevo' }} />
       <Stack.Screen name="invitaciones" options={{ title: 'Invitaciones' }} />
       <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
       <Stack.Screen name="admin/alertas" options={{ title: 'Alertas de administración' }} />
       <Stack.Screen name="admin/alerta/[reportId]" options={{ title: 'Alerta' }} />
+      <Stack.Screen name="admin/foto/[requestId]" options={{ title: 'Foto de perfil' }} />
       <Stack.Screen name="admin/moderacion" options={{ title: 'Moderación' }} />
       <Stack.Screen name="cana/presentacion" options={{ title: 'Preséntate' }} />
       <Stack.Screen name="cana/persona/[userId]" options={{ title: 'Tírate una caña' }} />
@@ -106,8 +109,12 @@ export default function RootLayout() {
         {/* Encima del Stack: la burbujita de la cana tiene que verse desde
             cualquier pestana, no solo desde la de la cana. */}
         <AvisosCanaProvider>
-          <StatusBar style="dark" />
-          <AuthGate />
+          {/* Idem para el punto rojo de Mi perfil: junta la cana, los avisos de
+              moderacion y las alertas de admin (ver Notificaciones.tsx). */}
+          <NotificacionesProvider>
+            <StatusBar style="dark" />
+            <AuthGate />
+          </NotificacionesProvider>
         </AvisosCanaProvider>
       </ActiveRouteProvider>
     </AuthProvider>

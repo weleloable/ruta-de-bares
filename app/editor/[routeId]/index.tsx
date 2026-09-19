@@ -12,6 +12,8 @@ import {
   persistOrder,
   updateRoute,
 } from '../../../src/features/routes/api';
+import { BarLogo } from '../../../src/features/routes/BarLogo';
+import { direccionVisible } from '../../../src/features/routes/catalogo';
 import {
   assignSortOrder,
   findRouteWarnings,
@@ -181,7 +183,7 @@ export default function EditorDeRuta() {
         {bares.length === 0 ? (
           <EmptyState
             title="Ruta sin paradas"
-            body="Anade el primer bar: nombre, posicion en el mapa y a que hora hay que estar alli."
+            body="Anade el primer bar: eliges uno de la lista y le pones el horario."
           />
         ) : (
           bares.map((bar, indice) => (
@@ -190,14 +192,15 @@ export default function EditorDeRuta() {
                 <View style={styles.numero}>
                   <Text style={styles.numeroTexto}>{indice + 1}</Text>
                 </View>
+                <BarLogo nombre={bar.name} tamano={40} />
                 <View style={styles.tituloTexto}>
                   <Text style={typography.cardTitle}>{bar.name}</Text>
                   <Text style={typography.muted}>
                     {ventana(new Date(bar.opens_at), new Date(bar.closes_at))} · {bar.radius_m} m
                   </Text>
-                  {bar.address.length > 0 ? (
+                  {direccionVisible(bar.address).length > 0 ? (
                     <Text style={typography.muted} numberOfLines={1}>
-                      {bar.address}
+                      {direccionVisible(bar.address)}
                     </Text>
                   ) : null}
                 </View>

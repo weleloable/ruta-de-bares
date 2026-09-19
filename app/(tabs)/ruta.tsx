@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -14,9 +15,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { RutaMapa, type RutaMapaHandle } from '../../src/components/RutaMapa';
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
+import { direccionVisible } from '../../src/features/routes/catalogo';
 import { huecosDesdeMedidas } from '../../src/lib/encuadre';
 import { ventana } from '../../src/lib/fechas';
-import { OSM_COPYRIGHT_URL } from '../../src/lib/osm';
 import { colors, radius, shadow, space, typography } from '../../src/lib/theme';
 
 /** Aire entre lo que tapa el mapa y el primer pin que se ve. */
@@ -40,6 +41,7 @@ export default function RutaScreen() {
   const mapaRef = useRef<RutaMapaHandle>(null);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [altoSuperior, setAltoSuperior] = useState(0);
   const [altoPie, setAltoPie] = useState(0);
 
@@ -90,7 +92,7 @@ export default function RutaScreen() {
       <SafeAreaView style={styles.pantalla} edges={['bottom', 'left', 'right']}>
         <EmptyState
           title="Sin ruta que dibujar"
-          body="Desde que las invitaciones son por ruta, aqui solo salen las rutas a las que te han invitado. Abre el enlace que te pasen, o entra en una desde Mi perfil con su codigo."
+          body="Aqui solo salen las rutas a las que te han invitado. Abre el enlace de invitacion que te pasen y su mapa aparecera aqui."
         />
       </SafeAreaView>
     );
@@ -111,23 +113,37 @@ export default function RutaScreen() {
         {/* Cabecera y aviso juntos: los dos tapan la parte de arriba del mapa. */}
         <View pointerEvents="box-none" onLayout={medirSuperior}>
           <View style={styles.cabecera}>
-            <Text style={typography.sectionTitle} numberOfLines={1}>
-              {activeRoute.name}
-            </Text>
-            <Text style={typography.muted}>
-              {bars.length} paradas, {sellados.size} selladas
-            </Text>
-            {Platform.OS === 'web' ? (
-              // En web el mapa es OpenStreetMap, que exige atribucion visible. Va
-              // aqui y no en una esquina del mapa porque cabecera y carrusel las tapan.
-              <Text
-                style={styles.atribucion}
-                accessibilityRole="link"
-                onPress={() => Linking.openURL(OSM_COPYRIGHT_URL)}
-              >
-                Mapa: © OpenStreetMap
+            <View style={styles.cabeceraTexto}>
+              <Text style={typography.sectionTitle} numberOfLines={1}>
+                {activeRoute.name}
               </Text>
-            ) : null}
+              <Text style={typography.muted}>
+                {bars.length} paradas, {sellados.size} selladas
+              </Text>
+              {Platform.OS === 'web' ? (
+                // En web el mapa es OpenStreetMap, que exige atribucion VISIBLE
+                // (su licencia y las condiciones de uso de las teselas). Va aqui y
+                // no en una esquina del mapa porque cabecera y carrusel las tapan.
+                // Es texto sin enlace a proposito: al lado del boton de Sellos, un
+                // toque torcido abria la web de OpenStreetMap y sacaba de la app.
+                // El credito se queda; lo que se quito es que se pueda pulsar.
+                <Text style={styles.atribucion}>Mapa: © OpenStreetMap</Text>
+              ) : null}
+            </View>
+
+            {/*
+              Sellos ya no tiene boton en la barra de abajo: se entra por aqui,
+              con su mismo icono. Lleva la palabra delante porque un simbolo solo
+              no dice a donde lleva; el nombre accesible es el propio texto.
+            */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.navigate('/')}
+              style={({ pressed }) => [styles.botonSellos, pressed && styles.botonSellosPulsado]}
+            >
+              <Text style={styles.botonSellosTexto}>Sellos</Text>
+              <Ionicons name="ribbon" size={20} color={colors.stamp} />
+            </Pressable>
           </View>
 
           {error ? (
@@ -168,9 +184,9 @@ export default function RutaScreen() {
                   <Text style={typography.muted} numberOfLines={1}>
                     {ventana(new Date(bar.opens_at), new Date(bar.closes_at))}
                   </Text>
-                  {bar.address.length > 0 ? (
+                  {direccionVisible(bar.address).length > 0 ? (
                     <Text style={typography.muted} numberOfLines={1}>
-                      {bar.address}
+                      {direccionVisible(bar.address)}
                     </Text>
                   ) : null}
                 </Pressable>
@@ -193,9 +209,34 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 253, 248, 0.94)',
     borderWidth: 1,
     borderColor: colors.border,
+    // Texto a la izquierda, boton de Sellos a la derecha.
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
     ...shadow,
   },
+  // minWidth 0: sin el, un nombre de ruta largo empuja el boton fuera de la
+  // cabecera en vez de recortarse con los puntos suspensivos.
+  cabeceraTexto: { flex: 1, minWidth: 0 },
   atribucion: { fontSize: 11, color: colors.inkFaint, marginTop: 2 },
+  // Rectangulo de esquinas redondeadas (radius.md, no pill). 44 px de alto: el
+  // minimo tocable que piden iOS y Android. flexShrink 0: si el nombre de la
+  // ruta es largo se recorta el nombre, nunca este boton.
+  botonSellos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    height: 44,
+    paddingHorizontal: space.md,
+    flexShrink: 0,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+  },
+  botonSellosTexto: { fontSize: 14, fontWeight: '700', color: colors.ink },
+  botonSellosPulsado: { backgroundColor: colors.paperDeep },
   avisoError: { marginHorizontal: space.lg },
   pie: { gap: space.md, paddingBottom: space.md },
   botonEncuadre: {

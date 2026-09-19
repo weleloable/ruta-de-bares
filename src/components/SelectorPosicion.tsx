@@ -20,7 +20,9 @@ export function SelectorPosicion({ punto, radioM, centroInicial, onCambiar }: Se
   return (
     <>
       <Text style={typography.muted}>
-        Toca el mapa o arrastra el pin. El circulo es la zona desde la que se puede sellar.
+        {radioM === null
+          ? 'Toca el mapa o arrastra el pin.'
+          : 'Toca el mapa o arrastra el pin. El circulo es la zona desde la que se puede sellar.'}
       </Text>
       <View style={styles.mapaCaja}>
         <MapView

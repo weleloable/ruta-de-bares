@@ -1,4 +1,5 @@
 import type {
+  AvatarAdminRequestRow,
   MatchAdminReportRow,
   MatchAdminTicketRow,
   MatchReportReason,
@@ -20,7 +21,11 @@ import type {
  * `match_admin_require()` en Postgres (0009). Aqui solo se decide que pintar.
  */
 
-export type TipoAlerta = 'denuncia_cana';
+/**
+ * Las fuentes de alerta que hay hoy: las denuncias de Tirate una cana (0009) y
+ * las fotos de perfil pendientes de aprobar (0020).
+ */
+export type TipoAlerta = 'denuncia_cana' | 'foto_perfil';
 
 /** Mismos estados que `match_reports.status`: el ticket ES la denuncia. */
 export type EstadoAlerta = MatchReportStatus;
@@ -38,6 +43,8 @@ export type Alerta = {
   cuando: string;
   mensajes: number;
   resolucion: MatchReportResolution | null;
+  /** Solo las fotos de perfil, una vez decididas. */
+  veredicto?: 'aprobada' | 'rechazada';
 };
 
 /**
@@ -102,6 +109,48 @@ export function alertaDeDenuncia(fila: MatchAdminReportRow): Alerta {
     mensajes: fila.mensajes,
     resolucion: fila.resolution,
   };
+}
+
+/**
+ * Una foto de perfil pendiente (o ya decidida), vista como alerta. Estado: solo
+ * hay pendiente o resuelta; una foto no tiene "en revision" porque se decide de
+ * un toque, sin reclamarla antes como una denuncia.
+ */
+export function alertaDeSolicitudFoto(fila: AvatarAdminRequestRow): Alerta {
+  const veredicto = fila.status === 'pendiente' ? undefined : fila.status;
+  return {
+    id: fila.id,
+    tipo: 'foto_perfil',
+    estado: veredicto ? 'resuelta' : 'pendiente',
+    titulo: 'Foto de perfil nueva',
+    sobre: fila.user_name,
+    de: fila.user_name,
+    cuando: fila.created_at,
+    mensajes: 0,
+    resolucion: null,
+    ...(veredicto ? { veredicto } : {}),
+  };
+}
+
+/** La segunda linea de la fila: a quien afecta y quien avisa. */
+export function detalleAlerta(alerta: Alerta): string {
+  // Una foto la sube la propia persona: "Sobre Ana · de Ana" seria ruido.
+  if (alerta.tipo === 'foto_perfil') return alerta.sobre;
+  return `Sobre ${alerta.sobre} · de ${alerta.de}`;
+}
+
+/** La linea de abajo: lo que espera, o como se cerro. */
+export function pieAlerta(alerta: Alerta): string {
+  if (alerta.tipo === 'foto_perfil') {
+    if (alerta.veredicto === 'aprobada') return 'Aprobada';
+    if (alerta.veredicto === 'rechazada') return 'Rechazada';
+    return 'Espera que la apruebes';
+  }
+  const mensajes =
+    alerta.mensajes > 0
+      ? `${alerta.mensajes} ${alerta.mensajes === 1 ? 'mensaje copiado' : 'mensajes copiados'}`
+      : 'Sin mensajes';
+  return alerta.resolucion ? `${mensajes} · ${etiquetaResolucion(alerta.resolucion)}` : mensajes;
 }
 
 export type FiltroAlerta = 'abiertas' | 'pendiente' | 'en_revision' | 'resuelta';

@@ -285,6 +285,42 @@ export type MatchAdminReportMessageRow = {
 
 type Insert<T, Opcionales extends keyof T> = Omit<T, Opcionales> & Partial<Pick<T, Opcionales>>;
 
+/** 0020: la foto de perfil nueva pasa por revision de un admin. */
+export type AvatarRequestStatus = 'pendiente' | 'aprobada' | 'rechazada' | 'sustituida';
+
+/** Una solicitud de foto, tal como la ve su autora (la RLS solo deja las propias). */
+export type AvatarRequestRow = {
+  id: string;
+  user_id: string;
+  /** Ruta dentro del bucket `avatars`: <uid>/<nombre>. La URL la construye la app. */
+  foto_path: string;
+  thumb_path: string;
+  status: AvatarRequestStatus;
+  /** El motivo del rechazo; null si no esta rechazada. */
+  reason: string | null;
+  created_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+};
+
+/** Lo que ve el admin: avatar_admin_requests (0020). Nunca trae las sustituidas. */
+export type AvatarAdminRequestRow = {
+  id: string;
+  created_at: string;
+  status: Exclude<AvatarRequestStatus, 'sustituida'>;
+  reason: string | null;
+  user_id: string;
+  user_name: string;
+  foto_path: string;
+  thumb_path: string;
+  /** La foto que tiene puesta ahora, para compararla con la nueva. */
+  current_avatar_url: string | null;
+  current_avatar_thumb_url: string | null;
+  decided_by: string | null;
+  decided_by_name: string | null;
+  decided_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -330,6 +366,14 @@ export type Database = {
       };
       match_tags: {
         Row: MatchCatalogRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      // 0020. Sin Insert ni Update a proposito: solo se escribe por
+      // avatar_request_submit() y avatar_admin_decide().
+      avatar_requests: {
+        Row: AvatarRequestRow;
         Insert: never;
         Update: never;
         Relationships: [];
@@ -472,6 +516,30 @@ export type Database = {
       match_admin_alert_count: {
         Args: Record<string, never>;
         Returns: number;
+      };
+      // 0020: la foto de perfil nueva pasa por revision. Las URL solo las usa el
+      // servidor si quien llama es admin; para el resto se ignoran.
+      avatar_request_submit: {
+        Args: { p_foto_path: string; p_thumb_path: string; p_foto_url?: string | null; p_thumb_url?: string | null };
+        Returns: 'pendiente' | 'aprobada';
+      };
+      avatar_admin_requests: {
+        Args: { p_solo_pendientes?: boolean };
+        Returns: AvatarAdminRequestRow[];
+      };
+      avatar_admin_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      avatar_admin_decide: {
+        Args: {
+          p_request_id: string;
+          p_approve: boolean;
+          p_reason?: string;
+          p_foto_url?: string | null;
+          p_thumb_url?: string | null;
+        };
+        Returns: undefined;
       };
       match_admin_take: {
         Args: { p_report_id: string };

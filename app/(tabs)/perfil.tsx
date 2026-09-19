@@ -8,8 +8,19 @@ import { Banner, Button, Card, Field } from '../../src/components/ui';
 import { contarAlertas } from '../../src/features/admin/api';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { contarAvisos } from '../../src/features/notices/api';
-import { initials, pickAvatar, updateDisplayName, uploadAvatar } from '../../src/features/profile/api';
+import {
+  initials,
+  pickAvatar,
+  ultimaSolicitudFoto,
+  updateDisplayName,
+  uploadAvatar,
+} from '../../src/features/profile/api';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
+import {
+  avisoDeSolicitud,
+  mensajeTrasEnviar,
+  type SolicitudFotoPropia,
+} from '../../src/features/profile/fotoRevision';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
@@ -25,6 +36,30 @@ export default function PerfilScreen() {
   const [saliendo, setSaliendo] = useState(false);
   const [alertas, setAlertas] = useState(0);
   const [avisos, setAvisos] = useState(0);
+  // La ultima foto enviada a revision (0020): "en revision" o el motivo del rechazo.
+  const [solicitudFoto, setSolicitudFoto] = useState<SolicitudFotoPropia | null>(null);
+
+  /*
+    Se relee al volver a esta pantalla: la decision de un admin llega mientras
+    la persona esta en otra parte. Si falla (p. ej. la migracion 0020 aun no se
+    ha aplicado en ese proyecto) no se dice nada: solo se pierde el aviso, no la
+    pantalla.
+  */
+  const idPerfil = profile?.id;
+  useFocusEffect(
+    useCallback(() => {
+      if (!idPerfil) return;
+      let vivo = true;
+      void ultimaSolicitudFoto(idPerfil)
+        .then((solicitud) => {
+          if (vivo) setSolicitudFoto(solicitud);
+        })
+        .catch(() => {});
+      return () => {
+        vivo = false;
+      };
+    }, [idPerfil]),
+  );
 
   /*
     Los avisos de moderacion son de todo el mundo, no solo de admins: si alguien
@@ -80,6 +115,7 @@ export default function PerfilScreen() {
   }, [profile?.display_name]);
 
   const email = session?.user.email ?? '';
+  const aviso = avisoDeSolicitud(solicitudFoto);
   const cambiado = profile !== null && nombre.trim() !== profile.display_name;
 
   async function onGuardarNombre() {
@@ -106,9 +142,13 @@ export default function PerfilScreen() {
       const elegida = await pickAvatar();
       if (!elegida) return;
       setSubiendo(true);
-      await uploadAvatar(profile.id, elegida);
+      const resultado = await uploadAvatar(profile.id, elegida);
       await refreshProfile();
-      setExito('Foto de perfil actualizada.');
+      setExito(mensajeTrasEnviar(resultado));
+      // Solo aviso: si releer falla, la foto ya se envio y el mensaje de arriba es cierto.
+      void ultimaSolicitudFoto(profile.id)
+        .then(setSolicitudFoto)
+        .catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cambiar la foto.');
     } finally {
@@ -154,6 +194,8 @@ export default function PerfilScreen() {
             )}
             <Text style={styles.avatarAccion}>{subiendo ? 'Subiendo...' : 'Cambiar foto'}</Text>
           </Pressable>
+
+          {aviso ? <Banner tone={aviso.tono}>{aviso.texto}</Banner> : null}
 
           <Text style={typography.screenTitle}>{profile?.display_name || 'Sin nombre'}</Text>
           <Text style={typography.muted}>{email}</Text>
@@ -211,19 +253,12 @@ export default function PerfilScreen() {
         </Card>
 
         {/*
-          Via de canje a mano: si el enlace https no se puede abrir (el mensaje
-          llego cortado, se copio solo el codigo...), se pega aqui el enlace o el
-          codigo. Para todos, no solo admins.
+          Aqui hubo una tarjeta "Rutas > Entrar en una ruta" (canje pegando el
+          enlace o el codigo a mano). Se quito a proposito: la gente entra por
+          el enlace de invitacion y no debe poder pulsar aqui. La pantalla
+          /invitacion sigue existiendo, es el destino de ese enlace. Coste
+          asumido: si el enlace llega cortado ya no hay donde pegar el codigo.
         */}
-        <Card>
-          <Text style={styles.tituloTarjeta}>Rutas</Text>
-          <Button
-            title="Entrar en una ruta"
-            variant="secondary"
-            textStyle={styles.textoAccionBarra}
-            onPress={() => router.push('/invitacion')}
-          />
-        </Card>
 
         {isAdmin ? (
           <Card>
