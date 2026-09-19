@@ -5,6 +5,7 @@ import { Banner, Button } from '../../components/ui';
 import { diaLargo, ventana } from '../../lib/fechas';
 import { colors, radius, space, typography } from '../../lib/theme';
 import { useNow } from '../../lib/useNow';
+import { direccionVisible } from '../routes/catalogo';
 import type { RouteBarRow, StampRow } from '../../types/database';
 import { LocationDeniedError, claimStamp, getCurrentPosition } from './api';
 import { describeVerdict, evaluateStamp, type LatLng } from './rules';
@@ -106,7 +107,7 @@ export function StampSheet({
         <ScrollView contentContainerStyle={styles.contenido}>
           <Text style={typography.overline}>Parada {index + 1}</Text>
           <Text style={typography.screenTitle}>{bar.name}</Text>
-          {bar.address.length > 0 ? <Text style={typography.muted}>{bar.address}</Text> : null}
+          {direccionVisible(bar.address).length > 0 ? <Text style={typography.muted}>{direccionVisible(bar.address)}</Text> : null}
 
           <View style={styles.datos}>
             <Dato titulo="Dia" valor={diaLargo(abre)} />

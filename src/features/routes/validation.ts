@@ -30,6 +30,26 @@ export const RADIUS_MIN_M = 20;
 export const RADIUS_MAX_M = 2000;
 export const RADIUS_DEFAULT_M = 120;
 
+/**
+ * Radios que ofrece el editor: de 30 a 80 m de 10 en 10. Es una restriccion de
+ * la UI, no del servidor (que acepta 20-2000): un bar de calle se sella desde
+ * la puerta, y 120 m dejaba sellar desde el bar de al lado.
+ */
+export const RADIOS_SELECCIONABLES_M: readonly number[] = [30, 40, 50, 60, 70, 80];
+/** Radio con el que arranca un bar nuevo en el editor. */
+export const RADIO_INICIAL_M = 50;
+
+/**
+ * Opciones del desplegable de radio. Un bar ya guardado puede tener un radio
+ * fuera de la lista (120 m del catalogo anterior): se anade para que editar la
+ * hora no lo cambie en silencio a otro valor.
+ */
+export function opcionesDeRadio(actual: number): number[] {
+  const opciones = [...RADIOS_SELECCIONABLES_M];
+  if (Number.isInteger(actual) && !opciones.includes(actual)) opciones.push(actual);
+  return opciones.sort((a, b) => a - b);
+}
+
 export function validateRouteDraft(draft: RouteDraft): string[] {
   const errores: string[] = [];
   if (draft.name.trim().length === 0) errores.push('La ruta necesita un nombre.');

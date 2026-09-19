@@ -3,31 +3,54 @@ import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SelectorPosicion } from '../../../src/components/SelectorPosicion';
-import { Banner, Button, Card, Field, Loading } from '../../../src/components/ui';
+import { Desplegable } from '../../../src/components/Desplegable';
+import { Banner, Button, Loading } from '../../../src/components/ui';
 import {
   getRouteWithBars,
   nextSortOrder,
   saveBar,
 } from '../../../src/features/routes/api';
+import {
+  buscarPorNombre,
+  CATALOGO_BARES,
+  idsYaEnRuta,
+  type BarCatalogo,
+} from '../../../src/features/routes/catalogo';
 import { construirVentana, formatHora } from '../../../src/features/routes/horas';
-import { RADIUS_DEFAULT_M, validateBarDraft } from '../../../src/features/routes/validation';
-import { getCurrentPosition } from '../../../src/features/stamps/api';
+import { CampoHora, RelojHora } from '../../../src/features/routes/RelojHora';
+import { SelectorBar } from '../../../src/features/routes/SelectorBar';
+import {
+  opcionesDeRadio,
+  RADIO_INICIAL_M,
+  validateBarDraft,
+} from '../../../src/features/routes/validation';
 import { desdeFechaISO } from '../../../src/lib/fechas';
 import { colors, space, typography } from '../../../src/lib/theme';
 import type { RouteBarRow, RouteRow } from '../../../src/types/database';
 
-/** Centro por defecto cuando no hay nada mejor: Puerta del Sol, Madrid. */
-const CENTRO_POR_DEFECTO = { lat: 40.4168, lng: -3.7038 };
+/** Lo que se guardara del bar: viene del catalogo, o de la fila si se edita un bar anterior a el. */
+type BarElegido = {
+  catalogId: string | null;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+};
+
+function desdeCatalogo(bar: BarCatalogo): BarElegido {
+  // address vacia: el plus code del catalogo es un dato interno y no se guarda
+  // como direccion (ver direccionVisible en catalogo.ts).
+  return { catalogId: bar.id, name: bar.name, address: '', lat: bar.lat, lng: bar.lng };
+}
 
 /**
- * Alta y edicion de un bar.
+ * Alta y edicion de un bar de la ruta.
  *
- * La posicion se marca tocando el mapa o arrastrando el pin, no escribiendo
- * coordenadas: nadie sabe de memoria la latitud de su bar, y el circulo del
- * radio se ve en el sitio, que es justo lo que el admin necesita decidir. En
- * movil el mapa es Google (SelectorPosicion.tsx) y en web OpenStreetMap
- * (SelectorPosicion.web.tsx); en web ademas se pueden pegar coordenadas.
+ * El bar se ELIGE de una lista predefinida (features/routes/catalogo.ts), que ya
+ * trae nombre, posicion y logo. Lo que se decide aqui es el radio de sellado
+ * (desplegable) y el horario de esa parada (reloj): escribir coordenadas o
+ * marcar el mapa a mano daba bares mal colocados y el mismo bar con tres
+ * nombres distintos.
  */
 export default function EditorDeBar() {
   const { routeId, barId } = useLocalSearchParams<{ routeId: string; barId?: string }>();
@@ -40,19 +63,12 @@ export default function EditorDeBar() {
   const [errores, setErrores] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
 
-  const [nombre, setNombre] = useState('');
-  const [direccion, setDireccion] = useState('');
-  const [notas, setNotas] = useState('');
-  const [radio, setRadio] = useState(String(RADIUS_DEFAULT_M));
+  const [elegido, setElegido] = useState<BarElegido | null>(null);
+  const [radio, setRadio] = useState<number>(RADIO_INICIAL_M);
   const [abre, setAbre] = useState('19:00');
   const [cierra, setCierra] = useState('20:00');
-  const [punto, setPunto] = useState<{ lat: number; lng: number } | null>(null);
-  // Donde arranca el mapa en un bar nuevo. Es solo el encuadre inicial, nunca
-  // una posicion: un bar nuevo empieza sin pin y no se guarda hasta que el
-  // admin marca el sitio. Antes se precargaba la posicion del bar anterior, o
-  // Puerta del Sol si se negaba la ubicacion, y "guardar sin tocar" dejaba el
-  // bar en un sitio que nadie habia elegido.
-  const [centroMapa, setCentroMapa] = useState(CENTRO_POR_DEFECTO);
+  // Que hora esta editando el reloj (solo hay un reloj abierto a la vez).
+  const [horaActiva, setHoraActiva] = useState<'abre' | 'cierra' | null>(null);
 
   const editando = typeof barId === 'string' && barId.length > 0;
 
@@ -72,39 +88,27 @@ export default function EditorDeBar() {
 
         const existente = editando ? detalle.bars.find((b) => b.id === barId) : undefined;
         if (existente) {
-          setNombre(existente.name);
-          setDireccion(existente.address);
-          setNotas(existente.notes);
-          setRadio(String(existente.radius_m));
+          const delCatalogo = buscarPorNombre(existente.name);
+          setElegido({
+            catalogId: delCatalogo?.id ?? null,
+            name: existente.name,
+            address: existente.address,
+            lat: existente.lat,
+            lng: existente.lng,
+          });
+          setRadio(existente.radius_m);
           setAbre(formatHora(new Date(existente.opens_at)));
           setCierra(formatHora(new Date(existente.closes_at)));
-          setPunto({ lat: existente.lat, lng: existente.lng });
           return;
         }
 
         // Bar nuevo: se encadena con el anterior. Hora de apertura = cierre del
-        // ultimo bar, y el mapa arranca donde esta ese bar, que es donde va a
-        // estar el siguiente.
+        // ultimo bar de la ruta.
         const ultimo = detalle.bars.at(-1);
         if (ultimo) {
           const cierreAnterior = new Date(ultimo.closes_at);
           setAbre(formatHora(cierreAnterior));
           setCierra(formatHora(new Date(cierreAnterior.getTime() + 60 * 60 * 1000)));
-          setCentroMapa({ lat: ultimo.lat, lng: ultimo.lng });
-          return;
-        }
-
-        // Primer bar de la ruta: en el movil el mapa se centra donde esta el
-        // admin. En web no se pide la ubicacion al abrir la pantalla (el
-        // navegador lanzaria la pregunta sin contexto): el selector tiene el
-        // boton "Usar mi ubicacion" para cuando la quiera.
-        if (Platform.OS !== 'web') {
-          try {
-            const aqui = await getCurrentPosition();
-            if (activo) setCentroMapa(aqui);
-          } catch {
-            // Sin permiso o sin GPS: el mapa se queda en el centro por defecto.
-          }
         }
       } catch (e) {
         if (activo) setError(e instanceof Error ? e.message : 'No se pudo cargar la ruta.');
@@ -126,8 +130,8 @@ export default function EditorDeBar() {
   const resultadoVentana = construirVentana(dia, abre, cierra);
 
   async function onGuardar() {
-    if (!routeId || !punto) {
-      setErrores(['Marca la posicion del bar en el mapa.']);
+    if (!routeId || !elegido) {
+      setErrores(['Elige un bar de la lista.']);
       return;
     }
     if (!resultadoVentana.ok) {
@@ -135,16 +139,19 @@ export default function EditorDeBar() {
       return;
     }
 
-    const radioNumero = Number(radio);
+    const existente = editando ? bares.find((b) => b.id === barId) : undefined;
     const borrador = {
-      name: nombre,
-      address: direccion,
-      lat: punto.lat,
-      lng: punto.lng,
-      radiusM: Number.isInteger(radioNumero) ? radioNumero : Number.NaN,
+      name: elegido.name,
+      address: elegido.address,
+      lat: elegido.lat,
+      lng: elegido.lng,
+      radiusM: radio,
       opensAt: resultadoVentana.ventana.opensAt,
       closesAt: resultadoVentana.ventana.closesAt,
-      notes: notas,
+      // El formulario ya no tiene campo de notas. Las que tuviera el bar se
+      // conservan mientras siga siendo el mismo bar; si se cambia por otro,
+      // hablaban del anterior y no se arrastran.
+      notes: existente && existente.name === elegido.name ? existente.notes : '',
     };
 
     const problemas = validateBarDraft(borrador);
@@ -154,19 +161,11 @@ export default function EditorDeBar() {
     setGuardando(true);
     setError(null);
     try {
-      const existente = editando ? bares.find((b) => b.id === barId) : undefined;
       await saveBar({
         id: existente?.id,
         routeId,
         sortOrder: existente ? existente.sort_order : nextSortOrder(bares),
-        name: borrador.name,
-        address: borrador.address,
-        lat: borrador.lat,
-        lng: borrador.lng,
-        radiusM: borrador.radiusM,
-        opensAt: borrador.opensAt,
-        closesAt: borrador.closesAt,
-        notes: borrador.notes,
+        ...borrador,
       });
       router.back();
     } catch (e) {
@@ -178,8 +177,7 @@ export default function EditorDeBar() {
 
   if (cargando) return <Loading label="Preparando el bar..." />;
 
-  const radioNumero = Number(radio);
-  const radioValido = Number.isInteger(radioNumero) && radioNumero >= 20 && radioNumero <= 2000;
+  const ocupados = idsYaEnRuta(bares, editando ? barId : undefined);
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
@@ -190,42 +188,51 @@ export default function EditorDeBar() {
         <ScrollView contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
           {error ? <Banner tone="error">{error}</Banner> : null}
 
-          <Field label="Nombre del bar" value={nombre} onChangeText={setNombre} placeholder="La Venencia" />
-          <Field
-            label="Direccion"
-            value={direccion}
-            onChangeText={setDireccion}
-            placeholder="Calle de Echegaray 7"
-          />
-
-          <Card style={styles.tarjetaMapa}>
-            <Text style={typography.overline}>Posicion</Text>
-            <SelectorPosicion
-              key={editando ? barId : 'nuevo'}
-              punto={punto}
-              radioM={radioValido ? radioNumero : null}
-              centroInicial={centroMapa}
-              onCambiar={setPunto}
+          <View style={styles.bloque}>
+            <Text style={typography.overline}>Bar</Text>
+            <SelectorBar
+              opciones={CATALOGO_BARES}
+              elegido={elegido}
+              seleccionadoId={elegido?.catalogId ?? null}
+              ocupados={ocupados}
+              onElegir={(bar) => {
+                setElegido(desdeCatalogo(bar));
+                setErrores([]);
+              }}
             />
-          </Card>
+          </View>
 
-          <Field
-            label="Radio para sellar (metros)"
-            value={radio}
-            onChangeText={setRadio}
-            keyboardType="number-pad"
-            hint="Entre 20 y 2000. 120 m cubre un bar y su acera."
-            error={radio.length > 0 && !radioValido ? 'Tiene que ser un entero entre 20 y 2000.' : null}
+          <Desplegable
+            etiqueta="Radio para sellar"
+            opciones={opcionesDeRadio(radio).map((metros) => ({ valor: metros, etiqueta: `${metros} m` }))}
+            valor={radio}
+            onCambiar={setRadio}
           />
 
           <View style={styles.filaHoras}>
-            <View style={styles.mitad}>
-              <Field label="Se abre a las" value={abre} onChangeText={setAbre} placeholder="19:00" />
-            </View>
-            <View style={styles.mitad}>
-              <Field label="Se cierra a las" value={cierra} onChangeText={setCierra} placeholder="20:00" />
-            </View>
+            <CampoHora
+              etiqueta="Se abre a las"
+              valor={abre}
+              activo={horaActiva === 'abre'}
+              onPress={() => setHoraActiva(horaActiva === 'abre' ? null : 'abre')}
+            />
+            <CampoHora
+              etiqueta="Se cierra a las"
+              valor={cierra}
+              activo={horaActiva === 'cierra'}
+              onPress={() => setHoraActiva(horaActiva === 'cierra' ? null : 'cierra')}
+            />
           </View>
+
+          {horaActiva ? (
+            <RelojHora
+              key={horaActiva}
+              titulo={horaActiva === 'abre' ? 'Hora de apertura' : 'Hora de cierre'}
+              valor={horaActiva === 'abre' ? abre : cierra}
+              onCambiar={horaActiva === 'abre' ? setAbre : setCierra}
+              onListo={() => setHoraActiva(null)}
+            />
+          ) : null}
 
           {resultadoVentana.ok && resultadoVentana.cruzaMedianoche ? (
             <Banner tone="info">
@@ -233,14 +240,6 @@ export default function EditorDeBar() {
             </Banner>
           ) : null}
           {!resultadoVentana.ok ? <Banner tone="error">{resultadoVentana.error}</Banner> : null}
-
-          <Field
-            label="Notas"
-            value={notas}
-            onChangeText={setNotas}
-            placeholder="Pedir el vermut de grifo"
-            multiline
-          />
 
           {errores.map((mensaje) => (
             <Text key={mensaje} style={typography.error}>
@@ -263,7 +262,6 @@ export default function EditorDeBar() {
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
-  tarjetaMapa: { gap: space.sm },
+  bloque: { gap: space.sm },
   filaHoras: { flexDirection: 'row', gap: space.md },
-  mitad: { flex: 1 },
 });

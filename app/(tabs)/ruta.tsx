@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { RutaMapa, type RutaMapaHandle } from '../../src/components/RutaMapa';
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
+import { direccionVisible } from '../../src/features/routes/catalogo';
 import { huecosDesdeMedidas } from '../../src/lib/encuadre';
 import { ventana } from '../../src/lib/fechas';
 import { OSM_COPYRIGHT_URL } from '../../src/lib/osm';
@@ -168,9 +169,9 @@ export default function RutaScreen() {
                   <Text style={typography.muted} numberOfLines={1}>
                     {ventana(new Date(bar.opens_at), new Date(bar.closes_at))}
                   </Text>
-                  {bar.address.length > 0 ? (
+                  {direccionVisible(bar.address).length > 0 ? (
                     <Text style={typography.muted} numberOfLines={1}>
-                      {bar.address}
+                      {direccionVisible(bar.address)}
                     </Text>
                   ) : null}
                 </Pressable>
