@@ -11,8 +11,9 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 
 - **Pestanas** (`app/(tabs)/`): Sellos (compostelana), Ruta (mapa con los
   bares numerados y el trazado: Google en nativo, OpenStreetMap en web), Editor
-  (solo admins: crear rutas, anadir bares tocando el mapa, horarios, publicar),
-  Mi perfil (+ editor de rutas y panel de invitaciones para admins).
+  (solo admins: crear rutas, anadir bares de un catalogo cerrado, radio y
+  horario de cada parada, publicar), Mi perfil (+ editor de rutas y panel de
+  invitaciones para admins).
 - **App instalable (PWA)**: la web se instala desde el navegador en Android e
   iPhone, sin APK ni tienda. Ver seccion 8 de `docs/SETUP.md`.
 - **Sellar un bar** exige cuatro cosas a la vez: ser miembro de la ruta, ruta
@@ -64,8 +65,8 @@ app/                      pantallas (Expo Router)
 src/
   features/<dominio>/     reglas + llamadas a datos + componentes por dominio
                            (auth, routes, stamps, invites, profile, pwa, match, admin, notices)
-  components/             UI compartida (StampSeal, ui.tsx, RutaMapa, SelectorPosicion
-                           con variantes .web.tsx)
+  components/             UI compartida (StampSeal, ui.tsx, Desplegable, RutaMapa,
+                           SelectorPosicion con variantes .web.tsx)
   lib/                    cliente Supabase, secure-session-store, tema, fechas,
                            coordenadas y encuadre (logica pura del mapa), mapaWeb (Leaflet)
   types/database.ts       espejo TS del esquema SQL
@@ -302,3 +303,33 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **`tests/migration.test.ts` parsea el SQL real** con `pg-query-emscripten`
   (el parser de Postgres compilado a wasm) para comprobar invariantes de RLS
   y de `claim_stamp` que no se pueden perder por un refactor descuidado.
+- **Los bares salen de un catalogo en codigo, no de la BBDD**
+  (`src/features/routes/catalogo.ts`): el editor ya no deja escribir nombre ni
+  marcar posicion a mano, se elige de una lista cerrada de 14 bares de Alcala.
+  Se hizo asi porque un admin tecleando coordenadas colocaba bares mal y creaba
+  el mismo bar con tres nombres distintos. Esta en codigo y no en Postgres
+  porque era una prueba local y no se queria tocar el esquema; si el catalogo
+  crece o lo edita alguien que no despliega, ahi es donde deja de valer.
+  Al guardar se COPIA a `route_bars`, asi que una ruta ya creada no depende del
+  catalogo. Consecuencia: el logo no se guarda, se recupera casando el nombre
+  (`buscarPorNombre`), y renombrar un bar en el catalogo deja sin logo a los
+  que ya estaban guardados con el nombre viejo.
+- **El plus code de Google Maps es interno y nunca se enseña**
+  (`direccionVisible` en `catalogo.ts`): es de donde salen `lat`/`lng`, no una
+  direccion para el usuario. Se filtra AL PINTAR y no solo al guardar porque
+  los bares creados antes lo llevan escrito en `route_bars.address`, y esa
+  tabla no se toca. Cuatro pantallas lo pintan: si aparece una quinta, tiene
+  que pasar por el filtro.
+- **Los bares propios viven en el DISPOSITIVO, no en Supabase**
+  (`catalogoStore.ts` + `catalogoPropio.ts`, AsyncStorage / localStorage en
+  web): el admin puede anadir un bar que no esta en la lista cerrada (nombre,
+  ubicacion en el mapa, imagen del sello) y queda disponible para futuras
+  rutas. Se hizo asi porque la prueba no toca el esquema. LIMITE REAL: otro
+  movil, otro navegador u otro admin no ven esos bares, y lo que llega a
+  `route_bars` es nombre y posicion pero NO la imagen, asi que los jugadores
+  veran un sello con iniciales. Para compartirlos hace falta una tabla y un
+  bucket en Postgres (cambio de esquema: decision pendiente, no se ha tocado).
+  La imagen va como data URL de 256 px dentro del propio JSON y no como ruta:
+  en nativo la ruta del picker es cache que el sistema borra, y en web es un
+  `blob:` que muere al recargar. No hay forma de editar ni borrar un bar propio
+  desde la app todavia.

@@ -2,21 +2,27 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '../../lib/theme';
 import { buscarPorNombre, iniciales } from './catalogo';
+import { useCatalogo } from './catalogoStore';
 import { LOGOS } from './logos';
 
 /**
- * Logo de un bar, buscado por nombre en el catalogo (route_bars no guarda el
- * logo, ver catalogo.ts). Un bar que no esta en el catalogo, por ejemplo uno
- * creado antes de que existiera, se pinta como un sello con sus iniciales: el
- * hueco nunca queda vacio.
+ * Logo de un bar, buscado por nombre en el catalogo vivo (route_bars no guarda
+ * el logo, ver catalogo.ts): los de la lista cerrada salen de assets/bares/ y
+ * los propios de la imagen guardada en el dispositivo. Un bar que no esta en el
+ * catalogo, o un propio en otro dispositivo, se pinta como un sello con sus
+ * iniciales: el hueco nunca queda vacio.
+ *
+ * `uri` fuerza una imagen concreta: es la vista previa de un bar que aun no se
+ * ha guardado, cuando todavia no esta en el catalogo.
  */
-export function BarLogo({ nombre, tamano = 44 }: { nombre: string; tamano?: number }) {
+export function BarLogo({ nombre, tamano = 44, uri }: { nombre: string; tamano?: number; uri?: string | null }) {
+  const catalogo = useCatalogo();
   const caja = { width: tamano, height: tamano, borderRadius: radius.pill };
-  const id = buscarPorNombre(nombre)?.id;
-  const logo = id ? LOGOS[id] : undefined;
+  const bar = buscarPorNombre(nombre, catalogo);
+  const fuente = uri ? { uri } : bar?.logoUri ? { uri: bar.logoUri } : bar ? LOGOS[bar.id] : undefined;
 
-  if (logo) {
-    return <Image source={logo} accessibilityLabel={`Logo de ${nombre}`} style={caja} />;
+  if (fuente) {
+    return <Image source={fuente} accessibilityLabel={`Logo de ${nombre}`} style={caja} />;
   }
 
   return (

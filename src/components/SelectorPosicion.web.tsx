@@ -121,7 +121,9 @@ export function SelectorPosicion({ punto, radioM, centroInicial, onCambiar }: Se
   return (
     <>
       <Text style={typography.muted}>
-        Toca el mapa o arrastra el pin. El circulo es la zona desde la que se puede sellar.
+        {radioM === null
+          ? 'Toca el mapa o arrastra el pin.'
+          : 'Toca el mapa o arrastra el pin. El circulo es la zona desde la que se puede sellar.'}
       </Text>
       <View style={styles.mapaCaja}>
         <MapContainer
@@ -167,7 +169,7 @@ export function SelectorPosicion({ punto, radioM, centroInicial, onCambiar }: Se
         label="Coordenadas"
         value={texto}
         onChangeText={onCambiarTexto}
-        placeholder="40.41680, -3.70380"
+        placeholder={formatCoordenadas(centroInicial)}
         hint={estado.punto ? `Se guardara en ${describirPunto(estado.punto)}` : AYUDA}
         error={estado.error}
       />

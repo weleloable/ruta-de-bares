@@ -84,6 +84,7 @@ function AuthGate() {
       <Stack.Screen name="invitacion" options={{ title: 'Entrar en una ruta' }} />
       <Stack.Screen name="editor/[routeId]/index" options={{ title: 'Editar ruta' }} />
       <Stack.Screen name="editor/[routeId]/bar" options={{ title: 'Bar de la ruta' }} />
+      <Stack.Screen name="editor/[routeId]/bar-nuevo" options={{ title: 'Bar nuevo' }} />
       <Stack.Screen name="invitaciones" options={{ title: 'Invitaciones' }} />
       <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
       <Stack.Screen name="admin/alertas" options={{ title: 'Alertas de administración' }} />

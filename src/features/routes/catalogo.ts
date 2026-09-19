@@ -25,9 +25,18 @@
 export type BarCatalogo = {
   id: string;
   name: string;
-  plusCode: string;
+  /** Solo los bares de la lista cerrada; los propios no tienen. */
+  plusCode?: string;
   lat: number;
   lng: number;
+  /**
+   * Solo los bares propios (ver catalogoPropio.ts): la imagen va dentro, como
+   * data URL, porque vive en el dispositivo y no hay fichero en assets/. Los de
+   * la lista cerrada usan logos.ts.
+   */
+  logoUri?: string;
+  /** true = lo anadio un admin desde el editor, no viene en el codigo. */
+  propio?: boolean;
 };
 
 export const CATALOGO_BARES: readonly BarCatalogo[] = [

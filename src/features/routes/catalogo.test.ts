@@ -81,7 +81,7 @@ describe('CATALOGO_BARES', () => {
   });
 
   it('el plus code de Google Maps esta bien formado y no se repite', () => {
-    const codigos = CATALOGO_BARES.map((b) => b.plusCode);
+    const codigos = CATALOGO_BARES.map((b) => b.plusCode ?? '');
     for (const c of codigos) assert.match(c, /^[23456789CFGHJMPQRVWX]{4}\+[23456789CFGHJMPQRVWX]{2}$/);
     assert.equal(new Set(codigos).size, codigos.length);
   });

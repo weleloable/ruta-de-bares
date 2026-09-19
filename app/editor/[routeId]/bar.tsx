@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,12 +10,8 @@ import {
   nextSortOrder,
   saveBar,
 } from '../../../src/features/routes/api';
-import {
-  buscarPorNombre,
-  CATALOGO_BARES,
-  idsYaEnRuta,
-  type BarCatalogo,
-} from '../../../src/features/routes/catalogo';
+import { buscarPorNombre, idsYaEnRuta, type BarCatalogo } from '../../../src/features/routes/catalogo';
+import { consumirUltimoCreado, useCatalogo } from '../../../src/features/routes/catalogoStore';
 import { construirVentana, formatHora } from '../../../src/features/routes/horas';
 import { CampoHora, RelojHora } from '../../../src/features/routes/RelojHora';
 import { SelectorBar } from '../../../src/features/routes/SelectorBar';
@@ -30,7 +26,6 @@ import type { RouteBarRow, RouteRow } from '../../../src/types/database';
 
 /** Lo que se guardara del bar: viene del catalogo, o de la fila si se edita un bar anterior a el. */
 type BarElegido = {
-  catalogId: string | null;
   name: string;
   address: string;
   lat: number;
@@ -40,7 +35,7 @@ type BarElegido = {
 function desdeCatalogo(bar: BarCatalogo): BarElegido {
   // address vacia: el plus code del catalogo es un dato interno y no se guarda
   // como direccion (ver direccionVisible en catalogo.ts).
-  return { catalogId: bar.id, name: bar.name, address: '', lat: bar.lat, lng: bar.lng };
+  return { name: bar.name, address: '', lat: bar.lat, lng: bar.lng };
 }
 
 /**
@@ -72,6 +67,24 @@ export default function EditorDeBar() {
 
   const editando = typeof barId === 'string' && barId.length > 0;
 
+  // Lista cerrada + bares propios de este dispositivo (catalogoStore.ts).
+  const catalogo = useCatalogo();
+
+  // Al volver de crear un bar propio se deja elegido, para que el admin solo
+  // tenga que ponerle radio y horas. Se hace al ganar el foco y no en la
+  // pantalla nueva porque esta sigue montada debajo y conserva lo ya rellenado.
+  useFocusEffect(
+    useCallback(() => {
+      const id = consumirUltimoCreado();
+      if (!id) return;
+      const nuevo = catalogo.find((bar) => bar.id === id);
+      if (nuevo) {
+        setElegido(desdeCatalogo(nuevo));
+        setErrores([]);
+      }
+    }, [catalogo]),
+  );
+
   useEffect(() => {
     let activo = true;
 
@@ -88,9 +101,7 @@ export default function EditorDeBar() {
 
         const existente = editando ? detalle.bars.find((b) => b.id === barId) : undefined;
         if (existente) {
-          const delCatalogo = buscarPorNombre(existente.name);
           setElegido({
-            catalogId: delCatalogo?.id ?? null,
             name: existente.name,
             address: existente.address,
             lat: existente.lat,
@@ -177,7 +188,7 @@ export default function EditorDeBar() {
 
   if (cargando) return <Loading label="Preparando el bar..." />;
 
-  const ocupados = idsYaEnRuta(bares, editando ? barId : undefined);
+  const ocupados = idsYaEnRuta(bares, editando ? barId : undefined, catalogo);
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
@@ -191,14 +202,17 @@ export default function EditorDeBar() {
           <View style={styles.bloque}>
             <Text style={typography.overline}>Bar</Text>
             <SelectorBar
-              opciones={CATALOGO_BARES}
+              opciones={catalogo}
               elegido={elegido}
-              seleccionadoId={elegido?.catalogId ?? null}
+              // Por nombre y no por un id guardado: un bar que ya estaba en la ruta
+              // se reconoce igual, y un propio tambien aunque el almacen cargue tarde.
+              seleccionadoId={elegido ? (buscarPorNombre(elegido.name, catalogo)?.id ?? null) : null}
               ocupados={ocupados}
               onElegir={(bar) => {
                 setElegido(desdeCatalogo(bar));
                 setErrores([]);
               }}
+              onNuevo={() => router.push({ pathname: '/editor/[routeId]/bar-nuevo', params: { routeId } })}
             />
           </View>
 

@@ -15,6 +15,12 @@ type Elegido = { name: string; address: string };
  * `elegido` es lo que se pinta en la cabecera y puede no estar en `opciones`
  * (un bar creado antes del catalogo): por eso no se deduce de `seleccionadoId`.
  * `ocupados` son ids ya usados en la ruta: se ven pero no se pueden elegir.
+ *
+ * Arranca SIEMPRE cerrado, tambien cuando aun no hay bar elegido: abierto de
+ * salida tapaba el resto del formulario y el admin no sabia que era un
+ * desplegable. La cabecera ya dice "Elige un bar de la lista".
+ *
+ * La ultima fila, `onNuevo`, es la salida para un bar que no esta en la lista.
  */
 export function SelectorBar({
   opciones,
@@ -22,14 +28,16 @@ export function SelectorBar({
   seleccionadoId,
   ocupados,
   onElegir,
+  onNuevo,
 }: {
   opciones: readonly BarCatalogo[];
   elegido: Elegido | null;
   seleccionadoId: string | null;
   ocupados: ReadonlySet<string>;
   onElegir: (bar: BarCatalogo) => void;
+  onNuevo: () => void;
 }) {
-  const [abierto, setAbierto] = useState(elegido === null);
+  const [abierto, setAbierto] = useState(false);
 
   return (
     <View style={styles.caja}>
@@ -90,6 +98,27 @@ export function SelectorBar({
           })}
         </ScrollView>
       ) : null}
+
+      {abierto ? (
+        // Fuera del scroll: fija y siempre a la vista, no perdida al final de una lista larga.
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Anadir un bar que no esta en la lista"
+          onPress={() => {
+            setAbierto(false);
+            onNuevo();
+          }}
+          style={({ pressed }) => [styles.opcion, styles.opcionNueva, pressed && styles.opcionPulsada]}
+        >
+          <View style={styles.mas}>
+            <Text style={styles.masTexto}>+</Text>
+          </View>
+          <View style={styles.texto}>
+            <Text style={typography.cardTitle}>Otro bar</Text>
+            <Text style={typography.muted}>Anadir uno que no esta en la lista</Text>
+          </View>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -111,4 +140,16 @@ const styles = StyleSheet.create({
   opcionActiva: { backgroundColor: colors.paperDeep },
   opcionPulsada: { backgroundColor: colors.paper },
   opcionOcupada: { opacity: 0.4 },
+  opcionNueva: { borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.paperDeep },
+  mas: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  masTexto: { fontSize: 20, fontWeight: '700', color: colors.inkSoft, lineHeight: 22 },
 });
