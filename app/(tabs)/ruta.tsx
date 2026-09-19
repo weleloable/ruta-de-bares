@@ -131,14 +131,18 @@ export default function RutaScreen() {
               ) : null}
             </View>
 
-            {/* Sellos ya no tiene boton en la barra de abajo: se entra por aqui, con su mismo icono. */}
+            {/*
+              Sellos ya no tiene boton en la barra de abajo: se entra por aqui,
+              con su mismo icono. Lleva la palabra delante porque un simbolo solo
+              no dice a donde lleva; el nombre accesible es el propio texto.
+            */}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Ver mis sellos"
               onPress={() => router.navigate('/')}
               style={({ pressed }) => [styles.botonSellos, pressed && styles.botonSellosPulsado]}
             >
-              <Ionicons name="ribbon" size={22} color={colors.stamp} />
+              <Text style={styles.botonSellosTexto}>Sellos</Text>
+              <Ionicons name="ribbon" size={20} color={colors.stamp} />
             </Pressable>
           </View>
 
@@ -215,17 +219,23 @@ const styles = StyleSheet.create({
   // cabecera en vez de recortarse con los puntos suspensivos.
   cabeceraTexto: { flex: 1, minWidth: 0 },
   atribucion: { fontSize: 11, color: colors.inkFaint, marginTop: 2 },
-  // 44 px: el minimo tocable que piden iOS y Android para un boton solo de icono.
+  // Rectangulo de esquinas redondeadas (radius.md, no pill). 44 px de alto: el
+  // minimo tocable que piden iOS y Android. flexShrink 0: si el nombre de la
+  // ruta es largo se recorta el nombre, nunca este boton.
   botonSellos: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: space.sm,
+    height: 44,
+    paddingHorizontal: space.md,
+    flexShrink: 0,
+    borderRadius: radius.md,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.borderStrong,
   },
+  botonSellosTexto: { fontSize: 14, fontWeight: '700', color: colors.ink },
   botonSellosPulsado: { backgroundColor: colors.paperDeep },
   avisoError: { marginHorizontal: space.lg },
   pie: { gap: space.md, paddingBottom: space.md },

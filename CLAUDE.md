@@ -391,3 +391,14 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   de creditos (p. ej. en Mi perfil), no la cabecera del mapa. El mapa del
   editor (`SelectorPosicion.web.tsx`) conserva el control de Leaflet con enlace:
   es solo para admins y no hay boton al lado.
+- **No hay campanita ni pantalla de notificaciones; hay un punto rojo** en la
+  esquina del boton de Mi perfil de `BarraSuperior` (`Notificaciones.tsx` +
+  `notificaciones/reglas.ts`). Se enciende con cualquier notificacion de tres
+  fuentes ya existentes: avisos de la cana, avisos de moderacion sin leer y,
+  solo para admins, alertas pendientes (denuncias y fotos). NO cuenta la foto
+  rechazada de Mi perfil: no tiene estado "leida" y el punto no se apagaria
+  nunca. Es un proveedor por encima del Stack (como `AvisosCana`) para que se vea
+  desde cualquier pestana; se refresca cada 60 s, al volver del segundo plano y
+  en cada cambio de pantalla (asi se apaga al salir de Avisos). Una peticion de
+  refresco que llega mientras se pregunta se REPITE, no se descarta: si se
+  descartase, el punto seguiria rojo tras marcar los avisos como leidos.

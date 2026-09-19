@@ -44,17 +44,37 @@ describe('Ruta: boton de acceso a Sellos', () => {
     assert.match(ruta, new RegExp(`<Ionicons\\s+name="${icono}"`), `ruta.tsx no usa el icono "${icono}" de Sellos`);
   });
 
-  it('es solo un simbolo, pero accesible: sin texto visible y con etiqueta para lector de pantalla', () => {
-    assert.match(ruta, /accessibilityLabel="Ver mis sellos"/);
-    assert.match(ruta, /accessibilityRole="button"/);
-    const boton = ruta.slice(ruta.indexOf('accessibilityLabel="Ver mis sellos"'), ruta.indexOf('</Pressable>', ruta.indexOf('Ver mis sellos')));
-    assert.doesNotMatch(boton, /<Text\b/, 'el boton no debe llevar texto');
+  /** El JSX del boton: desde el Pressable que navega a "/" hasta su cierre. */
+  function boton(): string {
+    const ini = ruta.lastIndexOf('<Pressable', ruta.indexOf("router.navigate('/')"));
+    return ruta.slice(ini, ruta.indexOf('</Pressable>', ini));
+  }
+
+  it('lleva la palabra "Sellos" ANTES (a la izquierda) del simbolo, para que sea intuitivo', () => {
+    const b = boton();
+    const texto = b.indexOf('>Sellos<');
+    const icono = b.indexOf('<Ionicons');
+    assert.ok(texto > 0, 'el boton no dice "Sellos"');
+    assert.ok(icono > 0, 'el boton no lleva icono');
+    assert.ok(texto < icono, 'el texto tiene que ir a la izquierda del icono');
+    assert.match(b, /accessibilityRole="button"/);
+  });
+
+  it('es un rectangulo de esquinas redondeadas, no un circulo: sin ancho fijo y sin radius.pill', () => {
+    const m = /botonSellos:\s*\{([^}]*)\}/.exec(ruta);
+    assert.ok(m, 'no encuentro el estilo botonSellos');
+    assert.match(m[1], /borderRadius:\s*radius\.md/);
+    assert.doesNotMatch(m[1], /radius\.pill/);
+    assert.doesNotMatch(m[1], /\bwidth:/, 'un ancho fijo no deja sitio al texto');
+    assert.match(m[1], /flexDirection:\s*'row'/);
+    // El nombre de la ruta se recorta antes que este boton.
+    assert.match(m[1], /flexShrink:\s*0/);
   });
 
   it('esta en la cabecera y a la derecha: el texto va en un bloque que se estira y el boton detras', () => {
     const cabecera = ruta.slice(ruta.indexOf('style={styles.cabecera}'), ruta.indexOf('{error ?'));
     const texto = cabecera.indexOf('styles.cabeceraTexto');
-    const boton = cabecera.indexOf('Ver mis sellos');
+    const boton = cabecera.indexOf("router.navigate('/')");
     assert.ok(texto > 0 && boton > 0, 'falta el bloque de texto o el boton en la cabecera');
     assert.ok(texto < boton, 'el boton tiene que ir DESPUES del texto para quedar a la derecha');
     assert.match(ruta, /cabecera:\s*\{[\s\S]*?flexDirection:\s*'row'/);
@@ -62,10 +82,10 @@ describe('Ruta: boton de acceso a Sellos', () => {
     assert.match(ruta, /cabeceraTexto:\s*\{[^}]*minWidth:\s*0/);
   });
 
-  it('mide al menos 44 px: el minimo tocable de un boton solo de icono', () => {
-    const m = /botonSellos:\s*\{[^}]*width:\s*(\d+)[^}]*height:\s*(\d+)/.exec(ruta);
+  it('mide al menos 44 px de alto: el minimo tocable', () => {
+    const m = /botonSellos:\s*\{[^}]*height:\s*(\d+)/.exec(ruta);
     assert.ok(m, 'no encuentro el estilo botonSellos');
-    assert.ok(Number(m[1]) >= 44 && Number(m[2]) >= 44, `mide ${m[1]}x${m[2]}`);
+    assert.ok(Number(m[1]) >= 44, `mide ${m[1]}`);
   });
 });
 
