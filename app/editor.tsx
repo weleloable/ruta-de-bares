@@ -8,7 +8,14 @@ import { useAuth } from '../src/features/auth/AuthProvider';
 import { DialogoConfirmar } from '../src/features/profile/DialogoConfirmar';
 import { useActiveRoute } from '../src/features/routes/ActiveRouteProvider';
 import { createRoute, deleteRoute, listRoutes, updateRoute } from '../src/features/routes/api';
-import { validateRouteDraft } from '../src/features/routes/validation';
+import {
+  avisoDeRutaTerminada,
+  estadoDeRuta,
+  etiquetaEstado,
+  LO_QUE_SE_BORRA,
+  puedeTerminarseAMano,
+} from '../src/features/routes/estado';
+import { motivoParaNoPublicar, validateRouteDraft } from '../src/features/routes/validation';
 import { aFechaISO, desdeFechaISO, diaLargo } from '../src/lib/fechas';
 import { colors, radius, space, typography } from '../src/lib/theme';
 import type { RouteRow } from '../src/types/database';
@@ -27,6 +34,9 @@ export default function EditorScreen() {
   const { refresh: refrescarRutaActiva } = useActiveRoute();
 
   const [rutas, setRutas] = useState<RouteRow[]>([]);
+  // Una sola marca de tiempo para toda la lista: asi dos rutas no se pintan
+  // con instantes distintos, y se refresca sola en cada recarga.
+  const [ahora, setAhora] = useState(() => new Date());
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +54,10 @@ export default function EditorScreen() {
     setError(null);
     try {
       setRutas(await listRoutes());
+      // El estado "terminada" se deduce de la hora: al recargar hay que mirar
+      // el reloj otra vez, o una ruta que termino mientras la pantalla estaba
+      // abierta seguiria saliendo como publicada.
+      setAhora(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron cargar las rutas.');
     } finally {
@@ -83,12 +97,33 @@ export default function EditorScreen() {
 
   async function onPublicar(ruta: RouteRow) {
     setError(null);
+    // Solo al publicar: despublicar una sin fecha tiene que seguir siendo
+    // posible, o una ruta mal creada se quedaria publicada para siempre.
+    const impedimento = ruta.is_published ? null : motivoParaNoPublicar(ruta);
+    if (impedimento) {
+      setError(impedimento);
+      return;
+    }
     try {
       await updateRoute(ruta.id, { is_published: !ruta.is_published });
       await cargar();
       await refrescarRutaActiva();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cambiar la publicacion.');
+    }
+  }
+
+  /*
+    Terminar a mano es para cuando se cancela o se acaba antes: lo normal es que
+    la ruta termine sola a las 08:00 del dia siguiente, sin tocar nada.
+  */
+  async function onTerminar(ruta: RouteRow) {
+    setError(null);
+    try {
+      await updateRoute(ruta.id, { finished_at: new Date().toISOString() });
+      await cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo marcar como terminada.');
     }
   }
 
@@ -177,25 +212,42 @@ export default function EditorScreen() {
         ) : (
           rutas.map((ruta) => {
             const dia = desdeFechaISO(ruta.event_date);
+            // Se deduce en cada pintada y no se guarda: ver routes/estado.ts.
+            const estado = estadoDeRuta(ruta, ahora);
+            const avisoFin = avisoDeRutaTerminada(ruta, ahora);
             return (
               <Card key={ruta.id}>
                 <View style={styles.filaTitulo}>
                   <Text style={typography.sectionTitle} numberOfLines={2}>
                     {ruta.name}
                   </Text>
-                  <View style={[styles.etiqueta, ruta.is_published && styles.etiquetaPublicada]}>
+                  <View
+                    style={[
+                      styles.etiqueta,
+                      estado === 'publicada' && styles.etiquetaPublicada,
+                      estado === 'terminada' && styles.etiquetaTerminada,
+                    ]}
+                  >
                     <Text
                       style={[
                         styles.etiquetaTexto,
-                        ruta.is_published && styles.etiquetaTextoPublicada,
+                        estado === 'publicada' && styles.etiquetaTextoPublicada,
+                        estado === 'terminada' && styles.etiquetaTextoTerminada,
                       ]}
                     >
-                      {ruta.is_published ? 'Publicada' : 'Borrador'}
+                      {etiquetaEstado(estado)}
                     </Text>
                   </View>
                 </View>
 
                 {dia ? <Text style={typography.muted}>{diaLargo(dia)}</Text> : null}
+                {/*
+                  El unico recordatorio que hay de que toca borrar: no hay cron
+                  ni tarea programada, asi que si nadie pulsa, los datos del
+                  evento se quedan. Por eso lo dice aqui y no en un sitio al que
+                  haya que ir a mirar.
+                */}
+                {avisoFin ? <Text style={styles.avisoFin}>{avisoFin}</Text> : null}
                 {ruta.description.length > 0 ? (
                   <Text style={typography.body}>{ruta.description}</Text>
                 ) : null}
@@ -214,6 +266,11 @@ export default function EditorScreen() {
                       {ruta.is_published ? 'Despublicar' : 'Publicar'}
                     </Text>
                   </Pressable>
+                  {puedeTerminarseAMano(ruta, ahora) ? (
+                    <Pressable style={styles.accion} onPress={() => void onTerminar(ruta)}>
+                      <Text style={styles.accionTexto}>Marcar terminada</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable style={styles.accion} onPress={() => setBorrando(ruta)}>
                     <Text style={[styles.accionTexto, styles.accionPeligro]}>Borrar</Text>
                   </Pressable>
@@ -234,7 +291,7 @@ export default function EditorScreen() {
         titulo="Borrar la ruta"
         mensaje={
           borrando
-            ? `Se borra "${borrando.name}" con todos sus bares y los sellos que la gente ya tenga. No hay vuelta atras.`
+            ? `Se borra "${borrando.name}". ${LO_QUE_SE_BORRA}`
             : ''
         }
         textoConfirmar="Borrar"
@@ -260,8 +317,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   etiquetaPublicada: { backgroundColor: '#DCEBE1', borderColor: colors.green },
+  etiquetaTerminada: { backgroundColor: colors.paperDeep, borderColor: colors.borderStrong },
+  avisoFin: { fontSize: 13, fontWeight: '700', color: colors.beerDark },
   etiquetaTexto: { fontSize: 11, fontWeight: '700', color: colors.inkSoft },
   etiquetaTextoPublicada: { color: colors.green },
+  etiquetaTextoTerminada: { color: colors.inkSoft },
   acciones: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
   accion: {
     paddingHorizontal: space.md,

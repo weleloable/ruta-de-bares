@@ -25,6 +25,11 @@ export type RouteRow = {
   description: string;
   event_date: string | null;
   is_published: boolean;
+  /**
+   * Solo para terminarla a mano antes de tiempo (0027). Lo normal es null: que
+   * una ruta haya terminado se DEDUCE de `event_date` (ver routes/estado.ts).
+   */
+  finished_at: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -369,7 +374,10 @@ export type Database = {
       };
       routes: {
         Row: RouteRow;
-        Insert: Insert<RouteRow, 'id' | 'description' | 'event_date' | 'is_published' | 'created_at' | 'updated_at'>;
+        Insert: Insert<
+          RouteRow,
+          'id' | 'description' | 'event_date' | 'is_published' | 'finished_at' | 'created_at' | 'updated_at'
+        >;
         Update: Partial<RouteRow>;
         Relationships: [];
       };
