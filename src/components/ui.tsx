@@ -1,4 +1,5 @@
-import { forwardRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { forwardRef, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -54,6 +55,9 @@ type ButtonProps = Omit<PressableProps, 'children'> & {
   // que necesitan un color de texto distinto al del variant, sin crear uno
   // nuevo solo para ese sitio.
   textStyle?: StyleProp<TextStyle>;
+  // Solo para el boton "Instalar App" de Mi perfil por ahora: un icono antes
+  // del texto, sin crear un componente aparte solo para eso.
+  icon?: ComponentProps<typeof Ionicons>['name'];
 };
 
 export function Button({
@@ -63,9 +67,11 @@ export function Button({
   disabled,
   style,
   textStyle,
+  icon,
   ...rest
 }: ButtonProps) {
   const inactivo = disabled || loading;
+  const colorTexto = variant === 'secondary' || variant === 'ghost' ? colors.ink : colors.white;
   return (
     <Pressable
       accessibilityRole="button"
@@ -81,9 +87,12 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? colors.ink : colors.white} />
+        <ActivityIndicator color={colorTexto} />
       ) : (
-        <Text style={[styles.buttonText, styles[`buttonText_${variant}`], textStyle]}>{title}</Text>
+        <View style={styles.buttonContenido}>
+          {icon ? <Ionicons name={icon} size={18} color={colorTexto} /> : null}
+          <Text style={[styles.buttonText, styles[`buttonText_${variant}`], textStyle]}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -165,6 +174,7 @@ const styles = StyleSheet.create({
   button_danger: { backgroundColor: colors.danger, borderColor: colors.danger },
   buttonPressed: { opacity: 0.82 },
   buttonDisabled: { opacity: 0.45 },
+  buttonContenido: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   buttonText: { fontSize: 16, fontWeight: '700' },
   buttonText_primary: { color: colors.white },
   buttonText_secondary: { color: colors.ink },

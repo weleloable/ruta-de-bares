@@ -21,11 +21,13 @@ import {
   mensajeTrasEnviar,
   type SolicitudFotoPropia,
 } from '../../src/features/profile/fotoRevision';
+import { useInstalarApp } from '../../src/lib/pwaInstalar';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const router = useRouter();
+  const { disponible: instalarDisponible, instalando, instalar } = useInstalarApp();
 
   const [nombre, setNombre] = useState(profile?.display_name ?? '');
   const [guardando, setGuardando] = useState(false);
@@ -306,6 +308,17 @@ export default function PerfilScreen() {
           </Card>
         ) : null}
 
+        {instalarDisponible ? (
+          <Button
+            title="Instalar App"
+            variant="secondary"
+            icon="download-outline"
+            style={styles.botonInstalar}
+            loading={instalando}
+            onPress={instalar}
+          />
+        ) : null}
+
         <Button
           title="Cerrar sesion"
           variant="danger"
@@ -359,6 +372,9 @@ const styles = StyleSheet.create({
   // texto de la app.
   textoAccionBarra: { color: colors.inkFaint },
   inputCentrado: { textAlign: 'center' },
+  // Ancho justo del icono y el texto, centrado: sin alignSelf el boton se
+  // estira a todo el ancho como los demas.
+  botonInstalar: { alignSelf: 'center' },
   cabecera: { alignItems: 'center', gap: space.xs },
   avatarPulsable: { alignItems: 'center', gap: space.xs },
   avatar: {
