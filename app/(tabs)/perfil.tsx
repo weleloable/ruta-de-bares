@@ -313,6 +313,7 @@ export default function PerfilScreen() {
             title="Instalar App"
             variant="secondary"
             icon="download-outline"
+            style={styles.botonInstalar}
             loading={instalando}
             onPress={instalar}
           />
@@ -371,6 +372,9 @@ const styles = StyleSheet.create({
   // texto de la app.
   textoAccionBarra: { color: colors.inkFaint },
   inputCentrado: { textAlign: 'center' },
+  // Ancho justo del icono y el texto, centrado: sin alignSelf el boton se
+  // estira a todo el ancho como los demas.
+  botonInstalar: { alignSelf: 'center' },
   cabecera: { alignItems: 'center', gap: space.xs },
   avatarPulsable: { alignItems: 'center', gap: space.xs },
   avatar: {

@@ -43,6 +43,13 @@ describe('Perfil: boton "Instalar App"', () => {
     );
   });
 
+  it('el boton no ocupa todo el ancho: alignSelf center, ancho del contenido', () => {
+    const bloque = /\{instalarDisponible \? \(([\s\S]*?)\) : null\}/.exec(perfil);
+    assert.ok(bloque);
+    assert.match(bloque[1], /style=\{styles\.botonInstalar\}/);
+    assert.match(perfil, /botonInstalar:\s*\{\s*alignSelf:\s*'center'\s*\}/);
+  });
+
   it('el boton de instalar va ANTES que "Cerrar sesion" en el JSX', () => {
     const iInstalar = perfil.indexOf("title='Instalar App'");
     const iCerrar = perfil.indexOf("title='Cerrar sesion'");
