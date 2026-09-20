@@ -55,6 +55,7 @@ describe('useInstalarApp: version nativa siempre inactiva', () => {
   it('pwaInstalar.ts (fallback fuera de web) nunca ofrece el boton', () => {
     const codigo = sinComentarios(leer('src/lib/pwaInstalar.ts'));
     assert.match(codigo, /disponible:\s*false/);
+    assert.match(codigo, /export function iniciarInstalarApp\(\): void \{\}/);
   });
 });
 
@@ -63,11 +64,34 @@ describe('useInstalarApp: version web solo escucha si aun no esta instalada', ()
 
   it('usa estaInstalada() (pwaInstalada.ts) para no escuchar el evento si ya esta instalada', () => {
     assert.match(codigo, /import\s*\{\s*estaInstalada\s*\}\s*from\s*'\.\/pwaInstalada'/);
-    assert.match(codigo, /if\s*\(typeof window === 'undefined' \|\| yaInstalada\(\)\)\s*return;/);
+    assert.match(codigo, /if\s*\(estaInstalada\(modoStandalone,\s*iosStandalone\)\)\s*return;/);
   });
 
   it('se apaga con appinstalled, para no ofrecer instalar dos veces', () => {
     assert.match(codigo, /addEventListener\('appinstalled'/);
-    assert.match(codigo, /setDisponible\(false\)/);
+    assert.match(codigo, /eventoCapturado = null/);
+  });
+
+  it('lee el estado con useSyncExternalStore, no con un estado propio de componente', () => {
+    // Critico: useState/useEffect en Perfil perderia el evento si llega
+    // mientras se ve el login (antes de que Perfil exista).
+    assert.match(codigo, /useSyncExternalStore/);
+    assert.doesNotMatch(codigo, /\buseEffect\b/);
+  });
+
+  it('exporta iniciarInstalarApp para registrar el listener al cargar el modulo', () => {
+    assert.match(codigo, /export function iniciarInstalarApp\(\): void/);
+  });
+});
+
+describe('_layout.tsx: el listener arranca junto con iniciarPwa, no dentro de un efecto', () => {
+  const layout = sinComentarios(leer('app/_layout.tsx')).replace(/["`]/g, "'");
+
+  it('importa iniciarInstalarApp de src/lib/pwaInstalar', () => {
+    assert.match(layout, /import \{ iniciarInstalarApp \} from '\.\.\/src\/lib\/pwaInstalar'/);
+  });
+
+  it('se llama a nivel de modulo (junto a iniciarPwa), no dentro de useEffect', () => {
+    assert.match(layout, /^iniciarPwa\(\);\s*\n(?:.*\n)*?^iniciarInstalarApp\(\);/m);
   });
 });

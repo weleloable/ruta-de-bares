@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 import { estaInstalada } from './pwaInstalada';
 
 /**
  * Boton "Instalar App" en Mi perfil.
+ *
+ * El listener de `beforeinstallprompt` se registra al CARGAR EL MODULO
+ * (`iniciarInstalarApp`, llamado desde app/_layout.tsx junto a `iniciarPwa`),
+ * no dentro de un efecto de la pantalla de Perfil. Perfil esta detras del
+ * login: si el evento llegase mientras se ve el login (el caso normal, es lo
+ * primero que se pinta) un listener puesto solo al montar Perfil lo perderia
+ * para siempre, porque el navegador no lo repite. Con el modulo escuchando
+ * desde el arranque no importa cuando se visite Perfil: useInstalarApp() solo
+ * LEE el estado ya capturado (useSyncExternalStore), igual que
+ * AvisosCanaProvider lee su burbujita desde cualquier pestana.
  *
  * El navegador dispara `beforeinstallprompt` solo cuando la PWA es instalable
  * Y TODAVIA NO ESTA instalada (Chrome/Edge/Android). Con eso basta para
@@ -19,52 +29,57 @@ interface EventoInstalar extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
-function yaInstalada(): boolean {
-  if (typeof window === 'undefined') return true;
+let eventoCapturado: EventoInstalar | null = null;
+let instalandoAhora = false;
+let iniciado = false;
+const oyentes = new Set<() => void>();
+
+function avisar() {
+  for (const oyente of oyentes) oyente();
+}
+
+export function iniciarInstalarApp(): void {
+  if (iniciado || typeof window === 'undefined') return;
+  iniciado = true;
+
   const modoStandalone = window.matchMedia?.('(display-mode: standalone)').matches ?? false;
   const iosStandalone = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-  return estaInstalada(modoStandalone, iosStandalone);
+  if (estaInstalada(modoStandalone, iosStandalone)) return;
+
+  window.addEventListener('beforeinstallprompt', (evento) => {
+    // Sin esto Chrome pinta su propia barra ademas del boton de la app.
+    evento.preventDefault();
+    eventoCapturado = evento as EventoInstalar;
+    avisar();
+  });
+  window.addEventListener('appinstalled', () => {
+    eventoCapturado = null;
+    avisar();
+  });
+}
+
+function suscribir(callback: () => void) {
+  oyentes.add(callback);
+  return () => oyentes.delete(callback);
 }
 
 export function useInstalarApp() {
-  const eventoRef = useRef<EventoInstalar | null>(null);
-  const [disponible, setDisponible] = useState(false);
-  const [instalando, setInstalando] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || yaInstalada()) return;
-
-    function onBeforeInstallPrompt(evento: Event) {
-      // Sin esto Chrome pinta su propia barra ademas del boton de la app.
-      evento.preventDefault();
-      eventoRef.current = evento as EventoInstalar;
-      setDisponible(true);
-    }
-    function onAppInstalled() {
-      eventoRef.current = null;
-      setDisponible(false);
-    }
-
-    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-    window.addEventListener('appinstalled', onAppInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', onAppInstalled);
-    };
-  }, []);
+  const disponible = useSyncExternalStore(suscribir, () => eventoCapturado !== null, () => false);
+  const instalando = useSyncExternalStore(suscribir, () => instalandoAhora, () => false);
 
   const instalar = useCallback(async () => {
-    const evento = eventoRef.current;
+    const evento = eventoCapturado;
     if (!evento) return;
-    setInstalando(true);
+    instalandoAhora = true;
+    avisar();
     try {
       await evento.prompt();
       await evento.userChoice;
       // Se acepte o no, el evento ya esta gastado: el navegador no lo repite.
     } finally {
-      eventoRef.current = null;
-      setDisponible(false);
-      setInstalando(false);
+      eventoCapturado = null;
+      instalandoAhora = false;
+      avisar();
     }
   }, []);
 

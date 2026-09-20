@@ -9,6 +9,7 @@ import { AvisosCanaProvider } from '../src/features/match/AvisosCana';
 import { NotificacionesProvider } from '../src/features/notificaciones/Notificaciones';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
 import { iniciarPwa } from '../src/lib/pwa';
+import { iniciarInstalarApp } from '../src/lib/pwaInstalar';
 import { colors, fonts } from '../src/lib/theme';
 
 /**
@@ -27,6 +28,10 @@ export const unstable_settings = {
 // cuanto la pagina termina de cargar, sin esperar a que monte ningun
 // componente. En nativo no hace nada.
 iniciarPwa();
+// Idem: si se esperara al efecto de Mi perfil, `beforeinstallprompt` podria
+// llegar (y perderse, el navegador no lo repite) mientras se ve el login,
+// que es la primera pantalla y esta antes que Perfil.
+iniciarInstalarApp();
 
 /**
  * Portero de la navegacion.
