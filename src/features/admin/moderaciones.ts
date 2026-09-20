@@ -32,7 +32,7 @@ export type Moderacion = {
 
 const ACCION: Record<string, string> = {
   foto_retirada: 'Foto retirada',
-  cana_desactivada: 'Caña desactivada',
+  cana_desactivada: 'La Caña desactivada',
   expulsada_de_ruta: 'Expulsada de la ruta',
   cuenta_suspendida: 'Cuenta suspendida',
   veto_retirado: 'Veto retirado',

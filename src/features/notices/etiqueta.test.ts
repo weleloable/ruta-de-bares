@@ -31,7 +31,7 @@ describe('etiquetaDeCuenta', () => {
 
   it('a quien tiene la cana desactivada tambien', () => {
     const e = etiquetaDeCuenta(false, { suspended: false, cana_blocked: true });
-    assert.equal(e.texto, 'Caña desactivada');
+    assert.equal(e.texto, 'La Caña desactivada');
     assert.equal(e.tono, 'sancion');
   });
 

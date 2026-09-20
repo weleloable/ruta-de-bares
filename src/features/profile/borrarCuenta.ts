@@ -64,7 +64,7 @@ export function traducirErrorBorrado(mensaje: string): string {
 export const CONFIRMAR_BORRADO = {
   titulo: '¿Borrar tu cuenta?',
   mensaje:
-    'Se borran tu cuenta y todos tus datos: sellos, foto, perfil de la caña y chats. ' +
+    'Se borran tu cuenta y todos tus datos: sellos, foto, perfil de La Caña y chats. ' +
     'No se puede deshacer. Solo se conserva, sin tu cuenta, el registro de moderación: ' +
     'las denuncias en las que participaste y las decisiones que se tomaron.',
   textoConfirmar: 'Borrar cuenta',

@@ -209,7 +209,7 @@ export const MOTIVOS_DENUNCIA: readonly { id: MotivoDenuncia; etiqueta: string; 
   { id: 'foto', etiqueta: 'La foto', ayuda: 'No es suya, o no debería estar aquí' },
   { id: 'acoso', etiqueta: 'Acoso o insultos', ayuda: 'Lo que ha escrito o lo que hace en la ruta' },
   { id: 'suplantacion', etiqueta: 'Se hace pasar por otra persona', ayuda: '' },
-  { id: 'menor', etiqueta: 'Creo que es menor de edad', ayuda: 'La caña es solo para mayores' },
+  { id: 'menor', etiqueta: 'Creo que es menor de edad', ayuda: 'La Caña es solo para mayores' },
   { id: 'otro', etiqueta: 'Otra cosa', ayuda: 'Cuéntanoslo abajo' },
 ];
 
@@ -340,9 +340,9 @@ const MENSAJES: Record<string, string> = {
   NOT_PARTICIPANT: 'No participas en esta ruta.',
   // Los dos vetos de la 0015. El motivo concreto no viaja en el error: esta en
   // Mi perfil > Avisos, que es donde la ley obliga a contarlo entero.
-  CANA_BLOCKED: 'Un administrador ha desactivado tu caña. Mira el motivo en Mi perfil > Avisos.',
+  CANA_BLOCKED: 'Un administrador ha desactivado tu Caña. Mira el motivo en Mi perfil > Avisos.',
   ACCOUNT_SUSPENDED: 'Tu cuenta está suspendida. Mira el motivo en Mi perfil > Avisos.',
-  MATCH_NOT_ACTIVE: 'Activa Tírate una caña para ver a la gente de tu ruta.',
+  MATCH_NOT_ACTIVE: 'Activa La Caña para ver a la gente de tu ruta.',
   MATCH_PROFILE_MISSING: 'Todavía no te has presentado.',
   ADULT_CONFIRMATION_REQUIRED: 'Confirma que eres mayor de edad para activarlo.',
   BIO_REQUIRED: 'Escribe una frase para presentarte.',
@@ -351,10 +351,10 @@ const MENSAJES: Record<string, string> = {
   TAG_NOT_FOUND: 'Alguna etiqueta ya no existe. Vuelve a elegirlas.',
   INVALID_VOTE: 'Ese voto no es válido.',
   INVALID_TARGET: 'No puedes votarte a ti.',
-  TARGET_UNAVAILABLE: 'Esta persona ha pausado Tírate una caña.',
+  TARGET_UNAVAILABLE: 'Esta persona ha pausado La Caña.',
   CONNECTION_NOT_FOUND: 'Esta conversación no existe.',
   CONNECTION_CLOSED: 'Esta conexión se ha cerrado.',
-  CONNECTION_UNAVAILABLE: 'La otra persona ha pausado Tírate una caña.',
+  CONNECTION_UNAVAILABLE: 'La otra persona ha pausado La Caña.',
   BLOCKED: 'Ya no podéis veros: hay un bloqueo entre vosotros.',
   REPORT_ALREADY_PENDING: 'Ya has denunciado a esta persona y lo estamos revisando.',
   INVALID_REASON: 'Elige un motivo de la lista.',

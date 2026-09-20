@@ -69,7 +69,7 @@ export function etiquetaMotivo(motivo: MatchReportReason): string {
 const RESOLUCION: Record<MatchReportResolution, string> = {
   sin_accion: 'Sin acción',
   foto_retirada: 'Foto retirada',
-  cana_desactivada: 'Caña desactivada',
+  cana_desactivada: 'La Caña desactivada',
   expulsada_de_ruta: 'Expulsada de la ruta',
   cuenta_suspendida: 'Cuenta suspendida',
   otra: 'Otra',
@@ -86,7 +86,7 @@ export function etiquetaResolucion(resolucion: MatchReportResolution | null): st
 export const RESOLUCIONES: readonly { id: MatchReportResolution; etiqueta: string; ayuda: string }[] = [
   { id: 'sin_accion', etiqueta: 'Sin acción', ayuda: 'Revisada y no había nada que hacer' },
   { id: 'foto_retirada', etiqueta: 'Foto retirada', ayuda: 'Le he quitado la foto de perfil' },
-  { id: 'cana_desactivada', etiqueta: 'Caña desactivada', ayuda: 'Ya no aparece en Tírate una caña' },
+  { id: 'cana_desactivada', etiqueta: 'La Caña desactivada', ayuda: 'Ya no aparece en La Caña' },
   { id: 'expulsada_de_ruta', etiqueta: 'Expulsada de la ruta', ayuda: 'Fuera de esta ruta, sin borrar su cuenta' },
   { id: 'cuenta_suspendida', etiqueta: 'Cuenta suspendida', ayuda: 'Fuera de todas las rutas' },
   { id: 'otra', etiqueta: 'Otra', ayuda: 'Cuéntalo en la nota' },

@@ -27,8 +27,8 @@ const TEXTOS: Record<NoticeAction, TextoAviso> = {
     restriccion: true,
   },
   cana_desactivada: {
-    titulo: 'Se ha desactivado tu caña',
-    explicacion: 'Ya no apareces en Tírate una caña, y no puedes volver a activarla hasta que se retire.',
+    titulo: 'Se ha desactivado tu Caña',
+    explicacion: 'Ya no apareces en La Caña, y no puedes volver a activarla hasta que se retire.',
     restriccion: true,
   },
   expulsada_de_ruta: {
@@ -44,7 +44,7 @@ const TEXTOS: Record<NoticeAction, TextoAviso> = {
     restriccion: true,
   },
   cana_reactivada: {
-    titulo: 'Puedes volver a activar tu caña',
+    titulo: 'Puedes volver a activar tu Caña',
     explicacion: 'Se ha retirado la restricción. Activarla otra vez es cosa tuya: no se enciende sola.',
     restriccion: false,
   },
@@ -118,7 +118,7 @@ export type EtiquetaCuenta = { texto: string; tono: 'normal' | 'admin' | 'sancio
  *
  * La suspension gana al veto de cana porque es la sancion mayor y la que explica
  * todo lo demas: a quien esta suspendida tambien le falla la cana, y decirle
- * "Caña desactivada" seria contarle el sintoma pequeno. `admin` se comprueba
+ * "La Caña desactivada" seria contarle el sintoma pequeno. `admin` se comprueba
  * despues de las sanciones solo por orden de lectura: a un admin no se le veta
  * (TARGET_IS_ADMIN), asi que las dos cosas no coinciden.
  */
@@ -127,7 +127,7 @@ export function etiquetaDeCuenta(
   restricciones: { suspended: boolean; cana_blocked: boolean } | null,
 ): EtiquetaCuenta {
   if (restricciones?.suspended) return { texto: 'Cuenta suspendida', tono: 'sancion' };
-  if (restricciones?.cana_blocked) return { texto: 'Caña desactivada', tono: 'sancion' };
+  if (restricciones?.cana_blocked) return { texto: 'La Caña desactivada', tono: 'sancion' };
   if (esAdmin) return { texto: 'Administrador', tono: 'admin' };
   return { texto: 'Participante', tono: 'normal' };
 }

@@ -131,7 +131,7 @@ export default function AlertasAdmin() {
             body={
               filtro === 'resuelta'
                 ? 'Aquí quedará lo que vayáis resolviendo, con quién lo hizo y cuándo.'
-                : 'Cuando alguien denuncie a otra persona en Tírate una caña, o suba una foto de perfil nueva, el aviso aparecerá aquí.'
+                : 'Cuando alguien denuncie a otra persona en La Caña, o suba una foto de perfil nueva, el aviso aparecerá aquí.'
             }
           />
         ) : (

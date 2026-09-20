@@ -105,6 +105,54 @@ describe('el texto dice lo que tiene que decir', () => {
   });
 });
 
+describe('una sola seccion para que se recoge, para que y quien lo ve', () => {
+  // Antes eran tres secciones ("Que se recoge, y para que", "Quien lo ve" y
+  // "La Caña" aparte). Separarlas dejaba un hueco entre leer que se guarda un
+  // dato y leer, mucho despues, quien puede verlo.
+  it('el titulo nuevo existe, y los tres viejos ya no', () => {
+    assert.match(pantalla, /Qué se recoge, para qué y quién puede verlo/);
+    assert.doesNotMatch(pantalla, /Qué se recoge, y para qué/);
+    assert.doesNotMatch(pantalla, />Quién lo ve</);
+    assert.doesNotMatch(pantalla, />La Caña</);
+  });
+
+  it('ya no hay una frase que remita "mas abajo" a la seccion de La Caña: esta aqui mismo', () => {
+    assert.doesNotMatch(pantalla, /Si activas La Caña:.*más abajo/);
+  });
+
+  it('lo de La Caña esta DENTRO de esa misma seccion, tras su propio subtitulo', () => {
+    const seccion = /Qué se recoge, para qué y quién puede verlo([\s\S]*?)Si te sancionamos/.exec(pantalla)?.[1] ?? '';
+    assert.match(seccion, /Además, si activas La Caña/);
+    assert.match(seccion, /A quién le das Me gusta[\s\S]{0,60}es privado/);
+    assert.match(seccion, /Puedes desactivarla cuando quieras/);
+  });
+});
+
+describe('el orden de las secciones: las sanciones antes que la conservacion', () => {
+  it('"huella de tu correo" sale antes que "Cuánto tiempo"', () => {
+    const iSanciones = pantalla.indexOf('huella de tu correo');
+    const iTiempo = pantalla.indexOf('Cuánto tiempo');
+    assert.ok(iSanciones > -1 && iTiempo > -1);
+    assert.ok(iSanciones < iTiempo, 'las sanciones tienen que ir antes que cuanto tiempo se conserva');
+  });
+});
+
+describe('las tres frases que se pidio cambiar, tal cual', () => {
+  it('la contraseña, sin nombrar a Supabase', () => {
+    assert.match(pantalla, /La contraseña no la vemos, se guarda cifrada\./);
+    assert.doesNotMatch(pantalla, /la guarda Supabase cifrada/);
+  });
+
+  it('borrar la cuenta, en cualquier momento y junto con todos los datos', () => {
+    assert.match(pantalla, /Puedes borrar tu cuenta junto con todos tus datos en cualquier momento desde Mi perfil\./);
+  });
+
+  it('la conservacion del evento, con la aspiracion de las 24h', () => {
+    assert.match(pantalla, /Un máximo de \{DIAS_CONSERVACION\} días tras la celebración del evento\./);
+    assert.match(pantalla, /idealmente, lo borraremos\s+todo a las 24h/);
+  });
+});
+
 describe('el HMAC del correo se explica entero', () => {
   const seccion = pantalla.slice(pantalla.indexOf('huella de tu correo'));
 
@@ -126,7 +174,8 @@ describe('el HMAC del correo se explica entero', () => {
 
   it('y que sale en la descarga de datos, como todo lo demas', () => {
     // Decir que se guarda y esconderlo al pedir los datos seria lo peor de
-    // los dos mundos.
-    assert.match(seccion, /Mis datos/);
+    // los dos mundos. "Mis datos" dejo de ser una pantalla aparte: ahora es el
+    // recuadro "Ver lo que guardamos", dentro de esta misma pantalla.
+    assert.match(seccion, /Ver lo que guardamos/);
   });
 });

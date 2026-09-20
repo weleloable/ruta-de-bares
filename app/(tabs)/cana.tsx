@@ -52,7 +52,7 @@ type Vista = 'perfiles' | 'chats';
 const VACIO: Record<Filtro, { title: string; body: string }> = {
   todos: {
     title: 'Aún no hay nadie',
-    body: 'Cuando alguien de tu ruta active Tírate una caña, aparecerá aquí.',
+    body: 'Cuando alguien de tu ruta active La Caña, aparecerá aquí.',
   },
   'me-gusta': { title: 'Nadie marcado', body: 'Las personas a las que des Me gusta aparecerán aquí.' },
   visto: {
@@ -109,7 +109,7 @@ export default function CanaScreen() {
       setBandeja(chats);
       fijarAvisos(chatsPendientes(chats, yo));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo cargar Tírate una caña.');
+      setError(e instanceof Error ? e.message : 'No se pudo cargar La Caña.');
     } finally {
       setCargando(false);
     }
@@ -187,7 +187,7 @@ export default function CanaScreen() {
       <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
         <EmptyState
           title="Todavía no hay ruta"
-          body="Tírate una caña funciona dentro de una ruta. Cuando participes en una, aquí podrás conocer a su gente."
+          body="La Caña funciona dentro de una ruta. Cuando participes en una, aquí podrás conocer a su gente."
         />
       </SafeAreaView>
     );
@@ -207,7 +207,7 @@ export default function CanaScreen() {
               <View style={styles.sello}>
                 <Text style={styles.selloTexto}>CAÑA</Text>
               </View>
-              <Text style={typography.screenTitle}>Un tinder cervecero</Text>
+              <Text style={typography.screenTitle}>Tírale la caña con La Caña</Text>
               <Text style={[typography.muted, styles.centrado]}>
                 Conoce a la gente de {activeRoute?.name} y ofrécele una caña.
               </Text>
@@ -326,7 +326,7 @@ export default function CanaScreen() {
 
       <DialogoConfirmar
         visible={confirmandoDesactivar}
-        titulo="Desactivar Tírate una caña"
+        titulo="Desactivar La Caña"
         mensaje="Dejarás de aparecer en la grilla y en los chats de tu ruta. Tus votos y conexiones se guardan para cuando vuelvas a activarlo."
         textoConfirmar="Desactivar"
         ocupado={cambiando}

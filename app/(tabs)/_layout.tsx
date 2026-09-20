@@ -15,9 +15,17 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.inkFaint,
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        // Misma barra en todas las pestanas, titulada con el title de cada una
-        // (el mismo texto que su boton en la barra de abajo).
-        header: ({ options }) => <BarraSuperior titulo={options.title ?? ''} />,
+        // Misma barra en todas las pestanas. Por defecto, titulada con el
+        // title de cada una (el mismo texto que su boton en la barra de
+        // abajo); si una pestana pone ademas headerTitle, manda ese en la
+        // cabecera y el title corto se queda solo abajo (caso de "Caña": no
+        // cabe entero en la barra con cinco pestanas, pero la cabecera si
+        // tiene sitio). Bug encontrado al comprobar esto en pantalla:
+        // headerTitle llevaba puesto desde siempre y no se leia en ningun
+        // sitio, asi que la cabecera de esa pestana decia "Caña" a secas.
+        header: ({ options }) => (
+          <BarraSuperior titulo={(typeof options.headerTitle === 'string' ? options.headerTitle : null) ?? options.title ?? ''} />
+        ),
         // React Navigation reserva el hueco del notch con este color aunque el
         // header sea propio: sin esto se ve mas claro que el resto de la barra.
         headerStyle: { backgroundColor: colors.paperDeep },
@@ -45,10 +53,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="cana"
         options={{
-          // "Tirate una cana" no cabe en la barra: nombre corto abajo y
-          // completo en la cabecera.
+          // "La Caña" no cabe en la barra con cinco pestanas: nombre corto
+          // abajo y completo en la cabecera.
           title: 'Caña',
-          headerTitle: 'Tírate una caña',
+          headerTitle: 'La Caña',
           tabBarIcon: ({ color, size }) => <Ionicons name="beer" color={color} size={size} />,
           // Conexion nueva o novedad en un chat: la misma cuenta que la
           // burbujita de "Chats" dentro de la pestana.

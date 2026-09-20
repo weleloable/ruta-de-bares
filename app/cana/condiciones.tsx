@@ -7,43 +7,37 @@ import { CONSENTIMIENTO_VERSION } from '../../src/features/match/reglas';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 /**
- * Lo que se acepta al activar la cana: que se recoge, quien lo ve y que no se
- * puede hacer. Es la pantalla a la que apunta el consentimiento que guarda
- * match_activate, y por eso lleva su version a la vista (0010).
+ * Cómo funciona La Caña, paso a paso, y qué normas tiene. Es la pantalla a la
+ * que apunta el consentimiento que guarda match_activate, y por eso lleva su
+ * version a la vista (0010).
  *
- * La politica de privacidad general (quien responde de los datos y como
- * ejercer los derechos) ya existe y se enlaza abajo. Sigue en borrador: falta
- * decidir quien es el responsable del tratamiento, y la propia pantalla lo
- * dice. Al cerrarlo habra que subir CONSENTIMIENTO_VERSION.
+ * Lo que NO va aqui, a proposito: que dato se guarda y quien lo ve. Eso es
+ * politica de privacidad, y vivia mezclado con la mecanica hasta que se separo
+ * en dos pantallas (privacidad.tsx tiene la seccion "La Caña"). Aqui solo se
+ * explica el mecanismo (D5-D8 y D12 de docs/TIRATE-UNA-CANA.md) y las normas de
+ * convivencia; el enlace de abajo lleva a la parte de datos.
  */
 export default function CondicionesCana() {
   const router = useRouter();
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right', 'bottom']}>
-      <Stack.Screen options={{ title: 'Cómo funciona la caña' }} />
+      <Stack.Screen options={{ title: 'Cómo funciona La Caña' }} />
       <ScrollView contentContainerStyle={styles.cuerpo}>
         <Text style={typography.muted}>Versión {CONSENTIMIENTO_VERSION}</Text>
 
         <Seccion titulo="Es voluntario y se puede parar">
           <Punto>Activarlo es decisión tuya y puedes desactivarlo cuando quieras: dejas de aparecer y tus chats se guardan para cuando vuelvas.</Punto>
-          <Punto>Si prefieres no dejar rastro, puedes borrar todos tus datos de la caña desde "Mis datos".</Punto>
+          <Punto>Si prefieres no dejar rastro, puedes borrar tu cuenta entera desde Mi perfil &gt; Borrar Cuenta.</Punto>
           <Punto>Es solo para mayores de edad.</Punto>
         </Seccion>
 
-        <Seccion titulo="Qué se recoge mientras lo tengas activado">
-          <Punto>Tu frase de presentación y las etiquetas que elijas.</Punto>
-          <Punto>A quién le das Me gusta y de quién abres la ficha.</Punto>
-          <Punto>Con quién conectas y cuándo.</Punto>
-          <Punto>La pregunta de la cerveza, su respuesta y el mensaje que escribas después.</Punto>
-          <Punto>Cuándo abres cada chat, para poder enseñarte lo que tienes sin leer.</Punto>
-        </Seccion>
-
-        <Seccion titulo="Quién ve cada cosa">
-          <Punto>Tu nombre, tu foto, tu frase y tus etiquetas: las personas de tu ruta que también lo tengan activado.</Punto>
-          <Punto>A quién das Me gusta y qué fichas abres: nadie. Solo se sabe que hay conexión cuando el Me gusta es mutuo.</Punto>
-          <Punto>Los chats: nadie más que vosotros dos. Quien organiza la ruta tampoco puede leerlos.</Punto>
-          <Punto>Si denuncias a alguien, lo que esa persona te escribió viaja con la denuncia para que se pueda revisar.</Punto>
+        <Seccion titulo="Cómo funciona, paso a paso">
+          <Punto>Ves las fichas de quien más, en tu ruta, también tenga La Caña activada: foto, frase y etiquetas.</Punto>
+          <Punto>Le das Me gusta a quien te interese. Abrir una ficha sin darle Me gusta la deja como Visto.</Punto>
+          <Punto>Si esa persona también te lo ha dado a ti, se abre una conexión.</Punto>
+          <Punto>En la conexión podéis preguntaros: "¿Te tomas una cerveza conmigo?". Se responde Sí, No, o "Pregúntamelo dentro de un rato".</Punto>
+          <Punto>Tras el Sí, cada uno manda un único mensaje. A partir de ahí, quedáis por vuestra cuenta.</Punto>
         </Seccion>
 
         <Seccion titulo="Lo que no se puede hacer">
@@ -56,10 +50,13 @@ export default function CondicionesCana() {
 
         <Seccion titulo="Qué pasa si alguien lo incumple">
           <Punto>Cualquiera puede bloquear y denunciar desde la ficha o desde el chat.</Punto>
-          <Punto>Quien organiza la ruta puede retirar una foto o desactivarle la caña a esa persona.</Punto>
+          <Punto>Quien organiza la ruta puede retirar una foto o desactivarle La Caña a esa persona.</Punto>
           <Punto>Bloquear cierra la conexión y borra el chat, y la otra persona deja de verte en la ruta.</Punto>
         </Seccion>
 
+        <Text style={typography.muted}>
+          Qué dato se guarda de cada cosa y quién puede verlo está en la política de privacidad, no aquí.
+        </Text>
         <Button
           title="Cómo tratamos tus datos"
           variant="secondary"

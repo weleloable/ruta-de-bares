@@ -139,4 +139,4 @@ export function avisoDeRutaTerminada(ruta: RutaEstado, ahora: Date): string | nu
  */
 export const LO_QUE_SE_BORRA =
   'Se borran los sellos de todo el mundo, la lista de participantes, las invitaciones, ' +
-  'y los perfiles, chats y denuncias de la caña de esta ruta. No se puede deshacer.';
+  'y los perfiles, chats y denuncias de La Caña de esta ruta. No se puede deshacer.';

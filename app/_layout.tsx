@@ -97,7 +97,6 @@ function AuthGate() {
       <Stack.Screen name="editor/[routeId]/bar-nuevo" options={{ title: 'Bar nuevo' }} />
       <Stack.Screen name="invitaciones" options={{ title: 'Invitaciones' }} />
       <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
-      <Stack.Screen name="mis-datos" options={{ title: 'Mis datos' }} />
       <Stack.Screen name="contacto" options={{ title: 'Escribir' }} />
       <Stack.Screen name="privacidad" options={{ title: 'Privacidad' }} />
       <Stack.Screen name="admin/alertas" options={{ title: 'Alertas de administración' }} />
@@ -106,10 +105,10 @@ function AuthGate() {
       <Stack.Screen name="admin/mensaje/[messageId]" options={{ title: 'Mensaje' }} />
       <Stack.Screen name="admin/moderacion" options={{ title: 'Moderación' }} />
       <Stack.Screen name="cana/presentacion" options={{ title: 'Preséntate' }} />
-      <Stack.Screen name="cana/persona/[userId]" options={{ title: 'Tírate una caña' }} />
+      <Stack.Screen name="cana/persona/[userId]" options={{ title: 'La Caña' }} />
       <Stack.Screen name="cana/chat/[connectionId]" options={{ title: 'Chat' }} />
       <Stack.Screen name="cana/bloqueados" options={{ title: 'Personas bloqueadas' }} />
-      <Stack.Screen name="cana/condiciones" options={{ title: 'Cómo funciona la caña' }} />
+      <Stack.Screen name="cana/condiciones" options={{ title: 'Cómo funciona La Caña' }} />
     </Stack>
   );
 }

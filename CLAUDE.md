@@ -61,9 +61,9 @@ app/                      pantallas (Expo Router)
   admin/                  bandeja de alertas de administracion, ficha de una denuncia
                           (alerta/) y decidir una foto de perfil (foto/)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
-  mis-datos.tsx           descargar o borrar tus datos; se entra desde Mi perfil
   contacto.tsx            escribir a la organizacion y reclamar una decision
-  privacidad.tsx          que datos se recogen y como ejercer tus derechos (publica)
+  privacidad.tsx          que datos se recogen, quien los ve y descargarlos
+                          (publica; "Ver lo que guardamos" fue app/mis-datos.tsx)
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
@@ -105,6 +105,7 @@ supabase/
   migrations/0026_*.sql     escribir a la organizacion y reclamar una decision
   migrations/0027_*.sql     una ruta termina, y borrarla se lleva sus datos
   migrations/0028_*.sql     la denuncia congela la foto y la frase de entonces
+  migrations/0029_*.sql     catalogo de etiquetas real, ya no son placeholders
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -519,3 +520,59 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   revienta el wasm y **se lleva el proceso de test por delante**, sin mensaje
   util. `tests/migration-0020.test.ts` era el unico que la reutilizaba y
   aguantaba de milagro: salto al anadirle 16 bytes de comentario a la 0020.
+- **"La Caña" es el nombre del servicio desde ahora, con articulo pegado**:
+  sustituye a "Tirate una cana"/"la cana" en todo el texto de cara al usuario
+  (no en rutas, identificadores ni comentarios internos). Trampa gramatical: no
+  se puede escribir "tu La Caña" ni "su La Caña" (dos articulos chocan), asi
+  que en construcciones posesivas se usa "Caña" sin articulo ("tu Caña", "su
+  Caña"); en el resto, "La Caña" completa. El chip de la barra inferior se
+  queda en "Caña" a secas por espacio (cinco pestanas); la cabecera de la
+  pantalla y el resto del texto sí dicen "La Caña" entera. Los usos idiomaticos
+  de "una caña"/"la caña" como la cerveza literal ("ofrécele una caña", "¿Una
+  caña?", "tomar una caña") NO se tocan: son juego de palabras con el nombre,
+  no el nombre.
+- **`app/(tabs)/_layout.tsx`: el header de las pestanas leia `options.title` y
+  no `options.headerTitle`**, pese a que el comentario ya decia "nombre corto
+  abajo y completo en la cabecera". Bug real, encontrado al comprobar en
+  pantalla que la cabecera de Cana decia "Caña" en vez de "La Caña": el
+  `headerTitle` de esa pestana llevaba puesto desde siempre y nunca se leia en
+  ningun sitio. Arreglado para que el header prefiera `headerTitle` (si es
+  string) y caiga a `title` si no lo hay.
+- **Politica de privacidad y mecanica de La Caña, en pantallas separadas**
+  (`cana/condiciones.tsx` explica SOLO como funciona y las normas;
+  `privacidad.tsx` tiene la seccion "La Caña" con que dato ve quien). Vivian
+  mezcladas en condiciones.tsx. Cada pantalla enlaza a la otra.
+- **No hay borrado parcial de "los datos de la cana" en Mis datos**: por ley
+  basta con poder borrar TODO (Borrar Cuenta, Mi perfil, 0021); una via de
+  borrado parcial ademas de esa no es una obligacion legal y confundia con dos
+  botones de "borrar" en pantallas distintas. Quien quiera separarse solo de La
+  Caña sin perder su compostelana la DESACTIVA (pausa, no borra nada) desde su
+  pestana; `match_delete_my_data` y `deleteMyMatchData()` se quedan en el
+  codigo (no rompen nada al seguir ahi), simplemente ya no los llama ninguna
+  pantalla.
+- **El catalogo de etiquetas de La Caña ya no es el placeholder de la 0005**
+  (`0029`): la 0005 sembro "Etiqueta 1".."Etiqueta 8" con una nota EXPLICITA de
+  que era provisional y de que nunca debian tocar categorias especiales del
+  art. 9 del RGPD (orientacion, salud, religion, ideologia). La 0029 solo
+  actualiza el `label` por `id` fijo (no toca los ids, no son visibles en
+  ningun sitio): rasgos de comportamiento en la ruta, nunca de identidad.
+- **"Mis datos" ya no es una pantalla propia: es el recuadro "Ver lo que
+  guardamos" dentro de `privacidad.tsx`** (`app/mis-datos.tsx` borrado). Habia
+  dos pantallas casi iguales enlazadas entre si (una decia que se recogia, la
+  otra dejaba descargarlo) y dos botones distintos en Mi perfil. Ahora un solo
+  boton, "Política de privacidad y datos", lleva a una sola pantalla que
+  explica la politica Y deja descargar, en el hueco donde antes estaba el
+  boton "Cómo funciona La Caña" (que se quito: el enlace en sentido contrario,
+  de condiciones a privacidad, se queda).
+- **En `privacidad.tsx`, "que se recoge", "para que" y "quien lo ve" van en
+  UNA sola seccion, dato por dato** ("Qué se recoge, para qué y quién puede
+  verlo"), no en dos o tres separadas: separarlas deja un hueco entre leer que
+  se guarda un dato y leer, mucho despues, que no lo ve nadie. Lo de La Caña
+  no tiene su propia seccion: es "Además, si activas La Caña" DENTRO de esa
+  misma seccion. Las sanciones (huella de correo) van ANTES que cuanto tiempo
+  se conserva, porque explican por que existe ese dato antes de decir cuanto
+  dura.
+- **El catalogo de etiquetas de La Caña tiene 30**, no 8 (`0029`, editada
+  porque aun no estaba comiteada cuando se amplio: no es una migracion ya
+  publicada). Misma regla que antes: comportamiento en la ruta, nunca
+  identidad, nada del art. 9 del RGPD.

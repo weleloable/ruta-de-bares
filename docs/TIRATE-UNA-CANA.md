@@ -68,7 +68,7 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D8 | Desactivar es una **pausa**: desapareces de grillas y chats y todo vuelve al reactivar. |
 | D9 | La foto **no es obligatoria**; sin ella se ven las iniciales. |
 | D10 | Los **admins no leen chats**. |
-| D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Las actuales son provisionales. |
+| D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Catalogo real desde la 0029: rasgos de comportamiento en la ruta, nunca de identidad. |
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
 | D13 | ~~Catalogo propio de GIFs~~. **Retirada en la 0008**: no hay GIFs ni zumbidos, solo la pregunta de la cerveza. |
 | D16 | **Activar es un si explicito** (0010): se guarda la version de las condiciones aceptadas, y cualquiera puede descargar o borrar sus datos de la cana. |
@@ -136,18 +136,26 @@ explicito e informado, y queda guardado con la version de lo que se acepto
 se sube solo cuando cambia lo que se acepta, no con cada retoque de redaccion.
 Volver de una pausa no vuelve a pedirlo: el si ya esta dado.
 
-Desde "Mis datos" (`app/mis-datos.tsx`, al que se entra desde **Mi perfil**, no
-desde esta pestana: a una cuenta suspendida o con la cana desactivada la pestana
-Cana le sale vacia, y es justo quien mas necesita llegar ahi):
+Desde "Ver lo que guardamos" (dentro de `app/privacidad.tsx`, a la que se entra
+desde **Mi perfil > Política de privacidad y datos**, no desde esta pestana: a
+una cuenta suspendida o con la cana desactivada la pestana Cana le sale vacia, y
+es justo quien mas necesita llegar ahi):
 
-- **Ver y copiar** lo que la cana guarda (`match_export_my_data`): perfil,
-  Me gusta y Vistos, conexiones y **los mensajes que escribiste tu**. Los de la
-  otra persona son suyos y no se entregan aqui.
-- **Borrar** (`match_delete_my_data`), que no es desactivar: no deja perfil, ni
-  etiquetas, ni votos (en los dos sentidos), ni conexiones, ni mensajes. **No**
-  se lleva los bloqueos que otras personas te pusieron (es su decision de no
-  volver a verte) ni las denuncias sobre ti (pueden estar sin resolver y quien
-  organiza tiene que poder responder de ellas).
+- **Ver y copiar** lo que la cana guarda (`match_export_my_data`, dentro de
+  `export_my_data`, 0025): perfil, Me gusta y Vistos, conexiones y **los
+  mensajes que escribiste tu**. Los de la otra persona son suyos y no se
+  entregan aqui.
+
+`match_delete_my_data` (borrar solo lo de la cana, sin tocar cuenta ni sellos)
+sigue en Postgres y probada (ver tests/migration-0010.test.ts y posteriores),
+pero **ninguna pantalla la llama**: se quito la tarjeta de "Borrar mis datos de
+la cana" porque por ley basta con poder borrar TODO (Borrar Cuenta, Mi perfil,
+0021), y dos botones de "borrar" en pantallas distintas confundia mas que
+ayudaba. No es desactivar: no deja perfil, ni etiquetas, ni votos (en los dos
+sentidos), ni conexiones, ni mensajes. **No** se lleva los bloqueos que otras
+personas te pusieron (es su decision de no volver a verte) ni las denuncias
+sobre ti (pueden estar sin resolver y quien organiza tiene que poder responder
+de ellas).
 
 Conservacion: `match_admin_purge_route(p_route_id, p_days default 30)` borra
 votos, conexiones y denuncias de una ruta cuyo evento fue hace mas de N dias.

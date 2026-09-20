@@ -339,17 +339,17 @@ export default function PerfilScreen() {
             ) : null}
           </View>
           {/*
-            Aqui y no en la pestana Cana, de donde viene: a una cuenta suspendida
-            o con la cana desactivada esa pestana le sale vacia, y es justo a
-            quien su aviso le promete que puede llevarse o borrar sus datos.
-            Va ANTES de "Borrar Cuenta" (que esta al final de la pantalla) por
-            el mismo motivo: descargar primero, borrar despues.
+            Llevaba a /mis-datos, pantalla propia; ahora "Ver lo que guardamos"
+            vive DENTRO de /privacidad (el boton, no solo el enlace). Un unico
+            sitio para leer la politica Y descargar tus datos, en vez de dos
+            pantallas casi iguales. Sigue yendo antes que "Borrar Cuenta" por
+            el mismo motivo de siempre: descargar primero, borrar despues.
           */}
           <Button
-            title="Mis datos"
+            title="Política de privacidad y datos"
             variant="secondary"
             textStyle={styles.textoAccionBarra}
-            onPress={() => router.push('/mis-datos')}
+            onPress={() => router.push('/privacidad')}
           />
           {/*
             Siempre visible y sin condiciones: es el punto de contacto del
@@ -410,7 +410,7 @@ export default function PerfilScreen() {
               tiene que haber siempre un sitio desde el que deshacerlo.
             */}
             <Button
-              title="Moderación"
+              title="Histórico de moderación"
               variant="secondary"
               textStyle={styles.textoAccionBarra}
               onPress={() => router.push('/admin/moderacion')}

@@ -39,12 +39,12 @@ describe('entrada desde Mi perfil (DSA art. 12)', () => {
     assert.doesNotMatch(antes, /isAdmin \?|restricciones\?\.|suspended/);
   });
 
-  it('va en la misma tarjeta que Avisos y Mis datos', () => {
+  it('va en la misma tarjeta que Avisos y Política de privacidad y datos', () => {
     const iAvisos = perfil.indexOf("router.push('/avisos')");
-    const iDatos = perfil.indexOf("router.push('/mis-datos')");
+    const iDatos = perfil.indexOf("router.push('/privacidad')");
     const iContacto = perfil.indexOf("router.push('/contacto')");
     assert.ok(iAvisos > -1 && iDatos > -1 && iContacto > -1);
-    assert.ok(iContacto > iDatos && iDatos > iAvisos, 'el orden es Avisos, Mis datos, Escribir');
+    assert.ok(iContacto > iDatos && iDatos > iAvisos, 'el orden es Avisos, Política de privacidad y datos, Escribir');
   });
 });
 

@@ -126,7 +126,8 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    siendo el escalon mas bajo de la sancion. Rellena sola los vetos que ya
    estuviesen puestos.
 25. [`supabase/migrations/0025_exportar_todos_mis_datos.sql`](../supabase/migrations/0025_exportar_todos_mis_datos.sql)
-   y **Run**. `export_my_data()`: la descarga de **Mi perfil > Mis datos** pasa
+   y **Run**. `export_my_data()`: la descarga de **Mi perfil > Política de
+   privacidad y datos > Ver lo que guardamos** pasa
    a traer todo (cuenta y correo, rutas, sellos con coordenadas, fotos
    enviadas, avisos y sanciones) y no solo lo de la cana. **Ojo con el orden**:
    si despliegas la app antes de pegarla, "Ver mis datos" falla.

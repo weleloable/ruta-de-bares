@@ -188,7 +188,7 @@ export default function ChatCana() {
         <Stack.Screen options={{ title: 'Chat', headerLeft: () => <BotonVolverCana /> }} />
         <View style={styles.cuerpoVacio}>
           <EmptyState title="Este chat ya no está disponible" body={perdida ?? error ?? 'No se pudo abrir.'} />
-          <Button title="Volver a Tírate una caña" variant="secondary" onPress={() => router.back()} />
+          <Button title="Volver a La Caña" variant="secondary" onPress={() => router.back()} />
         </View>
       </SafeAreaView>
     );
