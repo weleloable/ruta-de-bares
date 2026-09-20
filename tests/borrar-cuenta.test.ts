@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -116,11 +116,41 @@ describe('contrato SQL <-> app', () => {
     assert.match(tipos, /delete_my_account_blockers:\s*\{\s*Args: Record<string, never>;\s*Returns: string\[\];/);
   });
 
+  /**
+   * Se lee la ULTIMA migracion que redefine la funcion, no la 0021 fija: la
+   * 0024 le quito `CANA_BLOCKED` y, leyendo solo la 0021, este test exigia una
+   * frase para un codigo que el servidor ya no emite. Una migracion publicada
+   * no se edita, se anade la siguiente, asi que el contrato lo marca la ultima.
+   */
+  function ultimoBlockers(): string {
+    const dir = join(raiz, 'supabase/migrations');
+    const ficheros = readdirSync(dir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
+    const cual = ficheros
+      .filter((f) => /function public\.delete_my_account_blockers\(\)/.test(leer(`supabase/migrations/${f}`)))
+      .at(-1);
+    assert.ok(cual, 'ninguna migracion define delete_my_account_blockers()');
+    return leer(`supabase/migrations/${cual}`).replace(/--.*$/gm, '');
+  }
+
   it('todos los codigos que emite el SQL tienen frase en la app', () => {
-    const sql = leer('supabase/migrations/0021_borrar_mi_cuenta.sql').replace(/--.*$/gm, '');
-    const codigos = [...sql.matchAll(/array_append\(v_res, '([A-Z_]+)'::text\)/g)].map((m) => m[1]);
-    assert.ok(codigos.length >= 4);
+    const codigos = [...ultimoBlockers().matchAll(/array_append\(v_res, '([A-Z_]+)'::text\)/g)].map((m) => m[1]);
+    assert.ok(codigos.length >= 3, `se esperaban varios impedimentos y salieron ${codigos.length}`);
     const app = leer('src/features/profile/borrarCuenta.ts');
     for (const codigo of codigos) assert.match(app, new RegExp(`\\b${codigo}:`), `${codigo} sin texto en borrarCuenta.ts`);
+  });
+
+  it('y la app no inventa impedimentos que el servidor ya no emite', () => {
+    // Al reves que el anterior: una frase para un codigo muerto le diria a
+    // alguien que no puede borrarse por algo que ya no le afecta.
+    const sql = ultimoBlockers();
+    const app = leer('src/features/profile/borrarCuenta.ts');
+    const cuerpoMapa = app.slice(app.indexOf('const IMPEDIMENTOS'), app.indexOf('/** El primer impedimento'));
+    const enLaApp = [...cuerpoMapa.matchAll(/^\s{2}([A-Z_]+):/gm)].map((m) => m[1]);
+    assert.ok(enLaApp.length >= 3);
+    for (const codigo of enLaApp) {
+      assert.match(sql, new RegExp(`'${codigo}'`), `${codigo} tiene frase en la app y el SQL ya no lo emite`);
+    }
   });
 });

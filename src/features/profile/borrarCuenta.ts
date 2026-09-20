@@ -15,9 +15,10 @@ const IMPEDIMENTOS: Record<string, string> = {
   HAS_OPEN_REPORTS:
     'Ahora mismo hay una denuncia sin resolver sobre tu cuenta, así que no se puede borrar todavía. ' +
     'Podrás hacerlo cuando la organización la resuelva.',
-  CANA_BLOCKED:
-    'La organización tiene desactivada tu caña, así que la cuenta no se puede borrar todavía. ' +
-    'Habla con la organización.',
+  // CANA_BLOCKED estuvo aqui y lo quito la 0024. Tener la cana desactivada ya
+  // no impide borrarse: el veto sobrevive por su cuenta (HMAC del correo, como
+  // el de ruta y la suspension) en vez de retener a la persona. Era el escalon
+  // mas bajo de la sancion bloqueando el derecho de supresion, sin plazo.
 };
 
 /** El primer impedimento que trae la lista, ya en lenguaje de persona; null si no hay. */

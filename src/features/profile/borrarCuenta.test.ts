@@ -9,7 +9,7 @@ describe('textoDeImpedimentos', () => {
   });
 
   it('cada codigo del servidor tiene su frase, y ninguna es el codigo crudo', () => {
-    for (const codigo of ['ADMIN_CANNOT_DELETE', 'OWNS_ROUTES', 'HAS_OPEN_REPORTS', 'CANA_BLOCKED']) {
+    for (const codigo of ['ADMIN_CANNOT_DELETE', 'OWNS_ROUTES', 'HAS_OPEN_REPORTS']) {
       const texto = textoDeImpedimentos([codigo]);
       assert.ok(texto && !texto.includes(codigo), `${codigo} sin frase propia`);
     }
@@ -20,7 +20,16 @@ describe('textoDeImpedimentos', () => {
   });
 
   it('con varios, sale el primero', () => {
-    assert.equal(textoDeImpedimentos(['OWNS_ROUTES', 'CANA_BLOCKED']), textoDeImpedimentos(['OWNS_ROUTES']));
+    assert.equal(textoDeImpedimentos(['OWNS_ROUTES', 'HAS_OPEN_REPORTS']), textoDeImpedimentos(['OWNS_ROUTES']));
+  });
+});
+
+describe('CANA_BLOCKED ya no impide borrarse (0024)', () => {
+  it('tener la cana desactivada no para el borrado', () => {
+    // El servidor dejo de devolverlo. Si volviese (una base sin la 0024), cae
+    // en la rama del codigo desconocido y PARA igual, que es lo prudente.
+    assert.match(textoDeImpedimentos(['CANA_BLOCKED']) ?? '', /no se puede borrar/);
+    assert.equal(textoDeImpedimentos([]), null);
   });
 });
 
@@ -47,7 +56,7 @@ describe('traducirErrorBorrado', () => {
   });
 
   it('el resto de impedimentos tambien llegan traducidos', () => {
-    for (const codigo of ['OWNS_ROUTES', 'HAS_OPEN_REPORTS', 'CANA_BLOCKED']) {
+    for (const codigo of ['OWNS_ROUTES', 'HAS_OPEN_REPORTS']) {
       assert.equal(traducirErrorBorrado(codigo), textoDeImpedimentos([codigo]));
     }
   });
