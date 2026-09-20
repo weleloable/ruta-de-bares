@@ -62,6 +62,8 @@ app/                      pantallas (Expo Router)
                           (alerta/) y decidir una foto de perfil (foto/)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   mis-datos.tsx           descargar o borrar tus datos; se entra desde Mi perfil
+  contacto.tsx            escribir a la organizacion y reclamar una decision
+  privacidad.tsx          que datos se recogen y como ejercer tus derechos (publica)
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
@@ -98,13 +100,16 @@ supabase/
   migrations/0021_*.sql     borrar tu propia cuenta (delete_my_account)
   migrations/0022_*.sql     ni anon ni authenticated pueden vaciar una tabla
   migrations/0023_*.sql     el bucket de fotos es privado: URL firmadas
+  migrations/0024_*.sql     el veto de cana aguanta solo (HMAC) y deja borrarse
+  migrations/0025_*.sql     exportar TODOS tus datos, no solo los de la cana
+  migrations/0026_*.sql     escribir a la organizacion y reclamar una decision
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
 ```
 
 Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `route_invites`,
-`route_members`, `avatar_requests`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`route_members`, `avatar_requests`, `cana_bans`, `user_messages`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -450,3 +455,36 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   un `avatar_url` en un `uri:` (no daria error, daria un hueco en blanco).
   **Al desplegar, la app va ANTES que la migracion**: al reves, una version vieja
   pide la URL publica y todo el mundo se queda sin fotos.
+- **El veto de cana guarda un HMAC del correo, igual que el de ruta** (`0024`,
+  tabla `cana_bans`): la 0021 habia elegido `CANA_BLOCKED` como impedimento para
+  borrar la cuenta, con buen motivo (el veto vive en `match_profiles`, que cae
+  en cascada), pero eso dejaba el escalon MAS BAJO de la sancion bloqueando el
+  derecho de supresion y sin plazo. Ahora el veto sobrevive por su cuenta y
+  `CANA_BLOCKED` ya no impide nada. `match_admin_lift_cana` levanta tambien
+  cuando NO hay fila viva: una cuenta nueva con el mismo correo solo tiene el
+  HMAC, y sin eso ese veto heredado no habria forma de retirarlo (art. 20 DSA).
+  Y `match_admin_moderaciones` lee la rama 'cana' de `cana_bans` y no de
+  `match_profiles`, o el veto desaparece de la lista justo al borrarse la cuenta.
+- **`export_my_data()` es la exportacion de verdad; `match_export_my_data` es
+  solo el trozo de la cana** (`0025`): la segunda se sigue llamando desde la
+  primera en vez de copiarse, para que no acaben separandose. Salen el correo,
+  los sellos CON coordenadas y **el HMAC del correo**: decir en la politica que
+  se guarda y esconderlo al pedir los datos seria lo peor de los dos mundos. NO
+  sale el texto de una denuncia abierta sobre ti ni quien la puso (art. 15.4:
+  son datos de un tercero, y una invitacion a las represalias).
+- **El canal de contacto NO copia el guardian de la 0016** (`0026`,
+  `send_admin_message`): denunciar y bloquear exigen estar dentro de una ruta y
+  sin sancion; aqui seria al reves de lo que se busca, porque quien mas necesita
+  escribir es la cuenta suspendida y expulsada. Solo se exige sesion, y tiene
+  test propio. Dos entradas al mismo sitio: Mi perfil (art. 12 DSA, siempre
+  visible) y dentro de cada aviso restrictivo (art. 20, con el id del aviso
+  pegado). El art. 16 —avisar teniendo o no cuenta— NO se puede cubrir desde la
+  app: lo cubre el correo de la politica. Responder genera un aviso
+  (`respuesta_organizacion`), y si la decision reclamada la tomo quien mira el
+  ticket, se avisa pero no se bloquea (con un solo admin no habria alternativa).
+- **`/privacidad` es publica en AuthGate**, como `/invitacion`: el art. 13 del
+  RGPD obliga a informar ANTES de recoger los datos y el registro se hace sin
+  sesion, asi que exigirla mandaba el enlace al login (paso, y el primer test no
+  lo cazo por mirar solo que AuthGate existiera). El responsable y el correo son
+  provisionales, viven en `src/features/legal/responsable.ts` con un flag
+  `PENDIENTE`, y mientras siga a true la pantalla avisa de que es un borrador.

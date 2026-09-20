@@ -108,6 +108,29 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    `profiles.avatar_url` de alguien; antes devolvia la imagen, ahora tiene que
    dar error. Y dentro de la app las caras se siguen viendo.
 
+24. [`supabase/migrations/0024_veto_de_cana_con_hmac.sql`](../supabase/migrations/0024_veto_de_cana_con_hmac.sql)
+   y **Run**. El veto de cana pasa a guardar un HMAC del correo (tabla
+   `cana_bans`), como el de ruta y la suspension, y **deja de impedir borrar la
+   cuenta**: antes, tener la cana desactivada bloqueaba la supresion sin plazo,
+   siendo el escalon mas bajo de la sancion. Rellena sola los vetos que ya
+   estuviesen puestos.
+25. [`supabase/migrations/0025_exportar_todos_mis_datos.sql`](../supabase/migrations/0025_exportar_todos_mis_datos.sql)
+   y **Run**. `export_my_data()`: la descarga de **Mi perfil > Mis datos** pasa
+   a traer todo (cuenta y correo, rutas, sellos con coordenadas, fotos
+   enviadas, avisos y sanciones) y no solo lo de la cana. **Ojo con el orden**:
+   si despliegas la app antes de pegarla, "Ver mis datos" falla.
+26. [`supabase/migrations/0026_canal_de_contacto.sql`](../supabase/migrations/0026_canal_de_contacto.sql)
+   y **Run**. Crea `user_messages` y el canal de **Escribir a la organizacion**
+   (Mi perfil) y **reclamar una decision** (dentro de cada aviso). Los mensajes
+   caen en la bandeja de Alertas como una fuente mas. **Ojo con el orden**: si
+   despliegas antes, los dos botones salen pero fallan al enviar, y la bandeja
+   avisa de que no puede leer los mensajes.
+
+Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
+privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;
+mientras `PENDIENTE` sea `true`, la pantalla de Privacidad avisa de que es un
+borrador. Antes de abrir esto a gente de verdad hay que cerrarlo.
+
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
 `avatars`. La 0002 deja que el propio SQL Editor (y la `service_role`) cambien
