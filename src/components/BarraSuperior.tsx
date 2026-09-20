@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../features/auth/AuthProvider';
 import { useNotificaciones } from '../features/notificaciones/Notificaciones';
 import { etiquetaBotonPerfil } from '../features/notificaciones/reglas';
+import { useAvatarFirmado } from '../features/profile/avatarFirmado';
 import { initials } from '../features/profile/initials';
 import { colors, fonts, radius, space } from '../lib/theme';
 
@@ -40,6 +41,9 @@ export function BarraSuperior({ titulo }: { titulo: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const email = session?.user.email ?? '';
+  // El bucket es privado desde la 0023: lo guardado no descarga nada, hay que
+  // firmarlo. Se prefiere la miniatura, que es para lo que existe.
+  const miAvatar = useAvatarFirmado(profile?.avatar_thumb_url ?? profile?.avatar_url);
   const { fuentes, hay, refrescar } = useNotificaciones();
 
   // Se pone al dia el punto en cada cambio de pantalla: asi se apaga al volver de
@@ -73,12 +77,8 @@ export function BarraSuperior({ titulo }: { titulo: string }) {
             accessibilityLabel={etiquetaBotonPerfil(fuentes)}
             hitSlop={6}
           >
-            {profile?.avatar_thumb_url ?? profile?.avatar_url ? (
-              <Image
-                source={{ uri: profile.avatar_thumb_url ?? profile.avatar_url ?? '' }}
-                style={styles.avatar}
-                contentFit="cover"
-              />
+            {miAvatar ? (
+              <Image source={{ uri: miAvatar }} style={styles.avatar} contentFit="cover" />
             ) : (
               <View style={[styles.avatar, styles.avatarVacio]}>
                 <Text style={styles.iniciales}>{initials(profile?.display_name ?? '', email)}</Text>

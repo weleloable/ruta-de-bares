@@ -57,10 +57,11 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 app/                      pantallas (Expo Router)
   (auth)/                 login, registro (alta abierta)
   (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
-  cana/                   presentacion, ficha, chat, bloqueados, mis datos, condiciones
+  cana/                   presentacion, ficha, chat, bloqueados, condiciones
   admin/                  bandeja de alertas de administracion, ficha de una denuncia
                           (alerta/) y decidir una foto de perfil (foto/)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
+  mis-datos.tsx           descargar o borrar tus datos; se entra desde Mi perfil
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
@@ -95,6 +96,8 @@ supabase/
   migrations/0019_*.sql     arregla activar la cana, que la 0015 rompio
   migrations/0020_*.sql     la foto de perfil nueva pasa por revision de un admin
   migrations/0021_*.sql     borrar tu propia cuenta (delete_my_account)
+  migrations/0022_*.sql     ni anon ni authenticated pueden vaciar una tabla
+  migrations/0023_*.sql     el bucket de fotos es privado: URL firmadas
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -422,3 +425,28 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   en cada cambio de pantalla (asi se apaga al salir de Avisos). Una peticion de
   refresco que llega mientras se pregunta se REPITE, no se descarta: si se
   descartase, el punto seguiria rojo tras marcar los avisos como leidos.
+  Ese reintento leia el closure VIEJO y por eso a los admins el punto tardaba
+  60 s en encenderse: `isAdmin` es false al arrancar (el perfil llega despues de
+  la sesion) y al pasar a true la primera consulta seguia en vuelo. Se arregla
+  leyendo `isAdmin` de una **referencia** y poniendolo ademas en las
+  dependencias del efecto; las dos mitades hacen falta.
+- **El bucket de fotos es PRIVADO y se pinta con URL firmadas** (`0023`,
+  `src/features/profile/avatarFirmado.ts`): era `public = true`, o sea que
+  Storage servia cualquier foto por su URL SIN mirar policy, y la cuadricula de
+  la cana reparte esas URL. Comprobado: sin sesion y sin clave devolvia
+  `200 image/jpeg`; ahora, `400`. La policy `avatars_read` no habla de carpetas
+  sino de FICHEROS: de otra persona solo se lee el que es HOY su foto aprobada o
+  su miniatura (`avatar_visible_para_mi`, que compara con `right()` porque '_' es
+  comodin de LIKE). Si hablase de carpetas reabriria lo que cerro la 0020, que
+  es que un companero liste tus fotos PENDIENTES y RECHAZADAS. Hay test para eso.
+  La funcion es `security definer` (lee `route_members` de otros) y hay que
+  **concederle ejecucion a `authenticated`**: el USING de una policy corre como
+  el rol que consulta, asi que revocarsela deja la policy fallando para todos.
+  `profiles.avatar_url` sigue guardando la URL `.../object/public/avatars/...`,
+  que ya no descarga nada: pasa a ser un IDENTIFICADOR del que
+  `rutaDesdeUrlPublica` saca la ruta, y es el unico sitio que conoce ese formato.
+  Firma `AvatarCana` por dentro, asi que sus seis pantallas no cambiaron; lo
+  vigila `tests/avatares-firmados.test.ts`, que falla si alguien vuelve a meter
+  un `avatar_url` en un `uri:` (no daria error, daria un hueco en blanco).
+  **Al desplegar, la app va ANTES que la migracion**: al reves, una version vieja
+  pide la URL publica y todo el mundo se queda sin fotos.

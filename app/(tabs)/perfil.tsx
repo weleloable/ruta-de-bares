@@ -18,6 +18,7 @@ import {
   updateDisplayName,
   uploadAvatar,
 } from '../../src/features/profile/api';
+import { useAvatarFirmado } from '../../src/features/profile/avatarFirmado';
 import { CONFIRMAR_BORRADO } from '../../src/features/profile/borrarCuenta';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import {
@@ -151,6 +152,8 @@ export default function PerfilScreen() {
   const email = session?.user.email ?? '';
   const aviso = avisoDeSolicitud(solicitudFoto);
   const etiqueta = etiquetaDeCuenta(isAdmin, restricciones);
+  // Bucket privado desde la 0023: lo guardado es un identificador, no un enlace.
+  const miFoto = useAvatarFirmado(profile?.avatar_url);
   const cambiado = profile !== null && nombre.trim() !== profile.display_name;
 
   async function onGuardarNombre() {
@@ -246,9 +249,9 @@ export default function PerfilScreen() {
             disabled={subiendo}
             style={styles.avatarPulsable}
           >
-            {profile?.avatar_url ? (
+            {miFoto ? (
               <Image
-                source={{ uri: profile.avatar_url }}
+                source={{ uri: miFoto }}
                 style={styles.avatar}
                 contentFit="cover"
                 transition={200}

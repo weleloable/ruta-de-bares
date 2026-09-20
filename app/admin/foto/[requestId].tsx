@@ -9,10 +9,10 @@ import {
   decidirFoto,
   ErrorAdmin,
   leerSolicitudFoto,
-  urlPublicaAvatar,
   type AvatarAdminRequestRow,
 } from '../../../src/features/admin/api';
 import { hace, MOTIVO_MAX, motivoValido } from '../../../src/features/admin/alertas';
+import { useAvatarFirmado, useRutaFirmada } from '../../../src/features/profile/avatarFirmado';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
 
 /**
@@ -53,6 +53,20 @@ export default function FotoAdmin() {
     void cargar();
   }, [cargar]);
 
+  /*
+    Bucket privado desde la 0023: aqui ya no vale construir la URL publica.
+    Los tres hooks van ANTES de los `return` de carga y de "no encontrada",
+    porque un hook no puede quedar detras de un return condicional. Mientras
+    firman devuelven null, y `expo-image` con `uri: undefined` no pinta nada,
+    que es lo mismo que hacia con una foto que tardaba en llegar.
+
+    Un admin puede firmar cualquier fichero del bucket (lo dice `avatars_read`),
+    que es justo lo que hace falta para revisar algo que nadie mas puede ver.
+  */
+  const fotoNueva = useRutaFirmada(fila?.foto_path);
+  const miniaturaNueva = useRutaFirmada(fila?.thumb_path);
+  const actual = useAvatarFirmado(fila?.current_avatar_thumb_url ?? fila?.current_avatar_url);
+
   async function decidir(decision: Parameters<typeof decidirFoto>[1]) {
     if (!fila) return;
     setEnCurso(decision.aprobar ? 'aprobar' : 'rechazar');
@@ -83,7 +97,6 @@ export default function FotoAdmin() {
   }
 
   const pendiente = fila.status === 'pendiente';
-  const actual = fila.current_avatar_thumb_url ?? fila.current_avatar_url;
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
@@ -105,7 +118,7 @@ export default function FotoAdmin() {
             <Text style={typography.muted}>La subió {hace(fila.created_at, new Date())}</Text>
 
             <Image
-              source={{ uri: urlPublicaAvatar(fila.foto_path) }}
+              source={{ uri: fotoNueva ?? undefined }}
               style={styles.foto}
               contentFit="cover"
               accessibilityLabel={`Foto nueva de ${fila.user_name}`}
@@ -121,7 +134,7 @@ export default function FotoAdmin() {
             {pendiente ? (
               <View style={styles.actual}>
                 <Image
-                  source={{ uri: urlPublicaAvatar(fila.thumb_path) }}
+                  source={{ uri: miniaturaNueva ?? undefined }}
                   style={styles.miniatura}
                   contentFit="cover"
                   accessibilityLabel={`Miniatura de ${fila.user_name}`}

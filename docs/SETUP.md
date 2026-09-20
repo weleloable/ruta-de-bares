@@ -69,7 +69,8 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    clave publicable, solo tu propia carpeta (antes cualquiera veia los nombres
    de las fotos pendientes de todos); y los nombres de foto llevan un sufijo
    aleatorio, porque la foto pendiente sigue siendo legible por URL hasta que
-   se aprueba (un bucket publico sirve por URL sin policy).
+   se aprueba (un bucket publico sirve por URL sin policy; eso lo cierra la
+   0023, que hace el bucket privado).
 21. [`supabase/migrations/0021_borrar_mi_cuenta.sql`](../supabase/migrations/0021_borrar_mi_cuenta.sql)
    y **Run**. Crea `delete_my_account()` y `delete_my_account_blockers()`, que
    usa **Mi perfil > Borrar Cuenta**: borra la cuenta y todo lo que cuelga de
@@ -87,6 +88,25 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    Comprobacion: con una cuenta de prueba, Borrar Cuenta, y en Supabase >
    Authentication no debe quedar el usuario, ni su carpeta en Storage >
    `avatars`.
+22. [`supabase/migrations/0022_sin_truncate.sql`](../supabase/migrations/0022_sin_truncate.sql)
+   y **Run**. Le quita TRUNCATE a `anon` y `authenticated` sobre las tablas de
+   la app, y a lo que se cree en el futuro. Viene de los permisos por defecto
+   de Supabase (`all` incluye TRUNCATE) y **la RLS no protege de eso**: es un
+   privilegio de tabla, no de fila. No cambia nada visible; si algo dejara de
+   funcionar, seria un TRUNCATE que la app no hace.
+23. [`supabase/migrations/0023_bucket_de_fotos_privado.sql`](../supabase/migrations/0023_bucket_de_fotos_privado.sql)
+   y **Run**. El bucket `avatars` pasa a **privado**: antes, con el enlace en la
+   mano, cualquiera veia la cara de cualquiera sin sesion y sin clave, y la
+   cuadricula de la cana reparte esos enlaces. Ahora la app pide una URL firmada
+   de 15 minutos, y firmar si pasa por la policy. De otra persona solo se puede
+   leer el fichero que es HOY su foto aprobada (y su miniatura): lo pendiente y
+   lo rechazado siguen siendo solo suyos y de los admins. **Ojo con el orden, y
+   aqui importa de verdad**: despliega ANTES la web (y la build de EAS) y pega
+   esto DESPUES. Al reves, una version vieja de la app pide la URL publica a un
+   bucket que ya no sirve nada y **todo el mundo se queda sin fotos** hasta que
+   actualice. Comprobacion: pega en el navegador, sin sesion, la URL que hay en
+   `profiles.avatar_url` de alguien; antes devolvia la imagen, ahora tiene que
+   dar error. Y dentro de la app las caras se siguen viendo.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket

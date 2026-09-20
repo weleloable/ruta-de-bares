@@ -83,9 +83,14 @@ describe('Alertas de administracion', () => {
   });
 
   it('la pantalla de decidir ensena la MINIATURA, no solo la foto grande: es lo que ven los demas y el servidor no puede verificarla', () => {
+    // Desde la 0023 el bucket es privado y las dos se firman (`useRutaFirmada`)
+    // en vez de construirse como URL publica, pero lo que se vigila aqui es lo
+    // mismo: que se pinten LAS DOS.
     const pantalla = sinComentarios('app/admin/foto/[requestId].tsx');
-    assert.match(pantalla, /urlPublicaAvatar\(fila\.foto_path\)/);
-    assert.match(pantalla, /urlPublicaAvatar\(fila\.thumb_path\)/);
+    assert.match(pantalla, /useRutaFirmada\(fila\?\.foto_path\)/);
+    assert.match(pantalla, /useRutaFirmada\(fila\?\.thumb_path\)/);
+    assert.match(pantalla, /source=\{\{ uri: fotoNueva/);
+    assert.match(pantalla, /source=\{\{ uri: miniaturaNueva/);
   });
 
   it('la pantalla de decidir manda las URL solo al aprobar y el motivo solo al rechazar', () => {

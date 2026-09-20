@@ -12,6 +12,7 @@ import {
 
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
+import { olvidarFirmasDeAvatar } from '../profile/avatarFirmado';
 
 type AuthState = {
   /** null = sin sesion. undefined nunca: `loading` cubre el "aun no lo se". */
@@ -98,6 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!nuevaSesion) {
         usuarioPedido.current = null;
         setProfile(null);
+        // Una URL firmada de una foto (0023) es una llave temporal concedida a
+        // QUIEN la pidio. Aqui y no en signOut() porque borrar la cuenta cierra
+        // la sesion por su cuenta (`scope: 'local'`), sin pasar por alli.
+        olvidarFirmasDeAvatar();
         setLoading(false);
         return;
       }
