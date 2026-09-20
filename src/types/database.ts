@@ -428,6 +428,11 @@ export type Database = {
         Args: Record<string, never>;
         Returns: unknown;
       };
+      /** Todo lo tuyo, no solo lo de la cana (0025). Mete dentro lo anterior. */
+      export_my_data: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
       match_delete_my_data: {
         Args: Record<string, never>;
         Returns: { conexiones: number; votos: number; mensajes: number };

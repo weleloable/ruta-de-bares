@@ -174,3 +174,18 @@ export async function deleteMyAccount(userId: string): Promise<void> {
   // fallaria. Quita la sesion guardada y AuthGate lleva al login.
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }
+
+/**
+ * TODO lo que la app guarda de ti, en un JSON (RGPD art. 15, migracion 0025).
+ *
+ * No es lo mismo que `exportMyMatchData`, que solo saca el trozo de la cana y
+ * era lo unico que habia: faltaban el perfil, los sellos con sus coordenadas,
+ * las rutas, las fotos enviadas a revision, los avisos de moderacion y las
+ * sanciones con el HMAC del correo. Esta funcion los mete todos, y llama a la
+ * de la cana para el resto.
+ */
+export async function exportMyData(): Promise<unknown> {
+  const { data, error } = await supabase.rpc('export_my_data');
+  if (error) throw new Error(error.message);
+  return data;
+}

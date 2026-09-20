@@ -5,7 +5,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card } from '../src/components/ui';
-import { deleteMyMatchData, exportMyMatchData } from '../src/features/match/api';
+import { deleteMyMatchData } from '../src/features/match/api';
+import { exportMyData } from '../src/features/profile/api';
 import { DialogoConfirmar } from '../src/features/profile/DialogoConfirmar';
 import { colors, radius, space, typography } from '../src/lib/theme';
 
@@ -17,15 +18,23 @@ import { colors, radius, space, typography } from '../src/lib/theme';
  * cuenta suspendida, o a quien tiene la cana desactivada por un admin, esa
  * pestana le ensena una pantalla vacia, y su aviso de sancion le promete que
  * puede llevarse o borrar sus datos. No es una pantalla de la cana: descarga un
- * JSON y borra datos. (Lo que descarga SI es solo de la cana todavia; ampliarlo
- * al perfil, los sellos y los avisos es otro trabajo.)
+ * JSON y borra datos.
+ *
+ * Lo que descarga es TODO (`export_my_data`, 0025): cuenta y correo, rutas,
+ * sellos con hora y coordenadas, fotos enviadas a revision, avisos de
+ * moderacion, sanciones con el HMAC del correo, y lo de la cana. Antes solo
+ * sacaba el trozo de la cana, que no cumplia el art. 15 del RGPD.
+ *
+ * Lo de BORRAR sigue siendo solo de la cana: borrar la cuenta entera esta en
+ * Mi perfil (0021). Son dos cosas distintas a proposito, y por eso las dos
+ * tarjetas lo dicen.
  *
  * Borrar NO es desactivar: desactivar es una pausa y lo guarda todo (D8), esto
  * no deja perfil, ni votos, ni conexiones, ni mensajes. Lo que no se lleva son
  * los bloqueos que otras personas te pusieron y las denuncias sobre ti, y la
  * pantalla lo dice antes de que alguien confirme.
  */
-export default function MisDatosCana() {
+export default function MisDatos() {
   const router = useRouter();
   const [datos, setDatos] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -40,7 +49,7 @@ export default function MisDatosCana() {
     setError(null);
     setCopiado(false);
     try {
-      setDatos(JSON.stringify(await exportMyMatchData(), null, 2));
+      setDatos(JSON.stringify(await exportMyData(), null, 2));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron traer tus datos.');
     } finally {
@@ -84,8 +93,14 @@ export default function MisDatosCana() {
         <Card style={styles.tarjeta}>
           <Text style={typography.sectionTitle}>Ver lo que guardamos</Text>
           <Text style={typography.muted}>
-            Tu perfil de la caña, tus Me gusta y Vistos, tus conexiones y los mensajes que has escrito tú. Los de la
-            otra persona son suyos y no salen aquí.
+            Todo: tu cuenta y tu correo, las rutas en las que estás, tus sellos con la hora y el sitio, las fotos que
+            enviaste a revisión, lo que se ha decidido sobre tu cuenta y por qué, y lo de la caña (perfil, Me gusta y
+            Vistos, conexiones y los mensajes que escribiste tú).
+          </Text>
+          <Text style={typography.muted}>
+            No salen los mensajes de la otra persona, que son suyos, ni el texto de una denuncia sobre ti que siga sin
+            resolver: eso llevaría el nombre de quien la puso. Lo que se decidió sí sale, y es lo que necesitas para
+            reclamar.
           </Text>
           <Button title={datos ? 'Actualizar' : 'Ver mis datos'} onPress={() => void descargar()} loading={cargando} />
           {datos ? (
