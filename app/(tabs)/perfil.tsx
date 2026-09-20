@@ -21,11 +21,13 @@ import {
   mensajeTrasEnviar,
   type SolicitudFotoPropia,
 } from '../../src/features/profile/fotoRevision';
+import { useInstalarApp } from '../../src/lib/pwaInstalar';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const router = useRouter();
+  const { disponible: instalarDisponible, instalando, instalar } = useInstalarApp();
 
   const [nombre, setNombre] = useState(profile?.display_name ?? '');
   const [guardando, setGuardando] = useState(false);
@@ -304,6 +306,16 @@ export default function PerfilScreen() {
               onPress={() => router.push('/admin/moderacion')}
             />
           </Card>
+        ) : null}
+
+        {instalarDisponible ? (
+          <Button
+            title="Instalar App"
+            variant="secondary"
+            icon="download-outline"
+            loading={instalando}
+            onPress={instalar}
+          />
         ) : null}
 
         <Button
