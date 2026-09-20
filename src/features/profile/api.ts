@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
+import { rutasDeFotos, textoDeImpedimentos, traducirErrorBorrado } from './borrarCuenta';
 import {
   nombresFicheroAvatar,
   traducirErrorFoto,
@@ -124,4 +125,52 @@ export async function ultimaSolicitudFoto(userId: string): Promise<SolicitudFoto
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * Borra la cuenta y todos los datos de quien llama (0021, delete_my_account).
+ *
+ * Las fotos van PRIMERO y desde aqui: Storage no se deja borrar por SQL, y una
+ * vez borrada la cuenta la persona ya no podria ni intentarlo. El orden tiene un
+ * coste asumido: si la llamada final falla (sin red), la persona se queda sin
+ * fotos pero con cuenta y puede volver a pulsar. Lo contrario, una cuenta
+ * borrada con sus fotos publicas colgando para siempre, no tiene arreglo.
+ *
+ * Storage.remove NO da error cuando la policy le impide borrar un fichero: solo
+ * devuelve menos de los pedidos. Por eso se cuenta lo devuelto y se vuelve a
+ * listar al final, en vez de fiarse de que no hubo error.
+ */
+export async function deleteMyAccount(userId: string): Promise<void> {
+  // Antes de tocar nada: si la cuenta no se puede borrar (admin, denuncia sin
+  // resolver...), las fotos no se pierden para nada.
+  const { data: impedimentos, error: errorPrevio } = await supabase.rpc('delete_my_account_blockers');
+  if (errorPrevio) throw new Error(traducirErrorBorrado(errorPrevio.message));
+  const motivo = textoDeImpedimentos(impedimentos ?? []);
+  if (motivo) throw new Error(motivo);
+
+  const carpeta = supabase.storage.from(AVATAR_BUCKET);
+
+  // Acotado a proposito: sin tope, una policy que impida borrar dejaria el bucle
+  // girando para siempre.
+  for (let vuelta = 0; vuelta < 20; vuelta++) {
+    const { data: ficheros, error } = await carpeta.list(userId, { limit: 100 });
+    if (error) throw new Error(error.message);
+    const rutas = rutasDeFotos(userId, (ficheros ?? []).map((f) => f.name));
+    if (rutas.length === 0) break;
+    const { data: borrados, error: errorBorrado } = await carpeta.remove(rutas);
+    if (errorBorrado) throw new Error(errorBorrado.message);
+    if ((borrados ?? []).length < rutas.length) {
+      throw new Error('No se pudieron borrar todas tus fotos. Prueba otra vez.');
+    }
+  }
+  const { data: quedan, error: errorFinal } = await carpeta.list(userId, { limit: 1 });
+  if (errorFinal) throw new Error(errorFinal.message);
+  if ((quedan ?? []).length > 0) throw new Error('No se pudieron borrar todas tus fotos. Prueba otra vez.');
+
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) throw new Error(traducirErrorBorrado(error.message));
+
+  // Local y no global: en el servidor la sesion ya no existe, y un cierre global
+  // fallaria. Quita la sesion guardada y AuthGate lleva al login.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }

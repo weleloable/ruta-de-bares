@@ -70,6 +70,23 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    de las fotos pendientes de todos); y los nombres de foto llevan un sufijo
    aleatorio, porque la foto pendiente sigue siendo legible por URL hasta que
    se aprueba (un bucket publico sirve por URL sin policy).
+21. [`supabase/migrations/0021_borrar_mi_cuenta.sql`](../supabase/migrations/0021_borrar_mi_cuenta.sql)
+   y **Run**. Crea `delete_my_account()` y `delete_my_account_blockers()`, que
+   usa **Mi perfil > Borrar Cuenta**: borra la cuenta y todo lo que cuelga de
+   ella (sellos, pertenencia a rutas, perfil, votos, chats y bloqueos de la
+   cana...). Lo que NO borra es el rastro de moderacion (registro, denuncias en
+   las que participo, veto de ruta y suspension, ver 0015 y 0017): si borrarse
+   la cuenta lo limpiase, una sancion se esquivaria con un clic. **No deja
+   borrar** (y lo dice antes de tocar nada) a: administradores (se quitan a
+   mano en Supabase), quien creo alguna ruta, quien tiene una denuncia sin
+   resolver y quien tiene la cana desactivada por un admin; los dos ultimos
+   se desbloquean al resolver la denuncia o levantar el veto en Moderacion. Las
+   fotos las borra la app antes de llamar a la funcion, porque Storage no se
+   deja borrar por SQL. **Ojo con el orden**: si despliegas la app antes de
+   pegarla, el enlace sale pero avisa de que falta la migracion.
+   Comprobacion: con una cuenta de prueba, Borrar Cuenta, y en Supabase >
+   Authentication no debe quedar el usuario, ni su carpeta en Storage >
+   `avatars`.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
