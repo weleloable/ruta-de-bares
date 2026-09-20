@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0025: llevarte TODOS tus datos, no solo los de la cana.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0024.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe. `match_export_my_data` (0010) devuelve siete bloques y los
 -- siete son de la cana. El derecho de acceso del art. 15 del RGPD cubre TODOS

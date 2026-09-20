@@ -1,6 +1,13 @@
 -- Ruta de Bares - 0017: el rastro de moderacion sobrevive a que se borre la cuenta.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0016.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_admin_report() la rehace la 0028
+--   * match_report_nombres() la rehace la 0028
 --
 -- Por que existe. Comprobado sobre Postgres: si la persona sancionada se borra
 -- la cuenta, `on delete cascade` se lleva por delante sus apuntes del registro

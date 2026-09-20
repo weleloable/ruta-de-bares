@@ -103,6 +103,8 @@ supabase/
   migrations/0024_*.sql     el veto de cana aguanta solo (HMAC) y deja borrarse
   migrations/0025_*.sql     exportar TODOS tus datos, no solo los de la cana
   migrations/0026_*.sql     escribir a la organizacion y reclamar una decision
+  migrations/0027_*.sql     una ruta termina, y borrarla se lleva sus datos
+  migrations/0028_*.sql     la denuncia congela la foto y la frase de entonces
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -488,3 +490,32 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   lo cazo por mirar solo que AuthGate existiera). El responsable y el correo son
   provisionales, viven en `src/features/legal/responsable.ts` con un flag
   `PENDIENTE`, y mientras siga a true la pantalla avisa de que es un borrador.
+- **Borrar una ruta ES la purga, y no hay cron** (`0027`): el esquema ya
+  cascadea desde la 0001 (bares -> sellos con su GPS, pertenencia, invitaciones,
+  conexiones y chats, votos, denuncias, veto de ruta con su HMAC), y la 0027
+  anade que el veto de cana tambien muera ahi (`cana_bans.route_id`). Los vetos
+  NO se arrastran de un evento al siguiente: cada ruta empieza de cero, y el
+  HMAC vive lo que vive la ruta. Lo que NO muere con una ruta: la suspension de
+  cuenta (es de la persona) y el registro de moderacion. Si nadie pulsa Borrar,
+  los datos se quedan; el unico recordatorio es el aviso del editor.
+- **"Terminada" no se guarda, se deduce del cierre del ULTIMO bar**
+  (`routes/estado.ts`): el ultimo por `sort_order`, no el que cierra mas tarde.
+  `closes_at` es `timestamptz`, asi que la medianoche no le afecta — y ese era
+  el problema de la primera version, que usaba `event_date` (un `date`) y
+  marcaba la ruta terminada a las 00:01 con la gente todavia sellando. Queda
+  como red "08:00 del dia siguiente" SOLO para una ruta sin bares.
+  `routes.finished_at` es solo para terminarla a mano antes de tiempo. Y
+  publicar exige fecha, o la ruta no termina nunca y se escapa del aviso.
+- **Una migracion se pega UNA VEZ: casi la mitad NO son idempotentes** aunque
+  lo dijeran. Cuando una define una funcion que otra POSTERIOR rehace, volver a
+  pegar la vieja la degrada en silencio (paso con la 0006 y
+  `match_require_target`, que perdio la comprobacion de bloqueos). Cada cabecera
+  dice ahora la verdad y nombra que funciones suyas quedaron obsoletas y quien
+  las rehizo; `tests/migraciones-cabeceras.test.ts` lo recalcula en cada
+  ejecucion, asi que anadir una migracion que pise a otra hace fallar la
+  cabecera de aquella.
+- **Del parser de SQL se pide UNA instancia POR LLAMADA**
+  (`pg-query-emscripten`): `parse()` seguido de `parsePlpgsql()` sobre la misma
+  revienta el wasm y **se lleva el proceso de test por delante**, sin mensaje
+  util. `tests/migration-0020.test.ts` era el unico que la reutilizaba y
+  aguantaba de milagro: salto al anadirle 16 bytes de comentario a la 0020.

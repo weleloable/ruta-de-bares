@@ -1,6 +1,12 @@
 -- Ruta de Bares - 0019: arregla activar la cana, que la 0015 rompio.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0018.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_activate() la rehace la 0024
 --
 -- Que estaba roto: activar Tirate una cana por primera vez (o despues de borrar
 -- tus datos) fallaba con

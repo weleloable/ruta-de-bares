@@ -11,7 +11,18 @@ que los seis puntos pasen.
 ## 1. Base de datos
 
 En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
-**cada migracion entera, en orden**, una query por fichero:
+**cada migracion entera, en orden**, una query por fichero.
+
+> **Cada migracion se pega UNA SOLA VEZ y nunca se vuelve a pegar.** No da
+> error al repetirse, y ahi esta el peligro: la mitad definen funciones que una
+> migracion posterior rehizo, asi que re-ejecutar una vieja **devuelve esas
+> funciones a su version antigua en silencio**. Ya paso: relanzar la 0006 dejo a
+> `match_require_target` sin la comprobacion de bloqueos, o sea que la gente
+> bloqueada volvia a poder interactuar, y no se vio hasta comparar el md5 de la
+> funcion. La cabecera de cada fichero dice si se puede repetir y que funciones
+> suyas quedaron obsoletas. Si te pierdes, sigue por la siguiente sin aplicar:
+> aplicar de menos se arregla; aplicar de mas, no.
+
 
 1. [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql)
    y **Run**.

@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0020: la foto de perfil nueva pasa por revision de un admin.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0019.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Como era: la app subia el fichero al bucket publico `avatars` y escribia
 -- profiles.avatar_url ella misma (la policy profiles_update deja a cada persona

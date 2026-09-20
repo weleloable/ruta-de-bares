@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0027: una ruta termina, y al borrarla se lleva sus datos.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0026.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe. `match_admin_purge_route` (0009) esta escrita y **no la llama
 -- nadie**: ni cron, ni tarea, ni boton. Todo lo de la cana de un evento de hace

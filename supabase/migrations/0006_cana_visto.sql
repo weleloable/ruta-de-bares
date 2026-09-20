@@ -1,6 +1,12 @@
 -- Ruta de Bares - 0006: "Tirate una cana" sin "No me gusta": solo Me gusta y Visto.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0006.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_require_target() la rehace la 0009
 --
 -- Cambio de producto: la unica accion sobre una persona es Me gusta. Abrir su
 -- ficha sin darle Me gusta la deja como "Visto" (value = 'seen'), y quitar un

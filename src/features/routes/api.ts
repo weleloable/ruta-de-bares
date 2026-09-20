@@ -25,11 +25,19 @@ export type BarInput = {
   notes: string;
 };
 
-/** Rutas visibles para quien pregunta: RLS ya filtra (admin ve todo, usuario solo publicadas). */
+/**
+ * Rutas visibles para quien pregunta: RLS ya filtra (admin ve todo, usuario solo
+ * publicadas).
+ *
+ * Se traen tambien el orden y la hora de cierre de sus bares: es de donde se
+ * deduce si una ruta ha terminado (`routes/estado.ts`), y sin eso el editor no
+ * podria decir "termino hace 3 dias". Son dos columnas por bar y esta pantalla
+ * la abren cuatro personas, asi que no compensa una consulta aparte.
+ */
 export async function listRoutes(): Promise<RouteRow[]> {
   const { data, error } = await supabase
     .from('routes')
-    .select('*')
+    .select('*, route_bars(sort_order, closes_at)')
     .order('event_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);

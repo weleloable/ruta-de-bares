@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0003: nombre visible unico, sin espacios, maximo 30 caracteres.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0002.
--- Idempotente en lo que Postgres permite.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe: dos personas con el mismo "Nombre de bartalla" son
 -- indistinguibles en la compostelana y en cualquier ranking futuro. La regla

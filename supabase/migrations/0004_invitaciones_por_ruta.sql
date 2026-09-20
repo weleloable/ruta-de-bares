@@ -1,6 +1,6 @@
 -- Ruta de Bares - las invitaciones dejan de dar cuenta y pasan a dar RUTA.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, despues de 0003.
--- Es idempotente: se puede re-ejecutar sin romper nada.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Que cambia respecto a 0001:
 --   Antes: el alta estaba cerrada y una invitacion creaba una CUENTA. Toda

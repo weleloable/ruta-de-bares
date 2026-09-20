@@ -1,6 +1,12 @@
 -- Ruta de Bares - 0024: el veto de cana aguanta solo, y deja borrar la cuenta.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0023.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_admin_deactivate() la rehace la 0027
 --
 -- Por que existe. La 0021 eligio `CANA_BLOCKED` como impedimento para borrar la
 -- cuenta, y el razonamiento era correcto: el veto de cana vive en

@@ -1,6 +1,14 @@
 -- Ruta de Bares - 0010: consentimiento, y borrar o descargar tus datos de la cana.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0009.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_activate() la rehace la 0015
+--   * match_admin_purge_route() la rehace la 0015
+--   * match_delete_my_data() la rehace la 0021
 --
 -- Por que existe, en una frase por pieza:
 --   * A quien das Me gusta y lo que escribis son datos de los que se puede

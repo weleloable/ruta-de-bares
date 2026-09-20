@@ -1,6 +1,18 @@
 -- Ruta de Bares - 0009: bloquear y denunciar en "Tirate una cana".
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0008.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_admin_deactivate() la rehace la 0015
+--   * match_admin_remove_photo() la rehace la 0015
+--   * match_admin_reports() la rehace la 0017
+--   * match_admin_resolve() la rehace la 0014
+--   * match_block() la rehace la 0016
+--   * match_inbox() la rehace la 0011
+--   * match_report() la rehace la 0016
 --
 -- Por que existe:
 --   * Bloquear. Quitar el Me gusta ya cierra la conexion y borra el chat, pero

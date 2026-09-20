@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0022: quitarle TRUNCATE a anon y authenticated.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0021.
--- Idempotente de verdad: solo revoca privilegios, se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe. Los permisos por defecto de Supabase conceden `all` a `anon`
 -- y `authenticated` sobre lo que se cree en `public`, y `all` incluye TRUNCATE.

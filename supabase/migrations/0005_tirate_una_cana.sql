@@ -1,6 +1,21 @@
 -- Ruta de Bares - 0005: "Tirate una cana", el tinder cervecero de cada ruta.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0002.
--- Idempotente como las anteriores: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * is_route_participant() la rehace la 0012
+--   * match_activate() la rehace la 0010
+--   * match_answer_beer() la rehace la 0006
+--   * match_fetch_messages() la rehace la 0008
+--   * match_get_connection() la rehace la 0007
+--   * match_get_profile() la rehace la 0010
+--   * match_grid() la rehace la 0007
+--   * match_inbox() la rehace la 0007
+--   * match_require_connection() la rehace la 0009
+--   * match_send_text() la rehace la 0008
 --
 -- Reglas y decisiones de producto: docs/TIRATE-UNA-CANA.md.
 --

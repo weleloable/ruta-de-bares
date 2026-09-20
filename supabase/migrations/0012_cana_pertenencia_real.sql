@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0012: la cana usa la pertenencia de verdad (route_members).
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0011.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe: la 0005 trajo `is_route_participant(ruta, usuario)` como
 -- version PROVISIONAL ("participa todo el mundo en las rutas publicadas"),

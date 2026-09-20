@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0026: escribir a la organizacion, y reclamar una decision.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0025.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe. Cada aviso de sancion dice "si crees que es un error, habla
 -- con quien organiza la ruta", y hasta ahora no habia ningun sitio donde

@@ -19,6 +19,12 @@ export type ProfileRow = {
   updated_at: string;
 };
 
+/**
+ * Los bares que `listRoutes()` trae pegados a cada ruta, solo para saber cuando
+ * termina. No es la fila entera de `route_bars`.
+ */
+export type RouteBarHorario = { sort_order: number; closes_at: string | null };
+
 export type RouteRow = {
   id: string;
   name: string;
@@ -27,12 +33,15 @@ export type RouteRow = {
   is_published: boolean;
   /**
    * Solo para terminarla a mano antes de tiempo (0027). Lo normal es null: que
-   * una ruta haya terminado se DEDUCE de `event_date` (ver routes/estado.ts).
+   * una ruta haya terminado se DEDUCE de cuando cierra su ultimo bar (ver
+   * routes/estado.ts).
    */
   finished_at: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
+  /** Solo lo rellena `listRoutes()`, que los pide en la misma consulta. */
+  route_bars?: RouteBarHorario[];
 };
 
 export type RouteBarRow = {

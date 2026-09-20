@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0023: el bucket de fotos deja de ser publico.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0022.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- ¡ORDEN IMPORTANTE! Desplegar ANTES la web (o la build de EAS) que firma las
 -- URL, y pegar esto DESPUES. Al revés, una version vieja del cliente pide

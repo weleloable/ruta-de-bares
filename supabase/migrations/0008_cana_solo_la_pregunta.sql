@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0008: la cana se queda solo con la pregunta de la cerveza.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0007.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Cambio de producto: desaparecen los GIFs y los zumbidos. Lo unico que se
 -- puede hacer en una conexion es ofrecer la cana ("Te tomas una cerveza

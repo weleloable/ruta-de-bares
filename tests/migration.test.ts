@@ -32,11 +32,10 @@ import init from 'pg-query-emscripten';
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const migracion = readFileSync(join(raiz, 'supabase/migrations/0001_init.sql'), 'utf8');
 
-const pg = await init();
 
 describe('0001_init.sql', () => {
-  it('la gramatica SQL es valida para Postgres', () => {
-    const resultado = pg.parse(migracion);
+  it('la gramatica SQL es valida para Postgres', async () => {
+    const resultado = (await init()).parse(migracion);
     // El parser devuelve null, no undefined, cuando no hay error.
     assert.ok(!resultado.error, `error de sintaxis: ${JSON.stringify(resultado.error)}`);
     // Si el fichero se vacia o se trunca, el parser dice "ok" con 0 sentencias.
@@ -46,8 +45,8 @@ describe('0001_init.sql', () => {
     );
   });
 
-  it('los cuerpos plpgsql compilan', () => {
-    const resultado = pg.parsePlpgsql(migracion);
+  it('los cuerpos plpgsql compilan', async () => {
+    const resultado = (await init()).parsePlpgsql(migracion);
     assert.ok(!resultado.error, `error en plpgsql: ${JSON.stringify(resultado.error)}`);
     // claim_stamp, handle_new_user, guard_profile_role y los bloques DO.
     assert.ok(
