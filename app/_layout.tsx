@@ -54,8 +54,12 @@ function AuthGate() {
     // de una ruta sin haberla iniciado acabaria en /login y el token se
     // perderia por el camino. La pantalla se apana sola con y sin sesion.
     const enInvitacion = segments[0] === 'invitacion';
+    // /privacidad tambien, y por una razon de peso: el art. 13 del RGPD obliga
+    // a informar ANTES de recoger los datos, y el registro se hace sin sesion.
+    // Si exigiera sesion, el enlace del registro rebotaria al login (pasaba).
+    const enPrivacidad = segments[0] === 'privacidad';
 
-    if (!session && !enAuth && !enInvitacion) {
+    if (!session && !enAuth && !enInvitacion && !enPrivacidad) {
       router.replace('/login');
     } else if (session && enAuth) {
       // Si se llego aqui por un enlace de ruta, se vuelve a el en vez de a la
@@ -95,6 +99,7 @@ function AuthGate() {
       <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
       <Stack.Screen name="mis-datos" options={{ title: 'Mis datos' }} />
       <Stack.Screen name="contacto" options={{ title: 'Escribir' }} />
+      <Stack.Screen name="privacidad" options={{ title: 'Privacidad' }} />
       <Stack.Screen name="admin/alertas" options={{ title: 'Alertas de administración' }} />
       <Stack.Screen name="admin/alerta/[reportId]" options={{ title: 'Alerta' }} />
       <Stack.Screen name="admin/foto/[requestId]" options={{ title: 'Foto de perfil' }} />

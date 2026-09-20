@@ -11,10 +11,10 @@ import { colors, radius, space, typography } from '../../src/lib/theme';
  * puede hacer. Es la pantalla a la que apunta el consentimiento que guarda
  * match_activate, y por eso lleva su version a la vista (0010).
  *
- * PENDIENTE: la politica de privacidad general de la app (quien responde de
- * los datos y como ejercer los derechos) no existe todavia, porque falta
- * decidir quien es el responsable del tratamiento. Cuando exista, se enlaza
- * desde aqui y se sube CONSENTIMIENTO_VERSION.
+ * La politica de privacidad general (quien responde de los datos y como
+ * ejercer los derechos) ya existe y se enlaza abajo. Sigue en borrador: falta
+ * decidir quien es el responsable del tratamiento, y la propia pantalla lo
+ * dice. Al cerrarlo habra que subir CONSENTIMIENTO_VERSION.
  */
 export default function CondicionesCana() {
   const router = useRouter();
@@ -60,6 +60,11 @@ export default function CondicionesCana() {
           <Punto>Bloquear cierra la conexión y borra el chat, y la otra persona deja de verte en la ruta.</Punto>
         </Seccion>
 
+        <Button
+          title="Cómo tratamos tus datos"
+          variant="secondary"
+          onPress={() => router.push('/privacidad')}
+        />
         <Button title="Volver" variant="secondary" onPress={() => router.back()} />
       </ScrollView>
     </SafeAreaView>

@@ -48,11 +48,17 @@ describe('rutasDeFotos', () => {
 });
 
 describe('traducirErrorBorrado', () => {
-  it('un admin lee que no puede, no el codigo interno', () => {
-    assert.equal(
-      traducirErrorBorrado('ADMIN_CANNOT_DELETE'),
-      'Los administradores no pueden borrar su cuenta desde la app.',
-    );
+  it('un admin lee que no puede, no el codigo interno, y a donde escribir', () => {
+    const texto = traducirErrorBorrado('ADMIN_CANNOT_DELETE');
+    assert.ok(!texto.includes('ADMIN_CANNOT_DELETE'));
+    assert.match(texto, /administradores no pueden borrar/);
+    // El art. 17 no admite "nunca": si la app no puede, tiene que decir por
+    // donde si. El canal es el de la 0026.
+    assert.match(texto, /Escribir a la organización/);
+  });
+
+  it('y lo mismo quien creo una ruta: no se le deja en un callejon', () => {
+    assert.match(traducirErrorBorrado('OWNS_ROUTES'), /Escribir a la organización/);
   });
 
   it('el resto de impedimentos tambien llegan traducidos', () => {

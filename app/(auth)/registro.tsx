@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
-import { space, typography } from '../../src/lib/theme';
+import { colors, space, typography } from '../../src/lib/theme';
 
 /**
  * Alta abierta.
@@ -120,6 +120,21 @@ export default function RegistroScreen() {
 
           {error ? <Banner tone="error">{error}</Banner> : null}
 
+          {/*
+            El art. 13 del RGPD obliga a informar EN EL MOMENTO de recoger los
+            datos, no despues. No es una casilla: el tratamiento aqui no se basa
+            en consentimiento sino en prestar el servicio, y una casilla
+            obligatoria confunde mas que informa. (La de la cana si es
+            consentimiento y esa se queda.)
+          */}
+          <Text style={typography.muted}>
+            Al crear la cuenta aceptas cómo tratamos tus datos.{' '}
+            <Text style={styles.enlace} onPress={() => router.push('/privacidad')}>
+              Leerlo
+            </Text>
+            .
+          </Text>
+
           <Button title="Crear cuenta" onPress={onSubmit} disabled={!puedeEnviar} loading={enviando} />
           <Button
             title="Ya tengo cuenta"
@@ -136,4 +151,5 @@ export default function RegistroScreen() {
 const styles = StyleSheet.create({
   cabecera: { gap: space.xs, paddingTop: space.xl, paddingBottom: space.md },
   formulario: { gap: space.lg },
+  enlace: { fontWeight: '700', color: colors.beerDark, textDecorationLine: 'underline' },
 });

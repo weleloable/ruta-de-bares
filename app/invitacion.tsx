@@ -16,7 +16,7 @@ import {
 } from '../src/features/invites/pendiente';
 import { useActiveRoute } from '../src/features/routes/ActiveRouteProvider';
 import { getRouteWithBars } from '../src/features/routes/api';
-import { space, typography } from '../src/lib/theme';
+import { colors, space, typography } from '../src/lib/theme';
 
 /**
  * Canje de una invitacion a una ruta.
@@ -155,6 +155,14 @@ export default function InvitacionScreen() {
 
         {error ? <Banner tone="error">{error}</Banner> : null}
 
+        <Text style={styles.avisoDatos}>
+          Al entrar aceptas cómo tratamos tus datos.{' '}
+          <Text style={styles.enlaceDatos} onPress={() => router.push('/privacidad')}>
+            Leerlo
+          </Text>
+          .
+        </Text>
+
         <Button
           title="Entrar en la ruta"
           onPress={onCanjear}
@@ -175,4 +183,6 @@ export default function InvitacionScreen() {
 const styles = StyleSheet.create({
   cabecera: { gap: space.xs, paddingTop: space.xl, paddingBottom: space.md },
   formulario: { gap: space.lg },
+  avisoDatos: { fontSize: 13, color: colors.inkSoft },
+  enlaceDatos: { fontWeight: '700', color: colors.beerDark, textDecorationLine: 'underline' },
 });

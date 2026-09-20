@@ -10,8 +10,12 @@ export function rutasDeFotos(userId: string, nombres: readonly string[]): string
 
 /** Codigos de delete_my_account_blockers() / delete_my_account() (0021). */
 const IMPEDIMENTOS: Record<string, string> = {
-  ADMIN_CANNOT_DELETE: 'Los administradores no pueden borrar su cuenta desde la app.',
-  OWNS_ROUTES: 'No puedes borrar tu cuenta mientras seas quien creó alguna ruta. Habla con la organización.',
+  ADMIN_CANNOT_DELETE:
+    'Los administradores no pueden borrar su cuenta desde la app. Escríbenos desde Mi perfil, en "Escribir a la ' +
+    'organización", y lo hacemos a mano.',
+  OWNS_ROUTES:
+    'No puedes borrar tu cuenta mientras seas quien creó alguna ruta. Escríbenos desde Mi perfil, en "Escribir a la ' +
+    'organización", y lo resolvemos contigo.',
   HAS_OPEN_REPORTS:
     'Ahora mismo hay una denuncia sin resolver sobre tu cuenta, así que no se puede borrar todavía. ' +
     'Podrás hacerlo cuando la organización la resuelva.',
