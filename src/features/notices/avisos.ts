@@ -93,3 +93,29 @@ export function cuando(iso: string): string {
   const hora = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   return `${dia} a las ${hora}`;
 }
+
+/** La etiqueta bajo el nombre en Mi perfil. */
+export type EtiquetaCuenta = { texto: string; tono: 'normal' | 'admin' | 'sancion' };
+
+/**
+ * Que pone bajo tu nombre en Mi perfil.
+ *
+ * Antes ponia siempre "Participante", tambien a una cuenta SUSPENDIDA: la
+ * persona entraba, se encontraba la app a medias y no sabia por que. El motivo
+ * completo esta en Avisos, aqui solo se dice QUE pasa.
+ *
+ * La suspension gana al veto de cana porque es la sancion mayor y la que explica
+ * todo lo demas: a quien esta suspendida tambien le falla la cana, y decirle
+ * "Caña desactivada" seria contarle el sintoma pequeno. `admin` se comprueba
+ * despues de las sanciones solo por orden de lectura: a un admin no se le veta
+ * (TARGET_IS_ADMIN), asi que las dos cosas no coinciden.
+ */
+export function etiquetaDeCuenta(
+  esAdmin: boolean,
+  restricciones: { suspended: boolean; cana_blocked: boolean } | null,
+): EtiquetaCuenta {
+  if (restricciones?.suspended) return { texto: 'Cuenta suspendida', tono: 'sancion' };
+  if (restricciones?.cana_blocked) return { texto: 'Caña desactivada', tono: 'sancion' };
+  if (esAdmin) return { texto: 'Administrador', tono: 'admin' };
+  return { texto: 'Participante', tono: 'normal' };
+}

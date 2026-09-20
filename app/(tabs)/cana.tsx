@@ -270,13 +270,9 @@ export default function CanaScreen() {
               >
                 <Text style={styles.accionTexto}>Bloqueados</Text>
               </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.accion}
-                onPress={() => router.push('/cana/mis-datos')}
-              >
-                <Text style={styles.accionTexto}>Mis datos</Text>
-              </Pressable>
+              {/* "Mis datos" ya no esta aqui: vive en Mi perfil. Desde esta
+                  pestana no lo alcanzaba quien mas lo necesita (una cuenta
+                  suspendida o con la cana desactivada ve esto vacio). */}
             </View>
 
             <View style={styles.segmento} accessibilityRole="tablist">

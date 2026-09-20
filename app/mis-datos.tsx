@@ -4,13 +4,21 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Button, Card } from '../../src/components/ui';
-import { deleteMyMatchData, exportMyMatchData } from '../../src/features/match/api';
-import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
-import { colors, radius, space, typography } from '../../src/lib/theme';
+import { Banner, Button, Card } from '../src/components/ui';
+import { deleteMyMatchData, exportMyMatchData } from '../src/features/match/api';
+import { DialogoConfirmar } from '../src/features/profile/DialogoConfirmar';
+import { colors, radius, space, typography } from '../src/lib/theme';
 
 /**
- * Tus datos de la cana: verlos, copiarlos y borrarlos (0010).
+ * Tus datos: verlos, copiarlos y borrarlos (0010).
+ *
+ * Vivia en `app/cana/mis-datos.tsx` y se entraba solo desde la pestana Cana.
+ * Se movio aqui porque ahi no la alcanzaba justo quien mas la necesita: a una
+ * cuenta suspendida, o a quien tiene la cana desactivada por un admin, esa
+ * pestana le ensena una pantalla vacia, y su aviso de sancion le promete que
+ * puede llevarse o borrar sus datos. No es una pantalla de la cana: descarga un
+ * JSON y borra datos. (Lo que descarga SI es solo de la cana todavia; ampliarlo
+ * al perfil, los sellos y los avisos es otro trabajo.)
  *
  * Borrar NO es desactivar: desactivar es una pausa y lo guarda todo (D8), esto
  * no deja perfil, ni votos, ni conexiones, ni mensajes. Lo que no se lleva son
@@ -85,10 +93,17 @@ export default function MisDatosCana() {
               <Pressable accessibilityRole="button" onPress={() => void copiar()}>
                 <Text style={styles.enlace}>{copiado ? 'Copiado' : 'Copiar todo'}</Text>
               </Pressable>
-              <ScrollView horizontal style={styles.caja}>
-                <Text style={styles.json} selectable>
-                  {datos}
-                </Text>
+              {/* Dos ScrollView anidados, uno por eje: el JSON es largo Y ancho.
+                  Antes solo estaba el horizontal, asi que la caja se cortaba por
+                  abajo a los 280 px y no habia forma de leer el resto.
+                  `nestedScrollEnabled` hace falta por estar dentro del ScrollView
+                  de la pantalla: sin el, en Android el de dentro no scrollea. */}
+              <ScrollView style={styles.caja} nestedScrollEnabled>
+                <ScrollView horizontal>
+                  <Text style={styles.json} selectable>
+                    {datos}
+                  </Text>
+                </ScrollView>
               </ScrollView>
             </>
           ) : null}

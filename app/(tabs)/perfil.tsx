@@ -8,7 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, Card, Field } from '../../src/components/ui';
 import { contarAlertas } from '../../src/features/admin/api';
 import { useAuth } from '../../src/features/auth/AuthProvider';
-import { contarAvisos } from '../../src/features/notices/api';
+import { contarAvisos, misRestricciones } from '../../src/features/notices/api';
+import { etiquetaDeCuenta } from '../../src/features/notices/avisos';
 import {
   deleteMyAccount,
   initials,
@@ -26,6 +27,7 @@ import {
 } from '../../src/features/profile/fotoRevision';
 import { useInstalarApp } from '../../src/lib/pwaInstalar';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
+import type { MyRestrictionsRow } from '../../src/types/database';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
@@ -44,6 +46,7 @@ export default function PerfilScreen() {
   const [borrando, setBorrando] = useState(false);
   const [alertas, setAlertas] = useState(0);
   const [avisos, setAvisos] = useState(0);
+  const [restricciones, setRestricciones] = useState<MyRestrictionsRow | null>(null);
   // La ultima foto enviada a revision (0020): "en revision" o el motivo del rechazo.
   const [solicitudFoto, setSolicitudFoto] = useState<SolicitudFotoPropia | null>(null);
 
@@ -91,6 +94,29 @@ export default function PerfilScreen() {
   );
 
   /*
+    Que le impide usar la app ahora mismo. La etiqueta de abajo decia
+    "Participante" tambien a una cuenta SUSPENDIDA, que es la que mas necesita
+    enterarse: la persona entra, ve la app a medias y no sabe por que. El motivo
+    completo esta en Avisos; aqui solo se dice QUE pasa, que es lo que se mira.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      let vivo = true;
+      void misRestricciones()
+        .then((r) => {
+          if (vivo) setRestricciones(r);
+        })
+        .catch(() => {
+          // Sin respuesta se ensena la etiqueta normal: no es una puerta, es un
+          // aviso, y quien esta suspendido lo nota igual en cuanto intenta algo.
+        });
+      return () => {
+        vivo = false;
+      };
+    }, []),
+  );
+
+  /*
     Cuantas alertas quedan sin cerrar. Solo para admins y solo al mirar esta
     pantalla: quien no lo es no debe preguntar nada (el servidor le diria
     NOT_ADMIN), y aqui no hace falta sondeo porque no es una pantalla en la que
@@ -124,6 +150,7 @@ export default function PerfilScreen() {
 
   const email = session?.user.email ?? '';
   const aviso = avisoDeSolicitud(solicitudFoto);
+  const etiqueta = etiquetaDeCuenta(isAdmin, restricciones);
   const cambiado = profile !== null && nombre.trim() !== profile.display_name;
 
   async function onGuardarNombre() {
@@ -208,7 +235,17 @@ export default function PerfilScreen() {
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
         <Card style={styles.cabecera}>
-          <Pressable onPress={onCambiarFoto} disabled={subiendo} style={styles.avatarPulsable}>
+          {/* El rol y la etiqueta a mano: dentro solo hay una imagen (o las
+              iniciales) y el texto "Cambiar foto", asi que sin esto un lector de
+              pantalla no lo anuncia como boton ni dice para que sirve. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar foto de perfil"
+            accessibilityState={{ disabled: subiendo, busy: subiendo }}
+            onPress={onCambiarFoto}
+            disabled={subiendo}
+            style={styles.avatarPulsable}
+          >
             {profile?.avatar_url ? (
               <Image
                 source={{ uri: profile.avatar_url }}
@@ -231,11 +268,28 @@ export default function PerfilScreen() {
           <Text style={typography.screenTitle}>{profile?.display_name || 'Sin nombre'}</Text>
           <Text style={typography.muted}>{email}</Text>
 
-          <View style={[styles.etiqueta, isAdmin && styles.etiquetaAdmin]}>
-            <Text style={[styles.etiquetaTexto, isAdmin && styles.etiquetaTextoAdmin]}>
-              {isAdmin ? 'Administrador' : 'Participante'}
+          <View
+            style={[
+              styles.etiqueta,
+              etiqueta.tono === 'admin' && styles.etiquetaAdmin,
+              etiqueta.tono === 'sancion' && styles.etiquetaSancion,
+            ]}
+          >
+            <Text
+              style={[
+                styles.etiquetaTexto,
+                etiqueta.tono === 'admin' && styles.etiquetaTextoAdmin,
+                etiqueta.tono === 'sancion' && styles.etiquetaTextoSancion,
+              ]}
+            >
+              {etiqueta.texto}
             </Text>
           </View>
+          {etiqueta.tono === 'sancion' ? (
+            <Pressable accessibilityRole="button" onPress={() => router.push('/avisos')}>
+              <Text style={styles.enlaceSancion}>Ver por qué</Text>
+            </Pressable>
+          ) : null}
         </Card>
 
         {error ? <Banner tone="error">{error}</Banner> : null}
@@ -267,7 +321,7 @@ export default function PerfilScreen() {
           tienes que ver al entrar aqui, y llega igual estando suspendida.
         */}
         <Card>
-          <Text style={styles.tituloTarjeta}>Avisos</Text>
+          <Text style={styles.tituloTarjeta}>Tu cuenta</Text>
           <View>
             <Button
               title="Decisiones sobre tu cuenta"
@@ -281,6 +335,19 @@ export default function PerfilScreen() {
               </View>
             ) : null}
           </View>
+          {/*
+            Aqui y no en la pestana Cana, de donde viene: a una cuenta suspendida
+            o con la cana desactivada esa pestana le sale vacia, y es justo a
+            quien su aviso le promete que puede llevarse o borrar sus datos.
+            Va ANTES de "Borrar Cuenta" (que esta al final de la pantalla) por
+            el mismo motivo: descargar primero, borrar despues.
+          */}
+          <Button
+            title="Mis datos"
+            variant="secondary"
+            textStyle={styles.textoAccionBarra}
+            onPress={() => router.push('/mis-datos')}
+          />
         </Card>
 
         {/*
@@ -466,6 +533,11 @@ const styles = StyleSheet.create({
     marginTop: space.xs,
   },
   etiquetaAdmin: { backgroundColor: colors.stampSoft, borderColor: colors.stamp },
+  // Fondo solido y no suave como el de admin: una sancion tiene que leerse de
+  // un vistazo y no confundirse con una etiqueta de rol.
+  etiquetaSancion: { backgroundColor: colors.danger, borderColor: colors.danger },
   etiquetaTexto: { fontSize: 12, fontWeight: '700', color: colors.inkSoft },
   etiquetaTextoAdmin: { color: colors.stamp },
+  etiquetaTextoSancion: { color: colors.white },
+  enlaceSancion: { marginTop: space.xs, color: colors.danger, fontWeight: '700', fontSize: 13 },
 });

@@ -42,6 +42,20 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
   // Quien es la persona AHORA, para descartar la respuesta tardia de la anterior.
   const yoActual = useRef(yo);
   yoActual.current = yo;
+  /*
+    `isAdmin` tambien por referencia, y no capturado en el closure de `mirar`.
+
+    El bug que arregla: al arrancar, `isAdmin` es false (la sesion llega antes
+    que el perfil), asi que la primera consulta no pide las alertas. Cuando pasa
+    a true, esa primera consulta suele seguir en vuelo, con lo que la segunda
+    entra por `repetir.current = true` y el bucle de abajo se repite... con el
+    closure VIEJO, que sigue creyendo que no es admin. Resultado medido: quien
+    modera no veia el punto rojo de una denuncia nueva hasta el siguiente tick
+    de 60 s. Leyendolo de la referencia, la vuelta del bucle ya usa el valor de
+    ahora.
+  */
+  const esAdmin = useRef(isAdmin);
+  esAdmin.current = isAdmin;
 
   // Al cerrar sesion o cambiar de persona no se hereda el punto de la anterior.
   useEffect(() => {
@@ -65,7 +79,10 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
       do {
         repetir.current = false;
         // Cada fuente por su cuenta: si una falla, la otra se actualiza igual.
-        const [a, b] = await Promise.allSettled([contarAvisos(), isAdmin ? contarAlertas() : Promise.resolve(0)]);
+        const [a, b] = await Promise.allSettled([
+          contarAvisos(),
+          esAdmin.current ? contarAlertas() : Promise.resolve(0),
+        ]);
         if (yoActual.current !== yo) return;
         if (a.status === 'fulfilled') setAvisos(a.value);
         if (b.status === 'fulfilled') setAlertas(b.value);
@@ -73,8 +90,12 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
     } finally {
       enCurso.current = false;
     }
-  }, [yo, isAdmin]);
+  }, [yo]);
 
+  // `isAdmin` esta en las dependencias aunque `mirar` ya no lo capture: en
+  // cuanto el perfil llega y dice que si, hay que volver a preguntar, o las
+  // alertas se quedan a 0 hasta el siguiente tick. Rehacer el intervalo en ese
+  // momento no cuesta nada: pasa una vez por sesion.
   useEffect(() => {
     if (!yo) return undefined;
     void mirar();
@@ -88,7 +109,7 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
       clearInterval(id);
       suscripcion.remove();
     };
-  }, [yo, mirar]);
+  }, [yo, isAdmin, mirar]);
 
   // Estable a proposito: BarraSuperior la usa de dependencia de un efecto, y si
   // cambiase con cada contador, cada cambio provocaria una consulta de mas.

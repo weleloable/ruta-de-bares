@@ -100,7 +100,31 @@ describe('el contador se mantiene al dia', () => {
   });
 
   it('las alertas solo se piden a los admins', () => {
-    assert.match(proveedor, /isAdmin \? contarAlertas\(\) : Promise\.resolve\(0\)/);
+    assert.match(proveedor, /esAdmin\.current \? contarAlertas\(\) : Promise\.resolve\(0\)/);
+  });
+
+  /**
+   * El bug del retardo de 60 s: `mirar` capturaba `isAdmin`, asi que la vuelta
+   * del bucle por `repetir.current` repetia el closure VIEJO (isAdmin todavia
+   * false, porque el perfil llega despues de la sesion) y las alertas se
+   * quedaban a 0 hasta el siguiente tick. Dos mitades, y las dos hacen falta:
+   */
+  it('lee isAdmin de una referencia, no del closure de mirar', () => {
+    const cuerpo = proveedor.slice(proveedor.indexOf('const mirar'), proveedor.indexOf('const refrescar'));
+    const deps = cuerpo.match(/\}, \[([^\]]*)\]\);/);
+    assert.ok(deps, 'no se encontraron las dependencias de mirar');
+    assert.doesNotMatch(
+      deps[1] as string,
+      /isAdmin/,
+      'si mirar depende de isAdmin, vuelve a capturarlo y el reintento usa el valor viejo',
+    );
+  });
+
+  it('y vuelve a preguntar en cuanto el perfil dice que es admin', () => {
+    // Sin esto, con `mirar` ya estable, nada dispara una consulta nueva al
+    // pasar isAdmin a true y las alertas siguen a 0 hasta el tick de 60 s.
+    const efecto = proveedor.slice(proveedor.indexOf('setInterval'));
+    assert.match(efecto, /\}, \[yo, isAdmin, mirar\]\)/);
   });
 
   it('cada fuente falla por su cuenta: allSettled, no Promise.all', () => {

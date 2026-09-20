@@ -136,7 +136,9 @@ explicito e informado, y queda guardado con la version de lo que se acepto
 se sube solo cuando cambia lo que se acepta, no con cada retoque de redaccion.
 Volver de una pausa no vuelve a pedirlo: el si ya esta dado.
 
-Desde "Mis datos" (`app/cana/mis-datos.tsx`):
+Desde "Mis datos" (`app/mis-datos.tsx`, al que se entra desde **Mi perfil**, no
+desde esta pestana: a una cuenta suspendida o con la cana desactivada la pestana
+Cana le sale vacia, y es justo quien mas necesita llegar ahi):
 
 - **Ver y copiar** lo que la cana guarda (`match_export_my_data`): perfil,
   Me gusta y Vistos, conexiones y **los mensajes que escribiste tu**. Los de la
