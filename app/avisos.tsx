@@ -1,9 +1,9 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Card, EmptyState, Loading } from '../src/components/ui';
+import { Banner, Button, Card, EmptyState, Loading } from '../src/components/ui';
 import { listarAvisos, marcarAvisosLeidos } from '../src/features/notices/api';
 import { COMO_RECLAMAR, cuando, textoAviso } from '../src/features/notices/avisos';
 import { colors, radius, space, typography } from '../src/lib/theme';
@@ -79,6 +79,7 @@ export default function Avisos() {
 }
 
 function FichaAviso({ aviso }: { aviso: UserNoticeRow }) {
+  const router = useRouter();
   const texto = textoAviso(aviso.action);
   const nuevo = aviso.read_at === null;
 
@@ -103,7 +104,23 @@ function FichaAviso({ aviso }: { aviso: UserNoticeRow }) {
       ) : null}
 
       <Text style={styles.explicacion}>{texto.explicacion}</Text>
-      {texto.restriccion ? <Text style={styles.reclamar}>{COMO_RECLAMAR}</Text> : null}
+      {/*
+        El boton del art. 20 del DSA: seis meses para reclamar una decision. Solo
+        en las restrictivas, porque levantar un veto no se reclama. Lleva el id
+        del aviso pegado, que es lo que ata la reclamacion a ESTA decision.
+      */}
+      {texto.restriccion ? (
+        <>
+          <Text style={styles.reclamar}>{COMO_RECLAMAR}</Text>
+          <Button
+            title="No estoy de acuerdo con esta decisión"
+            variant="secondary"
+            onPress={() =>
+              router.push({ pathname: '/contacto', params: { aviso: aviso.id, accion: texto.titulo } })
+            }
+          />
+        </>
+      ) : null}
     </Card>
   );
 }

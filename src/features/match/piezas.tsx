@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, radius, space, typography } from '../../lib/theme';
+import { useAvatarFirmado } from '../profile/avatarFirmado';
 import { initials } from '../profile/initials';
 
 /** Casilla de verificacion. No existe en ui.tsx y la app no la necesitaba hasta ahora. */
@@ -66,6 +67,11 @@ export function ChipEtiqueta({
  * Foto de perfil o, sin foto, sus iniciales sobre un tono de la paleta (D9).
  * El tono sale del nombre y no es aleatorio: la misma persona tiene siempre el
  * mismo color en la grilla, en su ficha y en el chat.
+ *
+ * `foto` es lo que viene de la base (`profiles.avatar_url`), que desde la 0023
+ * NO descarga nada: el bucket es privado. Firmar es cosa de este componente y
+ * no de las seis pantallas que lo usan, asi que ninguna tuvo que cambiar.
+ * Mientras se firma se pintan las iniciales, igual que sin foto.
  */
 export function AvatarCana({
   nombre,
@@ -86,10 +92,11 @@ export function AvatarCana({
 }) {
   const medidas = tamano ? { width: tamano, height: tamano } : null;
   const forma = redondo ? { borderRadius: radius.pill } : null;
-  if (foto) {
+  const firmada = useAvatarFirmado(foto);
+  if (firmada) {
     return (
       <View style={[styles.avatar, medidas, forma, style]}>
-        <Image source={{ uri: foto }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+        <Image source={{ uri: firmada }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
       </View>
     );
   }

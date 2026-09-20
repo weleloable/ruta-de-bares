@@ -1,6 +1,12 @@
 -- Ruta de Bares - 0021: borrar tu propia cuenta y todos tus datos.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0020.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * delete_my_account_blockers() la rehace la 0024
 --
 -- Por que existe. Hasta ahora la app solo dejaba borrar lo de la cana
 -- (match_delete_my_data, 0010). La cuenta en si no se podia borrar desde la app,

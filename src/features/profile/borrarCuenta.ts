@@ -10,14 +10,19 @@ export function rutasDeFotos(userId: string, nombres: readonly string[]): string
 
 /** Codigos de delete_my_account_blockers() / delete_my_account() (0021). */
 const IMPEDIMENTOS: Record<string, string> = {
-  ADMIN_CANNOT_DELETE: 'Los administradores no pueden borrar su cuenta desde la app.',
-  OWNS_ROUTES: 'No puedes borrar tu cuenta mientras seas quien creó alguna ruta. Habla con la organización.',
+  ADMIN_CANNOT_DELETE:
+    'Los administradores no pueden borrar su cuenta desde la app. Escríbenos desde Mi perfil, en "Escribir a la ' +
+    'organización", y lo hacemos a mano.',
+  OWNS_ROUTES:
+    'No puedes borrar tu cuenta mientras seas quien creó alguna ruta. Escríbenos desde Mi perfil, en "Escribir a la ' +
+    'organización", y lo resolvemos contigo.',
   HAS_OPEN_REPORTS:
     'Ahora mismo hay una denuncia sin resolver sobre tu cuenta, así que no se puede borrar todavía. ' +
     'Podrás hacerlo cuando la organización la resuelva.',
-  CANA_BLOCKED:
-    'La organización tiene desactivada tu caña, así que la cuenta no se puede borrar todavía. ' +
-    'Habla con la organización.',
+  // CANA_BLOCKED estuvo aqui y lo quito la 0024. Tener la cana desactivada ya
+  // no impide borrarse: el veto sobrevive por su cuenta (HMAC del correo, como
+  // el de ruta y la suspension) en vez de retener a la persona. Era el escalon
+  // mas bajo de la sancion bloqueando el derecho de supresion, sin plazo.
 };
 
 /** El primer impedimento que trae la lista, ya en lenguaje de persona; null si no hay. */
@@ -59,7 +64,7 @@ export function traducirErrorBorrado(mensaje: string): string {
 export const CONFIRMAR_BORRADO = {
   titulo: '¿Borrar tu cuenta?',
   mensaje:
-    'Se borran tu cuenta y todos tus datos: sellos, foto, perfil de la caña y chats. ' +
+    'Se borran tu cuenta y todos tus datos: sellos, foto, perfil de La Caña y chats. ' +
     'No se puede deshacer. Solo se conserva, sin tu cuenta, el registro de moderación: ' +
     'las denuncias en las que participaste y las decisiones que se tomaron.',
   textoConfirmar: 'Borrar cuenta',

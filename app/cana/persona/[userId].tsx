@@ -77,12 +77,12 @@ export default function PersonaCana() {
   if (!persona || !rutaId) {
     return (
       <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
-        <Stack.Screen options={{ title: 'Tírate una caña', headerLeft: () => <BotonVolverCana /> }} />
+        <Stack.Screen options={{ title: 'La Caña', headerLeft: () => <BotonVolverCana /> }} />
         <View style={styles.cuerpo}>
           {error ? <Banner tone="error">{error}</Banner> : null}
           <EmptyState
             title="Esta persona ya no está"
-            body="Puede que haya desactivado Tírate una caña o que ya no participe en la ruta."
+            body="Puede que haya desactivado La Caña o que ya no participe en la ruta."
           />
           <Button title="Volver" variant="secondary" onPress={() => router.back()} />
         </View>

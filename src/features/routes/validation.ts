@@ -60,6 +60,24 @@ export function validateRouteDraft(draft: RouteDraft): string[] {
   return errores;
 }
 
+/**
+ * Por que no se puede publicar sin fecha (0027).
+ *
+ * Una ruta publicada sin `event_date` no termina NUNCA por deduccion, asi que
+ * nunca sale marcada como terminada y nadie se acuerda de borrar sus datos.
+ * Como no hay cron, ese aviso es lo unico que hay. Un borrador si puede estar
+ * sin fecha: todavia se esta montando.
+ *
+ * Es espejo de la restriccion `routes_publicada_con_fecha`, pero aqui se dice
+ * en cristiano y antes de que el servidor lo rechace.
+ */
+export function motivoParaNoPublicar(ruta: { event_date: string | null }): string | null {
+  if (!ruta.event_date) {
+    return 'Ponle fecha al evento antes de publicarla: sin fecha no se sabe cuándo ha terminado, y no avisaremos de que toca borrar sus datos.';
+  }
+  return null;
+}
+
 export function validateBarDraft(draft: BarDraft): string[] {
   const errores: string[] = [];
 

@@ -1,7 +1,13 @@
 -- Ruta de Bares - 0013: lo que le faltaba al contrato de admin para la bandeja
 -- de "Alertas de administracion".
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0012.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_admin_report() la rehace la 0014
 --
 -- Por que existe: la 0009 dejo el contrato del panel (listar, retirar foto,
 -- desactivar, resolver), pero con tres huecos que solo se ven al construir la

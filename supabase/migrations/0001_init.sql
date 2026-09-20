@@ -1,6 +1,14 @@
 -- Ruta de Bares - esquema inicial.
 -- Pegar entero en Supabase > SQL Editor > New query > Run.
--- Es idempotente en lo que Postgres permite: se puede re-ejecutar sin romper nada.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * claim_stamp() la rehace la 0004
+--   * guard_profile_role() la rehace la 0002
+--   * handle_new_user() la rehace la 0003
 
 create extension if not exists pgcrypto;
 

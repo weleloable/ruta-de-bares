@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { contarMensajes, listarMensajes } from '../contacto/api';
 import type {
   AvatarAdminRequestRow,
   ModeracionRow,
@@ -7,7 +8,7 @@ import type {
   MatchAdminTicketRow,
   MatchReportResolution,
 } from '../../types/database';
-import { alertaDeDenuncia, alertaDeSolicitudFoto, ordenarAlertas, type Alerta } from './alertas';
+import { alertaDeDenuncia, alertaDeMensaje, alertaDeSolicitudFoto, ordenarAlertas, type Alerta } from './alertas';
 
 /**
  * Llamadas de "Alertas de administracion". Todas son funciones match_admin_*
@@ -87,19 +88,21 @@ export async function listarAlertas(incluirCerradas = false): Promise<Alerta[]> 
 
 /**
  * Solo el numero, para la burbujita del boton de Mi perfil: denuncias sin
- * cerrar mas fotos de perfil pendientes.
+ * cerrar, fotos de perfil pendientes y mensajes a la organizacion sin
+ * responder.
  */
 export async function contarAlertas(): Promise<number> {
   // Las dos fuentes por separado: si el proyecto aun no tiene la 0020 aplicada
   // (o cae la consulta de fotos) la burbuja cuenta lo otro en vez de
   // desaparecer. Un fallo en las denuncias, en cambio, sigue siendo un fallo:
   // ya lo era antes y no se disimula.
-  const [denuncias, fotos] = await Promise.all([
+  const [denuncias, fotos, mensajes] = await Promise.all([
     supabase.rpc('match_admin_alert_count'),
     contarSolicitudesFoto().catch(() => 0),
+    contarMensajes().catch(() => 0),
   ]);
   if (denuncias.error) fallo(denuncias.error);
-  return (denuncias.data ?? 0) + fotos;
+  return (denuncias.data ?? 0) + fotos + mensajes;
 }
 
 /** Cuantas fotos de perfil esperan aprobacion (0020). */
@@ -321,3 +324,8 @@ export async function decidirFoto(
 }
 
 export type { AvatarAdminRequestRow };
+
+/** Los mensajes a la organizacion, ya como alertas para la bandeja (0026). */
+export async function listarAlertasMensajes(incluirCerrados = false): Promise<Alerta[]> {
+  return (await listarMensajes(incluirCerrados)).map(alertaDeMensaje);
+}

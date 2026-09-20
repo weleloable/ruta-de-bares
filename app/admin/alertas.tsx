@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
-import { listarAlertas, listarSolicitudesFoto } from '../../src/features/admin/api';
+import { listarAlertas, listarAlertasMensajes, listarSolicitudesFoto } from '../../src/features/admin/api';
 import {
   cuentaPorFiltro,
   detalleAlerta,
@@ -43,13 +43,18 @@ export default function AlertasAdmin() {
     // vuelve a pedir nada. Las dos fuentes por separado: si una falla (p. ej.
     // el proyecto aun no tiene la 0020) la otra se ve igual, y el aviso dice
     // cual ha fallado.
-    const [denuncias, fotos] = await Promise.allSettled([listarAlertas(true), listarSolicitudesFoto(true)]);
+    const [denuncias, fotos, mensajes] = await Promise.allSettled([
+      listarAlertas(true),
+      listarSolicitudesFoto(true),
+      listarAlertasMensajes(true),
+    ]);
     const mensaje = (r: PromiseRejectedResult) => (r.reason instanceof Error ? r.reason.message : 'error desconocido');
 
     setAlertas(
       ordenarAlertas([
         ...(denuncias.status === 'fulfilled' ? denuncias.value : []),
         ...(fotos.status === 'fulfilled' ? fotos.value : []),
+        ...(mensajes.status === 'fulfilled' ? mensajes.value : []),
       ]),
     );
 
@@ -58,15 +63,21 @@ export default function AlertasAdmin() {
     if (fotos.status === 'rejected') {
       avisos.push(`No se pudieron leer las fotos de perfil (¿está aplicada la migración 0020?): ${mensaje(fotos)}`);
     }
+    if (mensajes.status === 'rejected') {
+      avisos.push(`No se pudieron leer los mensajes (¿está aplicada la migración 0026?): ${mensaje(mensajes)}`);
+    }
     setError(avisos.length > 0 ? avisos.join(' ') : null);
     setCargando(false);
   }, []);
 
-  // Cada tipo tiene su ticket: una denuncia lleva a sus mensajes y sanciones, una foto a aprobar o rechazar.
+  // Cada tipo tiene su ticket: una denuncia lleva a sus mensajes y sanciones, una
+  // foto a aprobar o rechazar, y un mensaje a responderlo.
   const abrir = useCallback(
     (alerta: Alerta) => {
       if (alerta.tipo === 'foto_perfil') {
         router.push({ pathname: '/admin/foto/[requestId]', params: { requestId: alerta.id } });
+      } else if (alerta.tipo === 'mensaje') {
+        router.push({ pathname: '/admin/mensaje/[messageId]', params: { messageId: alerta.id } });
       } else {
         router.push({ pathname: '/admin/alerta/[reportId]', params: { reportId: alerta.id } });
       }
@@ -120,7 +131,7 @@ export default function AlertasAdmin() {
             body={
               filtro === 'resuelta'
                 ? 'Aquí quedará lo que vayáis resolviendo, con quién lo hizo y cuándo.'
-                : 'Cuando alguien denuncie a otra persona en Tírate una caña, o suba una foto de perfil nueva, el aviso aparecerá aquí.'
+                : 'Cuando alguien denuncie a otra persona en La Caña, o suba una foto de perfil nueva, el aviso aparecerá aquí.'
             }
           />
         ) : (

@@ -28,7 +28,7 @@ describe('volver desde una pantalla abierta directamente', () => {
   it('las pantallas de la cana cuelgan de ese layout, no de otro', () => {
     // Si alguien las mueve a su propio _layout, el ancla de aqui deja de
     // cubrirlas y hay que repetirla alli.
-    for (const pantalla of ['cana/persona/[userId]', 'cana/chat/[connectionId]', 'cana/bloqueados', 'cana/mis-datos']) {
+    for (const pantalla of ['cana/persona/[userId]', 'cana/chat/[connectionId]', 'cana/bloqueados', 'privacidad']) {
       assert.ok(layout.includes(`name="${pantalla}"`), `${pantalla} ya no esta en app/_layout.tsx`);
     }
   });

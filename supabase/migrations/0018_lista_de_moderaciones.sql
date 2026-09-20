@@ -1,6 +1,12 @@
 -- Ruta de Bares - 0018: la lista de a quien se ha moderado y que sigue vigente.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0017.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_admin_moderaciones() la rehace la 0024
 --
 -- Por que existe: hasta ahora un veto solo se podia retirar desde el ticket de
 -- la denuncia que lo origino. Si esa denuncia se resolvio hace meses, o la

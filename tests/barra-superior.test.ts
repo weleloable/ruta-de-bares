@@ -53,8 +53,27 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
 
   it('el layout de pestanas usa BarraSuperior y ninguna pestana la oculta', () => {
     const codigo = sinComentarios(leer('app/(tabs)/_layout.tsx'));
-    assert.match(codigo, /header:\s*\(\{\s*options\s*\}\)\s*=>\s*<BarraSuperior\s+titulo=\{options\.title/);
+    assert.match(codigo, /header:\s*\(\{\s*options\s*\}\)\s*=>\s*\(?\s*<BarraSuperior\b/);
     assert.doesNotMatch(codigo, /headerShown:\s*false/);
+  });
+
+  it('la cabecera prefiere headerTitle (string) y cae a title si no lo hay', () => {
+    // Bug encontrado en pantalla: el header solo leia `options.title`, asi que
+    // el `headerTitle` de la pestana Cana (mas largo, "La Caña") no se pintaba
+    // nunca y la cabecera decia "Caña" a secas, aunque el codigo llevaba
+    // headerTitle puesto desde siempre.
+    const codigo = sinComentarios(leer('app/(tabs)/_layout.tsx'));
+    const cabecera = /header:\s*\(\{\s*options\s*\}\)\s*=>[\s\S]*?<BarraSuperior\s+titulo=\{([\s\S]*?)\}\s*\/>/.exec(
+      codigo,
+    );
+    assert.ok(cabecera, 'no se encuentra el render de BarraSuperior');
+    assert.match(cabecera[1] as string, /options\.headerTitle/);
+    assert.match(cabecera[1] as string, /options\.title/);
+    // El orden importa: headerTitle antes que title, o el fallback ganaria siempre.
+    assert.ok(
+      (cabecera[1] as string).indexOf('options.headerTitle') < (cabecera[1] as string).indexOf('options.title'),
+      'headerTitle tiene que mirarse ANTES que title',
+    );
   });
 
   it('cada pestana tiene title: sin el, la barra saldria sin titulo', () => {

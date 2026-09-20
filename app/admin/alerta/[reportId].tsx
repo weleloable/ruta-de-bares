@@ -168,7 +168,7 @@ export default function AlertaAdmin() {
               <Text style={styles.nombre}>{ticket.reported_name}</Text>
               {ticket.reported_bio ? <Text style={typography.muted}>{ticket.reported_bio}</Text> : null}
               <Text style={styles.dato}>
-                Su caña está {ticket.reported_active ? 'activada' : 'apagada'}
+                Su Caña está {ticket.reported_active ? 'activada' : 'apagada'}
                 {ticket.reported_in_route ? '' : ' · ya no está en la ruta'}
               </Text>
             </View>
@@ -228,7 +228,7 @@ export default function AlertaAdmin() {
             */}
             {puede.puedeRetirarVetoCana ? (
               <Button
-                title="Retirar el veto de la caña"
+                title="Retirar el veto de La Caña"
                 variant="secondary"
                 disabled={ocupado}
                 onPress={() => setConfirmando('veto-cana')}
@@ -294,7 +294,7 @@ export default function AlertaAdmin() {
               onPress={() => setConfirmando('foto')}
             />
             <Button
-              title="Desactivar su caña"
+              title="Desactivar su Caña"
               variant="secondary"
               disabled={!puede.puedeDesactivar || !hayMotivo || ocupado}
               onPress={() => setConfirmando('desactivar')}
@@ -383,8 +383,8 @@ export default function AlertaAdmin() {
 
       <DialogoConfirmar
         visible={confirmando === 'desactivar'}
-        titulo="¿Desactivar su caña?"
-        mensaje={`${ticket.reported_name} desaparece de Tírate una caña y no podrá volver a activarla hasta que un admin retire el veto. Se le avisa con el motivo.`}
+        titulo="¿Desactivar su Caña?"
+        mensaje={`${ticket.reported_name} desaparece de La Caña y no podrá volver a activarla hasta que un admin retire el veto. Se le avisa con el motivo.`}
         textoConfirmar="Desactivar"
         destructivo
         ocupado={ocupado}
@@ -392,7 +392,7 @@ export default function AlertaAdmin() {
           void ejecutar(
             () => desactivarCana(objetivo, motivo, ticket.id, nota),
             'cana_desactivada',
-            'Caña desactivada.',
+            'La Caña desactivada.',
           )
         }
         onCancelar={() => setConfirmando(null)}
@@ -434,8 +434,8 @@ export default function AlertaAdmin() {
 
       <DialogoConfirmar
         visible={confirmando === 'veto-cana'}
-        titulo="¿Retirar el veto de la caña?"
-        mensaje={`${ticket.reported_name} podrá volver a activar su caña cuando quiera. No se le activa sola.`}
+        titulo="¿Retirar el veto de La Caña?"
+        mensaje={`${ticket.reported_name} podrá volver a activar su Caña cuando quiera. No se le activa sola.`}
         textoConfirmar="Retirar"
         ocupado={ocupado}
         onConfirmar={() =>

@@ -317,7 +317,15 @@ describe('0021: quien no puede', async () => {
     });
   });
 
-  it('la caña desactivada por un admin bloquea el borrado; al levantarla, se puede', async () => {
+  /**
+   * OJO, esto ya NO es lo que hace la app: la 0024 quito `CANA_BLOCKED` de los
+   * impedimentos, porque el escalon mas bajo de la sancion estaba bloqueando el
+   * derecho de supresion sin plazo. El veto aguanta ahora por su cuenta, con un
+   * HMAC del correo. Este test se queda porque describe la base tal y como
+   * queda con las migraciones 0001-0021, que es lo que monta; lo de hoy esta en
+   * tests/migration-0024.test.ts.
+   */
+  it('[hasta la 0024] la caña desactivada por un admin bloquea el borrado; al levantarla, se puede', async () => {
     await escenario(db, async (a) => {
       await activar(db, a, LUIS);
       await a.como(ADMIN);

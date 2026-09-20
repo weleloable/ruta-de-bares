@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0002: el SQL Editor y la service_role pueden cambiar roles.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0001.
--- Idempotente: solo reemplaza la funcion del trigger, se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe: en la 0001, guard_profile_role() solo deja cambiar `role` si
 -- public.is_admin(), que mira auth.uid(). En el SQL Editor no hay JWT, asi que

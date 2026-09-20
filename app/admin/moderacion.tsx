@@ -99,7 +99,7 @@ export default function ModeracionAdmin() {
     : retirando.que === 'cuenta'
       ? `${retirando.persona.nombre} podrá volver a entrar en rutas. Necesitará que le inviten otra vez.`
       : retirando.que === 'cana'
-        ? `${retirando.persona.nombre} podrá volver a activar su caña. No se le activa sola.`
+        ? `${retirando.persona.nombre} podrá volver a activar su Caña. No se le activa sola.`
         : `${retirando.persona.nombre} podrá volver a entrar en «${retirando.routeName}» si le invitan.`;
 
   if (cargando && moderaciones.length === 0) return <Loading label="Buscando moderaciones..." />;
@@ -199,10 +199,10 @@ function FichaPersona({
 
       {persona.vetoCana ? (
         <View style={styles.veto}>
-          <Text style={styles.vetoTitulo}>Caña desactivada</Text>
+          <Text style={styles.vetoTitulo}>La Caña desactivada</Text>
           <Text style={styles.vetoMotivo}>«{persona.vetoCana.motivo}»</Text>
           <Button
-            title="Retirar el veto de la caña"
+            title="Retirar el veto de La Caña"
             variant="secondary"
             disabled={ocupado || !persona.userId}
             onPress={() => onRetirar({ que: 'cana', persona })}

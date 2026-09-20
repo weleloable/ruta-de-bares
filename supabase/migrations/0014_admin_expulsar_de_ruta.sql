@@ -1,6 +1,14 @@
 -- Ruta de Bares - 0014: expulsar de una ruta desde la bandeja de alertas.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0013.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_admin_remove_from_route() la rehace la 0015
+--   * match_admin_report() la rehace la 0015
+--   * match_admin_resolve() la rehace la 0015
 --
 -- Por que existe: retirar la foto o apagar la cana no bastan cuando la falta es
 -- grave. Quien acosa en una ruta sigue viendo la ruta, sus bares y a su gente,

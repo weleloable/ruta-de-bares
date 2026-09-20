@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0016: denunciar y bloquear exigen estar dentro y no sancionado.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0015.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe: `match_report` y `match_block` eran las dos unicas funciones
 -- de la cana que no comprobaban NADA sobre quien llama. Todo lo demas

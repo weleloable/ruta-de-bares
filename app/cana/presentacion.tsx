@@ -9,12 +9,13 @@ import { activateMatch, getMatchProfile, listMatchTags, updateMatchProfile } fro
 import { AvatarCana, Casilla, ChipEtiqueta } from '../../src/features/match/piezas';
 import { BIO_MAX, ETIQUETAS_MAX, alternarEtiqueta, validarPresentacion } from '../../src/features/match/reglas';
 import { pickAvatar, uploadAvatar } from '../../src/features/profile/api';
+import { mensajeTrasEnviar } from '../../src/features/profile/fotoRevision';
 import { colors, space, typography } from '../../src/lib/theme';
 import type { MatchCatalogRow } from '../../src/types/database';
 
 /**
- * Presentacion para Tirate una cana: frase y etiquetas, y un empujon para
- * subir foto (no es obligatoria, D9).
+ * Presentacion para La Caña: frase y etiquetas, y un empujon para subir foto
+ * (no es obligatoria, D9).
  *
  * modo=alta   primera activacion; `adulto` trae la casilla de mayoria de edad
  *             de la pestana, y guardar es lo que activa.
@@ -33,9 +34,10 @@ export default function PresentacionCana() {
   const [guardando, setGuardando] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [intentado, setIntentado] = useState(false);
-  // Solo en el alta: activar la cana es un si explicito e informado (0009).
+  // Solo en el alta: activar La Caña es un si explicito e informado (0009).
   const [acepta, setAcepta] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exito, setExito] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -67,6 +69,7 @@ export default function PresentacionCana() {
     if (errores.length > 0 || (alta && !acepta)) return;
     setGuardando(true);
     setError(null);
+    setExito(null);
     try {
       if (alta) {
         await activateMatch({ mayorDeEdad: adulto === '1', bio: bio.trim(), etiquetas: seleccion });
@@ -83,12 +86,17 @@ export default function PresentacionCana() {
   async function onFoto() {
     if (!profile) return;
     setError(null);
+    setExito(null);
     try {
       const elegida = await pickAvatar();
       if (!elegida) return;
       setSubiendoFoto(true);
-      await uploadAvatar(profile.id, elegida);
+      const resultado = await uploadAvatar(profile.id, elegida);
       await refreshProfile();
+      // Sin esto, subir la foto parecia no hacer nada: se manda a revision y
+      // la anterior se queda puesta, igual que en Mi perfil (mismo patron,
+      // mismo aviso).
+      setExito(mensajeTrasEnviar(resultado));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo cambiar la foto.');
     } finally {
@@ -123,6 +131,7 @@ export default function PresentacionCana() {
               {!profile?.avatar_url ? <Text style={typography.muted}>Sin foto se verán tus iniciales.</Text> : null}
             </View>
           </Card>
+          {exito ? <Banner tone="success">{exito}</Banner> : null}
 
           <View style={styles.bloque}>
             <Field
@@ -166,11 +175,16 @@ export default function PresentacionCana() {
               <Casilla
                 marcada={acepta}
                 onCambiar={setAcepta}
-                texto="He leído cómo funciona la caña y acepto que se active"
+                texto="He leído cómo funciona La Caña y acepto que se active"
               />
-              <Pressable accessibilityRole="button" onPress={() => router.push('/cana/condiciones')}>
-                <Text style={styles.enlace}>Leer cómo funciona y qué se recoge</Text>
-              </Pressable>
+              <View style={styles.enlaces}>
+                <Pressable accessibilityRole="button" onPress={() => router.push('/cana/condiciones')}>
+                  <Text style={styles.enlace}>Cómo funciona</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={() => router.push('/privacidad')}>
+                  <Text style={styles.enlace}>Cómo tratamos tus datos</Text>
+                </Pressable>
+              </View>
               {intentado && !acepta ? (
                 <Text style={typography.error}>Tienes que aceptarlo para activarlo.</Text>
               ) : null}
@@ -204,6 +218,7 @@ const styles = StyleSheet.create({
   tarjetaFoto: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   textoFoto: { flex: 1, gap: 2 },
   enlace: { fontSize: 14, fontWeight: '700', color: colors.beerDark },
+  enlaces: { flexDirection: 'row', gap: space.md },
   bloque: { gap: space.xs },
   frase: { minHeight: 84, paddingTop: space.md, textAlignVertical: 'top' },
   contador: { alignSelf: 'flex-end', fontSize: 12, color: colors.inkSoft, fontVariant: ['tabular-nums'] },

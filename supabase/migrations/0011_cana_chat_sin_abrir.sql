@@ -1,6 +1,6 @@
 -- Ruta de Bares - 0011: saber que chats no has abierto nunca.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0010.
--- Idempotente: se puede re-ejecutar.
+-- Idempotente: se puede re-ejecutar sin romper nada.
 --
 -- Por que existe: la pestana Cana avisa con una burbujita cuando hay algo que
 -- mirar, y "hay algo que mirar" incluye una conexion recien abierta, aunque

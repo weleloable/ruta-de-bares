@@ -19,15 +19,29 @@ export type ProfileRow = {
   updated_at: string;
 };
 
+/**
+ * Los bares que `listRoutes()` trae pegados a cada ruta, solo para saber cuando
+ * termina. No es la fila entera de `route_bars`.
+ */
+export type RouteBarHorario = { sort_order: number; closes_at: string | null };
+
 export type RouteRow = {
   id: string;
   name: string;
   description: string;
   event_date: string | null;
   is_published: boolean;
+  /**
+   * Solo para terminarla a mano antes de tiempo (0027). Lo normal es null: que
+   * una ruta haya terminado se DEDUCE de cuando cierra su ultimo bar (ver
+   * routes/estado.ts).
+   */
+  finished_at: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
+  /** Solo lo rellena `listRoutes()`, que los pide en la misma consulta. */
+  route_bars?: RouteBarHorario[];
 };
 
 export type RouteBarRow = {
@@ -230,7 +244,9 @@ export type NoticeAction =
   | 'cuenta_suspendida'
   | 'cana_reactivada'
   | 'veto_de_ruta_retirado'
-  | 'cuenta_reactivada';
+  | 'cuenta_reactivada'
+  /** Respuesta a un mensaje o una reclamacion (0026). */
+  | 'respuesta_organizacion';
 
 /**
  * Un aviso al usuario: my_notices (0015). `reason` es el motivo que se le
@@ -253,6 +269,41 @@ export type MyRestrictionsRow = {
   suspended_at: string | null;
   cana_blocked: boolean;
   cana_reason: string;
+};
+
+/** Un mensaje a la organizacion: contacto general o reclamar una decision (0026). */
+export type MensajeKind = 'contacto' | 'reclamacion';
+export type MensajeStatus = 'pendiente' | 'en_revision' | 'resuelta';
+
+/** Lo que ve quien lo escribio. */
+export type MiMensajeRow = {
+  id: string;
+  kind: MensajeKind;
+  notice_action: string;
+  body: string;
+  status: MensajeStatus;
+  answer: string;
+  created_at: string;
+  handled_at: string | null;
+};
+
+/** Lo que ve quien modera. */
+export type AdminMessageRow = {
+  id: string;
+  user_id: string | null;
+  user_name: string;
+  kind: MensajeKind;
+  notice_id: string | null;
+  notice_action: string;
+  body: string;
+  status: MensajeStatus;
+  answer: string;
+  created_at: string;
+  handled_by: string | null;
+  handled_by_name: string;
+  handled_at: string | null;
+  /** La decision que se reclama la tomo quien esta mirando el ticket. */
+  decidido_por_mi: boolean;
 };
 
 /** Lo que se le ha hecho a alguien: match_admin_moderaciones (0018). */
@@ -332,7 +383,10 @@ export type Database = {
       };
       routes: {
         Row: RouteRow;
-        Insert: Insert<RouteRow, 'id' | 'description' | 'event_date' | 'is_published' | 'created_at' | 'updated_at'>;
+        Insert: Insert<
+          RouteRow,
+          'id' | 'description' | 'event_date' | 'is_published' | 'finished_at' | 'created_at' | 'updated_at'
+        >;
         Update: Partial<RouteRow>;
         Relationships: [];
       };
@@ -427,6 +481,36 @@ export type Database = {
       match_export_my_data: {
         Args: Record<string, never>;
         Returns: unknown;
+      };
+      /** Todo lo tuyo, no solo lo de la cana (0025). Mete dentro lo anterior. */
+      export_my_data: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      /** Canal de contacto y reclamacion (0026). */
+      send_admin_message: {
+        Args: { p_kind: MensajeKind; p_body: string; p_notice_id?: string | null };
+        Returns: string;
+      };
+      my_admin_messages: {
+        Args: Record<string, never>;
+        Returns: MiMensajeRow[];
+      };
+      admin_messages: {
+        Args: { p_solo_pendientes?: boolean };
+        Returns: AdminMessageRow[];
+      };
+      admin_message_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      admin_take_message: {
+        Args: { p_id: string };
+        Returns: boolean;
+      };
+      admin_answer_message: {
+        Args: { p_id: string; p_answer: string };
+        Returns: undefined;
       };
       match_delete_my_data: {
         Args: Record<string, never>;

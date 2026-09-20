@@ -1,4 +1,5 @@
 import type {
+  AdminMessageRow,
   AvatarAdminRequestRow,
   MatchAdminReportRow,
   MatchAdminTicketRow,
@@ -22,10 +23,11 @@ import type {
  */
 
 /**
- * Las fuentes de alerta que hay hoy: las denuncias de Tirate una cana (0009) y
- * las fotos de perfil pendientes de aprobar (0020).
+ * Las fuentes de alerta que hay hoy: las denuncias de Tirate una cana (0009),
+ * las fotos de perfil pendientes de aprobar (0020) y los mensajes que la gente
+ * escribe a la organizacion, incluidas las reclamaciones (0026).
  */
-export type TipoAlerta = 'denuncia_cana' | 'foto_perfil';
+export type TipoAlerta = 'denuncia_cana' | 'foto_perfil' | 'mensaje';
 
 /** Mismos estados que `match_reports.status`: el ticket ES la denuncia. */
 export type EstadoAlerta = MatchReportStatus;
@@ -67,7 +69,7 @@ export function etiquetaMotivo(motivo: MatchReportReason): string {
 const RESOLUCION: Record<MatchReportResolution, string> = {
   sin_accion: 'Sin acción',
   foto_retirada: 'Foto retirada',
-  cana_desactivada: 'Caña desactivada',
+  cana_desactivada: 'La Caña desactivada',
   expulsada_de_ruta: 'Expulsada de la ruta',
   cuenta_suspendida: 'Cuenta suspendida',
   otra: 'Otra',
@@ -84,7 +86,7 @@ export function etiquetaResolucion(resolucion: MatchReportResolution | null): st
 export const RESOLUCIONES: readonly { id: MatchReportResolution; etiqueta: string; ayuda: string }[] = [
   { id: 'sin_accion', etiqueta: 'Sin acción', ayuda: 'Revisada y no había nada que hacer' },
   { id: 'foto_retirada', etiqueta: 'Foto retirada', ayuda: 'Le he quitado la foto de perfil' },
-  { id: 'cana_desactivada', etiqueta: 'Caña desactivada', ayuda: 'Ya no aparece en Tírate una caña' },
+  { id: 'cana_desactivada', etiqueta: 'La Caña desactivada', ayuda: 'Ya no aparece en La Caña' },
   { id: 'expulsada_de_ruta', etiqueta: 'Expulsada de la ruta', ayuda: 'Fuera de esta ruta, sin borrar su cuenta' },
   { id: 'cuenta_suspendida', etiqueta: 'Cuenta suspendida', ayuda: 'Fuera de todas las rutas' },
   { id: 'otra', etiqueta: 'Otra', ayuda: 'Cuéntalo en la nota' },
@@ -132,15 +134,41 @@ export function alertaDeSolicitudFoto(fila: AvatarAdminRequestRow): Alerta {
   };
 }
 
+/**
+ * Un mensaje a la organizacion, ya como alerta (0026).
+ *
+ * Una reclamacion entra como PENDIENTE aunque hable de una decision ya cerrada:
+ * lo que espera respuesta es la reclamacion, no la sancion.
+ */
+export function alertaDeMensaje(fila: AdminMessageRow): Alerta {
+  return {
+    id: fila.id,
+    tipo: 'mensaje',
+    estado: fila.status,
+    titulo: fila.kind === 'reclamacion' ? 'Reclamación de una decisión' : 'Mensaje a la organización',
+    sobre: fila.user_name,
+    de: fila.user_name,
+    cuando: fila.created_at,
+    mensajes: 0,
+    resolucion: null,
+  };
+}
+
 /** La segunda linea de la fila: a quien afecta y quien avisa. */
 export function detalleAlerta(alerta: Alerta): string {
-  // Una foto la sube la propia persona: "Sobre Ana · de Ana" seria ruido.
-  if (alerta.tipo === 'foto_perfil') return alerta.sobre;
+  // Una foto la sube la propia persona, y un mensaje lo escribe ella:
+  // "Sobre Ana · de Ana" seria ruido.
+  if (alerta.tipo === 'foto_perfil' || alerta.tipo === 'mensaje') return alerta.sobre;
   return `Sobre ${alerta.sobre} · de ${alerta.de}`;
 }
 
 /** La linea de abajo: lo que espera, o como se cerro. */
 export function pieAlerta(alerta: Alerta): string {
+  if (alerta.tipo === 'mensaje') {
+    if (alerta.estado === 'resuelta') return 'Respondida';
+    if (alerta.estado === 'en_revision') return 'La estás mirando';
+    return 'Espera respuesta';
+  }
   if (alerta.tipo === 'foto_perfil') {
     if (alerta.veredicto === 'aprobada') return 'Aprobada';
     if (alerta.veredicto === 'rechazada') return 'Rechazada';

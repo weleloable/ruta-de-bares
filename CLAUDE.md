@@ -57,10 +57,13 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 app/                      pantallas (Expo Router)
   (auth)/                 login, registro (alta abierta)
   (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
-  cana/                   presentacion, ficha, chat, bloqueados, mis datos, condiciones
+  cana/                   presentacion, ficha, chat, bloqueados, condiciones
   admin/                  bandeja de alertas de administracion, ficha de una denuncia
                           (alerta/) y decidir una foto de perfil (foto/)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
+  contacto.tsx            escribir a la organizacion y reclamar una decision
+  privacidad.tsx          que datos se recogen, quien los ve y descargarlos
+                          (publica; "Ver lo que guardamos" fue app/mis-datos.tsx)
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
@@ -95,13 +98,21 @@ supabase/
   migrations/0019_*.sql     arregla activar la cana, que la 0015 rompio
   migrations/0020_*.sql     la foto de perfil nueva pasa por revision de un admin
   migrations/0021_*.sql     borrar tu propia cuenta (delete_my_account)
+  migrations/0022_*.sql     ni anon ni authenticated pueden vaciar una tabla
+  migrations/0023_*.sql     el bucket de fotos es privado: URL firmadas
+  migrations/0024_*.sql     el veto de cana aguanta solo (HMAC) y deja borrarse
+  migrations/0025_*.sql     exportar TODOS tus datos, no solo los de la cana
+  migrations/0026_*.sql     escribir a la organizacion y reclamar una decision
+  migrations/0027_*.sql     una ruta termina, y borrarla se lleva sus datos
+  migrations/0028_*.sql     la denuncia congela la foto y la frase de entonces
+  migrations/0029_*.sql     catalogo de etiquetas real, ya no son placeholders
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
 ```
 
 Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `route_invites`,
-`route_members`, `avatar_requests`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`route_members`, `avatar_requests`, `cana_bans`, `user_messages`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -422,3 +433,146 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   en cada cambio de pantalla (asi se apaga al salir de Avisos). Una peticion de
   refresco que llega mientras se pregunta se REPITE, no se descarta: si se
   descartase, el punto seguiria rojo tras marcar los avisos como leidos.
+  Ese reintento leia el closure VIEJO y por eso a los admins el punto tardaba
+  60 s en encenderse: `isAdmin` es false al arrancar (el perfil llega despues de
+  la sesion) y al pasar a true la primera consulta seguia en vuelo. Se arregla
+  leyendo `isAdmin` de una **referencia** y poniendolo ademas en las
+  dependencias del efecto; las dos mitades hacen falta.
+- **El bucket de fotos es PRIVADO y se pinta con URL firmadas** (`0023`,
+  `src/features/profile/avatarFirmado.ts`): era `public = true`, o sea que
+  Storage servia cualquier foto por su URL SIN mirar policy, y la cuadricula de
+  la cana reparte esas URL. Comprobado: sin sesion y sin clave devolvia
+  `200 image/jpeg`; ahora, `400`. La policy `avatars_read` no habla de carpetas
+  sino de FICHEROS: de otra persona solo se lee el que es HOY su foto aprobada o
+  su miniatura (`avatar_visible_para_mi`, que compara con `right()` porque '_' es
+  comodin de LIKE). Si hablase de carpetas reabriria lo que cerro la 0020, que
+  es que un companero liste tus fotos PENDIENTES y RECHAZADAS. Hay test para eso.
+  La funcion es `security definer` (lee `route_members` de otros) y hay que
+  **concederle ejecucion a `authenticated`**: el USING de una policy corre como
+  el rol que consulta, asi que revocarsela deja la policy fallando para todos.
+  `profiles.avatar_url` sigue guardando la URL `.../object/public/avatars/...`,
+  que ya no descarga nada: pasa a ser un IDENTIFICADOR del que
+  `rutaDesdeUrlPublica` saca la ruta, y es el unico sitio que conoce ese formato.
+  Firma `AvatarCana` por dentro, asi que sus seis pantallas no cambiaron; lo
+  vigila `tests/avatares-firmados.test.ts`, que falla si alguien vuelve a meter
+  un `avatar_url` en un `uri:` (no daria error, daria un hueco en blanco).
+  **Al desplegar, la app va ANTES que la migracion**: al reves, una version vieja
+  pide la URL publica y todo el mundo se queda sin fotos.
+- **El veto de cana guarda un HMAC del correo, igual que el de ruta** (`0024`,
+  tabla `cana_bans`): la 0021 habia elegido `CANA_BLOCKED` como impedimento para
+  borrar la cuenta, con buen motivo (el veto vive en `match_profiles`, que cae
+  en cascada), pero eso dejaba el escalon MAS BAJO de la sancion bloqueando el
+  derecho de supresion y sin plazo. Ahora el veto sobrevive por su cuenta y
+  `CANA_BLOCKED` ya no impide nada. `match_admin_lift_cana` levanta tambien
+  cuando NO hay fila viva: una cuenta nueva con el mismo correo solo tiene el
+  HMAC, y sin eso ese veto heredado no habria forma de retirarlo (art. 20 DSA).
+  Y `match_admin_moderaciones` lee la rama 'cana' de `cana_bans` y no de
+  `match_profiles`, o el veto desaparece de la lista justo al borrarse la cuenta.
+- **`export_my_data()` es la exportacion de verdad; `match_export_my_data` es
+  solo el trozo de la cana** (`0025`): la segunda se sigue llamando desde la
+  primera en vez de copiarse, para que no acaben separandose. Salen el correo,
+  los sellos CON coordenadas y **el HMAC del correo**: decir en la politica que
+  se guarda y esconderlo al pedir los datos seria lo peor de los dos mundos. NO
+  sale el texto de una denuncia abierta sobre ti ni quien la puso (art. 15.4:
+  son datos de un tercero, y una invitacion a las represalias).
+- **El canal de contacto NO copia el guardian de la 0016** (`0026`,
+  `send_admin_message`): denunciar y bloquear exigen estar dentro de una ruta y
+  sin sancion; aqui seria al reves de lo que se busca, porque quien mas necesita
+  escribir es la cuenta suspendida y expulsada. Solo se exige sesion, y tiene
+  test propio. Dos entradas al mismo sitio: Mi perfil (art. 12 DSA, siempre
+  visible) y dentro de cada aviso restrictivo (art. 20, con el id del aviso
+  pegado). El art. 16 —avisar teniendo o no cuenta— NO se puede cubrir desde la
+  app: lo cubre el correo de la politica. Responder genera un aviso
+  (`respuesta_organizacion`), y si la decision reclamada la tomo quien mira el
+  ticket, se avisa pero no se bloquea (con un solo admin no habria alternativa).
+- **`/privacidad` es publica en AuthGate**, como `/invitacion`: el art. 13 del
+  RGPD obliga a informar ANTES de recoger los datos y el registro se hace sin
+  sesion, asi que exigirla mandaba el enlace al login (paso, y el primer test no
+  lo cazo por mirar solo que AuthGate existiera). El responsable y el correo son
+  provisionales, viven en `src/features/legal/responsable.ts` con un flag
+  `PENDIENTE`, y mientras siga a true la pantalla avisa de que es un borrador.
+- **Borrar una ruta ES la purga, y no hay cron** (`0027`): el esquema ya
+  cascadea desde la 0001 (bares -> sellos con su GPS, pertenencia, invitaciones,
+  conexiones y chats, votos, denuncias, veto de ruta con su HMAC), y la 0027
+  anade que el veto de cana tambien muera ahi (`cana_bans.route_id`). Los vetos
+  NO se arrastran de un evento al siguiente: cada ruta empieza de cero, y el
+  HMAC vive lo que vive la ruta. Lo que NO muere con una ruta: la suspension de
+  cuenta (es de la persona) y el registro de moderacion. Si nadie pulsa Borrar,
+  los datos se quedan; el unico recordatorio es el aviso del editor.
+- **"Terminada" no se guarda, se deduce del cierre del ULTIMO bar**
+  (`routes/estado.ts`): el ultimo por `sort_order`, no el que cierra mas tarde.
+  `closes_at` es `timestamptz`, asi que la medianoche no le afecta — y ese era
+  el problema de la primera version, que usaba `event_date` (un `date`) y
+  marcaba la ruta terminada a las 00:01 con la gente todavia sellando. Queda
+  como red "08:00 del dia siguiente" SOLO para una ruta sin bares.
+  `routes.finished_at` es solo para terminarla a mano antes de tiempo. Y
+  publicar exige fecha, o la ruta no termina nunca y se escapa del aviso.
+- **Una migracion se pega UNA VEZ: casi la mitad NO son idempotentes** aunque
+  lo dijeran. Cuando una define una funcion que otra POSTERIOR rehace, volver a
+  pegar la vieja la degrada en silencio (paso con la 0006 y
+  `match_require_target`, que perdio la comprobacion de bloqueos). Cada cabecera
+  dice ahora la verdad y nombra que funciones suyas quedaron obsoletas y quien
+  las rehizo; `tests/migraciones-cabeceras.test.ts` lo recalcula en cada
+  ejecucion, asi que anadir una migracion que pise a otra hace fallar la
+  cabecera de aquella.
+- **Del parser de SQL se pide UNA instancia POR LLAMADA**
+  (`pg-query-emscripten`): `parse()` seguido de `parsePlpgsql()` sobre la misma
+  revienta el wasm y **se lleva el proceso de test por delante**, sin mensaje
+  util. `tests/migration-0020.test.ts` era el unico que la reutilizaba y
+  aguantaba de milagro: salto al anadirle 16 bytes de comentario a la 0020.
+- **"La Caña" es el nombre del servicio desde ahora, con articulo pegado**:
+  sustituye a "Tirate una cana"/"la cana" en todo el texto de cara al usuario
+  (no en rutas, identificadores ni comentarios internos). Trampa gramatical: no
+  se puede escribir "tu La Caña" ni "su La Caña" (dos articulos chocan), asi
+  que en construcciones posesivas se usa "Caña" sin articulo ("tu Caña", "su
+  Caña"); en el resto, "La Caña" completa. El chip de la barra inferior se
+  queda en "Caña" a secas por espacio (cinco pestanas); la cabecera de la
+  pantalla y el resto del texto sí dicen "La Caña" entera. Los usos idiomaticos
+  de "una caña"/"la caña" como la cerveza literal ("ofrécele una caña", "¿Una
+  caña?", "tomar una caña") NO se tocan: son juego de palabras con el nombre,
+  no el nombre.
+- **`app/(tabs)/_layout.tsx`: el header de las pestanas leia `options.title` y
+  no `options.headerTitle`**, pese a que el comentario ya decia "nombre corto
+  abajo y completo en la cabecera". Bug real, encontrado al comprobar en
+  pantalla que la cabecera de Cana decia "Caña" en vez de "La Caña": el
+  `headerTitle` de esa pestana llevaba puesto desde siempre y nunca se leia en
+  ningun sitio. Arreglado para que el header prefiera `headerTitle` (si es
+  string) y caiga a `title` si no lo hay.
+- **Politica de privacidad y mecanica de La Caña, en pantallas separadas**
+  (`cana/condiciones.tsx` explica SOLO como funciona y las normas;
+  `privacidad.tsx` tiene la seccion "La Caña" con que dato ve quien). Vivian
+  mezcladas en condiciones.tsx. Cada pantalla enlaza a la otra.
+- **No hay borrado parcial de "los datos de la cana" en Mis datos**: por ley
+  basta con poder borrar TODO (Borrar Cuenta, Mi perfil, 0021); una via de
+  borrado parcial ademas de esa no es una obligacion legal y confundia con dos
+  botones de "borrar" en pantallas distintas. Quien quiera separarse solo de La
+  Caña sin perder su compostelana la DESACTIVA (pausa, no borra nada) desde su
+  pestana; `match_delete_my_data` y `deleteMyMatchData()` se quedan en el
+  codigo (no rompen nada al seguir ahi), simplemente ya no los llama ninguna
+  pantalla.
+- **El catalogo de etiquetas de La Caña ya no es el placeholder de la 0005**
+  (`0029`): la 0005 sembro "Etiqueta 1".."Etiqueta 8" con una nota EXPLICITA de
+  que era provisional y de que nunca debian tocar categorias especiales del
+  art. 9 del RGPD (orientacion, salud, religion, ideologia). La 0029 solo
+  actualiza el `label` por `id` fijo (no toca los ids, no son visibles en
+  ningun sitio): rasgos de comportamiento en la ruta, nunca de identidad.
+- **"Mis datos" ya no es una pantalla propia: es el recuadro "Ver lo que
+  guardamos" dentro de `privacidad.tsx`** (`app/mis-datos.tsx` borrado). Habia
+  dos pantallas casi iguales enlazadas entre si (una decia que se recogia, la
+  otra dejaba descargarlo) y dos botones distintos en Mi perfil. Ahora un solo
+  boton, "Política de privacidad y datos", lleva a una sola pantalla que
+  explica la politica Y deja descargar, en el hueco donde antes estaba el
+  boton "Cómo funciona La Caña" (que se quito: el enlace en sentido contrario,
+  de condiciones a privacidad, se queda).
+- **En `privacidad.tsx`, "que se recoge", "para que" y "quien lo ve" van en
+  UNA sola seccion, dato por dato** ("Qué se recoge, para qué y quién puede
+  verlo"), no en dos o tres separadas: separarlas deja un hueco entre leer que
+  se guarda un dato y leer, mucho despues, que no lo ve nadie. Lo de La Caña
+  no tiene su propia seccion: es "Además, si activas La Caña" DENTRO de esa
+  misma seccion. Las sanciones (huella de correo) van ANTES que cuanto tiempo
+  se conserva, porque explican por que existe ese dato antes de decir cuanto
+  dura.
+- **El catalogo de etiquetas de La Caña tiene 30**, no 8 (`0029`, editada
+  porque aun no estaba comiteada cuando se amplio: no es una migracion ya
+  publicada). Misma regla que antes: comportamiento en la ruta, nunca
+  identidad, nada del art. 9 del RGPD.

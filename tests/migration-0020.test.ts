@@ -107,10 +107,15 @@ const perfil = async (db: PGlite, a: Actor, uid: string) =>
 
 describe('0020: forma', () => {
   it('la gramatica es valida y los cuerpos plpgsql compilan', async () => {
-    const parser = await init();
-    const resultado = parser.parse(m0020);
+    // Una instancia del parser POR LLAMADA. parse() seguido de parsePlpgsql()
+    // sobre la misma revienta el wasm ("Program terminated with exit(1)"), y no
+    // avisa: revienta el proceso entero. Este fichero era el unico que la
+    // reutilizaba; salto al anadir 16 bytes de comentario a la migracion, o sea
+    // que llevaba tiempo al borde. El resto de migration-*.test.ts ya lo hacen
+    // asi, y la 0005 lo explica en un comentario.
+    const resultado = (await init()).parse(m0020);
     assert.ok(!resultado.error, `error de sintaxis: ${JSON.stringify(resultado.error)}`);
-    const plpgsql = parser.parsePlpgsql(m0020);
+    const plpgsql = (await init()).parsePlpgsql(m0020);
     assert.ok(!plpgsql.error, `plpgsql no compila: ${JSON.stringify(plpgsql.error)}`);
   });
 

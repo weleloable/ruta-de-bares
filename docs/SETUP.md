@@ -11,7 +11,18 @@ que los seis puntos pasen.
 ## 1. Base de datos
 
 En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
-**cada migracion entera, en orden**, una query por fichero:
+**cada migracion entera, en orden**, una query por fichero.
+
+> **Cada migracion se pega UNA SOLA VEZ y nunca se vuelve a pegar.** No da
+> error al repetirse, y ahi esta el peligro: la mitad definen funciones que una
+> migracion posterior rehizo, asi que re-ejecutar una vieja **devuelve esas
+> funciones a su version antigua en silencio**. Ya paso: relanzar la 0006 dejo a
+> `match_require_target` sin la comprobacion de bloqueos, o sea que la gente
+> bloqueada volvia a poder interactuar, y no se vio hasta comparar el md5 de la
+> funcion. La cabecera de cada fichero dice si se puede repetir y que funciones
+> suyas quedaron obsoletas. Si te pierdes, sigue por la siguiente sin aplicar:
+> aplicar de menos se arregla; aplicar de mas, no.
+
 
 1. [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql)
    y **Run**.
@@ -69,7 +80,8 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    clave publicable, solo tu propia carpeta (antes cualquiera veia los nombres
    de las fotos pendientes de todos); y los nombres de foto llevan un sufijo
    aleatorio, porque la foto pendiente sigue siendo legible por URL hasta que
-   se aprueba (un bucket publico sirve por URL sin policy).
+   se aprueba (un bucket publico sirve por URL sin policy; eso lo cierra la
+   0023, que hace el bucket privado).
 21. [`supabase/migrations/0021_borrar_mi_cuenta.sql`](../supabase/migrations/0021_borrar_mi_cuenta.sql)
    y **Run**. Crea `delete_my_account()` y `delete_my_account_blockers()`, que
    usa **Mi perfil > Borrar Cuenta**: borra la cuenta y todo lo que cuelga de
@@ -78,15 +90,58 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    las que participo, veto de ruta y suspension, ver 0015 y 0017): si borrarse
    la cuenta lo limpiase, una sancion se esquivaria con un clic. **No deja
    borrar** (y lo dice antes de tocar nada) a: administradores (se quitan a
-   mano en Supabase), quien creo alguna ruta, quien tiene una denuncia sin
-   resolver y quien tiene la cana desactivada por un admin; los dos ultimos
-   se desbloquean al resolver la denuncia o levantar el veto en Moderacion. Las
+   mano en Supabase), quien creo alguna ruta, y quien tiene una denuncia sin
+   resolver, que se desbloquea al resolverla. (Tener la cana desactivada
+   tambien impedia borrarse; **eso lo quita la 0024**.) Las
    fotos las borra la app antes de llamar a la funcion, porque Storage no se
    deja borrar por SQL. **Ojo con el orden**: si despliegas la app antes de
    pegarla, el enlace sale pero avisa de que falta la migracion.
    Comprobacion: con una cuenta de prueba, Borrar Cuenta, y en Supabase >
    Authentication no debe quedar el usuario, ni su carpeta en Storage >
    `avatars`.
+22. [`supabase/migrations/0022_sin_truncate.sql`](../supabase/migrations/0022_sin_truncate.sql)
+   y **Run**. Le quita TRUNCATE a `anon` y `authenticated` sobre las tablas de
+   la app, y a lo que se cree en el futuro. Viene de los permisos por defecto
+   de Supabase (`all` incluye TRUNCATE) y **la RLS no protege de eso**: es un
+   privilegio de tabla, no de fila. No cambia nada visible; si algo dejara de
+   funcionar, seria un TRUNCATE que la app no hace.
+23. [`supabase/migrations/0023_bucket_de_fotos_privado.sql`](../supabase/migrations/0023_bucket_de_fotos_privado.sql)
+   y **Run**. El bucket `avatars` pasa a **privado**: antes, con el enlace en la
+   mano, cualquiera veia la cara de cualquiera sin sesion y sin clave, y la
+   cuadricula de la cana reparte esos enlaces. Ahora la app pide una URL firmada
+   de 15 minutos, y firmar si pasa por la policy. De otra persona solo se puede
+   leer el fichero que es HOY su foto aprobada (y su miniatura): lo pendiente y
+   lo rechazado siguen siendo solo suyos y de los admins. **Ojo con el orden, y
+   aqui importa de verdad**: despliega ANTES la web (y la build de EAS) y pega
+   esto DESPUES. Al reves, una version vieja de la app pide la URL publica a un
+   bucket que ya no sirve nada y **todo el mundo se queda sin fotos** hasta que
+   actualice. Comprobacion: pega en el navegador, sin sesion, la URL que hay en
+   `profiles.avatar_url` de alguien; antes devolvia la imagen, ahora tiene que
+   dar error. Y dentro de la app las caras se siguen viendo.
+
+24. [`supabase/migrations/0024_veto_de_cana_con_hmac.sql`](../supabase/migrations/0024_veto_de_cana_con_hmac.sql)
+   y **Run**. El veto de cana pasa a guardar un HMAC del correo (tabla
+   `cana_bans`), como el de ruta y la suspension, y **deja de impedir borrar la
+   cuenta**: antes, tener la cana desactivada bloqueaba la supresion sin plazo,
+   siendo el escalon mas bajo de la sancion. Rellena sola los vetos que ya
+   estuviesen puestos.
+25. [`supabase/migrations/0025_exportar_todos_mis_datos.sql`](../supabase/migrations/0025_exportar_todos_mis_datos.sql)
+   y **Run**. `export_my_data()`: la descarga de **Mi perfil > Política de
+   privacidad y datos > Ver lo que guardamos** pasa
+   a traer todo (cuenta y correo, rutas, sellos con coordenadas, fotos
+   enviadas, avisos y sanciones) y no solo lo de la cana. **Ojo con el orden**:
+   si despliegas la app antes de pegarla, "Ver mis datos" falla.
+26. [`supabase/migrations/0026_canal_de_contacto.sql`](../supabase/migrations/0026_canal_de_contacto.sql)
+   y **Run**. Crea `user_messages` y el canal de **Escribir a la organizacion**
+   (Mi perfil) y **reclamar una decision** (dentro de cada aviso). Los mensajes
+   caen en la bandeja de Alertas como una fuente mas. **Ojo con el orden**: si
+   despliegas antes, los dos botones salen pero fallan al enviar, y la bandeja
+   avisa de que no puede leer los mensajes.
+
+Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
+privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;
+mientras `PENDIENTE` sea `true`, la pantalla de Privacidad avisa de que es un
+borrador. Antes de abrir esto a gente de verdad hay que cerrarlo.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket

@@ -1,6 +1,14 @@
 -- Ruta de Bares - 0007: miniatura de la foto de perfil.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0006.
--- Idempotente: se puede re-ejecutar.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Sus sentencias no dan error al repetirse, pero definen funciones que una
+-- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
+-- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
+-- match_require_target sin la comprobacion de bloqueos, o sea que la gente
+-- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
+--   * match_get_connection() la rehace la 0008
+--   * match_grid() la rehace la 0009
+--   * match_inbox() la rehace la 0009
 --
 -- Por que existe: la grilla de "Tirate una cana" pinta la foto de todas las
 -- personas de la ruta a la vez. Hasta ahora la app subia la foto tal cual la
