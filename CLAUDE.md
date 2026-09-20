@@ -94,6 +94,7 @@ supabase/
   migrations/0018_*.sql     la lista de a quien se ha moderado (y que sigue puesto)
   migrations/0019_*.sql     arregla activar la cana, que la 0015 rompio
   migrations/0020_*.sql     la foto de perfil nueva pasa por revision de un admin
+  migrations/0021_*.sql     borrar tu propia cuenta (delete_my_account)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -373,6 +374,25 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   + copia al publico al aprobar, que pide una Edge Function (quitadas a
   proposito). Probar en un Supabase real antes de decidir si merece la pieza.
   Tres rondas de critico adversario no encontraron nada mas demostrable.
+- **Borrar cuenta es `delete_my_account()` (0021), y las fotos las borra la app
+  ANTES** (`deleteMyAccount` en `profile/api.ts`): Storage no se deja borrar por
+  SQL y, ya borrada la cuenta, nadie podria. Coste asumido: si falla la llamada
+  final (sin red), quedan la cuenta sin fotos y un reintento posible; lo
+  contrario dejaria fotos publicas colgando sin arreglo. `Storage.remove` no da
+  error cuando una policy le impide borrar: se cuenta lo devuelto y se relista.
+  Se lleva todo lo que cuelga de `profiles` en cascada, y NO el rastro de
+  moderacion ni el veto (0015, 0017): si borrarse limpiase eso, una sancion se
+  esquivaria con un clic. `delete_my_account_blockers()` dice cuando NO se puede
+  y la app lo pregunta ANTES de tocar las fotos: `ADMIN_CANNOT_DELETE` y
+  `OWNS_ROUTES` (`routes.created_by` no tiene cascade), y dos que solo dejan
+  de bloquear cuando un admin actua, `HAS_OPEN_REPORTS` (denuncia sin resolver
+  sobre ti) y `CANA_BLOCKED` (0015): la 0017 solo protege una sancion YA puesta,
+  asi que sin esto borrarse y volver con el mismo correo las esquivaba (lo
+  encontro un critico adversario, reproducido). Es retencion temporal y sin
+  datos nuevos (art. 17.3.e RGPD), la alternativa era guardar un HMAC mas. El
+  enlace se ensena a todos: quien no puede lo lee en un mensaje.
+  Un array de SQL se construye con `array_append(v, 'X'::text)`: `v || 'X'` con
+  un literal sin tipo lo lee como literal de array y revienta (lo cazo el test).
 - **La solicitud guarda rutas, no URL** (`0020`): la URL publica depende del
   proyecto y desde SQL no se conoce, y aceptar una de un usuario dejaria apuntar
   el perfil a otro sitio cuyo contenido cambia cuando quiere. Las URL las pasa

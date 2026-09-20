@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,12 +10,14 @@ import { contarAlertas } from '../../src/features/admin/api';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { contarAvisos } from '../../src/features/notices/api';
 import {
+  deleteMyAccount,
   initials,
   pickAvatar,
   ultimaSolicitudFoto,
   updateDisplayName,
   uploadAvatar,
 } from '../../src/features/profile/api';
+import { CONFIRMAR_BORRADO } from '../../src/features/profile/borrarCuenta';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
 import {
   avisoDeSolicitud,
@@ -36,6 +39,9 @@ export default function PerfilScreen() {
   const [exito, setExito] = useState<string | null>(null);
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+  const [borrando, setBorrando] = useState(false);
   const [alertas, setAlertas] = useState(0);
   const [avisos, setAvisos] = useState(0);
   // La ultima foto enviada a revision (0020): "en revision" o el motivo del rechazo.
@@ -173,11 +179,34 @@ export default function PerfilScreen() {
     }
   }
 
+  async function onConfirmarBorrado() {
+    // Doble toque en el mismo instante: el estado aun no se ha pintado.
+    if (!profile || borrando) return;
+    setBorrando(true);
+    setError(null);
+    setExito(null);
+    try {
+      await deleteMyAccount(profile.id);
+      // Con la sesion local fuera, AuthGate lleva al login y esta pantalla se
+      // desmonta. Aun asi se cierra el dialogo en el finally: si algo dejase la
+      // sesion viva, la persona no se queda mirando una rueda sin salida.
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo borrar la cuenta.');
+      // El aviso de error vive arriba del todo y el enlace abajo: sin subir, el
+      // dialogo se cierra y no pasa nada a la vista (un admin o quien tiene una
+      // denuncia abierta no sabria por que).
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    } finally {
+      setConfirmandoBorrado(false);
+      setBorrando(false);
+    }
+  }
+
   return (
     // Sin 'top': el margen del notch ya lo pone BarraSuperior, y pedirlo aqui
     // dejaria un hueco doble. Abajo manda la barra de pestanas.
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
-      <ScrollView contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
         <Card style={styles.cabecera}>
           <Pressable onPress={onCambiarFoto} disabled={subiendo} style={styles.avatarPulsable}>
             {profile?.avatar_url ? (
@@ -324,6 +353,18 @@ export default function PerfilScreen() {
           variant="danger"
           onPress={() => setConfirmandoSalida(true)}
         />
+
+        {/* Lo ven todos, admins incluidos: quien no puede borrarse (admin, denuncia
+            sin resolver...) lo sabe por el mensaje, antes de perder nada
+            (deleteMyAccount pregunta al servidor primero). */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setConfirmandoBorrado(true)}
+          style={styles.borrarCuenta}
+        >
+          <Ionicons name="ban" size={16} color={colors.danger} />
+          <Text style={styles.borrarCuentaTexto}>Borrar Cuenta</Text>
+        </Pressable>
       </ScrollView>
 
       <DialogoConfirmar
@@ -334,6 +375,17 @@ export default function PerfilScreen() {
         ocupado={saliendo}
         onConfirmar={onConfirmarSalir}
         onCancelar={() => setConfirmandoSalida(false)}
+      />
+
+      <DialogoConfirmar
+        visible={confirmandoBorrado}
+        titulo={CONFIRMAR_BORRADO.titulo}
+        mensaje={CONFIRMAR_BORRADO.mensaje}
+        textoConfirmar={CONFIRMAR_BORRADO.textoConfirmar}
+        destructivo
+        ocupado={borrando}
+        onConfirmar={onConfirmarBorrado}
+        onCancelar={() => setConfirmandoBorrado(false)}
       />
     </SafeAreaView>
   );
@@ -375,6 +427,22 @@ const styles = StyleSheet.create({
   // Ancho justo del icono y el texto, centrado: sin alignSelf el boton se
   // estira a todo el ancho como los demas.
   botonInstalar: { alignSelf: 'center' },
+  // Enlace discreto, no un boton: borrar la cuenta no debe ser lo mas facil de
+  // tocar de la pantalla.
+  borrarCuenta: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+  },
+  borrarCuentaTexto: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
   cabecera: { alignItems: 'center', gap: space.xs },
   avatarPulsable: { alignItems: 'center', gap: space.xs },
   avatar: {

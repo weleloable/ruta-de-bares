@@ -432,6 +432,14 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { conexiones: number; votos: number; mensajes: number };
       };
+      delete_my_account_blockers: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+      delete_my_account: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
       match_deactivate: {
         Args: Record<string, never>;
         Returns: undefined;
