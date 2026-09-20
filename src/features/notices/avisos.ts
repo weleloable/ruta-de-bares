@@ -58,6 +58,14 @@ const TEXTOS: Record<NoticeAction, TextoAviso> = {
     explicacion: 'Necesitas que te inviten otra vez a las rutas en las que estabas.',
     restriccion: false,
   },
+  // No es una restriccion: es la respuesta a algo que escribio la persona. Si
+  // se marcase como tal, saldria en rojo y con boton de reclamar la respuesta
+  // a su propia reclamacion.
+  respuesta_organizacion: {
+    titulo: 'Te han respondido',
+    explicacion: 'Es la respuesta a lo que escribiste. La tienes entera en Mi perfil > Escribir a la organización.',
+    restriccion: false,
+  },
 };
 
 export function textoAviso(accion: NoticeAction): TextoAviso {
@@ -71,11 +79,15 @@ export function textoAviso(accion: NoticeAction): TextoAviso {
 }
 
 /**
- * A quien dirigirse para reclamar. Va en toda restriccion porque el aviso sin
- * via de reclamacion no cumple el art. 17: no es un comunicado, es el principio
- * de un procedimiento.
+ * Como reclamar. Va en toda restriccion porque el aviso sin via de reclamacion
+ * no cumple el art. 17: no es un comunicado, es el principio de un
+ * procedimiento.
+ *
+ * Antes decia "habla con quien organiza la ruta" y no habia NINGUN sitio donde
+ * hacerlo. Desde la 0026 hay un boton debajo, asi que el texto ya no miente.
  */
-export const COMO_RECLAMAR = 'Si crees que es un error, habla con quien organiza la ruta.';
+export const COMO_RECLAMAR =
+  'Si crees que es un error, puedes reclamarlo aquí abajo. Lo lee quien organiza la ruta y te responde.';
 
 /** Los sin leer, que es lo que enciende la burbujita. */
 export function sinLeer(avisos: readonly UserNoticeRow[]): number {

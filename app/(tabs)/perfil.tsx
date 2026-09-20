@@ -351,6 +351,17 @@ export default function PerfilScreen() {
             textStyle={styles.textoAccionBarra}
             onPress={() => router.push('/mis-datos')}
           />
+          {/*
+            Siempre visible y sin condiciones: es el punto de contacto del
+            art. 12 del DSA. No se esconde a quien esta suspendido ni a quien no
+            esta en ninguna ruta, que es justo quien mas lo necesita.
+          */}
+          <Button
+            title="Escribir a la organización"
+            variant="secondary"
+            textStyle={styles.textoAccionBarra}
+            onPress={() => router.push('/contacto')}
+          />
         </Card>
 
         {/*
