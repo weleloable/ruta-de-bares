@@ -79,9 +79,9 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    las que participo, veto de ruta y suspension, ver 0015 y 0017): si borrarse
    la cuenta lo limpiase, una sancion se esquivaria con un clic. **No deja
    borrar** (y lo dice antes de tocar nada) a: administradores (se quitan a
-   mano en Supabase), quien creo alguna ruta, quien tiene una denuncia sin
-   resolver y quien tiene la cana desactivada por un admin; los dos ultimos
-   se desbloquean al resolver la denuncia o levantar el veto en Moderacion. Las
+   mano en Supabase), quien creo alguna ruta, y quien tiene una denuncia sin
+   resolver, que se desbloquea al resolverla. (Tener la cana desactivada
+   tambien impedia borrarse; **eso lo quita la 0024**.) Las
    fotos las borra la app antes de llamar a la funcion, porque Storage no se
    deja borrar por SQL. **Ojo con el orden**: si despliegas la app antes de
    pegarla, el enlace sale pero avisa de que falta la migracion.
