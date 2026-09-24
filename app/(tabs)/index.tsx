@@ -144,8 +144,9 @@ const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
   // 'fill' y no 'cover': el usuario pidio la imagen ESTIRADA a las medidas de
   // la pantalla, sin recortarla ni respetar su proporcion (la imagen es
-  // cuadrada y el telefono no).
-  fondo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.4 },
+  // cuadrada y el telefono no). 0.4 se comia la rejilla de sellos; por debajo
+  // de 0.25 la ilustracion deja de reconocerse. 0.3 es el punto medio.
+  fondo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.3 },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   chips: { gap: space.sm, paddingRight: space.lg },
   chip: {
