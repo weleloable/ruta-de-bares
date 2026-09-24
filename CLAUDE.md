@@ -309,6 +309,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **PWA: el service worker (`public/sw.js`) NO cachea la app**, solo una pagina
   de "sin conexion": cachear HTML/JS deja a la gente en la version vieja tras
   cada despliegue. Subir `VERSION` al cambiarlo.
+- **Los iconos no se editan a mano, los genera `scripts/generar-iconos.py`**
+  (Pillow) desde `assets/marca/`: `logo-10.png` (RxB) para el icono nativo,
+  el adaptativo de Android, la PWA, el favicon, el login y la pagina sin
+  conexion de `sw.js`; `logo-11.png` (el pato) SOLO para la barra superior,
+  a proposito. Los originales vienen con esquinas blancas de maqueta: el
+  script recorta el aro y lo monta sobre crema liso, porque el movil pone su
+  propia mascara y asomarian cunas blancas. `tests/iconos.test.ts` lo vigila.
 - **Manifest e icono de iOS se enlazan en tiempo de ejecucion**
   (`src/lib/pwa.web.ts`), no en `public/index.html`: Expo no reescribe
   ese fichero con `experiments.baseUrl`, y la ruta difiere entre localhost (`/`)
