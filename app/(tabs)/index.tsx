@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   // la pantalla, sin recortarla ni respetar su proporcion (la imagen es
   // cuadrada y el telefono no). A 0.1 la ilustracion practicamente desaparece
   // (comprobado con los logos reales de assets/bares/, no con un mock generico).
-  fondo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.1 },
+  fondo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.5 },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   chips: { gap: space.sm, paddingRight: space.lg },
   chip: {
