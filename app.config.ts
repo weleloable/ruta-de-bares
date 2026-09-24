@@ -40,7 +40,9 @@ const config: ExpoConfig = {
   android: {
     package: 'com.weleloable.rutadebares',
     adaptiveIcon: {
-      backgroundColor: '#2B1B10',
+      // El crema del logo (CREMA en scripts/generar-iconos.py), que es de donde
+      // salen estos tres pngs.
+      backgroundColor: '#FBF7EB',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',

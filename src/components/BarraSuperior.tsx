@@ -16,12 +16,10 @@ const LADO_AVATAR = 34;
 // Punto rojo de "tienes notificaciones" en la esquina del boton de Mi perfil.
 const LADO_PUNTO = 12;
 const LADO_LOGO = 38;
-// En icono-web.png (1024 px) el aro rojo exterior mide ~696 px y esta centrado.
-// La imagen se amplia para que el recorte redondo caiga justo dentro del aro,
-// sin el fondo papel ni el margen del icono. 680 y no 696 para no dejar un
-// hilo claro en el borde por el antialiasing.
-const LADO_IMAGEN_LOGO = Math.round((LADO_LOGO * 1024) / 680);
-const LOGO = require('../../assets/icono-web.png');
+// El pato (logo-11), no el logo de la app: aqui va otro a proposito. Ya viene
+// recortado por el aro y transparente fuera (scripts/generar-iconos.py), asi
+// que se pinta tal cual, sin ampliar ni recortar aqui.
+const LOGO = require('../../assets/logo-barra.png');
 
 /**
  * Cabecera comun de las pestanas: el nombre de la pestana en la que estas y el
@@ -60,7 +58,7 @@ export function BarraSuperior({ titulo }: { titulo: string }) {
             verdad y no desplazado por los iconos de la derecha. */}
         <View style={styles.lado}>
           <View style={styles.logo} accessibilityRole="image" accessibilityLabel="Ruta de Bares">
-            <Image source={LOGO} style={styles.imagenLogo} contentFit="cover" />
+            <Image source={LOGO} style={styles.logo} contentFit="contain" />
           </View>
         </View>
 
@@ -115,15 +113,7 @@ const styles = StyleSheet.create({
     // Encoge el hueco del titulo y no el de los iconos si el texto no cabe.
     flexShrink: 1,
   },
-  logo: {
-    width: LADO_LOGO,
-    height: LADO_LOGO,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imagenLogo: { width: LADO_IMAGEN_LOGO, height: LADO_IMAGEN_LOGO },
+  logo: { width: LADO_LOGO, height: LADO_LOGO },
   // Circulo entero de rojo en la esquina superior derecha del avatar, asomando un
   // poco para que se lea tambien sobre una foto. Rojo de la marca (colors.stamp).
   punto: {
