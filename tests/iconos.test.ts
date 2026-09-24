@@ -106,6 +106,25 @@ const TRANSPARENTES: Record<string, number> = {
   'assets/logo-barra.png': 144,
 };
 
+/**
+ * Cuanto del ancho ocupa el aro en la fila central (de canto a canto, no solo
+ * la esquina): mide lo mismo que "se ve cortado contra el marco" o "se ve
+ * como un sello perdido en el centro". Un pixel es "del aro" con el mismo
+ * umbral que generar-iconos.py (OSCURO = 400): las siluetas color arena
+ * quedan fuera, el marron del aro y el crema puro tambien (por debajo del
+ * corte, es fondo).
+ */
+function anchoDelAro(png: Png): number {
+  const fila = png.alto >> 1;
+  const oscuros: number[] = [];
+  for (let x = 0; x < png.ancho; x++) {
+    const [r, g, b] = png.pixel(x, fila);
+    if (r + g + b < 400) oscuros.push(x);
+  }
+  assert.ok(oscuros.length > 0, 'ninguna fila central tiene pixeles del aro');
+  return (oscuros[oscuros.length - 1] - oscuros[0]) / png.ancho;
+}
+
 describe('iconos: tamano y fondo', () => {
   for (const [rel, lado] of Object.entries(CUADRADOS)) {
     it(`${rel}: ${lado}x${lado}, esquinas del crema del logo (no blancas)`, () => {
@@ -114,6 +133,20 @@ describe('iconos: tamano y fondo', () => {
       for (const p of esquinas(png)) assert.deepEqual(p.slice(0, 3), CREMA);
       if (png.canales === 4) for (const p of esquinas(png)) assert.equal(p[3], 255);
     });
+
+    // android-icon-background.png no lleva aro: es solo el relleno crema que
+    // se ve alrededor del foreground (otro fichero, otro test).
+    if (rel !== 'assets/android-icon-background.png') {
+      it(`${rel}: el aro deja margen, ni cortado contra el marco ni perdido en el centro`, () => {
+        // Medido contra el icono viejo (icono-web.png, icon-192, apple-touch,
+        // icon-512): los cuatro daban 0.67-0.68. La primera version de este
+        // script lo puso a 0.9 y se veia cortado en el movil (foto real, PR).
+        // Banda ancha (0.5-0.75) para no reventar por el antialiasing de cada
+        // tamano, pero que un 0.9 o un 0.3 SI hagan saltar el test.
+        const ratio = anchoDelAro(leerPng(rel));
+        assert.ok(ratio > 0.5 && ratio < 0.75, `${rel}: aro al ${ratio.toFixed(2)} del ancho, fuera de 0.5-0.75`);
+      });
+    }
   }
 
   for (const [rel, lado] of Object.entries(TRANSPARENTES)) {

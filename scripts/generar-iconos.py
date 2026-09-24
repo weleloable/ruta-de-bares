@@ -28,6 +28,13 @@ MARCA = RAIZ / 'assets' / 'marca'
 # Crema del fondo de logo-10, muestreado dentro del aro. Si cambia el logo,
 # cambiarlo tambien en app.config.ts (android.adaptiveIcon.backgroundColor).
 CREMA = (251, 247, 235)
+# Cuanto ocupa el aro en un icono cuadrado normal (icon.png, favicon, PWA,
+# maskable): la primera version lo puso al 0.9 y quedaba cortado contra el
+# marco redondeado del icono (se vio en el movil, comparado con el icono
+# viejo). 0.68 es la proporcion MEDIDA del icono viejo (icono-web.png,
+# icon-192, apple-touch-icon, icon-512: los cuatro daban 0.67-0.68), no un
+# numero inventado.
+PROPORCION_ICONO = 0.68
 # Un pixel es "del aro" si es bastante oscuro. Las siluetas color arena
 # (suma ~545) quedan fuera; el marron del aro suma ~210.
 OSCURO = 400
@@ -120,7 +127,7 @@ def main() -> None:
     quijote = circulo('logo-10.png', 1024)
 
     # Nativo. iOS y Android redondean el cuadrado ellos: fondo liso hasta el borde.
-    guardar(sobre_fondo(quijote, 1024, 0.9, CREMA), 'assets/icon.png', rgb=True)
+    guardar(sobre_fondo(quijote, 1024, PROPORCION_ICONO, CREMA), 'assets/icon.png', rgb=True)
     # Adaptativo de Android: el sistema recorta a su forma y solo garantiza el
     # circulo central de 66/108 dp (61 %). 0.6 deja el aro entero dentro.
     guardar(sobre_fondo(quijote, 1024, 0.6, None), 'assets/android-icon-foreground.png')
@@ -128,12 +135,14 @@ def main() -> None:
     guardar(sobre_fondo(monocromo(quijote), 1024, 0.6, None), 'assets/android-icon-monochrome.png')
 
     # Web / PWA.
-    guardar(sobre_fondo(quijote, 48, 0.96, CREMA), 'assets/favicon.png', rgb=True)
-    guardar(sobre_fondo(quijote, 192, 0.9, CREMA), 'public/icons/icon-192.png', rgb=True)
-    guardar(sobre_fondo(quijote, 512, 0.9, CREMA), 'public/icons/icon-512.png', rgb=True)
-    guardar(sobre_fondo(quijote, 180, 0.9, CREMA), 'public/icons/apple-touch-icon.png', rgb=True)
-    # maskable: la zona segura es un circulo del 80 % del lado.
-    guardar(sobre_fondo(quijote, 512, 0.78, CREMA), 'public/icons/maskable-512.png', rgb=True)
+    guardar(sobre_fondo(quijote, 48, PROPORCION_ICONO, CREMA), 'assets/favicon.png', rgb=True)
+    guardar(sobre_fondo(quijote, 192, PROPORCION_ICONO, CREMA), 'public/icons/icon-192.png', rgb=True)
+    guardar(sobre_fondo(quijote, 512, PROPORCION_ICONO, CREMA), 'public/icons/icon-512.png', rgb=True)
+    guardar(sobre_fondo(quijote, 180, PROPORCION_ICONO, CREMA), 'public/icons/apple-touch-icon.png', rgb=True)
+    # maskable: la zona segura del spec es un circulo del 80 % del lado, pero
+    # se pinta a la misma PROPORCION_ICONO (bastante mas conservador) para que
+    # se vea igual que el resto y no distinto solo por venir de otra formula.
+    guardar(sobre_fondo(quijote, 512, PROPORCION_ICONO, CREMA), 'public/icons/maskable-512.png', rgb=True)
 
     # Dentro de la app: circulos con fondo transparente para pintarlos sobre
     # cualquier color. 3x del mayor tamano en pantalla (92 px el login).
