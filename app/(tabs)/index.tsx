@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,6 +35,16 @@ export default function SellosScreen() {
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
+      {/* Decorativa: estirada (no recortada) a las dimensiones de la pantalla,
+          al 40% de opacidad (60% transparente) para no tapar los sellos.
+          pointerEvents 'none' porque va detras pero ocupa toda la pantalla, y
+          si no un toque sobre ella no llegaria a la rejilla ni al scroll. */}
+      <Image
+        source={require('../../assets/fondos/sellos-fondo.jpg')}
+        style={styles.fondo}
+        contentFit="fill"
+        pointerEvents="none"
+      />
       <ScrollView
         contentContainerStyle={styles.cuerpo}
         refreshControl={
@@ -131,6 +142,10 @@ export default function SellosScreen() {
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.paper },
+  // 'fill' y no 'cover': el usuario pidio la imagen ESTIRADA a las medidas de
+  // la pantalla, sin recortarla ni respetar su proporcion (la imagen es
+  // cuadrada y el telefono no).
+  fondo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.4 },
   cuerpo: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   chips: { gap: space.sm, paddingRight: space.lg },
   chip: {
