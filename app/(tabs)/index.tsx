@@ -160,18 +160,22 @@ export default function SellosScreen() {
           </View>
         )}
 
-        {/* Enlaces de la ruta, siempre al pie, con o sin ruta activa. */}
+        {/* Enlaces de la ruta, siempre al pie, con o sin ruta activa. Texto en
+            colors.inkFaint: el mismo marron que usan los botones secundarios
+            de Mi perfil (textoAccionBarra alla, ver perfil.tsx). */}
         <View style={styles.enlacesFila}>
           <Button
-            title="Instagram"
+            title="@rutadebaresoficial"
             icon="logo-instagram"
             variant="secondary"
+            textStyle={styles.textoEnlace}
             onPress={() => abrirEnlaceExterno(INSTAGRAM_URL)}
           />
           <Button
-            title="Telegram"
+            title="Social"
             icon="paper-plane-outline"
             variant="secondary"
+            textStyle={styles.textoEnlace}
             onPress={() => abrirEnlaceExterno(TELEGRAM_URL)}
           />
         </View>
@@ -235,5 +239,9 @@ const styles = StyleSheet.create({
   rejilla: { flexDirection: 'row', flexWrap: 'wrap' },
   // justify 'space-between' y sin flex:1 en los botones (Button no estira por
   // defecto): uno pegado a cada lado, tal cual se pidio, y no dos a lo ancho.
-  enlacesFila: { flexDirection: 'row', justifyContent: 'space-between' },
+  // marginTop aparte del 'gap' de cuerpo: un poco mas de aire que el resto de
+  // secciones, para que se lean como un cierre y no como una fila mas.
+  enlacesFila: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.lg },
+  // Mismo marron que los botones secundarios de Mi perfil (textoAccionBarra).
+  textoEnlace: { color: colors.inkFaint },
 });
