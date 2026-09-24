@@ -138,13 +138,14 @@ describe('iconos: tamano y fondo', () => {
     // se ve alrededor del foreground (otro fichero, otro test).
     if (rel !== 'assets/android-icon-background.png') {
       it(`${rel}: el aro deja margen, ni cortado contra el marco ni perdido en el centro`, () => {
-        // Medido contra el icono viejo (icono-web.png, icon-192, apple-touch,
-        // icon-512): los cuatro daban 0.67-0.68. La primera version de este
-        // script lo puso a 0.9 y se veia cortado en el movil (foto real, PR).
-        // Banda ancha (0.5-0.75) para no reventar por el antialiasing de cada
-        // tamano, pero que un 0.9 o un 0.3 SI hagan saltar el test.
+        // 0.9 (primera version) y hasta 0.68 (la proporcion del icono viejo)
+        // se seguian viendo pegados al marco en un movil de verdad: algunos
+        // lanzadores de Android le aplican su propia mascara a un icono
+        // plano, ademas del margen que ya trae el fichero. Se bajo a 0.55.
+        // Banda ancha (0.4-0.65) para no reventar por el antialiasing de cada
+        // tamano, pero que un 0.9 o un 0.2 SI hagan saltar el test.
         const ratio = anchoDelAro(leerPng(rel));
-        assert.ok(ratio > 0.5 && ratio < 0.75, `${rel}: aro al ${ratio.toFixed(2)} del ancho, fuera de 0.5-0.75`);
+        assert.ok(ratio > 0.4 && ratio < 0.65, `${rel}: aro al ${ratio.toFixed(2)} del ancho, fuera de 0.4-0.65`);
       });
     }
   }

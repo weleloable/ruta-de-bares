@@ -29,12 +29,15 @@ MARCA = RAIZ / 'assets' / 'marca'
 # cambiarlo tambien en app.config.ts (android.adaptiveIcon.backgroundColor).
 CREMA = (251, 247, 235)
 # Cuanto ocupa el aro en un icono cuadrado normal (icon.png, favicon, PWA,
-# maskable): la primera version lo puso al 0.9 y quedaba cortado contra el
-# marco redondeado del icono (se vio en el movil, comparado con el icono
-# viejo). 0.68 es la proporcion MEDIDA del icono viejo (icono-web.png,
-# icon-192, apple-touch-icon, icon-512: los cuatro daban 0.67-0.68), no un
-# numero inventado.
-PROPORCION_ICONO = 0.68
+# maskable). La primera version lo puso al 0.9 y quedaba cortado contra el
+# marco del icono. Se bajo a 0.68 (la proporcion MEDIDA del icono viejo:
+# icono-web.png, icon-192, apple-touch-icon, icon-512 daban 0.67-0.68) y en
+# el movil de verdad SEGUIA viendose ajustado: varios lanzadores de Android
+# (y algunos navegadores) le aplican a un icono plano SU PROPIA mascara y
+# recorte, ademas del margen que ya trae el fichero, asi que hace falta mas
+# margen del que basta en el ordenador. 0.55 deja un margen claramente
+# visible incluso con ese recorte extra encima.
+PROPORCION_ICONO = 0.55
 # Un pixel es "del aro" si es bastante oscuro. Las siluetas color arena
 # (suma ~545) quedan fuera; el marron del aro suma ~210.
 OSCURO = 400
