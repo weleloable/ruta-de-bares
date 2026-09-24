@@ -25,16 +25,21 @@ describe('enlaces al pie de Sellos', () => {
   });
 
   it('un boton de Instagram (@rutadebaresoficial) y uno de Telegram (Social), cada uno con su url', () => {
-    assert.match(codigo, /title="@rutadebaresoficial"[\s\S]{0,160}?abrirEnlaceExterno\(INSTAGRAM_URL\)/);
-    assert.match(codigo, /title="Social"[\s\S]{0,160}?abrirEnlaceExterno\(TELEGRAM_URL\)/);
+    assert.match(codigo, /title="@rutadebaresoficial"[\s\S]{0,220}?abrirEnlaceExterno\(INSTAGRAM_URL\)/);
+    assert.match(codigo, /title="Social"[\s\S]{0,220}?abrirEnlaceExterno\(TELEGRAM_URL\)/);
   });
 
-  it('los dos en el marron de Mi perfil (colors.inkFaint), no el texto por defecto', () => {
+  it('el texto va en marron (colors.inkSoft), no negro ni el color por defecto', () => {
     const m = /textoEnlace:\s*\{([^}]*)\}/.exec(codigo);
     assert.ok(m, 'no se encuentra el estilo textoEnlace');
-    assert.match(m[1], /color:\s*colors\.inkFaint/);
-    assert.match(codigo, /textStyle=\{styles\.textoEnlace\}[\s\S]{0,60}?onPress=\{\(\) => abrirEnlaceExterno\(INSTAGRAM_URL\)\}/);
-    assert.match(codigo, /textStyle=\{styles\.textoEnlace\}[\s\S]{0,60}?onPress=\{\(\) => abrirEnlaceExterno\(TELEGRAM_URL\)\}/);
+    assert.match(m[1], /color:\s*colors\.inkSoft/);
+    assert.match(codigo, /textStyle=\{styles\.textoEnlace\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(INSTAGRAM_URL\)\}/);
+    assert.match(codigo, /textStyle=\{styles\.textoEnlace\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(TELEGRAM_URL\)\}/);
+  });
+
+  it('el icono va del mismo marron que el texto (iconColor), no negro por defecto', () => {
+    assert.match(codigo, /iconColor=\{colors\.inkSoft\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(INSTAGRAM_URL\)\}/);
+    assert.match(codigo, /iconColor=\{colors\.inkSoft\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(TELEGRAM_URL\)\}/);
   });
 
   it('la fila los separa a los lados (uno a la izquierda, otro a la derecha) con aire extra arriba', () => {

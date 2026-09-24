@@ -160,15 +160,17 @@ export default function SellosScreen() {
           </View>
         )}
 
-        {/* Enlaces de la ruta, siempre al pie, con o sin ruta activa. Texto en
-            colors.inkFaint: el mismo marron que usan los botones secundarios
-            de Mi perfil (textoAccionBarra alla, ver perfil.tsx). */}
+        {/* Enlaces de la ruta, siempre al pie, con o sin ruta activa. Marron
+            (colors.inkSoft) en el texto Y el icono, no solo el texto: el
+            icono no lee textStyle (es un Ionicons, no un Text), por eso
+            Button tiene su propio iconColor. */}
         <View style={styles.enlacesFila}>
           <Button
             title="@rutadebaresoficial"
             icon="logo-instagram"
             variant="secondary"
             textStyle={styles.textoEnlace}
+            iconColor={colors.inkSoft}
             onPress={() => abrirEnlaceExterno(INSTAGRAM_URL)}
           />
           <Button
@@ -176,6 +178,7 @@ export default function SellosScreen() {
             icon="paper-plane-outline"
             variant="secondary"
             textStyle={styles.textoEnlace}
+            iconColor={colors.inkSoft}
             onPress={() => abrirEnlaceExterno(TELEGRAM_URL)}
           />
         </View>
@@ -242,6 +245,7 @@ const styles = StyleSheet.create({
   // marginTop aparte del 'gap' de cuerpo: un poco mas de aire que el resto de
   // secciones, para que se lean como un cierre y no como una fila mas.
   enlacesFila: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.lg },
-  // Mismo marron que los botones secundarios de Mi perfil (textoAccionBarra).
-  textoEnlace: { color: colors.inkFaint },
+  // Un paso mas oscuro que colors.inkFaint (el de Mi perfil): se pidio asi
+  // tras verlo. Sigue siendo marron, no colors.ink (ese es casi negro).
+  textoEnlace: { color: colors.inkSoft },
 });
