@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Banner, Button } from '../../components/ui';
 import { diaLargo, ventana } from '../../lib/fechas';
@@ -8,6 +8,7 @@ import { useNow } from '../../lib/useNow';
 import { direccionVisible } from '../routes/catalogo';
 import type { RouteBarRow, StampRow } from '../../types/database';
 import { LocationDeniedError, claimStamp, getCurrentPosition } from './api';
+import { debeCerrarAlSoltar } from './arrastre';
 import { describeVerdict, evaluateStamp, type LatLng } from './rules';
 
 /**
@@ -68,6 +69,41 @@ export function StampSheet({
     }
   }, [visible]);
 
+  /*
+    Cerrar arrastrando la hoja entera hacia abajo. El contenido es un ScrollView,
+    asi que el gesto solo se le quita (Capture) cuando es claramente vertical,
+    hacia abajo y el contenido esta arriba del todo: si no, un gesto hacia abajo
+    seria "volver arriba" y no "cerrar". Los toques a los botones no se tocan:
+    solo se captura al MOVER, nunca al empezar.
+    onClose va por una referencia porque el PanResponder se crea una sola vez.
+  */
+  const desplazamiento = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(0);
+  const alCerrar = useRef(onClose);
+  alCerrar.current = onClose;
+  const arrastre = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (_e, g) =>
+          scrollY.current <= 0 && g.dy > 6 && g.dy > Math.abs(g.dx) * 1.5,
+        // Solo hacia abajo: hacia arriba la hoja no se despega de su sitio.
+        onPanResponderMove: (_e, g) => desplazamiento.setValue(Math.max(0, g.dy)),
+        onPanResponderRelease: (_e, g) => {
+          if (debeCerrarAlSoltar(g.dy, g.vy)) alCerrar.current();
+          else Animated.spring(desplazamiento, { toValue: 0, useNativeDriver: true }).start();
+        },
+        // Si el sistema se lo quita (una llamada, un gesto del sistema), vuelve.
+        onPanResponderTerminate: () =>
+          Animated.spring(desplazamiento, { toValue: 0, useNativeDriver: true }).start(),
+      }),
+    [desplazamiento],
+  );
+
+  // Cerrada la hoja, la proxima vez se abre en su sitio y no desplazada.
+  useEffect(() => {
+    if (!visible) desplazamiento.setValue(0);
+  }, [visible, desplazamiento]);
+
   if (!bar) return null;
 
   const abre = new Date(bar.opens_at);
@@ -102,9 +138,20 @@ export function StampSheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.fondo} onPress={onClose} accessibilityLabel="Cerrar" />
-      <View style={styles.hoja}>
-        <View style={styles.asa} />
-        <ScrollView contentContainerStyle={styles.contenido}>
+      <Animated.View
+        style={[styles.hoja, { transform: [{ translateY: desplazamiento }] }]}
+        {...arrastre.panHandlers}
+      >
+        <View style={styles.zonaAsa}>
+          <View style={styles.asa} />
+        </View>
+        <ScrollView
+          contentContainerStyle={styles.contenido}
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            scrollY.current = e.nativeEvent.contentOffset.y;
+          }}
+        >
           <Text style={typography.overline}>Parada {index + 1}</Text>
           <Text style={typography.screenTitle}>{bar.name}</Text>
           {direccionVisible(bar.address).length > 0 ? <Text style={typography.muted}>{direccionVisible(bar.address)}</Text> : null}
@@ -152,7 +199,7 @@ export function StampSheet({
 
           <Button title="Cerrar" variant="ghost" onPress={onClose} />
         </ScrollView>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -167,7 +214,9 @@ function Dato({ titulo, valor }: { titulo: string; valor: string }) {
 }
 
 const styles = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: 'rgba(36, 26, 18, 0.45)' },
+  // Sin velo oscuro (antes tinta al 45 %): transparente, pero sigue ocupando el
+  // hueco de arriba y cerrando al tocarlo.
+  fondo: { flex: 1, backgroundColor: 'transparent' },
   hoja: {
     backgroundColor: colors.paper,
     borderTopLeftRadius: radius.lg,
@@ -175,13 +224,12 @@ const styles = StyleSheet.create({
     maxHeight: '82%',
     paddingBottom: space.xl,
   },
+  zonaAsa: { paddingVertical: space.md, alignItems: 'center' },
   asa: {
-    alignSelf: 'center',
     width: 44,
     height: 5,
     borderRadius: radius.pill,
     backgroundColor: colors.borderStrong,
-    marginVertical: space.md,
   },
   contenido: { paddingHorizontal: space.lg, gap: space.md, paddingBottom: space.lg },
   datos: { flexDirection: 'row', gap: space.lg, flexWrap: 'wrap' },

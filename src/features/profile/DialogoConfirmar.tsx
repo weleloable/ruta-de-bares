@@ -11,8 +11,9 @@ import { space, typography } from '../../lib/theme';
  * el boton que dependia de el se quedaba mudo. Modal de react-native si
  * funciona en las dos plataformas, con un solo componente y sin variante .web.
  *
- * El velo usa la misma tinta al 45% que StampSheet: los dos modales de la app
- * tienen que oscurecer el fondo igual.
+ * El velo usa la misma tinta al 45% que el dialogo de AccionesPersona: los
+ * dialogos centrados oscurecen el fondo igual. (La ficha del bar, StampSheet,
+ * ya no lleva velo.)
  */
 export function DialogoConfirmar({
   visible,
