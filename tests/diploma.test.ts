@@ -60,9 +60,13 @@ describe('Diploma', () => {
 
   it('dos mitades, cada una con su marco: arriba el diploma, abajo el reverso con el mapa', () => {
     assert.match(codigo, /const MITAD = DIPLOMA_ALTO \/ 2;/);
-    assert.equal((codigo.match(/<Marco \/>/g) ?? []).length, 2, 'las dos mitades llevan marco');
-    const reverso = /<View style=\{styles\.mitad\}>\s*<Marco \/>\s*<View style=\{styles\.mapa\}>\s*<MapaEstatico paradas=\{paradas\}/.exec(codigo);
+    assert.equal((codigo.match(/<MarcoDiploma variante=\{marco\} \/>/g) ?? []).length, 2, 'las dos mitades llevan marco');
+    const reverso = /<View style=\{styles\.mitad\}>\s*<MarcoDiploma variante=\{marco\} \/>\s*<View style=\{\[styles\.mapa, [^\]]*\]\}>\s*<MapaEstatico paradas=\{paradas\}/.exec(codigo);
     assert.ok(reverso, 'el mapa va dentro del marco de la segunda mitad');
+  });
+
+  it('el marco por defecto es el friso de tercios', () => {
+    assert.match(codigo, /MARCO_POR_DEFECTO: VarianteMarco = 'tercios';/);
   });
 
   it('lleva la foto dentro de la chapa verde, "<nombre> ha completado: <RUTA>" y un cierre', () => {
@@ -74,10 +78,12 @@ describe('Diploma', () => {
     assert.doesNotMatch(codigo, /con honores/i, 'la frase de "con honores" se cambio por el cierre con guasa');
   });
 
-  it('el fondo es la ilustracion de Ruta de Bares, mezclada en multiply y dentro del marco', () => {
+  it('el fondo es la ilustracion de Ruta de Bares recortada, mezclada en multiply y dentro del marco', () => {
     assert.match(codigo, /require\('\.\.\/\.\.\/\.\.\/assets\/marca\/fondo-diploma\.jpg'\)/);
     assert.match(codigo, /mixBlendMode: 'multiply'/);
-    assert.match(codigo, /cajaFondo: \{ position: 'absolute', top: 10, left: 10, right: 10, bottom: 10, overflow: 'hidden' \}/);
+    assert.match(codigo, /resizeMode="cover"/);
+    assert.match(codigo, /cajaFondo: \{ position: 'absolute', overflow: 'hidden' \}/);
+    assert.match(codigo, /\{ top: fondo, left: fondo, right: fondo, bottom: fondo \}/);
   });
 
   it('la opacidad del fondo deja el texto legible: entre 10 % y 25 %', () => {
