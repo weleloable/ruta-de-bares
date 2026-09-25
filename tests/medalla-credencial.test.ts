@@ -17,7 +17,10 @@ describe('pantalla Sellos', () => {
   const codigo = sinComentarios(leer('app/(tabs)/index.tsx'));
 
   it('pinta la medalla solo cuando la credencial esta completa', () => {
-    assert.match(codigo, /\{credencialCompleta\(conseguidos, bars\.length\) \? <Medalla \/> : null\}/);
+    assert.match(
+      codigo,
+      /\{credencialCompleta\(conseguidos, bars\.length\) \? \(\s*<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>\s*\) : null\}/,
+    );
   });
 
   it('el globo verde "Ruta completa. Compostelana ganada." ya no existe', () => {
@@ -29,7 +32,7 @@ describe('pantalla Sellos', () => {
     const cabecera = /<View style=\{styles\.credencialCabecera\}>([\s\S]*?)<\/View>\s*\n\s*<View style=\{styles\.progresoFila\}>/.exec(codigo);
     assert.ok(cabecera, 'no encuentro la cabecera de la credencial');
     const iTextos = cabecera[1].indexOf('styles.credencialTextos');
-    const iMedalla = cabecera[1].indexOf('<Medalla />');
+    const iMedalla = cabecera[1].indexOf('<Medalla onPress=');
     assert.ok(iTextos > -1 && iMedalla > iTextos, 'la medalla tiene que ir despues de los textos');
     assert.match(codigo, /credencialCabecera:\s*\{\s*flexDirection:\s*'row'/);
   });
@@ -41,6 +44,6 @@ describe('pantalla Sellos', () => {
 
 describe('Medalla', () => {
   it('tiene etiqueta de accesibilidad', () => {
-    assert.match(leer('src/components/Medalla.tsx'), /accessibilityLabel="Medalla: ruta completa"/);
+    assert.match(leer('src/components/Medalla.tsx'), /accessibilityLabel="Medalla: ruta completa\./);
   });
 });
