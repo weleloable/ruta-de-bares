@@ -9,9 +9,11 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 
 ## Funcionalidades clave
 
-- **Pestanas** (`app/(tabs)/`): Sellos (compostelana; SIN boton en la barra de
-  abajo, se entra por el boton con su icono en la cabecera de Ruta), Ruta (mapa con los
-  bares numerados y el trazado: Google en nativo, OpenStreetMap en web), Editor
+- **Pestanas** (`app/(tabs)/`), en el orden de la barra de abajo: Ruta (mapa con los
+  bares numerados y el trazado: Google en nativo, OpenStreetMap en web; en su
+  cabecera, a la derecha, los enlaces de Instagram y Social, `EnlacesRuta`),
+  Sellos (compostelana; es a donde lleva `/` y el enlace de invitacion), Caña.
+  Mi perfil no tiene boton abajo (se entra por el avatar de la barra superior). Editor
   (solo admins: crear rutas, anadir bares de un catalogo cerrado, radio y
   horario de cada parada, publicar), Mi perfil (+ editor de rutas y panel de
   invitaciones para admins).
@@ -56,7 +58,7 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 ```
 app/                      pantallas (Expo Router)
   (auth)/                 login, registro (alta abierta)
-  (tabs)/                 Sellos, Ruta y Cana; Perfil sin boton abajo
+  (tabs)/                 Ruta, Sellos y Cana (ese orden); Perfil sin boton abajo
   cana/                   presentacion, ficha, chat, bloqueados, condiciones
   admin/                  bandeja de alertas de administracion, ficha de una denuncia
                           (alerta/) y decidir una foto de perfil (foto/)
@@ -436,7 +438,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **El credito de OpenStreetMap se queda, pero sin enlace** (`ruta.tsx`): la
   licencia de OSM y las condiciones de sus teselas exigen atribucion VISIBLE, asi
   que el texto "Mapa: © OpenStreetMap" de la cabecera de Ruta no se puede quitar.
-  Lo que se quito es que fuera pulsable: junto al boton de Sellos, un toque
+  Lo que se quito es que fuera pulsable: junto a los botones de la cabecera (antes el de Sellos, ahora los enlaces), un toque
   torcido abria la web de OpenStreetMap y sacaba a la gente de la app. Las
   directrices de OSM piden que el credito enlace a su pagina de copyright "cuando
   se pueda"; si algun dia hace falta cumplirlo del todo, el sitio es una pantalla

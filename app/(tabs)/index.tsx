@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -14,26 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Medalla } from '../../src/components/Medalla';
 import { StampSeal } from '../../src/components/StampSeal';
-import { Banner, Button, Card, EmptyState, Loading } from '../../src/components/ui';
+import { Banner, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { credencialCompleta } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
-import { INSTAGRAM_URL, TELEGRAM_URL } from '../../src/lib/enlacesExternos';
 import { desdeFechaISO, diaLargo } from '../../src/lib/fechas';
 import { colors, radius, space, typography } from '../../src/lib/theme';
-
-/**
- * Abre un enlace externo (Instagram/Telegram si estan instaladas, si no el
- * navegador). Vive aqui y no en src/lib/ para no importar 'react-native' en
- * un fichero con test (ver enlacesExternos.ts). Sin Alert si falla
- * (tests/sin-alert.test.ts lo prohibe en toda la app): el boton simplemente
- * no hace nada en vez de romper la pantalla.
- */
-function abrirEnlaceExterno(url: string): void {
-  Linking.openURL(url).catch(() => undefined);
-}
 
 /**
  * La compostelana: una pagina de huecos de sello, uno por bar de la ruta.
@@ -169,28 +156,6 @@ export default function SellosScreen() {
           </View>
         )}
 
-        {/* Enlaces de la ruta, siempre al pie, con o sin ruta activa. Marron
-            (colors.inkSoft) en el texto Y el icono, no solo el texto: el
-            icono no lee textStyle (es un Ionicons, no un Text), por eso
-            Button tiene su propio iconColor. */}
-        <View style={styles.enlacesFila}>
-          <Button
-            title="@rutadebaresoficial"
-            icon="logo-instagram"
-            variant="secondary"
-            textStyle={styles.textoEnlace}
-            iconColor={colors.inkSoft}
-            onPress={() => abrirEnlaceExterno(INSTAGRAM_URL)}
-          />
-          <Button
-            title="Social"
-            icon="paper-plane-outline"
-            variant="secondary"
-            textStyle={styles.textoEnlace}
-            iconColor={colors.inkSoft}
-            onPress={() => abrirEnlaceExterno(TELEGRAM_URL)}
-          />
-        </View>
       </ScrollView>
 
       <StampSheet
@@ -264,12 +229,4 @@ const styles = StyleSheet.create({
   // Con `gap` entre celdas de 31% el total pasa del ancho de pantalla en
   // moviles estrechos y la tercera se cae a la fila siguiente.
   rejilla: { flexDirection: 'row', flexWrap: 'wrap' },
-  // justify 'space-between' y sin flex:1 en los botones (Button no estira por
-  // defecto): uno pegado a cada lado, tal cual se pidio, y no dos a lo ancho.
-  // marginTop aparte del 'gap' de cuerpo: un poco mas de aire que el resto de
-  // secciones, para que se lean como un cierre y no como una fila mas.
-  enlacesFila: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.lg },
-  // Un paso mas oscuro que colors.inkFaint (el de Mi perfil): se pidio asi
-  // tras verlo. Sigue siendo marron, no colors.ink (ese es casi negro).
-  textoEnlace: { color: colors.inkSoft },
 });

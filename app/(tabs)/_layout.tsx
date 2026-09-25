@@ -32,22 +32,21 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.paper },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Sellos',
-          tabBarIcon: ({ color, size }) => <Ionicons name="ribbon" color={color} size={size} />,
-          // Sin boton abajo: se entra desde el boton de la cabecera de Ruta
-          // (app/(tabs)/ruta.tsx), que lleva el mismo icono. La pantalla sigue
-          // siendo una pestana: es a donde llevan '/' y el enlace de invitacion.
-          href: null,
-        }}
-      />
+      {/* El orden de la barra de abajo es el de estas pantallas: Ruta, Sellos, Caña. */}
       <Tabs.Screen
         name="ruta"
         options={{
           title: 'Ruta',
           tabBarIcon: ({ color, size }) => <Ionicons name="map" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          // La segunda de la barra. Sigue siendo a donde llevan '/' y el enlace de
+          // invitacion, como cuando estaba oculta.
+          title: 'Sellos',
+          tabBarIcon: ({ color, size }) => <Ionicons name="ribbon" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

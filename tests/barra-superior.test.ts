@@ -93,7 +93,7 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
     assert.match(sinComentarios(leer('src/components/BarraSuperior.tsx')), /paddingTop:\s*insets\.top/);
   });
 
-  describe('barra inferior: solo Ruta y Caña', () => {
+  describe('barra inferior: Ruta, Sellos y Caña, en ese orden', () => {
     const layout = sinComentarios(leer('app/(tabs)/_layout.tsx'));
     // Se parte por "<Tabs.Screen" y no con un regex hasta el primer "/>": el
     // icono de la pestana (<Ionicons ... />) cierra antes de llegar a `href`.
@@ -110,12 +110,18 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
       assert.match(opciones('perfil'), /\bhref:\s*null\s*,/);
     });
 
-    it('sellos tampoco tiene boton abajo: se entra por el boton de la cabecera de Ruta', () => {
-      assert.match(opciones('index'), /\bhref:\s*null\s*,/);
+    it('ruta, sellos y cana tienen boton abajo (ninguna oculta con href)', () => {
+      for (const nombre of ['ruta', 'index', 'cana']) assert.doesNotMatch(opciones(nombre), /\bhref:/, nombre);
     });
 
-    it('ruta y cana si lo tienen', () => {
-      for (const nombre of ['ruta', 'cana']) assert.doesNotMatch(opciones(nombre), /\bhref:/);
+    it('el orden de la barra es Ruta, Sellos, Caña: el de los Tabs.Screen', () => {
+      const orden = [...layout.replace(/"/g, "'").matchAll(/<Tabs\.Screen\s+name='(\w+)'/g)].map((m) => m[1]);
+      assert.deepEqual(orden.filter((n) => n !== 'perfil'), ['ruta', 'index', 'cana']);
+    });
+
+    it('sellos se llama Sellos y lleva su icono de cinta', () => {
+      assert.match(opciones('index'), /title:\s*'Sellos'/);
+      assert.match(opciones('index'), /<Ionicons name='ribbon'/);
     });
 
     it('editor ya no es una pestana: no hay Tabs.Screen para el', () => {
