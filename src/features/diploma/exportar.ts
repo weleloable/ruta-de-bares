@@ -23,15 +23,3 @@ export async function compartirImagen(_blob: Blob, _nombre: string): Promise<voi
 export function descargarImagen(_blob: Blob, _nombre: string): void {
   throw new Error('Guardar el diploma aun no esta disponible en la app nativa.');
 }
-
-export function puedeStory(): boolean {
-  return false;
-}
-
-export async function copiarTexto(_texto: string): Promise<boolean> {
-  return false;
-}
-
-export function abrirCamaraDeStories(): void {
-  throw new Error('Las historias de Instagram aun no estan disponibles en la app nativa.');
-}

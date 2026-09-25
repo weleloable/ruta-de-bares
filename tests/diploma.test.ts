@@ -158,7 +158,7 @@ describe('Exportar', () => {
     assert.match(codigo, /PUEDE_EXPORTAR = false;/);
   });
 
-  it('el modal ofrece compartir solo si el navegador puede, y guardar siempre que se pueda exportar', () => {
+  it('el modal ofrece compartir solo si el navegador puede compartir ficheros', () => {
     const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
     assert.match(codigo, /const puedeCompartir = PUEDE_EXPORTAR && puedeCompartirFicheros\(\);/);
     assert.match(codigo, /title="Compartir"/);
@@ -170,31 +170,27 @@ describe('Exportar', () => {
     assert.match(codigo, /transform: \[\{ scale: escala \}\][\s\S]*<Diploma ref=\{diplomaRef\}/);
   });
 
-  it('Story: boton con el logo de Instagram; Guardar solo sale donde NO hay Story', () => {
+  it('ya no hay boton Story ni nada de Instagram Stories en el codigo', () => {
+    const modal = leer('src/features/diploma/DiplomaModal.tsx');
+    assert.doesNotMatch(modal, /Story|story|logo-instagram|copiarTexto|puedeStory/);
+    const web = leer('src/features/diploma/exportar.web.ts');
+    const nativo = leer('src/features/diploma/exportar.ts');
+    for (const c of [web, nativo]) assert.doesNotMatch(c, /puedeStory|abrirCamaraDeStories|copiarTexto|story-camera/);
+  });
+
+  it('abajo: la accion a la IZQUIERDA y Cerrar a la DERECHA, en la misma fila', () => {
     const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
-    const fila = /<View style=\{styles\.fila\}>([\s\S]*?)<\/View>\s*\) : null\}/.exec(codigo);
+    const fila = /<View style=\{styles\.fila\}>([\s\S]*?)<\/View>\s*<\/View>\s*<\/View>\s*<\/View>\s*<\/Modal>/.exec(codigo);
     assert.ok(fila, 'no encuentro la fila de botones');
-    assert.match(fila[1], /icon="logo-instagram"/);
-    assert.match(codigo, /const conStory = PUEDE_EXPORTAR && puedeStory\(\);/);
-    // {conStory ? (<Story/>) : (<Guardar/>)}: son excluyentes.
-    const iStory = fila[1].indexOf('title="Story"');
-    const iGuardar = fila[1].indexOf('title="Guardar imagen"');
-    assert.ok(iStory > -1 && iGuardar > iStory, 'Guardar va en la rama contraria de Story');
-    assert.match(fila[1], /\{conStory \? \([\s\S]*title="Story"[\s\S]*\) : \([\s\S]*title="Guardar imagen"/);
+    const iAccion = Math.max(fila[1].indexOf('title="Compartir"'), fila[1].indexOf('title="Guardar imagen"'));
+    const iCerrar = fila[1].indexOf('title="Cerrar"');
+    assert.ok(iAccion > -1 && iCerrar > iAccion, 'Cerrar tiene que ir despues (a la derecha) de la accion');
+    assert.match(codigo, /fila: \{ flexDirection: 'row'/);
   });
 
-  it('Story deja la cuenta en el portapapeles DENTRO del toque, antes de esperar a nada', () => {
+  it('Compartir en el movil (menu del sistema) y Guardar imagen donde no hay menu: nunca los dos', () => {
     const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
-    const iCopia = codigo.indexOf('copiarTexto(CUENTA_INSTAGRAM)');
-    const iBlob = codigo.indexOf('imagen.current ?? (await diplomaABlob');
-    assert.ok(iCopia > -1 && iBlob > iCopia, 'el portapapeles se pide antes de generar la imagen');
-  });
-
-  it('Story usa la hoja de compartir si hay; si no, guarda la imagen y abre la camara de historias', () => {
-    const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
-    assert.match(codigo, /\} else if \(puedeCompartir\) \{\s*await compartirImagen\(blob, nombreFichero\);/);
-    assert.match(codigo, /descargarImagen\(blob, nombreFichero\);\s*setTimeout\(abrirCamaraDeStories, 700\);/);
-    assert.match(sinComentarios(leer('src/features/diploma/exportar.web.ts')), /'instagram:\/\/story-camera'/);
+    assert.match(codigo, /puedeCompartir \? \([\s\S]*title="Compartir"[\s\S]*\) : \([\s\S]*title="Guardar imagen"/);
   });
 
   it('sin globos de exito: solo se muestran los errores (el texto no daba tiempo a leerlo)', () => {
@@ -215,11 +211,6 @@ describe('Exportar', () => {
     assert.match(codigo, /const imagen = useRef<Blob \| null>\(null\);/);
     assert.match(codigo, /ESPERA_PREPARAR_MS/);
     assert.match(codigo, /imagen\.current = null;/);
-  });
-
-  it('en nativo Story no sale (no hay exportacion todavia)', () => {
-    const codigo = sinComentarios(leer('src/features/diploma/exportar.ts'));
-    assert.match(codigo, /export function puedeStory\(\): boolean \{\s*return false;/);
   });
 
   it('html-to-image esta en package.json', () => {

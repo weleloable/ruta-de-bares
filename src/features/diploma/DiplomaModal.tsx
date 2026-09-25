@@ -7,20 +7,18 @@ import { Diploma } from './Diploma';
 import type { ParadaMapa } from './MapaEstatico';
 import {
   PUEDE_EXPORTAR,
-  abrirCamaraDeStories,
   compartirImagen,
-  copiarTexto,
   descargarImagen,
   diplomaABlob,
   puedeCompartirFicheros,
-  puedeStory,
 } from './exportar';
-import { CUENTA_INSTAGRAM, DIPLOMA_ALTO, DIPLOMA_ANCHO, nombreFicheroDiploma } from './textoDiploma';
+import { DIPLOMA_ALTO, DIPLOMA_ANCHO, nombreFicheroDiploma } from './textoDiploma';
 
 /**
  * Ensena el diploma a pantalla casi completa sobre un fondo oscuro y, donde se
- * puede (la web y la PWA), lo comparte, descarga como PNG de 1080 x 1920 o lo
- * lleva a una historia de Instagram.
+ * puede (la web y la PWA), lo comparte por el menu del sistema (donde esta
+ * Instagram y su Historia) o, si el navegador no tiene ese menu, lo descarga
+ * como PNG de 1080 x 1920. Abajo, la accion a la izquierda y Cerrar a la derecha.
  *
  * La vista previa se escala con un transform en un contenedor PADRE del
  * diploma: el nodo que se exporta (`ref`) queda a su tamano de diseno.
@@ -29,7 +27,7 @@ const ESPACIO_BOTONES = 190;
 /** Lo que se espera tras abrir para preparar la imagen (deja pintar el diploma y las teselas). */
 const ESPERA_PREPARAR_MS = 1200;
 
-type Accion = 'compartir' | 'guardar' | 'story';
+type Accion = 'compartir' | 'guardar';
 
 export function DiplomaModal({
   visible,
@@ -49,10 +47,10 @@ export function DiplomaModal({
   const { width, height } = useWindowDimensions();
   const diplomaRef = useRef<View>(null);
   const [preparando, setPreparando] = useState<Accion | null>(null);
-  // Donde hay hoja de compartir con ficheros (el movil), compartir es lo principal
-  // y guardar queda de apoyo; en escritorio lo unico util es guardar.
+  // Donde hay hoja de compartir con ficheros (el movil), el boton es Compartir;
+  // donde no (escritorio sin ese menu), es Guardar imagen. Nunca los dos: en el
+  // movil el propio menu de compartir ya tiene "Guardar imagen".
   const puedeCompartir = PUEDE_EXPORTAR && puedeCompartirFicheros();
-  const conStory = PUEDE_EXPORTAR && puedeStory();
   const [aviso, setAviso] = useState<{ texto: string } | null>(null);
 
   // La imagen se genera al abrir y se guarda: el menu de compartir del sistema
@@ -87,26 +85,17 @@ export function DiplomaModal({
     if (preparando) return;
     setPreparando(accion);
     setAviso(null);
-    // Story deja @rutadebaresoficial en el portapapeles por si se quiere pegar como
-    // pegatina de texto (el diploma ya lo lleva escrito). Solo se deja tocar el
-    // portapapeles dentro del propio toque: se pide ANTES de esperar a nada.
-    if (accion === 'story') void copiarTexto(CUENTA_INSTAGRAM);
     try {
       const blob = imagen.current ?? (await diplomaABlob(diplomaRef.current));
       imagen.current = blob;
       const nombreFichero = nombreFicheroDiploma(ruta);
 
-      // Sin globos de exito: el propio sistema ya lo muestra (menu de compartir,
-      // descarga, Instagram abriendose) y el texto no daba tiempo a leerlo.
+      // Sin globos de exito: el propio sistema ya lo muestra (menu de compartir o
+      // descarga) y el texto no daba tiempo a leerlo.
       if (accion === 'compartir') {
-        await compartirImagen(blob, nombreFichero);
-      } else if (accion === 'guardar') {
-        descargarImagen(blob, nombreFichero);
-      } else if (puedeCompartir) {
         await compartirImagen(blob, nombreFichero);
       } else {
         descargarImagen(blob, nombreFichero);
-        setTimeout(abrirCamaraDeStories, 700);
       }
     } catch (e) {
       setAviso({ texto: e instanceof Error ? e.message : 'No se pudo generar la imagen.' });
@@ -146,47 +135,32 @@ export function DiplomaModal({
           <View style={styles.acciones}>
             {/* Solo errores: un fallo hay que verlo, un exito ya se nota. */}
             {aviso ? <Banner tone="error">{aviso.texto}</Banner> : null}
-            {PUEDE_EXPORTAR ? (
-              <View style={styles.fila}>
-                {puedeCompartir ? (
+            <View style={styles.fila}>
+              {/* La accion a la izquierda... */}
+              {PUEDE_EXPORTAR ? (
+                puedeCompartir ? (
                   <Button
                     title="Compartir"
                     icon="share-outline"
                     style={styles.enFila}
-                    textStyle={styles.textoEnFila}
                     onPress={() => hacer('compartir')}
                     loading={preparando === 'compartir'}
                     disabled={preparando !== null}
                   />
-                ) : null}
-                {conStory ? (
-                  <Button
-                    title="Story"
-                    icon="logo-instagram"
-                    variant={puedeCompartir ? 'secondary' : 'primary'}
-                    style={styles.enFila}
-                    textStyle={styles.textoEnFila}
-                    onPress={() => hacer('story')}
-                    loading={preparando === 'story'}
-                    disabled={preparando !== null}
-                  />
                 ) : (
-                  // Guardar solo donde no hay Story: en el movil Story ya guarda la
-                  // imagen (o abre el menu de compartir, que tambien la guarda).
                   <Button
                     title="Guardar imagen"
                     icon="download-outline"
-                    variant={puedeCompartir ? 'secondary' : 'primary'}
                     style={styles.enFila}
-                    textStyle={styles.textoEnFila}
                     onPress={() => hacer('guardar')}
                     loading={preparando === 'guardar'}
                     disabled={preparando !== null}
                   />
-                )}
-              </View>
-            ) : null}
-            <Button title="Cerrar" variant="ghost" textStyle={styles.textoCerrar} onPress={cerrar} />
+                )
+              ) : null}
+              {/* ...y Cerrar a la derecha. */}
+              <Button title="Cerrar" variant="secondary" style={styles.enFila} onPress={cerrar} />
+            </View>
           </View>
         </View>
       </View>
@@ -198,10 +172,7 @@ const styles = StyleSheet.create({
   fondo: { flex: 1, backgroundColor: 'rgba(20, 14, 8, 0.86)' },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.md },
   acciones: { gap: space.sm, alignItems: 'stretch', minWidth: 260, maxWidth: 380 },
-  // Guardar y Story lado a lado, del mismo ancho.
+  // La accion y Cerrar lado a lado, del mismo ancho.
   fila: { flexDirection: 'row', gap: space.sm },
-  enFila: { flex: 1, paddingHorizontal: space.sm },
-  // Mas pequena que la de un boton entero, para que "Guardar imagen" no se parta en dos lineas.
-  textoEnFila: { fontSize: 14 },
-  textoCerrar: { color: '#F3E1C6' },
+  enFila: { flex: 1, paddingHorizontal: space.md },
 });

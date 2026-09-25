@@ -5,54 +5,69 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Botones de Instagram y Telegram al pie de la pantalla Sellos: uno a cada
- * lado (justifyContent: space-between), abren con abrirEnlaceExterno (helper
- * local a la pantalla, ver su comentario) usando las URL exactas de
+ * Enlaces de Instagram (@rutadebaresoficial) y Telegram (Social): antes al pie de
+ * Sellos, ahora apilados en la cabecera de Ruta (EnlacesRuta.tsx). Abren con
+ * abrirEnlaceExterno (src/lib/abrirEnlace.ts) usando las URL exactas de
  * src/lib/enlacesExternos.ts (que las fija con su propio test).
  */
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
-const codigo = readFileSync(join(raiz, 'app/(tabs)/index.tsx'), 'utf8');
+const leer = (rel: string) => readFileSync(join(raiz, rel), 'utf8').replace(/\r\n/g, '\n');
+const enlaces = leer('src/features/routes/EnlacesRuta.tsx');
+const sellos = leer('app/(tabs)/index.tsx');
 
-describe('enlaces al pie de Sellos', () => {
+describe('EnlacesRuta', () => {
   it('las URL vienen del modulo centralizado, no escritas dos veces', () => {
-    assert.match(codigo, /import \{ INSTAGRAM_URL, TELEGRAM_URL \} from '\.\.\/\.\.\/src\/lib\/enlacesExternos'/);
-  });
-
-  it('abrirEnlaceExterno usa Linking.openURL con un .catch (sin Alert si falla)', () => {
-    assert.match(codigo, /function abrirEnlaceExterno\(url: string\): void \{/);
-    assert.match(codigo, /Linking\.openURL\(url\)\.catch\(\(\) => undefined\)/);
+    assert.match(enlaces, /import \{ INSTAGRAM_URL, TELEGRAM_URL \} from '\.\.\/\.\.\/lib\/enlacesExternos'/);
   });
 
   it('un boton de Instagram (@rutadebaresoficial) y uno de Telegram (Social), cada uno con su url', () => {
-    assert.match(codigo, /title="@rutadebaresoficial"[\s\S]{0,220}?abrirEnlaceExterno\(INSTAGRAM_URL\)/);
-    assert.match(codigo, /title="Social"[\s\S]{0,220}?abrirEnlaceExterno\(TELEGRAM_URL\)/);
+    assert.match(enlaces, /titulo="@rutadebaresoficial" icono="logo-instagram" url=\{INSTAGRAM_URL\}/);
+    assert.match(enlaces, /titulo="Social" icono="paper-plane-outline" url=\{TELEGRAM_URL\}/);
   });
 
-  it('el texto va en marron (colors.inkSoft), no negro ni el color por defecto', () => {
-    const m = /textoEnlace:\s*\{([^}]*)\}/.exec(codigo);
-    assert.ok(m, 'no se encuentra el estilo textoEnlace');
+  it('van apilados: el de Instagram arriba y Social debajo', () => {
+    assert.ok(enlaces.indexOf('titulo="@rutadebaresoficial"') < enlaces.indexOf('titulo="Social"'));
+    const m = /columna:\s*\{([^}]*)\}/.exec(enlaces);
+    assert.ok(m, 'no encuentro el estilo columna');
+    assert.doesNotMatch(m[1], /flexDirection:\s*'row'/, 'en una fila no cabrian junto al nombre de la ruta');
+    assert.match(m[1], /flexShrink:\s*0/, 'si el nombre es largo, se recorta el nombre y no los botones');
+  });
+
+  it('el texto y el icono van en marron (colors.inkSoft)', () => {
+    assert.match(enlaces, /<Ionicons name=\{icono\} size=\{16\} color=\{colors\.inkSoft\} \/>/);
+    const m = /texto:\s*\{([^}]*)\}/.exec(enlaces);
+    assert.ok(m);
     assert.match(m[1], /color:\s*colors\.inkSoft/);
-    assert.match(codigo, /textStyle=\{styles\.textoEnlace\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(INSTAGRAM_URL\)\}/);
-    assert.match(codigo, /textStyle=\{styles\.textoEnlace\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(TELEGRAM_URL\)\}/);
   });
 
-  it('el icono va del mismo marron que el texto (iconColor), no negro por defecto', () => {
-    assert.match(codigo, /iconColor=\{colors\.inkSoft\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(INSTAGRAM_URL\)\}/);
-    assert.match(codigo, /iconColor=\{colors\.inkSoft\}[\s\S]{0,80}?onPress=\{\(\) => abrirEnlaceExterno\(TELEGRAM_URL\)\}/);
+  it('cada boton es tocable: rectangulo de al menos 36 px y accesible con su texto', () => {
+    const m = /boton:\s*\{([^}]*)\}/.exec(enlaces);
+    assert.ok(m);
+    assert.ok(Number(/height:\s*(\d+)/.exec(m[1])?.[1]) >= 36);
+    assert.match(m[1], /borderRadius:\s*radius\.md/);
+    assert.match(enlaces, /accessibilityRole="button"/);
+    assert.match(enlaces, /accessibilityLabel=\{titulo\}/);
   });
 
-  it('la fila los separa a los lados (uno a la izquierda, otro a la derecha) con aire extra arriba', () => {
-    const m = /enlacesFila:\s*\{([^}]*)\}/.exec(codigo);
-    assert.ok(m, 'no se encuentra el estilo enlacesFila');
-    assert.match(m[1], /flexDirection:\s*'row'/);
-    assert.match(m[1], /justifyContent:\s*'space-between'/);
-    assert.match(m[1], /marginTop:/, 'sin aire extra arriba, quedaria pegado a la rejilla');
+  it('abren con abrirEnlaceExterno', () => {
+    assert.match(enlaces, /onPress=\{\(\) => abrirEnlaceExterno\(url\)\}/);
   });
+});
 
-  it('estan al final de la pantalla, despues de la rejilla', () => {
-    const indiceRejilla = codigo.indexOf('styles.rejilla}');
-    const indiceFila = codigo.indexOf('styles.enlacesFila');
-    assert.ok(indiceRejilla > 0 && indiceFila > indiceRejilla);
+describe('abrirEnlaceExterno', () => {
+  const codigo = leer('src/lib/abrirEnlace.ts');
+  it('usa Linking.openURL con un .catch (sin Alert si falla)', () => {
+    assert.match(codigo, /export function abrirEnlaceExterno\(url: string\): void \{/);
+    assert.match(codigo, /Linking\.openURL\(url\)\.catch\(\(\) => undefined\)/);
+  });
+});
+
+describe('Sellos: ya no lleva los enlaces', () => {
+  it('ni los botones, ni las URL, ni Linking, ni sus estilos', () => {
+    assert.doesNotMatch(sellos, /@rutadebaresoficial/);
+    assert.doesNotMatch(sellos, /title="Social"/);
+    assert.doesNotMatch(sellos, /INSTAGRAM_URL|TELEGRAM_URL|abrirEnlaceExterno|Linking/);
+    assert.doesNotMatch(sellos, /enlacesFila|textoEnlace/);
   });
 });

@@ -1,5 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Platform,
@@ -16,6 +14,7 @@ import { RutaMapa, type RutaMapaHandle } from '../../src/components/RutaMapa';
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { direccionVisible } from '../../src/features/routes/catalogo';
+import { EnlacesRuta } from '../../src/features/routes/EnlacesRuta';
 import { huecosDesdeMedidas } from '../../src/lib/encuadre';
 import { ventana } from '../../src/lib/fechas';
 import { colors, radius, shadow, space, typography } from '../../src/lib/theme';
@@ -41,7 +40,6 @@ export default function RutaScreen() {
   const mapaRef = useRef<RutaMapaHandle>(null);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const [altoSuperior, setAltoSuperior] = useState(0);
   const [altoPie, setAltoPie] = useState(0);
 
@@ -131,19 +129,9 @@ export default function RutaScreen() {
               ) : null}
             </View>
 
-            {/*
-              Sellos ya no tiene boton en la barra de abajo: se entra por aqui,
-              con su mismo icono. Lleva la palabra delante porque un simbolo solo
-              no dice a donde lleva; el nombre accesible es el propio texto.
-            */}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.navigate('/')}
-              style={({ pressed }) => [styles.botonSellos, pressed && styles.botonSellosPulsado]}
-            >
-              <Text style={styles.botonSellosTexto}>Sellos</Text>
-              <Ionicons name="ribbon" size={20} color={colors.stamp} />
-            </Pressable>
+            {/* Donde estuvo el boton de Sellos (que ya tiene su pestana abajo):
+                los enlaces de Instagram y Social, que estaban al pie de Sellos. */}
+            <EnlacesRuta />
           </View>
 
           {error ? (
@@ -209,7 +197,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 253, 248, 0.94)',
     borderWidth: 1,
     borderColor: colors.border,
-    // Texto a la izquierda, boton de Sellos a la derecha.
+    // Texto a la izquierda, los dos enlaces a la derecha.
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
@@ -219,24 +207,6 @@ const styles = StyleSheet.create({
   // cabecera en vez de recortarse con los puntos suspensivos.
   cabeceraTexto: { flex: 1, minWidth: 0 },
   atribucion: { fontSize: 11, color: colors.inkFaint, marginTop: 2 },
-  // Rectangulo de esquinas redondeadas (radius.md, no pill). 44 px de alto: el
-  // minimo tocable que piden iOS y Android. flexShrink 0: si el nombre de la
-  // ruta es largo se recorta el nombre, nunca este boton.
-  botonSellos: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.sm,
-    height: 44,
-    paddingHorizontal: space.md,
-    flexShrink: 0,
-    borderRadius: radius.md,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-  },
-  botonSellosTexto: { fontSize: 14, fontWeight: '700', color: colors.ink },
-  botonSellosPulsado: { backgroundColor: colors.paperDeep },
   avisoError: { marginHorizontal: space.lg },
   pie: { gap: space.md, paddingBottom: space.md },
   botonEncuadre: {
