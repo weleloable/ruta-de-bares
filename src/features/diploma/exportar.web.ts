@@ -73,3 +73,33 @@ export function descargarImagen(blob: Blob, nombre: string): void {
   enlace.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+/**
+ * El boton Story solo tiene sentido en un movil (o tablet): Instagram no se abre
+ * desde un ordenador. Se detecta por el navegador y no por el ancho.
+ */
+export function puedeStory(): boolean {
+  const ua = navigator.userAgent;
+  // iPadOS se hace pasar por Mac: se distingue por la pantalla tactil.
+  return /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+/** Copia texto al portapapeles. Devuelve false si el navegador no deja (no es un error). */
+export async function copiarTexto(texto: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Abre la camara de historias de Instagram. Es lo mas cerca que llega una web:
+ * Instagram solo acepta una imagen directa desde una app nativa registrada con
+ * Facebook (su API "Sharing to Stories"), no desde un navegador. Si Instagram no
+ * esta instalado no pasa nada.
+ */
+export function abrirCamaraDeStories(): void {
+  window.location.href = 'instagram://story-camera';
+}

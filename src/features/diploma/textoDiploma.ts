@@ -6,6 +6,13 @@ export const DIPLOMA_ALTO = 640;
 /** Con este factor el PNG sale a 1080 x 1920. */
 export const DIPLOMA_PIXEL_RATIO = 3;
 
+/**
+ * La cuenta de Instagram de la ruta. Instagram no deja etiquetar desde fuera: se
+ * copia al portapapeles al pulsar Story y la persona la pega con la pegatina de
+ * texto. Ha de coincidir con INSTAGRAM_URL (lo vigila un test).
+ */
+export const CUENTA_INSTAGRAM = '@rutadebaresoficial';
+
 /** "Dudu ha completado:" */
 export function lineaCompletado(nombre: string): string {
   return `${nombre.trim() || 'Peregrino'} ha completado:`;

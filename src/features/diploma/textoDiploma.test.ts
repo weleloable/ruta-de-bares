@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { INSTAGRAM_URL } from '../../lib/enlacesExternos.ts';
 import {
   CIERRES,
+  CUENTA_INSTAGRAM,
   DIPLOMA_ALTO,
   DIPLOMA_ANCHO,
   DIPLOMA_PIXEL_RATIO,
@@ -11,6 +13,15 @@ import {
   nombreFicheroDiploma,
   rutaEnDiploma,
 } from './textoDiploma.ts';
+
+describe('CUENTA_INSTAGRAM', () => {
+  it('es la cuenta del enlace de Instagram de la app (una sola verdad)', () => {
+    assert.equal(CUENTA_INSTAGRAM, `@${INSTAGRAM_URL.replace(/\/+$/, '').split('/').pop()}`);
+  });
+  it('empieza por @ y no lleva espacios (se pega tal cual como mencion)', () => {
+    assert.match(CUENTA_INSTAGRAM, /^@[a-z0-9._]+$/);
+  });
+});
 
 describe('lineaCompletado', () => {
   it('"Nombre ha completado:"', () => {
