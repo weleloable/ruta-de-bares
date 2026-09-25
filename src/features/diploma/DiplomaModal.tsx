@@ -53,7 +53,7 @@ export function DiplomaModal({
   // y guardar queda de apoyo; en escritorio lo unico util es guardar.
   const puedeCompartir = PUEDE_EXPORTAR && puedeCompartirFicheros();
   const conStory = PUEDE_EXPORTAR && puedeStory();
-  const [aviso, setAviso] = useState<{ tono: 'error' | 'success'; texto: string } | null>(null);
+  const [aviso, setAviso] = useState<{ texto: string } | null>(null);
 
   // La imagen se genera al abrir y se guarda: el menu de compartir del sistema
   // exige que se abra INMEDIATAMENTE tras el toque (Safari lo rechaza si antes
@@ -87,37 +87,29 @@ export function DiplomaModal({
     if (preparando) return;
     setPreparando(accion);
     setAviso(null);
-    // El portapapeles solo se deja tocar dentro del propio toque: se pide ANTES de
-    // esperar a nada.
-    const copiado = accion === 'story' ? copiarTexto(CUENTA_INSTAGRAM) : null;
+    // Story deja @rutadebaresoficial en el portapapeles por si se quiere pegar como
+    // pegatina de texto (el diploma ya lo lleva escrito). Solo se deja tocar el
+    // portapapeles dentro del propio toque: se pide ANTES de esperar a nada.
+    if (accion === 'story') void copiarTexto(CUENTA_INSTAGRAM);
     try {
       const blob = imagen.current ?? (await diplomaABlob(diplomaRef.current));
       imagen.current = blob;
       const nombreFichero = nombreFicheroDiploma(ruta);
 
+      // Sin globos de exito: el propio sistema ya lo muestra (menu de compartir,
+      // descarga, Instagram abriendose) y el texto no daba tiempo a leerlo.
       if (accion === 'compartir') {
         await compartirImagen(blob, nombreFichero);
       } else if (accion === 'guardar') {
         descargarImagen(blob, nombreFichero);
-        setAviso({ tono: 'success', texto: 'Imagen guardada en tu dispositivo.' });
+      } else if (puedeCompartir) {
+        await compartirImagen(blob, nombreFichero);
       } else {
-        const etiqueta = (await copiado)
-          ? `Hemos copiado ${CUENTA_INSTAGRAM}: en tu historia, pégalo con la pegatina de texto para etiquetarnos.`
-          : `Etiquétanos en tu historia: ${CUENTA_INSTAGRAM}.`;
-        if (puedeCompartir) {
-          await compartirImagen(blob, nombreFichero);
-          setAviso({ tono: 'success', texto: `Elige Instagram y "Historia". ${etiqueta}` });
-        } else {
-          descargarImagen(blob, nombreFichero);
-          setAviso({
-            tono: 'success',
-            texto: `Imagen guardada. Se abre Instagram: crea una historia con ella desde tu galería. ${etiqueta}`,
-          });
-          setTimeout(abrirCamaraDeStories, 700);
-        }
+        descargarImagen(blob, nombreFichero);
+        setTimeout(abrirCamaraDeStories, 700);
       }
     } catch (e) {
-      setAviso({ tono: 'error', texto: e instanceof Error ? e.message : 'No se pudo generar la imagen.' });
+      setAviso({ texto: e instanceof Error ? e.message : 'No se pudo generar la imagen.' });
     } finally {
       setPreparando(null);
     }
@@ -152,40 +144,46 @@ export function DiplomaModal({
           </View>
 
           <View style={styles.acciones}>
-            {aviso ? <Banner tone={aviso.tono}>{aviso.texto}</Banner> : null}
-            {puedeCompartir ? (
-              <Button
-                title="Compartir imagen"
-                icon="share-outline"
-                onPress={() => hacer('compartir')}
-                loading={preparando === 'compartir'}
-                disabled={preparando !== null}
-              />
-            ) : null}
+            {/* Solo errores: un fallo hay que verlo, un exito ya se nota. */}
+            {aviso ? <Banner tone="error">{aviso.texto}</Banner> : null}
             {PUEDE_EXPORTAR ? (
               <View style={styles.fila}>
-                <Button
-                  title="Guardar imagen"
-                  icon="download-outline"
-                  variant={puedeCompartir ? 'secondary' : 'primary'}
-                  style={styles.enFila}
-                  textStyle={styles.textoEnFila}
-                  onPress={() => hacer('guardar')}
-                  loading={preparando === 'guardar'}
-                  disabled={preparando !== null}
-                />
+                {puedeCompartir ? (
+                  <Button
+                    title="Compartir"
+                    icon="share-outline"
+                    style={styles.enFila}
+                    textStyle={styles.textoEnFila}
+                    onPress={() => hacer('compartir')}
+                    loading={preparando === 'compartir'}
+                    disabled={preparando !== null}
+                  />
+                ) : null}
                 {conStory ? (
                   <Button
                     title="Story"
                     icon="logo-instagram"
-                    variant="secondary"
+                    variant={puedeCompartir ? 'secondary' : 'primary'}
                     style={styles.enFila}
                     textStyle={styles.textoEnFila}
                     onPress={() => hacer('story')}
                     loading={preparando === 'story'}
                     disabled={preparando !== null}
                   />
-                ) : null}
+                ) : (
+                  // Guardar solo donde no hay Story: en el movil Story ya guarda la
+                  // imagen (o abre el menu de compartir, que tambien la guarda).
+                  <Button
+                    title="Guardar imagen"
+                    icon="download-outline"
+                    variant={puedeCompartir ? 'secondary' : 'primary'}
+                    style={styles.enFila}
+                    textStyle={styles.textoEnFila}
+                    onPress={() => hacer('guardar')}
+                    loading={preparando === 'guardar'}
+                    disabled={preparando !== null}
+                  />
+                )}
               </View>
             ) : null}
             <Button title="Cerrar" variant="ghost" textStyle={styles.textoCerrar} onPress={cerrar} />

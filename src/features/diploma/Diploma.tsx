@@ -7,6 +7,7 @@ import { AvatarCana } from '../match/piezas';
 import { MapaEstatico, type ParadaMapa } from './MapaEstatico';
 import { MEDIDAS_MARCO, MarcoDiploma, type VarianteMarco } from './marcos';
 import {
+  CUENTA_INSTAGRAM,
   DIPLOMA_ALTO,
   DIPLOMA_ANCHO,
   cierreDiploma,
@@ -92,6 +93,9 @@ export const Diploma = forwardRef<View, {
               {rutaEnDiploma(ruta)}
             </Text>
             <Text style={styles.cierre}>{cierreDiploma(nombre, ruta)}</Text>
+            {/* Va en la mitad de arriba y no en el pie: en una historia de Instagram
+                la barra de abajo (y la de arriba) tapan los bordes de la imagen. */}
+            <Text style={styles.cuenta}>{CUENTA_INSTAGRAM}</Text>
           </View>
         </View>
       </View>
@@ -151,6 +155,7 @@ const styles = StyleSheet.create({
     maxWidth: 250,
     marginTop: 2,
   },
+  cuenta: { fontSize: 10.5, lineHeight: 14, fontWeight: '700', letterSpacing: 1.2, color: TINTA_SUAVE, marginTop: 4 },
   mapa: {
     position: 'absolute',
     borderWidth: 1,

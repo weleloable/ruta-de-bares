@@ -161,7 +161,7 @@ describe('Exportar', () => {
   it('el modal ofrece compartir solo si el navegador puede, y guardar siempre que se pueda exportar', () => {
     const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
     assert.match(codigo, /const puedeCompartir = PUEDE_EXPORTAR && puedeCompartirFicheros\(\);/);
-    assert.match(codigo, /title="Compartir imagen"/);
+    assert.match(codigo, /title="Compartir"/);
     assert.match(codigo, /title="Guardar imagen"/);
   });
 
@@ -170,19 +170,20 @@ describe('Exportar', () => {
     assert.match(codigo, /transform: \[\{ scale: escala \}\][\s\S]*<Diploma ref=\{diplomaRef\}/);
   });
 
-  it('Story: boton con el logo de Instagram, a la DERECHA de Guardar imagen y solo en movil', () => {
+  it('Story: boton con el logo de Instagram; Guardar solo sale donde NO hay Story', () => {
     const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
     const fila = /<View style=\{styles\.fila\}>([\s\S]*?)<\/View>\s*\) : null\}/.exec(codigo);
-    assert.ok(fila, 'no encuentro la fila de Guardar + Story');
-    const iGuardar = fila[1].indexOf('title="Guardar imagen"');
-    const iStory = fila[1].indexOf('title="Story"');
-    assert.ok(iGuardar > -1 && iStory > iGuardar, 'Story tiene que ir despues (a la derecha) de Guardar imagen');
+    assert.ok(fila, 'no encuentro la fila de botones');
     assert.match(fila[1], /icon="logo-instagram"/);
     assert.match(codigo, /const conStory = PUEDE_EXPORTAR && puedeStory\(\);/);
-    assert.match(fila[1], /\{conStory \? \(/);
+    // {conStory ? (<Story/>) : (<Guardar/>)}: son excluyentes.
+    const iStory = fila[1].indexOf('title="Story"');
+    const iGuardar = fila[1].indexOf('title="Guardar imagen"');
+    assert.ok(iStory > -1 && iGuardar > iStory, 'Guardar va en la rama contraria de Story');
+    assert.match(fila[1], /\{conStory \? \([\s\S]*title="Story"[\s\S]*\) : \([\s\S]*title="Guardar imagen"/);
   });
 
-  it('Story copia la cuenta al portapapeles DENTRO del toque, antes de esperar a nada', () => {
+  it('Story deja la cuenta en el portapapeles DENTRO del toque, antes de esperar a nada', () => {
     const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
     const iCopia = codigo.indexOf('copiarTexto(CUENTA_INSTAGRAM)');
     const iBlob = codigo.indexOf('imagen.current ?? (await diplomaABlob');
@@ -191,15 +192,22 @@ describe('Exportar', () => {
 
   it('Story usa la hoja de compartir si hay; si no, guarda la imagen y abre la camara de historias', () => {
     const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
-    assert.match(codigo, /if \(puedeCompartir\) \{\s*await compartirImagen\(blob, nombreFichero\);/);
-    assert.match(codigo, /descargarImagen\(blob, nombreFichero\);[\s\S]*setTimeout\(abrirCamaraDeStories, 700\)/);
+    assert.match(codigo, /\} else if \(puedeCompartir\) \{\s*await compartirImagen\(blob, nombreFichero\);/);
+    assert.match(codigo, /descargarImagen\(blob, nombreFichero\);\s*setTimeout\(abrirCamaraDeStories, 700\);/);
     assert.match(sinComentarios(leer('src/features/diploma/exportar.web.ts')), /'instagram:\/\/story-camera'/);
   });
 
-  it('el aviso es honesto: la etiqueta la pega la persona, no se hace sola', () => {
-    const codigo = leer('src/features/diploma/DiplomaModal.tsx');
-    assert.match(codigo, /pégalo con la pegatina de texto para etiquetarnos/);
-    assert.doesNotMatch(codigo, /etiquetad[oa] automaticamente/i);
+  it('sin globos de exito: solo se muestran los errores (el texto no daba tiempo a leerlo)', () => {
+    const codigo = sinComentarios(leer('src/features/diploma/DiplomaModal.tsx'));
+    assert.doesNotMatch(codigo, /tono: 'success'|tone="success"/);
+    assert.match(codigo, /<Banner tone="error">\{aviso\.texto\}<\/Banner>/);
+    assert.doesNotMatch(codigo, /pégalo con la pegatina|Imagen guardada/);
+  });
+
+  it('el diploma lleva la cuenta de Instagram, en la mitad de arriba y bajo el cierre', () => {
+    const codigo = sinComentarios(leer('src/features/diploma/Diploma.tsx'));
+    // El comentario JSX que hay en medio se queda en `{}` al quitar los comentarios.
+    assert.match(codigo, /\{cierreDiploma\(nombre, ruta\)\}<\/Text>\s*(?:\{\}\s*)?<Text style=\{styles\.cuenta\}>\{CUENTA_INSTAGRAM\}<\/Text>/);
   });
 
   it('la imagen se prepara al abrir y se reutiliza: el menu de compartir exige abrirse al instante', () => {
