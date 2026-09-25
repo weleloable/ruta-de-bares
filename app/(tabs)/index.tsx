@@ -16,6 +16,7 @@ import { Medalla } from '../../src/components/Medalla';
 import { StampSeal } from '../../src/components/StampSeal';
 import { Banner, Button, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
+import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { credencialCompleta } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
@@ -43,6 +44,7 @@ export default function SellosScreen() {
   const { routes, activeRoute, bars, stamps, loading, error, selectRoute, refresh, addStamp } =
     useActiveRoute();
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [diplomaAbierto, setDiplomaAbierto] = useState(false);
 
   // Cuanto tapa la cabecera (aviso + chips + credencial) desde el top de la
   // pantalla: el fondo decorativo empieza justo debajo, no detras, porque la
@@ -121,7 +123,9 @@ export default function SellosScreen() {
                 </View>
                 {/* La medalla ocupa el hueco de la derecha, donde no hay texto.
                     Se deduce de los sellos: si se borra uno, desaparece. */}
-                {credencialCompleta(conseguidos, bars.length) ? <Medalla /> : null}
+                {credencialCompleta(conseguidos, bars.length) ? (
+                  <Medalla onPress={() => setDiplomaAbierto(true)} />
+                ) : null}
               </View>
 
               <View style={styles.progresoFila}>
@@ -199,6 +203,18 @@ export default function SellosScreen() {
           addStamp(sello);
         }}
       />
+
+      {/* Solo existe con la credencial completa: es lo que abre la medalla. */}
+      {activeRoute && credencialCompleta(conseguidos, bars.length) ? (
+        <DiplomaModal
+          visible={diplomaAbierto}
+          onClose={() => setDiplomaAbierto(false)}
+          nombre={profile?.display_name ?? ''}
+          ruta={activeRoute.name}
+          foto={profile?.avatar_url ?? null}
+          paradas={bars}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
