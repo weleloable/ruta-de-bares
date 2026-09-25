@@ -4,7 +4,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { ChapaSellado } from '../../components/ChapaSellado';
 import { fonts } from '../../lib/theme';
 import { AvatarCana } from '../match/piezas';
-import { MapaEstatico } from './MapaEstatico';
+import { MapaEstatico, type ParadaMapa } from './MapaEstatico';
 import { MEDIDAS_MARCO, MarcoDiploma, type VarianteMarco } from './marcos';
 import {
   DIPLOMA_ALTO,
@@ -48,7 +48,7 @@ export const Diploma = forwardRef<View, {
   nombre: string;
   ruta: string;
   foto: string | null;
-  paradas: readonly { id: string; lat: number; lng: number }[];
+  paradas: readonly ParadaMapa[];
   opacidadFondo?: number;
   marco?: VarianteMarco;
 }>(function Diploma(

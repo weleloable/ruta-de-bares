@@ -1,33 +1,45 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../lib/theme';
-import { calcularVista, proyectar, teselas, tramo, LADO_TESELA } from './proyeccionMapa';
+import { BarLogo } from '../routes/BarLogo';
+import { calcularVista, proyectar, teselas, tramo } from './proyeccionMapa';
 
 /**
  * El mapa de la ruta como imagen fija: teselas de OpenStreetMap, la linea
- * discontinua roja de la pantalla Ruta y las paradas numeradas. No pide la
+ * discontinua roja de la pantalla Ruta y una marca por parada. No pide la
  * ubicacion ni se mueve, y son Views e Images normales, asi que se puede
  * convertir en PNG (a diferencia de Leaflet o Google Maps) y se ve igual en
- * web y en movil. Las paradas van en rojo con el numero en blanco, como una
- * parada sellada en la pantalla Ruta.
+ * web y en movil.
  *
- * La atribucion de OpenStreetMap va dentro, en una esquina: la licencia la
- * exige visible y este mapa acaba en una imagen que se comparte.
+ * La marca de cada parada es, segun `marca`, el SELLO del bar (su logo dentro de
+ * un aro rojo) o un numero como el de la pantalla Ruta.
+ *
+ * El zoom es el justo para que las paradas toquen los margenes (ver
+ * proyeccionMapa.ts). La atribucion de OpenStreetMap va dentro, en una
+ * esquina: la licencia la exige visible y este mapa acaba en una imagen que se
+ * comparte.
  */
-const RADIO_PIN = 12;
-const MARGEN = RADIO_PIN + 22;
+const RADIO_SELLO = 17;
+const RADIO_NUMERO = 12;
+/** Cuanto se deja libre entre la marca y el borde del mapa. */
+const AIRE = 8;
+
+export type ParadaMapa = { id: string; nombre: string; lat: number; lng: number };
 
 export function MapaEstatico({
   paradas,
   ancho,
   alto,
+  marca = 'sellos',
 }: {
   /** En el orden de la ruta. */
-  paradas: readonly { id: string; lat: number; lng: number }[];
+  paradas: readonly ParadaMapa[];
   ancho: number;
   alto: number;
+  marca?: 'sellos' | 'numeros';
 }) {
-  const vista = calcularVista(paradas, ancho, alto, MARGEN);
+  const radio = marca === 'sellos' ? RADIO_SELLO : RADIO_NUMERO;
+  const vista = calcularVista(paradas, ancho, alto, radio + AIRE, 18);
   const posiciones = paradas.map((p) => proyectar(p, vista));
   const tramos = posiciones.slice(1).map((p, i) => tramo(posiciones[i], p));
 
@@ -37,7 +49,7 @@ export function MapaEstatico({
         <Image
           key={`${t.zoom}/${t.x}/${t.y}`}
           source={{ uri: t.url }}
-          style={{ position: 'absolute', left: t.izquierda, top: t.arriba, width: LADO_TESELA, height: LADO_TESELA }}
+          style={{ position: 'absolute', left: t.izquierda, top: t.arriba, width: t.lado, height: t.lado }}
         />
       ))}
 
@@ -56,8 +68,19 @@ export function MapaEstatico({
       ))}
 
       {posiciones.map((p, i) => (
-        <View key={paradas[i].id} style={[styles.pin, { left: p.x - RADIO_PIN, top: p.y - RADIO_PIN }]}>
-          <Text style={styles.pinNumero}>{i + 1}</Text>
+        <View
+          key={paradas[i].id}
+          style={[
+            styles.pin,
+            marca === 'sellos' ? styles.sello : styles.numero,
+            { left: p.x - radio, top: p.y - radio, width: radio * 2, height: radio * 2, borderRadius: radio },
+          ]}
+        >
+          {marca === 'sellos' ? (
+            <BarLogo nombre={paradas[i].nombre} tamano={radio * 2 - 4} />
+          ) : (
+            <Text style={styles.pinNumero}>{i + 1}</Text>
+          )}
         </View>
       ))}
 
@@ -80,19 +103,19 @@ const styles = StyleSheet.create({
   trazo: { width: 12, height: 4, marginRight: 8, backgroundColor: colors.stamp },
   pin: {
     position: 'absolute',
-    width: RADIO_PIN * 2,
-    height: RADIO_PIN * 2,
-    borderRadius: RADIO_PIN,
-    backgroundColor: colors.stamp,
     borderWidth: 2,
     borderColor: colors.stamp,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     shadowColor: '#241A12',
     shadowOpacity: 0.35,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
+  numero: { backgroundColor: colors.stamp },
+  // Fondo claro por si el logo del bar tiene transparencias.
+  sello: { backgroundColor: colors.card },
   pinNumero: { color: colors.white, fontWeight: '800', fontSize: 12 },
   atribucion: {
     position: 'absolute',

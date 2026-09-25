@@ -212,7 +212,7 @@ export default function SellosScreen() {
           nombre={profile?.display_name ?? ''}
           ruta={activeRoute.name}
           foto={profile?.avatar_url ?? null}
-          paradas={bars}
+          paradas={bars.map((b) => ({ id: b.id, nombre: b.name, lat: b.lat, lng: b.lng }))}
         />
       ) : null}
     </SafeAreaView>

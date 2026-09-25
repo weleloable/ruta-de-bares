@@ -3,16 +3,28 @@ import { describe, it } from 'node:test';
 
 import { aPixelesMundo, calcularVista, proyectar, teselas, tramo, urlTesela } from './proyeccionMapa.ts';
 
-// Paradas reales del catalogo (Alcala de Henares).
+// Paradas reales del catalogo (Alcala de Henares): las nueve de una ruta.
 const RUTA = [
   { lat: 40.484937, lng: -3.360688 },
   { lat: 40.483562, lng: -3.363438 },
   { lat: 40.483312, lng: -3.363563 },
   { lat: 40.483062, lng: -3.363938 },
+  { lat: 40.481562, lng: -3.364563 },
+  { lat: 40.482062, lng: -3.365437 },
+  { lat: 40.481812, lng: -3.366563 },
+  { lat: 40.481687, lng: -3.366563 },
+  { lat: 40.481687, lng: -3.367563 },
 ];
-const ANCHO = 360;
-const ALTO = 320;
-const MARGEN = 36;
+const ANCHO = 272;
+const ALTO = 238;
+const MARGEN = 27;
+
+const extremos = (ps: { x: number; y: number }[]) => ({
+  minX: Math.min(...ps.map((p) => p.x)),
+  maxX: Math.max(...ps.map((p) => p.x)),
+  minY: Math.min(...ps.map((p) => p.y)),
+  maxY: Math.max(...ps.map((p) => p.y)),
+});
 
 describe('aPixelesMundo', () => {
   it('el (0, 0) cae en el centro del mundo', () => {
@@ -25,34 +37,40 @@ describe('aPixelesMundo', () => {
   it('mas al norte, menos y', () => {
     assert.ok(aPixelesMundo({ lat: 41, lng: 0 }, 5).y < aPixelesMundo({ lat: 40, lng: 0 }, 5).y);
   });
+  it('acepta un zoom decimal: a mitad de camino entre dos niveles, la distancia sube en proporcion', () => {
+    const a = aPixelesMundo({ lat: 40, lng: -3 }, 16).x;
+    const b = aPixelesMundo({ lat: 40, lng: -3 }, 17).x;
+    assert.ok(Math.abs(aPixelesMundo({ lat: 40, lng: -3 }, 16.5).x - Math.sqrt(a * b)) < 1e-6);
+  });
 });
 
-describe('calcularVista', () => {
-  const vista = calcularVista(RUTA, ANCHO, ALTO, MARGEN);
+describe('calcularVista: el zoom justo', () => {
+  const vista = calcularVista(RUTA, ANCHO, ALTO, MARGEN, 18);
+  const ps = RUTA.map((p) => proyectar(p, vista));
+  const e = extremos(ps);
 
   it('todas las paradas caben dentro del mapa con su margen', () => {
-    for (const p of RUTA) {
-      const { x, y } = proyectar(p, vista);
-      assert.ok(x >= MARGEN - 0.001 && x <= ANCHO - MARGEN + 0.001, `x=${x}`);
-      assert.ok(y >= MARGEN - 0.001 && y <= ALTO - MARGEN + 0.001, `y=${y}`);
-    }
+    assert.ok(e.minX >= MARGEN - 0.001 && e.maxX <= ANCHO - MARGEN + 0.001, `x ${e.minX}..${e.maxX}`);
+    assert.ok(e.minY >= MARGEN - 0.001 && e.maxY <= ALTO - MARGEN + 0.001, `y ${e.minY}..${e.maxY}`);
   });
 
-  it('es el zoom mas alto que cabe: con uno mas, alguna parada se saldria', () => {
-    const mas = calcularVista(RUTA, ANCHO, ALTO, MARGEN, vista.zoom + 1, vista.zoom + 1);
-    // Forzar zoom+1 no cabe: cae a minZoom = zoom+1 sin comprobar, asi que se mira a mano.
-    const px = RUTA.map((p) => aPixelesMundo(p, mas.zoom));
-    const ancho = Math.max(...px.map((p) => p.x)) - Math.min(...px.map((p) => p.x));
-    const alto = Math.max(...px.map((p) => p.y)) - Math.min(...px.map((p) => p.y));
-    assert.ok(ancho > ANCHO - 2 * MARGEN || alto > ALTO - 2 * MARGEN);
+  it('y las mas alejadas TOCAN el margen en el eje que manda (ni un pixel de mas)', () => {
+    const tocaX = Math.abs(e.minX - MARGEN) < 0.001 && Math.abs(e.maxX - (ANCHO - MARGEN)) < 0.001;
+    const tocaY = Math.abs(e.minY - MARGEN) < 0.001 && Math.abs(e.maxY - (ALTO - MARGEN)) < 0.001;
+    assert.ok(tocaX || tocaY, 'ninguno de los dos ejes toca el margen: sobra zoom por acercar');
+  });
+
+  it('el zoom es decimal, no un nivel entero', () => {
+    assert.notEqual(vista.zoom, Math.round(vista.zoom));
+  });
+
+  it('con solo niveles enteros quedaria mas lejos: el zoom continuo es estrictamente mayor que el entero de abajo', () => {
+    assert.ok(vista.zoom > Math.floor(vista.zoom));
   });
 
   it('el conjunto queda centrado', () => {
-    const ps = RUTA.map((p) => proyectar(p, vista));
-    const cx = (Math.min(...ps.map((p) => p.x)) + Math.max(...ps.map((p) => p.x))) / 2;
-    const cy = (Math.min(...ps.map((p) => p.y)) + Math.max(...ps.map((p) => p.y))) / 2;
-    assert.ok(Math.abs(cx - ANCHO / 2) < 0.001);
-    assert.ok(Math.abs(cy - ALTO / 2) < 0.001);
+    assert.ok(Math.abs((e.minX + e.maxX) / 2 - ANCHO / 2) < 0.001);
+    assert.ok(Math.abs((e.minY + e.maxY) / 2 - ALTO / 2) < 0.001);
   });
 
   it('una sola parada usa el zoom maximo y queda en el centro', () => {
@@ -62,30 +80,51 @@ describe('calcularVista', () => {
     assert.ok(Math.abs(x - ANCHO / 2) < 0.001 && Math.abs(y - ALTO / 2) < 0.001);
   });
 
+  it('paradas en el mismo sitio, igual que una sola', () => {
+    assert.equal(calcularVista([RUTA[0], RUTA[0]], ANCHO, ALTO, MARGEN, 16).zoom, 16);
+  });
+
   it('sin paradas no revienta', () => {
     assert.equal(calcularVista([], ANCHO, ALTO, MARGEN).zoom, 3);
   });
 
-  it('una ruta enorme (dos continentes) baja el zoom en vez de salirse', () => {
+  it('el zoom nunca pasa del maximo, aunque las paradas esten muy juntas', () => {
+    const juntas = [RUTA[0], { lat: RUTA[0].lat + 1e-6, lng: RUTA[0].lng }];
+    assert.equal(calcularVista(juntas, ANCHO, ALTO, MARGEN, 17).zoom, 17);
+  });
+
+  it('una ruta enorme (dos continentes) baja el zoom al minimo en vez de salirse', () => {
     const v = calcularVista([{ lat: 40, lng: -3 }, { lat: -34, lng: 151 }], ANCHO, ALTO, MARGEN);
-    assert.ok(v.zoom <= 3);
+    assert.equal(v.zoom, 3);
+  });
+
+  it('un margen mas grande aleja el mapa', () => {
+    assert.ok(calcularVista(RUTA, ANCHO, ALTO, 50, 18).zoom < vista.zoom);
   });
 });
 
 describe('teselas', () => {
-  const vista = calcularVista(RUTA, ANCHO, ALTO, MARGEN);
+  const vista = calcularVista(RUTA, ANCHO, ALTO, MARGEN, 18);
   const lista = teselas(vista, ANCHO, ALTO);
 
   it('cubren todo el mapa, sin huecos', () => {
     const minIzq = Math.min(...lista.map((t) => t.izquierda));
-    const maxDer = Math.max(...lista.map((t) => t.izquierda + 256));
+    const maxDer = Math.max(...lista.map((t) => t.izquierda + t.lado));
     const minArr = Math.min(...lista.map((t) => t.arriba));
-    const maxAbj = Math.max(...lista.map((t) => t.arriba + 256));
+    const maxAbj = Math.max(...lista.map((t) => t.arriba + t.lado));
     assert.ok(minIzq <= 0 && maxDer >= ANCHO && minArr <= 0 && maxAbj >= ALTO);
   });
 
   it('son pocas: unas pocas peticiones a OpenStreetMap, no docenas', () => {
-    assert.ok(lista.length >= 1 && lista.length <= 9, `${lista.length} teselas`);
+    assert.ok(lista.length >= 1 && lista.length <= 12, `${lista.length} teselas`);
+  });
+
+  it('piden el nivel entero mas cercano al zoom decimal', () => {
+    for (const t of lista) assert.equal(t.zoom, Math.round(vista.zoom));
+  });
+
+  it('se dibujan con el lado que compensa la diferencia (entre 0,7 y 1,42 veces 256)', () => {
+    for (const t of lista) assert.ok(t.lado >= 256 * 0.7 && t.lado <= 256 * 1.42, `lado ${t.lado}`);
   });
 
   it('las URL son de OpenStreetMap con su zoom, x e y', () => {
@@ -94,10 +133,15 @@ describe('teselas', () => {
     }
   });
 
-  it('teselas contiguas encajan sin solaparse', () => {
+  it('teselas contiguas encajan sin solaparse: separadas exactamente su lado', () => {
     const t = lista[0];
     const derecha = lista.find((o) => o.y === t.y && o.x === t.x + 1);
-    if (derecha) assert.equal(derecha.izquierda - t.izquierda, 256);
+    if (derecha) assert.ok(Math.abs(derecha.izquierda - t.izquierda - t.lado) < 1e-9);
+  });
+
+  it('con un zoom entero, el lado es 256 exacto', () => {
+    const v = { zoom: 16, izquierda: 1000, arriba: 1000 };
+    for (const t of teselas(v, 300, 300)) assert.equal(t.lado, 256);
   });
 });
 

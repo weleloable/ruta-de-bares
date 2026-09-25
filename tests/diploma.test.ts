@@ -26,7 +26,7 @@ describe('pantalla Sellos', () => {
     assert.match(bloque[1], /nombre=\{profile\?\.display_name \?\? ''\}/);
     assert.match(bloque[1], /ruta=\{activeRoute\.name\}/);
     assert.match(bloque[1], /foto=\{profile\?\.avatar_url \?\? null\}/);
-    assert.match(bloque[1], /paradas=\{bars\}/);
+    assert.match(bloque[1], /paradas=\{bars\.map\(\(b\) => \(\{ id: b\.id, nombre: b\.name, lat: b\.lat, lng: b\.lng \}\)\)\}/);
   });
 });
 
@@ -116,6 +116,21 @@ describe('Mapa del diploma', () => {
 
   it('mismo trazo que la pantalla Ruta: linea discontinua roja de 12 y 8', () => {
     assert.match(codigo, /width: 12, height: 4, marginRight: 8, backgroundColor: colors\.stamp/);
+  });
+
+  it('las paradas se marcan por defecto con el SELLO (logo) del bar, y hay opcion de numeros', () => {
+    assert.match(codigo, /marca = 'sellos'/);
+    assert.match(codigo, /marca\?: 'sellos' \| 'numeros'/);
+    assert.match(codigo, /<BarLogo nombre=\{paradas\[i\]\.nombre\} tamano=\{radio \* 2 - 4\} \/>/);
+  });
+
+  it('las teselas se dibujan con el lado que compensa el zoom decimal, no con 256 fijo', () => {
+    assert.match(codigo, /width: t\.lado, height: t\.lado/);
+    assert.doesNotMatch(codigo, /LADO_TESELA/);
+  });
+
+  it('el zoom del mapa es el justo: el margen es el radio de la marca mas un poco de aire', () => {
+    assert.match(codigo, /calcularVista\(paradas, ancho, alto, radio \+ AIRE, 18\)/);
   });
 
   it('lleva la atribucion de OpenStreetMap, que su licencia exige visible', () => {

@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-n
 import { Banner, Button } from '../../components/ui';
 import { space } from '../../lib/theme';
 import { Diploma } from './Diploma';
+import type { ParadaMapa } from './MapaEstatico';
 import {
   PUEDE_EXPORTAR,
   compartirImagen,
@@ -35,7 +36,7 @@ export function DiplomaModal({
   nombre: string;
   ruta: string;
   foto: string | null;
-  paradas: readonly { id: string; lat: number; lng: number }[];
+  paradas: readonly ParadaMapa[];
 }) {
   const { width, height } = useWindowDimensions();
   const diplomaRef = useRef<View>(null);
