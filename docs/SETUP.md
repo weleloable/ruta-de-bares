@@ -475,22 +475,36 @@ hacer tu.
 
 ### 9.1 Google Cloud Console
 
-1. <https://console.cloud.google.com> > crea un proyecto (p. ej. "Ruta de Bares").
-2. **APIs y servicios > Pantalla de consentimiento de OAuth**: tipo *Externo*,
-   nombre de la app, correo de soporte y correo del desarrollador. Para que pueda
-   entrar cualquiera, la web de la app y la **politica de privacidad**
-   (`https://weleloable.github.io/ruta-de-bares/privacidad`) tienen que ser URL
-   publicas. Ojo: la pantalla de privacidad aun es un borrador
-   (`src/features/legal/responsable.ts`, `PENDIENTE`).
-3. **Permisos (scopes)**: solo `openid`, `.../auth/userinfo.email` y
-   `.../auth/userinfo.profile`. Son los no sensibles: no piden verificacion.
-4. **Publicacion**: en *Pruebas* solo entran los correos que anadas a mano (hasta
-   100). Para que entre cualquiera, *Publicar la aplicacion* (pasa a *En
-   produccion*; con esos tres permisos no hay revision de Google).
-5. **Credenciales > Crear credenciales > ID de cliente de OAuth**, tipo
-   **Aplicacion web**. En *URI de redireccionamiento autorizados* pon UNA:
-   `https://<tu-proyecto>.supabase.co/auth/v1/callback` (la ve Supabase en el
-   paso 9.2). Copia el **ID de cliente** y el **Secreto de cliente**.
+La consola se llama ahora **Google Auth Platform** (menu lateral: Vision general,
+Branding, Publico, Clientes, Acceso a los datos). Los nombres pueden variar un
+poco segun el idioma.
+
+1. **Proyecto.** <https://console.cloud.google.com> > selector de proyectos (arriba
+   a la izquierda, junto al logo) > **Proyecto nuevo** > nombre `Ruta de Bares` >
+   **Crear**. Comprueba que queda seleccionado arriba.
+2. **Empezar.** En el buscador de arriba escribe *Google Auth Platform* y abrelo.
+   Si es la primera vez, pulsa **Comenzar**: nombre `Ruta de Bares` y tu correo de
+   asistencia > **Siguiente**; Publico: **Externo** > **Siguiente**; correo de
+   contacto > **Siguiente**; marca aceptar la politica de datos de usuario >
+   **Continuar** > **Crear**.
+3. **Branding** (menu izquierdo). Pagina principal:
+   `https://weleloable.github.io/ruta-de-bares/`. Politica de privacidad:
+   `https://weleloable.github.io/ruta-de-bares/privacidad`. Dominios autorizados:
+   anade `weleloable.github.io` y `supabase.co`. **Guardar**. Ojo: la pantalla de
+   privacidad aun es un borrador (`src/features/legal/responsable.ts`, `PENDIENTE`).
+4. **Acceso a los datos** > **Anadir o quitar permisos**. Marca SOLO
+   `.../auth/userinfo.email`, `.../auth/userinfo.profile` y `openid` >
+   **Actualizar** > **Guardar**. Son los no sensibles: no piden verificacion.
+5. **Publico** > *Estado de la publicacion: Pruebas* > **Publicar aplicacion** >
+   **Confirmar**. En *Pruebas* solo entran los correos que anadas como usuarios de
+   prueba (hasta 100); publicada, entra cualquiera.
+6. **Clientes** > **Crear cliente**. Tipo: **Aplicacion web**. Nombre:
+   `Ruta de Bares web`. En *URI de redireccionamiento autorizados* > **Anadir URI**
+   y pega exactamente `https://<tu-proyecto>.supabase.co/auth/v1/callback` (el
+   `<tu-proyecto>` es la parte inicial de `EXPO_PUBLIC_SUPABASE_URL` en tu `.env`).
+   Deja vacios los *Origenes de JavaScript*. **Crear**. Sale una ventana con el
+   **ID de cliente** y el **Secreto de cliente**: copialos o descarga el JSON. No
+   se suben a git ni se pegan en ningun chat.
 
 Con este unico cliente "Web" sirven la web Y el movil: en el movil se abre el
 navegador del sistema y Supabase hace de intermediario, asi que NO hace falta un
@@ -498,16 +512,20 @@ cliente de Android ni de iOS ni el SHA-1.
 
 ### 9.2 Supabase
 
-1. **Authentication > Sign In / Providers > Google**: activalo y pega el ID y el
-   Secreto. Ahi mismo aparece la *Callback URL* que va en el paso 9.1.5.
-2. **Authentication > URL Configuration > Redirect URLs**: anade las tres
-   (con `**` al final donde se indica):
+1. <https://supabase.com/dashboard> > tu proyecto > menu izquierdo **Authentication**
+   > **Sign In / Providers** (o **Providers**) > **Google** > activa **Enable Sign
+   in with Google** > pega **Client ID** y **Client Secret** (los del paso 9.1.6) >
+   deja *Skip nonce checks* desactivado > **Save**. Ahi mismo aparece la *Callback
+   URL*: es la misma que va en 9.1.6.
+2. **Authentication > URL Configuration > Redirect URLs > Add URL**, una a una, y
+   **Save**:
    - `https://weleloable.github.io/ruta-de-bares/**` (la web publicada)
    - `http://localhost:8081/**` (desarrollo local)
    - `rutadebares://**` (el movil: vuelve a `rutadebares://auth-callback`)
    Sin esto Supabase rechaza la vuelta y manda a la Site URL.
 3. La **Site URL** sigue siendo la web publicada (seccion 7).
-4. Revisa que **Confirm email** siga activado: es lo que impide que alguien cree
+4. **Authentication > Sign In / Providers > Email**: revisa que **Confirm email**
+   siga activado. Es lo que impide que alguien cree
    una cuenta con contrasena usando TU correo antes de que entres con Google, y
    evita una toma de cuenta al enlazarse las dos.
 
@@ -540,8 +558,14 @@ development build anterior el boton falla al abrirse.
 Web local: `npx expo start --web`, *Continuar con Google* > eliges cuenta > vuelves
 a la app con la sesion abierta (sin invitacion veras la pantalla vacia de una
 cuenta nueva). Movil: development build, mismo recorrido; al terminar debe
-volver a la app sola. Si vuelve pero sigue en el login, mira que
-`rutadebares://**` este en Redirect URLs.
+volver a la app sola.
+
+| Lo que ves | Causa |
+| --- | --- |
+| Pagina JSON `provider is not enabled` | Google no esta activado en Supabase (9.2.1) |
+| `redirect_uri_mismatch` de Google | La URI del paso 9.1.6 no es identica a la Callback URL de Supabase (sin barra final ni espacios) |
+| `Access blocked` / app no verificada | Falta *Publicar aplicacion* (9.1.5) o tu correo no esta como usuario de prueba |
+| Vuelves al login sin sesion | Falta la URL en Redirect URLs de Supabase (9.2.2): `http://localhost:8081/**`, la web publicada o `rutadebares://**` |
 
 ---
 
