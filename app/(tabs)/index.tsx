@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Medalla } from '../../src/components/Medalla';
 import { StampSeal } from '../../src/components/StampSeal';
 import { Banner, Button, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
+import { credencialCompleta } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
 import { INSTAGRAM_URL, TELEGRAM_URL } from '../../src/lib/enlacesExternos';
 import { desdeFechaISO, diaLargo } from '../../src/lib/fechas';
@@ -110,10 +112,17 @@ export default function SellosScreen() {
 
           {activeRoute ? (
             <Card style={styles.credencial}>
-              <Text style={typography.overline}>Credencial de</Text>
-              <Text style={typography.screenTitle}>{profile?.display_name || 'Peregrino'}</Text>
-              <Text style={typography.body}>{activeRoute.name}</Text>
-              {fecha ? <Text style={typography.muted}>{diaLargo(fecha)}</Text> : null}
+              <View style={styles.credencialCabecera}>
+                <View style={styles.credencialTextos}>
+                  <Text style={typography.overline}>Credencial de</Text>
+                  <Text style={typography.screenTitle}>{profile?.display_name || 'Peregrino'}</Text>
+                  <Text style={typography.body}>{activeRoute.name}</Text>
+                  {fecha ? <Text style={typography.muted}>{diaLargo(fecha)}</Text> : null}
+                </View>
+                {/* La medalla ocupa el hueco de la derecha, donde no hay texto.
+                    Se deduce de los sellos: si se borra uno, desaparece. */}
+                {credencialCompleta(conseguidos, bars.length) ? <Medalla /> : null}
+              </View>
 
               <View style={styles.progresoFila}>
                 <View style={styles.progresoPista}>
@@ -128,10 +137,6 @@ export default function SellosScreen() {
                   {conseguidos} / {bars.length}
                 </Text>
               </View>
-
-              {bars.length > 0 && conseguidos === bars.length ? (
-                <Banner tone="success">Ruta completa. Compostelana ganada.</Banner>
-              ) : null}
             </Card>
           ) : null}
         </View>
@@ -224,6 +229,9 @@ const styles = StyleSheet.create({
   chipTexto: { color: colors.inkSoft, fontWeight: '600', fontSize: 13 },
   chipTextoActivo: { color: colors.white },
   credencial: { gap: space.xs },
+  // Textos a la izquierda y, si la ruta esta completa, la medalla a la derecha.
+  credencialCabecera: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  credencialTextos: { flex: 1, gap: space.xs },
   progresoFila: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm },
   progresoPista: {
     flex: 1,
