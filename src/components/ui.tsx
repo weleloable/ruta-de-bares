@@ -58,6 +58,10 @@ type ButtonProps = Omit<PressableProps, 'children'> & {
   // Solo para el boton "Instalar App" de Mi perfil por ahora: un icono antes
   // del texto, sin crear un componente aparte solo para eso.
   icon?: ComponentProps<typeof Ionicons>['name'];
+  // Por defecto el icono usa el mismo color que el texto del variant (como
+  // hasta ahora). Se puede separar para los casos como textStyle: un color de
+  // icono distinto sin tocar el resto del boton (p.ej. los enlaces de Sellos).
+  iconColor?: string;
 };
 
 export function Button({
@@ -68,6 +72,7 @@ export function Button({
   style,
   textStyle,
   icon,
+  iconColor,
   ...rest
 }: ButtonProps) {
   const inactivo = disabled || loading;
@@ -90,7 +95,7 @@ export function Button({
         <ActivityIndicator color={colorTexto} />
       ) : (
         <View style={styles.buttonContenido}>
-          {icon ? <Ionicons name={icon} size={18} color={colorTexto} /> : null}
+          {icon ? <Ionicons name={icon} size={18} color={iconColor ?? colorTexto} /> : null}
           <Text style={[styles.buttonText, styles[`buttonText_${variant}`], textStyle]}>{title}</Text>
         </View>
       )}

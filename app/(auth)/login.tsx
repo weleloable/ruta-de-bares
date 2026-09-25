@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
@@ -5,7 +6,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
-import { colors, radius, space, typography } from '../../src/lib/theme';
+import { space, typography } from '../../src/lib/theme';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -35,9 +36,14 @@ export default function LoginScreen() {
     <Screen scroll>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.hero}>
-          <View style={styles.sello}>
-            <Text style={styles.selloTexto}>RB</Text>
-          </View>
+          {/* Logo de la app (el mismo que el icono), no un sello dibujado: ver
+              scripts/generar-iconos.py. */}
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            contentFit="contain"
+            accessibilityLabel="Ruta de Bares"
+          />
           <Text style={typography.screenTitle}>Ruta de Bares</Text>
           <Text style={[typography.muted, styles.centrado]}>
             Tu compostelana de bares: un sello por cada parada de la ruta.
@@ -94,23 +100,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: space.sm, paddingVertical: space.xxl },
-  sello: {
-    width: 92,
-    height: 92,
-    borderRadius: radius.pill,
-    borderWidth: 3,
-    borderColor: colors.stamp,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '-8deg' }],
-    marginBottom: space.md,
-  },
-  selloTexto: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: colors.stamp,
-    letterSpacing: 2,
-  },
+  logo: { width: 96, height: 96, marginBottom: space.md },
   centrado: { textAlign: 'center' },
   formulario: { gap: space.lg },
   pie: { gap: space.xs, marginTop: space.md },

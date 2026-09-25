@@ -5,7 +5,7 @@ import { diaCorto, hora } from '../lib/fechas';
 import { colors, radius, space, typography } from '../lib/theme';
 
 /** Transparencia del sello de un bar sin sellar: 70 % transparente = 30 % de opacidad. */
-export const OPACIDAD_SELLO_PENDIENTE = 0.3;
+export const OPACIDAD_SELLO_PENDIENTE = 0.5;
 /** Giro del "APPROVED" del sello estampado. Negativo = contra las agujas, como un sello de caucho. */
 export const GIRO_APPROVED_GRADOS = -30;
 
