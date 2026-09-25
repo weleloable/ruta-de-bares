@@ -442,7 +442,7 @@ No hace falta APK ni tienda: la web es una **PWA** y se instala desde el navegad
 No hay un boton propio para instalar: el navegador ofrece el suyo cuando
 quiere (Chrome/Edge en Android y escritorio) o, en iPhone, se hace a mano
 desde el menu Compartir. Una vez instalada se abre a pantalla completa con el
-icono del sello "RB".
+icono del logo "RxB" (Don Quijote y Sancho).
 
 Piezas: `public/manifest.json`, `public/icons/`, `public/sw.js` y
 `src/lib/pwa.web.ts` (enlaza el manifest y registra el service worker; la app
@@ -458,8 +458,14 @@ obvias:
   (`/ruta-de-bares`), asi que un enlace fijo fallaria en GitHub Pages o en
   localhost. La ruta sale de `experiments.baseUrl` en tiempo de ejecucion.
 
-Los iconos salen del sello del login; el origen a 1024 px esta en
-`assets/icono-web.png`.
+Todos los iconos (nativo, Android adaptativo, PWA, favicon y el logo del
+login) salen de `assets/marca/logo-10.png`; el logo de la barra superior, de
+`assets/marca/logo-11.png`. Para cambiarlos: sustituir el original y correr
+`python scripts/generar-iconos.py` (necesita Pillow). No se editan a mano:
+el script ya pone los margenes que pide cada plataforma. Si cambia el color
+de fondo del logo, cambiar tambien `CREMA` en el script y
+`android.adaptiveIcon.backgroundColor` en `app.config.ts`, y subir `VERSION`
+en `public/sw.js` no hace falta (el service worker no cachea los iconos).
 
 ---
 
