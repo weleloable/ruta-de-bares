@@ -99,6 +99,7 @@ function AuthGate() {
       <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
       <Stack.Screen name="contacto" options={{ title: 'Escribir' }} />
       <Stack.Screen name="privacidad" options={{ title: 'Privacidad' }} />
+      <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
       <Stack.Screen name="admin/alertas" options={{ title: 'Alertas de administración' }} />
       <Stack.Screen name="admin/alerta/[reportId]" options={{ title: 'Alerta' }} />
       <Stack.Screen name="admin/foto/[requestId]" options={{ title: 'Foto de perfil' }} />

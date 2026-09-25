@@ -12,6 +12,7 @@ import {
 
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
+import { signInWithGoogle } from './google';
 import { olvidarFirmasDeAvatar } from '../profile/avatarFirmado';
 
 type AuthState = {
@@ -29,6 +30,12 @@ type AuthState = {
    * no va a disparar.
    */
   signUp: (email: string, password: string, displayName: string) => Promise<boolean>;
+  /**
+   * Entrar (o crear la cuenta, es lo mismo con Google) con la cuenta de Google.
+   * Devuelve false si la persona cierra el navegador sin terminar: no es un
+   * error. Con exito, AuthGate reacciona al cambio de sesion.
+   */
+  signInWithGoogle: () => Promise<boolean>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -162,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signIn,
       signUp,
+      signInWithGoogle,
       signOut,
       refreshProfile,
     }),

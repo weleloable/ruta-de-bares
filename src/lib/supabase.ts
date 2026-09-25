@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { sessionStorage } from './secure-session-store';
 import type { Database } from '../types/database';
@@ -24,8 +24,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabasePublishableK
     storage: sessionStorage,
     autoRefreshToken: true,
     persistSession: true,
-    // En movil no hay callback por URL: la sesion no llega nunca en el hash.
-    detectSessionInUrl: false,
+    // PKCE: es lo que exige volver de Google por una URL con `?code=`. En movil
+    // el codigo se canjea a mano (features/auth/google.ts); en web lo recoge
+    // supabase-js al cargar la pagina, y solo ahi hay una URL que leer.
+    flowType: 'pkce',
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });
 

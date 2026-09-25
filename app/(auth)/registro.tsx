@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
+import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
 import { colors, space, typography } from '../../src/lib/theme';
 
 /**
@@ -136,6 +137,8 @@ export default function RegistroScreen() {
           </Text>
 
           <Button title="Crear cuenta" onPress={onSubmit} disabled={!puedeEnviar} loading={enviando} />
+          {/* Con Google se acepta lo mismo que arriba: el aviso de privacidad vale para las dos vias. */}
+          <BotonGoogle deshabilitado={enviando} />
           <Button
             title="Ya tengo cuenta"
             variant="ghost"

@@ -92,6 +92,11 @@ export default function Privacidad() {
         <Seccion titulo="Qué se recoge, para qué y quién puede verlo">
           <Punto>Tu correo y tu contraseña: para que puedas entrar. La contraseña no la vemos, se guarda cifrada.</Punto>
           <Punto>
+            Si entras con Google, en lugar de contraseña: Google nos da tu correo y, con él, tu nombre y la foto de tu
+            cuenta de Google. Se quedan en el sistema de acceso, no los mostramos a nadie ni los usamos como tu nombre
+            visible ni como tu foto, y se borran con tu cuenta. Nunca vemos tu contraseña de Google.
+          </Punto>
+          <Punto>
             Tu nombre visible y tu foto: para que la gente de tus rutas te reconozca. Las ven ellas, nadie más.
           </Punto>
           <Punto>
