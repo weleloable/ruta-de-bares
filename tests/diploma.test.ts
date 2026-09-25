@@ -81,7 +81,7 @@ describe('Diploma', () => {
   it('el fondo es la ilustracion de Ruta de Bares recortada, mezclada en multiply y dentro del marco', () => {
     assert.match(codigo, /require\('\.\.\/\.\.\/\.\.\/assets\/marca\/fondo-diploma\.jpg'\)/);
     assert.match(codigo, /mixBlendMode: 'multiply'/);
-    assert.match(codigo, /resizeMode="cover"/);
+    assert.match(codigo, /resizeMode="contain"/, 'zoom out: la ilustracion entera, sin recortar');
     assert.match(codigo, /cajaFondo: \{ position: 'absolute', overflow: 'hidden' \}/);
     assert.match(codigo, /\{ top: fondo, left: fondo, right: fondo, bottom: fondo \}/);
   });

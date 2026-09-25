@@ -40,7 +40,7 @@ const TINTA_SUAVE = '#6B4E22';
  * 'multiply', asi que el blanco del dibujo desaparece contra el papel y solo
  * quedan las lineas y los tonos. Mas alto compite con el texto; mas bajo se pierde.
  */
-export const OPACIDAD_FONDO_DIPLOMA = 0.12;
+export const OPACIDAD_FONDO_DIPLOMA = 0.15;
 /** El marco del diploma: el friso de tercios. Los demas siguen en marcos.tsx por si se quieren recuperar. */
 export const MARCO_POR_DEFECTO: VarianteMarco = 'tercios';
 
@@ -59,14 +59,14 @@ export const Diploma = forwardRef<View, {
   return (
     <View ref={ref} collapsable={false} style={styles.diploma}>
       <View style={styles.mitad}>
-        {/* Recortada SIN su rotulo ("Ruta de Bares / Alcala de Henares"), que
-            chocaba con el titulo, y ajustada al marco ('cover'). Se probo
-            entera con los rotulos y hacia demasiado ruido. */}
+        {/* La ilustracion ENTERA ('contain', "zoom out"), con los rotulos de
+            arriba y abajo ("Ruta de Bares / Alcala de Henares") borrados: ruidaban
+            detras del titulo. Cubriendo el marco ('cover') se recortaba el dibujo. */}
         <View style={[styles.cajaFondo, { top: fondo, left: fondo, right: fondo, bottom: fondo }]} pointerEvents="none">
           <Image
             source={require('../../../assets/marca/fondo-diploma.jpg')}
             style={[styles.fondo, { opacity: opacidadFondo }]}
-            resizeMode="cover"
+            resizeMode="contain"
             accessibilityIgnoresInvertColors
           />
         </View>
