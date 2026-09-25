@@ -108,6 +108,7 @@ supabase/
   migrations/0027_*.sql     una ruta termina, y borrarla se lleva sus datos
   migrations/0028_*.sql     la denuncia congela la foto y la frase de entonces
   migrations/0029_*.sql     catalogo de etiquetas real, ya no son placeholders
+  migrations/0030_*.sql     las 30 etiquetas, en primera persona y de cultura pop
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -599,3 +600,14 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   porque aun no estaba comiteada cuando se amplio: no es una migracion ya
   publicada). Misma regla que antes: comportamiento en la ruta, nunca
   identidad, nada del art. 9 del RGPD.
+- **Las etiquetas van en PRIMERA persona** (`0030`): las elige cada cual para
+  presentarse, asi que se escriben como las diria ella ("Me apunto a...", "De
+  cañas con..."), no como una ficha en tercera ("Le pone chupitos"). La 0030
+  reescribe las 30 sobre los MISMOS ids, para que quien ya tenia una marcada la
+  conserve. Nada que presuponga el genero ("Therian" a secas, no "Therian
+  desde shequetito"). Limite de 40 caracteres (check de la 0005): una mas
+  larga revienta la migracion entera al pegarla; lo vigila
+  `tests/migration-0030.test.ts` contra Postgres real. Van en **orden
+  alfabetico**, guardado en `sort_order` (la app ya ordena por esa columna) y
+  calculado con el orden del español sin contar "¡" ni "...": anadir una
+  etiqueta obliga a renumerar, o cae al final.
