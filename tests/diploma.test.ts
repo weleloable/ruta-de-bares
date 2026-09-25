@@ -58,17 +58,41 @@ describe('Medalla animada', () => {
 describe('Diploma', () => {
   const codigo = sinComentarios(leer('src/features/diploma/Diploma.tsx'));
 
-  it('dos mitades: arriba el diploma, abajo el mapa', () => {
+  it('dos mitades, cada una con su marco: arriba el diploma, abajo el reverso con el mapa', () => {
     assert.match(codigo, /const MITAD = DIPLOMA_ALTO \/ 2;/);
-    assert.match(codigo, /styles\.arriba/);
-    assert.match(codigo, /<MapaEstatico paradas=\{paradas\}/);
+    assert.equal((codigo.match(/<Marco \/>/g) ?? []).length, 2, 'las dos mitades llevan marco');
+    const reverso = /<View style=\{styles\.mitad\}>\s*<Marco \/>\s*<View style=\{styles\.mapa\}>\s*<MapaEstatico paradas=\{paradas\}/.exec(codigo);
+    assert.ok(reverso, 'el mapa va dentro del marco de la segunda mitad');
   });
 
-  it('lleva el titulo (la ruta), la foto dentro de la chapa verde y la frase de honor', () => {
-    assert.match(codigo, /\{ruta\}\s*<\/Text>/);
+  it('lleva la foto dentro de la chapa verde, "<nombre> ha completado: <RUTA>" y un cierre', () => {
     assert.match(codigo, /<AvatarCana nombre=\{nombre\} foto=\{foto\} tamano=\{TAMANO_FOTO\} \/>/);
     assert.match(codigo, /<ChapaSellado tamanoLogo=\{TAMANO_FOTO\} \/>/);
-    assert.match(codigo, /fraseDiploma\(nombre, ruta\)/);
+    assert.match(codigo, /\{lineaCompletado\(nombre\)\}/);
+    assert.match(codigo, /\{rutaEnDiploma\(ruta\)\}/);
+    assert.match(codigo, /\{cierreDiploma\(nombre, ruta\)\}/);
+    assert.doesNotMatch(codigo, /con honores/i, 'la frase de "con honores" se cambio por el cierre con guasa');
+  });
+
+  it('el fondo es la ilustracion de Ruta de Bares, mezclada en multiply y dentro del marco', () => {
+    assert.match(codigo, /require\('\.\.\/\.\.\/\.\.\/assets\/marca\/fondo-diploma\.jpg'\)/);
+    assert.match(codigo, /mixBlendMode: 'multiply'/);
+    assert.match(codigo, /cajaFondo: \{ position: 'absolute', top: 10, left: 10, right: 10, bottom: 10, overflow: 'hidden' \}/);
+  });
+
+  it('la opacidad del fondo deja el texto legible: entre 10 % y 25 %', () => {
+    const m = /OPACIDAD_FONDO_DIPLOMA = ([0-9.]+);/.exec(codigo);
+    assert.ok(m);
+    const valor = Number(m[1]);
+    assert.ok(valor >= 0.1 && valor <= 0.25, `opacidad ${valor}`);
+  });
+
+  it('el JPG de fondo existe y es ligero (no engorda la app)', () => {
+    const ruta = join(raiz, 'assets/marca/fondo-diploma.jpg');
+    const bytes = readFileSync(ruta);
+    assert.equal(bytes[0], 0xff);
+    assert.equal(bytes[1], 0xd8);
+    assert.ok(bytes.length < 400_000, `${bytes.length} bytes`);
   });
 
   it('el zoom NO va en el propio diploma: el nodo que se exporta tiene que estar a su tamano', () => {

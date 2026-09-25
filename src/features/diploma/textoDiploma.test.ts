@@ -2,22 +2,54 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  CIERRES,
   DIPLOMA_ALTO,
   DIPLOMA_ANCHO,
   DIPLOMA_PIXEL_RATIO,
-  fraseDiploma,
+  cierreDiploma,
+  lineaCompletado,
   nombreFicheroDiploma,
+  rutaEnDiploma,
 } from './textoDiploma.ts';
 
-describe('fraseDiploma', () => {
-  it('nombre, ruta y "con honores"', () => {
-    assert.equal(fraseDiploma('Dudu', 'Ruta de Bares 26'), 'Dudu ha finalizado la Ruta de Bares 26 con honores.');
+describe('lineaCompletado', () => {
+  it('"Nombre ha completado:"', () => {
+    assert.equal(lineaCompletado('Dudu'), 'Dudu ha completado:');
   });
   it('sin nombre, Peregrino (como en la credencial)', () => {
-    assert.equal(fraseDiploma('  ', 'Ruta 1'), 'Peregrino ha finalizado la Ruta 1 con honores.');
+    assert.equal(lineaCompletado('  '), 'Peregrino ha completado:');
   });
-  it('recorta espacios sobrantes', () => {
-    assert.equal(fraseDiploma(' Ana ', ' Ruta 2 '), 'Ana ha finalizado la Ruta 2 con honores.');
+  it('recorta espacios', () => {
+    assert.equal(lineaCompletado(' Ana '), 'Ana ha completado:');
+  });
+});
+
+describe('rutaEnDiploma', () => {
+  it('en mayusculas, con tildes bien puestas', () => {
+    assert.equal(rutaEnDiploma('Ruta de Bares 26'), 'RUTA DE BARES 26');
+    assert.equal(rutaEnDiploma(' compostelana alcalá '), 'COMPOSTELANA ALCALÁ');
+  });
+});
+
+describe('cierreDiploma', () => {
+  it('es siempre uno de los cierres', () => {
+    for (const n of ['Dudu', 'Ana', 'Luis', 'Marta', '']) {
+      assert.ok((CIERRES as readonly string[]).includes(cierreDiploma(n, 'Ruta de Bares 26')));
+    }
+  });
+
+  it('es estable: la misma persona y ruta dicen siempre lo mismo', () => {
+    assert.equal(cierreDiploma('Dudu', 'Ruta 26'), cierreDiploma('Dudu', 'Ruta 26'));
+    assert.equal(cierreDiploma(' Dudu ', ' Ruta 26 '), cierreDiploma('Dudu', 'Ruta 26'));
+  });
+
+  it('reparte: con varios nombres salen varios cierres distintos', () => {
+    const usados = new Set(['Dudu', 'Ana', 'Luis', 'Marta', 'Pepe', 'Lola', 'Nico', 'Sara'].map((n) => cierreDiploma(n, 'R')));
+    assert.ok(usados.size >= 2);
+  });
+
+  it('ninguno es largo: caben en dos lineas del diploma', () => {
+    for (const c of CIERRES) assert.ok(c.length <= 56, c);
   });
 });
 
