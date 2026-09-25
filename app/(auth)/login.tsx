@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
+import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 export default function LoginScreen() {
@@ -71,6 +72,7 @@ export default function LoginScreen() {
           {error ? <Banner tone="error">{error}</Banner> : null}
 
           <Button title="Entrar" onPress={onSubmit} disabled={!puedeEnviar} loading={enviando} />
+          <BotonGoogle deshabilitado={enviando} />
 
           <View style={styles.pie}>
             <Text style={[typography.muted, styles.centrado]}>

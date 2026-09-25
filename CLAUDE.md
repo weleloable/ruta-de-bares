@@ -275,6 +275,20 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   transacciones a la vez. Está anotado como tal en `tests/migration-0004.test.ts`.
 - **Claves de Supabase en formato nuevo** (`sb_publishable_...` / `sb_secret_...`),
   no el antiguo `anon`/`service_role`. Ver equivalencia en `docs/SETUP.md`.
+- **"Continuar con Google" es OAuth de Supabase con PKCE, sin SDK de Google**
+  (`features/auth/google.ts` nativo y `google.web.ts`, `BotonGoogle.tsx`): un
+  solo cliente "Web" de Google Cloud sirve web y movil, porque en el movil se
+  abre el navegador del sistema (`expo-web-browser`, modulo nativo: development
+  build nuevo) y Supabase hace de intermediario; asi no hay cliente de Android
+  ni SHA-1. El cliente pasa a `flowType: 'pkce'` y `detectSessionInUrl` solo en
+  web (`lib/supabase.ts`). Se AÑADE al correo y contrasena, no lo sustituye
+  (WhatsApp y Telegram bloquean Google en su navegador integrado, y ahi se
+  reparten las invitaciones). No se importa el nombre ni la foto de Google: el
+  nombre visible sigue saliendo del correo (`handle_new_user`) y la foto pasa
+  por la revision de un admin (0020); la politica de privacidad lo cuenta. Sin
+  migracion. Hasta configurar Google Cloud y Supabase (`docs/SETUP.md`, 9) el
+  boton llega a Supabase y esta contesta "provider is not enabled".
+  `app/auth-callback.tsx` existe solo para que Android no pinte "no encontrada".
 - **`guard_profile_role` deja cambiar `role` al SQL Editor y a la `service_role`**
   (`0002_guard_role_sql_editor.sql`): `is_admin()` mira `auth.uid()`, que es
   NULL en el SQL Editor, y sin esta via no se podia crear el primer admin. Se

@@ -461,6 +461,88 @@ obvias:
 Los iconos salen del sello del login; el origen a 1024 px esta en
 `assets/icono-web.png`.
 
+## 9. Entrar con Google
+
+El boton **Continuar con Google** esta en login y registro, junto al correo y
+contrasena (que siguen funcionando). Con Google no hay diferencia entre entrar y
+crear la cuenta: la primera vez la crea. Crearla asi tampoco da acceso a nada:
+sigue haciendo falta una invitacion a una ruta. El nombre visible sale del
+correo, como siempre; no se importa el nombre ni la foto de Google.
+
+**Hasta que hagas esto, el boton sale pero Supabase contesta "provider is not
+enabled".** El codigo ya esta; falta configurar dos consolas, que solo puedes
+hacer tu.
+
+### 9.1 Google Cloud Console
+
+1. <https://console.cloud.google.com> > crea un proyecto (p. ej. "Ruta de Bares").
+2. **APIs y servicios > Pantalla de consentimiento de OAuth**: tipo *Externo*,
+   nombre de la app, correo de soporte y correo del desarrollador. Para que pueda
+   entrar cualquiera, la web de la app y la **politica de privacidad**
+   (`https://weleloable.github.io/ruta-de-bares/privacidad`) tienen que ser URL
+   publicas. Ojo: la pantalla de privacidad aun es un borrador
+   (`src/features/legal/responsable.ts`, `PENDIENTE`).
+3. **Permisos (scopes)**: solo `openid`, `.../auth/userinfo.email` y
+   `.../auth/userinfo.profile`. Son los no sensibles: no piden verificacion.
+4. **Publicacion**: en *Pruebas* solo entran los correos que anadas a mano (hasta
+   100). Para que entre cualquiera, *Publicar la aplicacion* (pasa a *En
+   produccion*; con esos tres permisos no hay revision de Google).
+5. **Credenciales > Crear credenciales > ID de cliente de OAuth**, tipo
+   **Aplicacion web**. En *URI de redireccionamiento autorizados* pon UNA:
+   `https://<tu-proyecto>.supabase.co/auth/v1/callback` (la ve Supabase en el
+   paso 9.2). Copia el **ID de cliente** y el **Secreto de cliente**.
+
+Con este unico cliente "Web" sirven la web Y el movil: en el movil se abre el
+navegador del sistema y Supabase hace de intermediario, asi que NO hace falta un
+cliente de Android ni de iOS ni el SHA-1.
+
+### 9.2 Supabase
+
+1. **Authentication > Sign In / Providers > Google**: activalo y pega el ID y el
+   Secreto. Ahi mismo aparece la *Callback URL* que va en el paso 9.1.5.
+2. **Authentication > URL Configuration > Redirect URLs**: anade las tres
+   (con `**` al final donde se indica):
+   - `https://weleloable.github.io/ruta-de-bares/**` (la web publicada)
+   - `http://localhost:8081/**` (desarrollo local)
+   - `rutadebares://**` (el movil: vuelve a `rutadebares://auth-callback`)
+   Sin esto Supabase rechaza la vuelta y manda a la Site URL.
+3. La **Site URL** sigue siendo la web publicada (seccion 7).
+4. Revisa que **Confirm email** siga activado: es lo que impide que alguien cree
+   una cuenta con contrasena usando TU correo antes de que entres con Google, y
+   evita una toma de cuenta al enlazarse las dos.
+
+### 9.3 Movil nativo
+
+`expo-web-browser` es un modulo nativo: hace falta un **development build
+nuevo** (`eas build --profile development --platform android`). Con el
+development build anterior el boton falla al abrirse.
+
+### 9.4 Que hay que saber
+
+- **Enlaces de invitacion abiertos dentro de WhatsApp o Telegram**: Google
+  bloquea el inicio de sesion en esos navegadores integrados
+  (`disallowed_useragent`). La persona tiene que abrir el enlace en Chrome o
+  Safari, o usar correo y contrasena.
+- **Una cuenta que ya existe con correo y contrasena** y entra con Google con el
+  mismo correo se une en una sola: Supabase enlaza las identidades cuando el
+  correo coincide y esta verificado.
+- **Correo confirmado por PKCE**: desde este cambio el cliente usa PKCE. El enlace
+  del correo de confirmacion, si se abre en el mismo navegador, inicia sesion
+  solo; abierto en otro, solo confirma y se entra con la contrasena.
+- **Vetos y suspensiones** (0015, 0017) y **Borrar Cuenta** (0021) funcionan igual:
+  van por el correo y por el id, no por como se entro.
+- **iPhone con la PWA instalada**: la PWA y Safari no comparten
+  almacenamiento; el inicio de sesion suele funcionar pero esta sin probar en un
+  dispositivo.
+
+### 9.5 Comprobacion
+
+Web local: `npx expo start --web`, *Continuar con Google* > eliges cuenta > vuelves
+a la app con la sesion abierta (sin invitacion veras la pantalla vacia de una
+cuenta nueva). Movil: development build, mismo recorrido; al terminar debe
+volver a la app sola. Si vuelve pero sigue en el login, mira que
+`rutadebares://**` este en Redirect URLs.
+
 ---
 
 ## Lista de verificacion
