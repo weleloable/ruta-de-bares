@@ -207,7 +207,7 @@ export default function CanaScreen() {
               <View style={styles.sello}>
                 <Text style={styles.selloTexto}>CAÑA</Text>
               </View>
-              <Text style={typography.screenTitle}>Tómate una caña con alguien de la ruta</Text>
+              <Text style={[typography.screenTitle, styles.centrado]}>Tómate una caña con alguien de la ruta</Text>
               <Text style={[typography.muted, styles.centrado]}>
                 Conoce a la gente de {activeRoute?.name} y ofrécele una caña.
               </Text>
