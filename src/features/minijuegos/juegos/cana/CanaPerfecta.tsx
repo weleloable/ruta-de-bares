@@ -10,7 +10,9 @@ import { useTecladoCana } from './teclado';
 import { useInclinacion } from './useInclinacion';
 import { avanzar, desbordado, ESTADO_VACIO, LINEA, puntuar, total, type Estado } from './modelo';
 
-const ALTO_VASO = 300;
+const ALTO_VASO = 260;
+/** Del pico del grifo a la boca del vaso, en px (ver `grifo` y `escenario` en los estilos). */
+const CAIDA_A_LA_BOCA = 22;
 /** Un fotograma largo (pestana en segundo plano) no debe llenar el vaso de golpe. */
 const DT_MAX = 0.05;
 
@@ -90,26 +92,30 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   );
 
   const haServido = inicioRef.current !== null;
+  const largoChorro = CAIDA_A_LA_BOCA + (1 - Math.min(total(estado), 1)) * ALTO_VASO * Math.cos((inclinado * Math.PI) / 180);
   const alto = (fraccion: number) => Math.min(Math.max(fraccion, 0), 1) * ALTO_VASO;
 
   return (
     <View style={styles.raiz}>
       <View style={styles.escenario}>
-        <View style={styles.grifo}>
-          <View style={styles.grifoCuerpo} />
-          <View style={styles.grifoPico} />
-          {sirviendo ? <View style={styles.chorro} /> : null}
-        </View>
-
-        {/* Siempre se inclina hacia el mismo lado: el signo del sensor no es fiable entre plataformas. */}
-        <View style={[styles.vaso, { transform: [{ rotate: `${inclinado}deg` }], transformOrigin: 'bottom' }]}>
-          <View style={[styles.liquido, { height: alto(estado.liquido) }]} />
-          <View style={[styles.espuma, { bottom: alto(estado.liquido), height: alto(estado.espuma) }]} />
-          <View style={[styles.linea, { bottom: alto(LINEA) }]} />
-        </View>
         <Text style={[typography.muted, styles.lineaTexto]}>
           {rebosa ? '¡Se ha desbordado!' : 'Llénalo hasta la línea'}
         </Text>
+        <View style={styles.columna}>
+          <View style={styles.grifo}>
+            <View style={styles.grifoCuerpo} />
+            <View style={styles.grifoPico} />
+          </View>
+
+          {/* Gira sobre la boca, no sobre la base: asi sigue bajo el grifo al inclinarse. Siempre hacia el mismo lado: el signo del sensor no es fiable entre plataformas. */}
+          <View style={[styles.vaso, { transform: [{ rotate: `${inclinado}deg` }], transformOrigin: 'top' }]}>
+            <View style={[styles.liquido, { height: alto(estado.liquido) }]} />
+            <View style={[styles.espuma, { bottom: alto(estado.liquido), height: alto(estado.espuma) }]} />
+            <View style={[styles.linea, { bottom: alto(LINEA) }]} />
+          </View>
+          {/* Despues del vaso para pintarse encima; acaba en la superficie del liquido. */}
+          {sirviendo ? <View pointerEvents="none" style={[styles.chorro, { height: largoChorro }]} /> : null}
+        </View>
       </View>
 
       {modo === 'inicio' ? (
@@ -151,14 +157,18 @@ const styles = StyleSheet.create({
   inicio: { gap: space.md },
   raiz: { flex: 1, gap: space.md, justifyContent: 'flex-end' },
   escenario: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: space.sm },
+  // Columna propia y de tamano fijo: el chorro se coloca en absoluto dentro de ella.
+  columna: { alignItems: 'center', gap: space.sm },
   grifo: { alignItems: 'center', height: 56 },
   grifoCuerpo: { width: 80, height: 22, borderRadius: radius.sm, backgroundColor: colors.borderStrong },
   grifoPico: { width: 16, height: 20, backgroundColor: colors.inkSoft },
   chorro: {
     position: 'absolute',
+    // Sale justo del pico: 22 (cuerpo del grifo) + 20 (pico).
     top: 42,
+    left: '50%',
+    marginLeft: -4,
     width: 8,
-    height: 160,
     backgroundColor: colors.beer,
     borderRadius: 4,
     opacity: 0.9,
@@ -171,11 +181,19 @@ const styles = StyleSheet.create({
     borderColor: colors.inkSoft,
     borderBottomLeftRadius: radius.md,
     borderBottomRightRadius: radius.md,
-    backgroundColor: colors.card,
+    // Mas oscuro que la espuma (blanca): sobre el papel claro no se veria.
+    backgroundColor: colors.paperDeep,
     overflow: 'hidden',
   },
   liquido: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.beer },
-  espuma: { position: 'absolute', left: 0, right: 0, backgroundColor: colors.white },
+  espuma: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    borderTopWidth: 2,
+    borderTopColor: colors.beerSoft,
+  },
   linea: { position: 'absolute', left: 0, right: 0, height: 3, backgroundColor: colors.stamp },
   lineaTexto: { textAlign: 'center' },
   servir: {
