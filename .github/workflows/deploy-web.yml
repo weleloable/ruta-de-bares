@@ -65,6 +65,12 @@ jobs:
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
 
+      - name: Politica de privacidad como pagina estatica
+        # Por el fallback de arriba, /privacidad respondia 404 y sin la politica
+        # en el HTML. Google exige una pagina real con 200 para verificar el
+        # acceso con Google: esto crea dist/privacidad/index.html.
+        run: node scripts/generar-privacidad.mjs dist /ruta-de-bares
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
