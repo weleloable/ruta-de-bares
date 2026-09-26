@@ -57,7 +57,7 @@ describe('0030: etiquetas de La Caña', () => {
     const etiquetas = rows.map((r) => r.label);
     const col = new Intl.Collator('es', { sensitivity: 'base', ignorePunctuation: true });
     assert.deepEqual(etiquetas, [...etiquetas].sort(col.compare));
-    assert.equal(etiquetas[0], 'Clara con limón y sin vergüenza');
+    assert.equal(etiquetas[0], 'Aquí solo por el cotilleo');
     assert.ok(etiquetas.includes('De cañas con colegas'));
     assert.ok(!etiquetas.includes('De cañas con Rosalía'));
     await db.close();
