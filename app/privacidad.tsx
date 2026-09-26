@@ -109,6 +109,16 @@ export default function Privacidad() {
             datos y almacenamiento) y GitHub Pages (la web).
           </Punto>
 
+          <Text style={[typography.overline, styles.subtitulo]}>Además, si juegas a los minijuegos</Text>
+          <Punto>
+            Tu mejor nota en La Caña Perfecta y las cervezas que hagas en Maestro Cervecero (con el nombre que les
+            pongas) las ve la gente de esa misma ruta, con tu nombre visible. No cruzan de una ruta a otra.
+          </Punto>
+          <Punto>
+            Del ranking se guarda solo tu mejor nota, no cada partida. Puedes borrar tus cervezas cuando quieras, y
+            se borran con tu cuenta y con la ruta.
+          </Punto>
+
           <Text style={[typography.overline, styles.subtitulo]}>Además, si activas La Caña</Text>
           <Punto>
             Tu frase de presentación, tu foto y tus etiquetas las ve la gente de tu ruta que también tenga La Caña
@@ -196,8 +206,8 @@ export default function Privacidad() {
           <Text style={typography.sectionTitle}>Ver lo que guardamos</Text>
           <Text style={typography.muted}>
             Todo: tu cuenta y tu correo, las rutas en las que estás, tus sellos con la hora y el sitio, las fotos que
-            enviaste a revisión, lo que se ha decidido sobre tu cuenta y por qué, y lo de La Caña (perfil, Me gusta y
-            Vistos, conexiones y los mensajes que escribiste tú).
+            enviaste a revisión, lo que se ha decidido sobre tu cuenta y por qué, lo de los minijuegos (tu mejor nota y tus
+            cervezas) y lo de La Caña (perfil, Me gusta y Vistos, conexiones y los mensajes que escribiste tú).
           </Text>
           <Text style={typography.muted}>
             No salen los mensajes de la otra persona, que son suyos, ni el texto de una denuncia sobre ti que siga sin

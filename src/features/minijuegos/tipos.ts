@@ -27,4 +27,14 @@ export type JuegoDef = {
   descripcion: string;
   icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer';
   Componente: ComponentType<PropsJuego>;
+  /**
+   * Como se guarda el resultado en la RUTA (0030). Sin esto el juego es solo
+   * local. Lanza con un mensaje legible si falla: el record local ya esta
+   * guardado y el menu solo avisa.
+   */
+  enviar?: (rutaId: string, resultado: ResultadoJuego) => Promise<void>;
+  /** Tiene ranking por ruta. */
+  ranking?: boolean;
+  /** Tiene lista de cervezas de la ruta. */
+  cervezas?: boolean;
 };

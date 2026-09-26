@@ -111,7 +111,12 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
     });
 
     it('ruta, sellos y cana tienen boton abajo (ninguna oculta con href)', () => {
-      for (const nombre of ['ruta', 'index', 'cana', 'minijuegos']) assert.doesNotMatch(opciones(nombre), /\bhref:/, nombre);
+      for (const nombre of ['ruta', 'index', 'cana']) assert.doesNotMatch(opciones(nombre), /\bhref:/, nombre);
+    });
+
+    it('juegos solo tiene boton dentro de una ruta: href depende de la ruta activa, nunca es null a secas', () => {
+      assert.match(opciones('minijuegos'), /href:\s*activeRoute\s*\?\s*undefined\s*:\s*null/);
+      assert.doesNotMatch(opciones('minijuegos'), /href:\s*null\s*,/);
     });
 
     it('el orden de la barra es Ruta, Sellos, Caña, Juegos: el de los Tabs.Screen', () => {

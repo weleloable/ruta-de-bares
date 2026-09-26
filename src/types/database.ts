@@ -372,6 +372,33 @@ export type AvatarAdminRequestRow = {
   decided_at: string | null;
 };
 
+/** Una fila del ranking de un minijuego en una ruta (0030). */
+export type MinigameRankingRow = {
+  pos: number;
+  user_id: string;
+  display_name: string;
+  score: number;
+  achieved_at: string;
+  is_me: boolean;
+};
+
+/** Una cerveza de Maestro Cervecero, con su autor (0030). */
+export type MaestroBeerRow = {
+  id: string;
+  user_id: string;
+  display_name: string;
+  name: string;
+  malta: string;
+  levadura: string;
+  estilo: string;
+  abv: number;
+  ibu: number;
+  cuerpo: string;
+  score: number;
+  created_at: string;
+  is_mine: boolean;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -486,6 +513,35 @@ export type Database = {
       export_my_data: {
         Args: Record<string, never>;
         Returns: unknown;
+      };
+      /** Minijuegos (0030): ranking por ruta y cervezas de Maestro Cervecero. */
+      minigame_submit_score: {
+        Args: { p_route_id: string; p_game: string; p_score: number };
+        Returns: { best: number; is_record: boolean };
+      };
+      minigame_ranking: {
+        Args: { p_route_id: string; p_game: string; p_limit?: number };
+        Returns: MinigameRankingRow[];
+      };
+      maestro_submit_beer: {
+        Args: {
+          p_route_id: string;
+          p_name: string;
+          p_malta: string;
+          p_levadura: string;
+          p_maceracion: number;
+          p_amargor: number;
+          p_aroma: number;
+        };
+        Returns: { id: string; name: string; estilo: string; abv: number; ibu: number; cuerpo: string; score: number };
+      };
+      maestro_list_beers: {
+        Args: { p_route_id: string; p_limit?: number; p_offset?: number; p_only_mine?: boolean };
+        Returns: MaestroBeerRow[];
+      };
+      maestro_delete_beer: {
+        Args: { p_beer_id: string };
+        Returns: boolean;
       };
       /** Canal de contacto y reclamacion (0026). */
       send_admin_message: {

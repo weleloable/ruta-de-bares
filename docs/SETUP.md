@@ -137,6 +137,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    caen en la bandeja de Alertas como una fuente mas. **Ojo con el orden**: si
    despliegas antes, los dos botones salen pero fallan al enviar, y la bandeja
    avisa de que no puede leer los mensajes.
+30. [`supabase/migrations/0030_minijuegos.sql`](../supabase/migrations/0030_minijuegos.sql)
+   y **Run**, despues de la 0029. Crea `minigame_scores` y `maestro_beers` (sin
+   privilegios para la app: todo pasa por funciones) y rehace `export_my_data()`
+   para que "Ver mis datos" incluya los minijuegos. Es el **ranking por ruta** de
+   La Cana Perfecta y la lista de cervezas de Maestro Cervecero, que solo ven
+   quienes estan dentro de esa ruta. **Ojo con el orden**: si despliegas la app
+   antes, la pestana Juegos funciona pero al guardar avisa de que falta la
+   migracion. Tras pegarla, la 0025 ya no se vuelve a pegar.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;

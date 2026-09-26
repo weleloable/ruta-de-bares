@@ -1,5 +1,7 @@
+import { enviarCerveza, enviarNota } from './api';
 import { CanaPerfecta } from './juegos/cana/CanaPerfecta';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
+import { recetaDesdeResultado } from './juegos/maestro/publicar';
 import type { JuegoDef } from './tipos';
 
 /**
@@ -10,9 +12,13 @@ export const JUEGOS: readonly JuegoDef[] = [
   {
     id: 'cana-perfecta',
     titulo: 'La Caña Perfecta',
-    descripcion: 'Tira la caña hasta la línea, con dos dedos de espuma.',
+    descripcion: 'Tira la caña hasta arriba, con dos dedos de espuma.',
     icono: 'beer',
     Componente: CanaPerfecta,
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
   },
   {
     id: 'maestro-cervecero',
@@ -20,5 +26,11 @@ export const JUEGOS: readonly JuegoDef[] = [
     descripcion: 'Fabrica tu propia cerveza en cuatro pasos.',
     icono: 'flask',
     Componente: MaestroCervecero,
+    cervezas: true,
+    enviar: async (rutaId, r) => {
+      const receta = recetaDesdeResultado(r);
+      if (!receta) throw new Error('No se pudo leer la receta de esta cerveza.');
+      await enviarCerveza(rutaId, receta);
+    },
   },
 ];
