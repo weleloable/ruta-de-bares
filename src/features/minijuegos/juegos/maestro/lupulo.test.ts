@@ -67,6 +67,6 @@ test('una partida perfecta da 1 y 1', () => {
 test('cuando no queda ninguna marca, tocar no hace nada', () => {
   let r = tocar(enTiempo(en('amargor')));
   r = tocar({ ...r.estado, t: en('aroma') });
-  const otra = tocar({ ...r.estado, t: 19 });
+  const otra = tocar({ ...r.estado, t: DURACION - 0.5 });
   assert.equal(otra.marca, null);
 });

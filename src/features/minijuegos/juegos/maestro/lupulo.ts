@@ -6,9 +6,9 @@
  */
 
 /** Segundos que dura la barra. Representa el hervido entero. */
-export const DURACION = 20;
+export const DURACION = 10;
 /** Margen (segundos) a cada lado del momento marcado. Fuera de el, el toque no vale. */
-export const VENTANA = 1.5;
+export const VENTANA = 1;
 
 export type MarcaId = 'amargor' | 'aroma';
 
@@ -16,8 +16,8 @@ export type Marca = { id: MarcaId; nombre: string; en: number };
 
 // Del hervido: amargor pronto, aroma casi al final. `en` va en segundos de la barra.
 export const MARCAS: readonly Marca[] = [
-  { id: 'amargor', nombre: 'Amargor', en: 4 },
-  { id: 'aroma', nombre: 'Aroma', en: 17 },
+  { id: 'amargor', nombre: 'Amargor', en: 2 },
+  { id: 'aroma', nombre: 'Aroma', en: 8 },
 ];
 
 export type Estado = {
