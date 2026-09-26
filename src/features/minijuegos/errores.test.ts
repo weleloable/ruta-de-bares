@@ -16,7 +16,7 @@ test('cada codigo de la migracion tiene su texto', () => {
 test('la funcion que no existe avisa de que falta la migracion', () => {
   assert.match(
     traducirErrorMinijuegos('Could not find the function public.minigame_ranking(p_game) in the schema cache'),
-    /0030/,
+    /0034/,
   );
 });
 

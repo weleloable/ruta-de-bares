@@ -15,6 +15,7 @@
 --   * match_admin_suspend() la rehace la 0017
 --   * match_admin_unsuspend() la rehace la 0017
 --   * my_restrictions() la rehace la 0024
+--   * match_admin_remove_photo() la rehace la 0032
 --
 -- Por que existe, dos agujeros de la 0014 y una obligacion legal:
 --

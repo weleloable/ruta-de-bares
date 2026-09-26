@@ -28,7 +28,7 @@ export type JuegoDef = {
   icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer';
   Componente: ComponentType<PropsJuego>;
   /**
-   * Como se guarda el resultado en la RUTA (0030). Sin esto el juego es solo
+   * Como se guarda el resultado en la RUTA (0034). Sin esto el juego es solo
    * local. Lanza con un mensaje legible si falla: el record local ya esta
    * guardado y el menu solo avisa.
    */

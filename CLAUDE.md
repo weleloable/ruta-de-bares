@@ -65,7 +65,8 @@ app/                      pantallas (Expo Router)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   contacto.tsx            escribir a la organizacion y reclamar una decision
   privacidad.tsx          que datos se recogen, quien los ve y descargarlos
-                          (publica; "Ver lo que guardamos" fue app/mis-datos.tsx)
+                          (publica; "Ver lo que guardamos" fue app/mis-datos.tsx;
+                          el TEXTO vive en src/features/legal/politica.ts)
   invitacion.tsx          canje de una invitacion a una ruta (publica: ver AuthGate)
   invitaciones.tsx        panel de admin para crear invitaciones
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
@@ -108,14 +109,19 @@ supabase/
   migrations/0027_*.sql     una ruta termina, y borrarla se lleva sus datos
   migrations/0028_*.sql     la denuncia congela la foto y la frase de entonces
   migrations/0029_*.sql     catalogo de etiquetas real, ya no son placeholders
-  migrations/0030_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
+  migrations/0030_*.sql     las 30 etiquetas, en primera persona y de cultura pop
+  migrations/0031_*.sql     la descarga de datos trae lo que dio Google al entrar
+  migrations/0032_*.sql     fotos que sobran se borran; la denunciada es prueba
+  migrations/0033_*.sql     que admin ya vio el aviso de una ruta terminada
+  migrations/0034_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
 ```
 
 Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `route_invites`,
-`route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `minigame_scores`, `maestro_beers`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
+`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -237,11 +243,11 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 
 - **Minijuegos (`src/features/minijuegos/`, pestana Juegos)**: solo son visibles
   dentro de una ruta (el boton depende de `activeRoute`) y el ranking y las
-  cervezas son POR RUTA (`0030`). Las tablas `minigame_scores` y `maestro_beers`
+  cervezas son POR RUTA (`0034`). Las tablas `minigame_scores` y `maestro_beers`
   no tienen privilegios para la app: todo pasa por funciones SECURITY DEFINER,
   como las `match_*`. El servidor NO se fia de la nota de una cerveza: recibe la
   receta y la calcula con `maestro_calcular_cerveza`, espejo de `estilo.ts` (los
-  dos con enteros sobre porcentajes; `tests/migration-0030.test.ts` los compara
+  dos con enteros sobre porcentajes; `tests/migration-0034.test.ts` los compara
   con 39 000 combinaciones). Lo que no puede saber es si un porcentaje se gano
   jugando: se frena con ritmo minimo y tope por ruta, no se evita del todo.
   Cada juego es un componente que llama a `onFinish`; como se guarda en la ruta
@@ -413,8 +419,8 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   los nombres de las fotos pendientes. La URL publica sigue sirviendo el fichero
   sin policy (bucket publico); hay que comprobarlo tras aplicar (SETUP.md, punto 8).
   Limites conocidos: la foto pendiente es legible por URL si se conoce el nombre
-  (sufijo aleatorio, no adivinable), y los ficheros de solicitudes sustituidas o
-  rechazadas se quedan en el bucket.
+  (sufijo aleatorio, no adivinable). (Los ficheros de solicitudes sustituidas o
+  rechazadas se quedaban en el bucket; desde la 0032 se borran al momento.)
   **Riesgo abierto, sin poder probarlo aqui**: si Storage solo comprueba el
   permiso de INSERT al FIRMAR una URL de subida (`createSignedUploadUrl` con
   `upsert`) y no al subir con el token (~2 h), un miembro con mala intencion
@@ -439,6 +445,9 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   encontro un critico adversario, reproducido). Es retencion temporal y sin
   datos nuevos (art. 17.3.e RGPD), la alternativa era guardar un HMAC mas. El
   enlace se ensena a todos: quien no puede lo lee en un mensaje.
+  **Hoy solo quedan `ADMIN_CANNOT_DELETE` y `OWNS_ROUTES`**: la 0024 quito
+  `CANA_BLOCKED` y la 0032 quito `HAS_OPEN_REPORTS` (se eligio al final la
+  alternativa del HMAC; ver la entrada de la 0032).
   Un array de SQL se construye con `array_append(v, 'X'::text)`: `v || 'X'` con
   un literal sin tipo lo lee como literal de array y revienta (lo cazo el test).
 - **La solicitud guarda rutas, no URL** (`0020`): la URL publica depende del
@@ -535,7 +544,8 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   NO se arrastran de un evento al siguiente: cada ruta empieza de cero, y el
   HMAC vive lo que vive la ruta. Lo que NO muere con una ruta: la suspension de
   cuenta (es de la persona) y el registro de moderacion. Si nadie pulsa Borrar,
-  los datos se quedan; el unico recordatorio es el aviso del editor.
+  los datos se quedan. Recordatorios: el aviso del editor y, desde la 0033, un
+  aviso arriba de Alertas de administracion para todos los admins.
 - **"Terminada" no se guarda, se deduce del cierre del ULTIMO bar**
   (`routes/estado.ts`): el ultimo por `sort_order`, no el que cierra mas tarde.
   `closes_at` es `timestamptz`, asi que la medianoche no le afecta — y ese era
@@ -613,3 +623,94 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   porque aun no estaba comiteada cuando se amplio: no es una migracion ya
   publicada). Misma regla que antes: comportamiento en la ruta, nunca
   identidad, nada del art. 9 del RGPD.
+- **Las etiquetas van en PRIMERA persona** (`0030`): las elige cada cual para
+  presentarse, asi que se escriben como las diria ella ("Me apunto a...", "De
+  cañas con..."), no como una ficha en tercera ("Le pone chupitos"). La 0030
+  reescribe las 30 sobre los MISMOS ids, para que quien ya tenia una marcada la
+  conserve. Nada que presuponga el genero ("Therian" a secas, no "Therian
+  desde shequetito"). Limite de 40 caracteres (check de la 0005): una mas
+  larga revienta la migracion entera al pegarla; lo vigila
+  `tests/migration-0030.test.ts` contra Postgres real. Van en **orden
+  alfabetico**, guardado en `sort_order` (la app ya ordena por esa columna) y
+  calculado con el orden del español sin contar "¡" ni "...": anadir una
+  etiqueta obliga a renumerar, o cae al final.
+- **La politica de privacidad se publica TAMBIEN como HTML estatico**
+  (`scripts/generar-privacidad.mjs`, paso del workflow de Pages ->
+  `dist/privacidad/index.html`). Google, para verificar el "Continuar con
+  Google", exige la politica en el cuerpo de una pagina HTML que responda 200
+  (support.google.com/cloud/answer/13806988). Comprobado contra la web
+  publicada: `/ruta-de-bares/privacidad` respondia **404** (la servia
+  `404.html`, el fallback de la app de una sola pagina) y el HTML no llevaba ni
+  una linea de la politica, que la pinta JavaScript. El texto vive en UN solo
+  sitio, `src/features/legal/politica.ts`, sin imports (Node exige `.ts` en
+  cada import y la app no lo admite), y lo pintan la pantalla y el script: dos
+  copias acabarian diciendo cosas distintas. `tests/privacidad-estatica.test.ts`
+  comprueba que la pagina lleva cada frase de la app. Consecuencia asumida:
+  recargar `/privacidad` en el navegador ensena la pagina estatica y no la
+  pantalla de la app; descargar tus datos solo se puede dentro de la app. La
+  URL que va en Google Cloud es la de la barra final, `.../privacidad/`. La
+  politica cubre lo que pide Google (que se lee de Google y para que, con quien
+  se comparte, como se protege, cuanto dura, los usos prohibidos de Uso
+  Limitado, avisar si cambia) y se enlaza tambien desde la pantalla de entrada,
+  que es la portada y donde se crea la cuenta al entrar con Google la primera
+  vez. Lo unico que falta para pasar la verificacion es el responsable y el
+  correo (`PENDIENTE` en `legal/responsable.ts`): Google no acepta borradores.
+- **La descarga de datos trae lo del sistema de acceso** (`0031`): con Google,
+  Supabase guarda correo, nombre, foto e identificador de la cuenta de Google
+  en `auth.identities` y `raw_user_meta_data`, la politica lo dice, y
+  `export_my_data()` no lo leia. Sale en la clave `acceso`; nunca la
+  contrasena cifrada ni tokens, que viven en otras columnas que no se tocan.
+  El PGlite de los tests (`tests/pglite-supabase.ts`) tiene ahora un
+  `auth.identities` minimo para poder probarlo. La descarga dice ademas, en
+  `sobre_las_fotos`, que `avatar_url` IDENTIFICA la foto y no la descarga (el
+  bucket es privado desde la 0023): quien quiera la imagen la pide por
+  "Escribir a la organizacion". Se decidio asi en vez de meter enlaces firmados.
+- **Fotos: lo que sobra se borra al momento; la foto de una denuncia es PRUEBA**
+  (`0032`, `profile/fotosSobrantes.ts`). Tres cosas encadenadas:
+  1. **Sobra** lo que no es la foto/miniatura puesta de nadie, ni de una
+     solicitud pendiente, ni prueba: sustituidas, rechazadas, huerfanas. QUE
+     sobra lo decide Postgres (`mis_fotos_sobrantes`, `avatar_admin_sobrantes`)
+     y la app borra lo que le devuelven, justo despues de enviar una foto,
+     aprobar, rechazar, liberar una prueba o borrar una ruta (`deleteRoute`).
+     No hay cron: la de un admin mira todo el bucket, asi que lo que una
+     limpieza no llego a borrar lo recoge la siguiente. Lo recien subido tiene
+     10 min de gracia (se sube antes de pedir) SOLO si la cuenta existe y no
+     esta liberado: sin esas dos condiciones, la foto de una cuenta recien
+     borrada se saltaba la limpieza (lo cazo la prueba contra la API real, no
+     los tests; ahora hay test).
+  2. **Prueba** es la foto que sale en una denuncia (la congelada al denunciar,
+     0028, o la retirada desde ella, `retired_avatar_url`) mientras ningun admin
+     la libere (`match_fotos_liberadas`, una fila por FICHERO: la misma foto
+     puede estar en varias denuncias). Se protege DONDE ESTA con la policy de
+     borrado (`avatar_protegida`), no copiandola: la copia la tendria que hacer
+     la app de quien denuncia, que podria colar otra imagen. **Cierra un
+     agujero**: `avatars_delete_own` (0001) dejaba borrar cualquier fichero
+     propio por la API, asi que la persona denunciada destruia la prueba. Ni un
+     admin borra una prueba sin liberarla antes: el boton "Eliminar foto de la
+     base de datos" de la ficha (`match_admin_liberar_foto`) avisa si hay otras
+     denuncias abiertas con esa foto y no deja liberar una foto EN USO (eso es
+     "Retirar la foto", con motivo y aviso). Borrar la ruta se lleva las
+     denuncias y la prueba pasa a sobrar.
+  3. **Borrarse la cuenta ya no se bloquea por una denuncia abierta** (fuera
+     `HAS_OPEN_REPORTS`): el RGPD deja conservar la prueba, no retener a la
+     persona. La denuncia guarda un HMAC del correo (`reported_email_hmac`,
+     trigger `match_report_huella`) y si alguien se registra con ese correo la
+     denuncia vuelve a apuntarle (`profiles_recupera_denuncias`). El HMAC se
+     borra al resolverla y muere con la ruta. Borrar Cuenta se salta las
+     pruebas (`mis_fotos_retenidas`, `fotosABorrar`) en vez de fallar.
+  Probado contra la API real de Storage en local (no solo PGlite): las policies
+  de Storage las aplica su servidor y es ahi donde tienen que valer.
+- **Una ruta terminada avisa a TODOS los admins arriba de Alertas de
+  administracion** (`0033`, `admin/rutasTerminadas.ts`): "La ruta «X» ha
+  terminado. Hay que borrarla antes del D: quedan N dias. Al borrarla, tambien
+  se borraran todos los datos de la gente que participo en ella." (esa ultima
+  frase la eligio el usuario, tal cual). Cuentan DIAS_CONSERVACION dias desde
+  `terminoEl` (routes/estado.ts: marcada a mano o cierre del ultimo bar, lo mismo
+  que usa el editor). Es un banner y NO una alerta de la lista: una ruta no se
+  reclama ni se resuelve, solo desaparece al borrarla. El aviso se queda hasta
+  entonces; lo que se apaga al verlo una vez es el PUNTO ROJO, por admin y en
+  la base (`admin_rutas_terminadas_vistas`, cae con la ruta), para que no
+  vuelva a salir en otro movil. Se suma dentro de `contarAlertas()`, asi el
+  punto rojo y la burbuja de Mi perfil se apagan a la vez. `rutasTerminadas.ts`
+  no importa nada en tiempo de ejecucion (node --test no resuelve rutas sin
+  extension): recibe `terminoEl` ya calculado y el formateador de fecha.

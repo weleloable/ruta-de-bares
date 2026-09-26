@@ -3,7 +3,7 @@ import type { MaestroBeerRow, MinigameRankingRow } from '../../types/database';
 import { traducirErrorMinijuegos } from './errores';
 
 /**
- * Llamadas a las funciones de la 0030. Quien comprueba que estas dentro de la
+ * Llamadas a las funciones de la 0034. Quien comprueba que estas dentro de la
  * ruta, que no estas suspendida y que la nota es creible es Postgres, no esto:
  * aqui solo se pasan los datos y se traduce el error.
  */

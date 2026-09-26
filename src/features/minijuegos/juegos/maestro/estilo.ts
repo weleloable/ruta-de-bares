@@ -51,7 +51,7 @@ const CUERPO_POR_PUNTO_MACERACION = 12;
 /**
  * TODO el calculo se hace con enteros sobre PORCENTAJES (0..100), no con las
  * fracciones que devuelven los microjuegos. Es un espejo de
- * `maestro_calcular_cerveza` (migracion 0030), que hace lo mismo en el
+ * `maestro_calcular_cerveza` (migracion 0034), que hace lo mismo en el
  * servidor: con decimales, un 0,1 + 0,2 de coma flotante bastaria para que el
  * cliente y el servidor no coincidieran en un redondeo de medio punto.
  */

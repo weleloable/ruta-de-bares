@@ -1,8 +1,8 @@
--- Ruta de Bares - 0030: minijuegos. Ranking POR RUTA y cervezas guardadas.
--- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0029.
+-- Ruta de Bares - 0034: minijuegos. Ranking POR RUTA y cervezas guardadas.
+-- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0033.
 -- Idempotente: se puede re-ejecutar sin romper nada (tablas con `if not exists`,
 -- funciones con `or replace`). Ojo al reves: esta migracion rehace export_my_data()
--- a partir de la 0025, asi que la 0025 ya no se puede volver a pegar despues.
+-- a partir de la 0031, asi que la 0031 ya no se puede volver a pegar despues.
 --
 -- Que hace. La pestana Juegos guarda ahora dos cosas EN LA RUTA:
 --
@@ -365,7 +365,8 @@ grant execute on function public.maestro_delete_beer(uuid) to authenticated;
 -- ---------------------------------------------------------------------------
 -- Descargar tus datos: ahora tambien lo de los minijuegos
 -- ---------------------------------------------------------------------------
--- Es la export_my_data() de la 0025 tal cual, con el bloque `minijuegos` nuevo.
+-- Es la export_my_data() de la 0031 tal cual (que a su vez parte de la 0025),
+-- con el bloque `minijuegos` nuevo.
 create or replace function public.export_my_data()
 returns jsonb
 language plpgsql
@@ -385,6 +386,13 @@ begin
   return jsonb_build_object(
     'generado_el', now(),
 
+    -- `avatar_url` parece un enlace y no lo es: desde la 0023 el bucket es
+    -- privado y esa direccion no descarga nada. Se dice aqui, dentro de la
+    -- descarga, para que nadie piense que se le esta negando la imagen.
+    'sobre_las_fotos',
+      'avatar_url y avatar_thumb_url identifican tu foto; no son enlaces para descargarla. '
+      || 'Si quieres una copia de la imagen, pidela desde Mi perfil > Escribir a la organizacion.',
+
     'cuenta', (
       select to_jsonb(x) from (
         select p.id, p.display_name, p.role, p.avatar_url, p.avatar_thumb_url,
@@ -392,6 +400,23 @@ begin
                public.correo_de(v_uid) as correo
           from public.profiles p where p.id = v_uid
       ) x
+    ),
+
+    -- Como entras y que guarda de ti cada via. Con Google: correo, nombre,
+    -- foto e identificador de la cuenta de Google, tal cual los dio Google.
+    'acceso', jsonb_build_object(
+      'formas_de_entrar', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'via', i.provider,
+                 'datos', i.identity_data,
+                 'vinculada_el', i.created_at,
+                 'ultimo_acceso', i.last_sign_in_at
+               ) order by i.created_at)
+          from auth.identities i where i.user_id = v_uid
+      ), '[]'::jsonb),
+      'metadatos_de_la_cuenta', (
+        select u.raw_user_meta_data from auth.users u where u.id = v_uid
+      )
     ),
 
     -- A que rutas perteneces. El nombre y la fecha del evento, no la ruta
@@ -465,7 +490,7 @@ begin
       ), '[]'::jsonb)
     ),
 
-    -- Lo de los minijuegos (0030): tu mejor nota por juego y ruta, y las cervezas
+    -- Lo de los minijuegos (0034): tu mejor nota por juego y ruta, y las cervezas
     -- que has hecho, con el nombre que les pusiste. Es lo que otras personas de
     -- la ruta ven de ti en el ranking y en la lista de cervezas.
     'minijuegos', jsonb_build_object(

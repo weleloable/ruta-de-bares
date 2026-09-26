@@ -40,6 +40,15 @@ export const SUPABASE_MINIMO = `
     email text,
     raw_user_meta_data jsonb not null default '{}'
   );
+  create table auth.identities (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users (id) on delete cascade,
+    provider text not null,
+    provider_id text not null,
+    identity_data jsonb not null default '{}',
+    created_at timestamptz default now(),
+    last_sign_in_at timestamptz
+  );
   create function auth.uid() returns uuid language sql stable as $$
     select coalesce(
       nullif(current_setting('request.jwt.claim.sub', true), ''),
@@ -47,7 +56,12 @@ export const SUPABASE_MINIMO = `
     )::uuid
   $$;
   create table storage.buckets (id text primary key, name text, public boolean);
-  create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text,
+    name text,
+    created_at timestamptz default now()
+  );
   create function storage.foldername(name text) returns text[] language sql immutable as $$
     select string_to_array(name, '/')
   $$;

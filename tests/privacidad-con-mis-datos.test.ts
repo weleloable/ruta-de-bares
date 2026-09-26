@@ -59,7 +59,9 @@ describe('"Mis datos" se fusiono con Privacidad', () => {
   const privacidad = sinComentarios(leer('app/privacidad.tsx'));
 
   it('privacidad.tsx tiene el recuadro "Ver lo que guardamos", donde estaba el boton a condiciones', () => {
-    assert.match(privacidad, /Ver lo que guardamos/);
+    // El titulo sale del texto comun (legal/politica.ts); la pantalla lo pinta.
+    assert.match(leer('src/features/legal/politica.ts'), /titulo: 'Ver lo que guardamos'/);
+    assert.match(privacidad, /texto\.verLoQueGuardamos\.titulo/);
     assert.match(privacidad, /exportMyData\(\)/);
     // Y el boton que habia antes, "Cómo funciona La Caña", ya no esta: lo
     // sustituye el recuadro, no conviven los dos.

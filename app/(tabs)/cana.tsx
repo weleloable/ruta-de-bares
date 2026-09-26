@@ -207,7 +207,7 @@ export default function CanaScreen() {
               <View style={styles.sello}>
                 <Text style={styles.selloTexto}>CAÑA</Text>
               </View>
-              <Text style={typography.screenTitle}>Tírale la caña con La Caña</Text>
+              <Text style={[typography.screenTitle, styles.centrado]}>Tómate una caña con alguien de la ruta</Text>
               <Text style={[typography.muted, styles.centrado]}>
                 Conoce a la gente de {activeRoute?.name} y ofrécele una caña.
               </Text>
@@ -222,14 +222,24 @@ export default function CanaScreen() {
               <Text style={typography.muted}>
                 Mientras esté desactivado nadie te ve. Puedes activarlo y desactivarlo cuando quieras.
               </Text>
+              {/* Antes de activar, no solo al presentarse: quien duda es aqui
+                  donde busca como funciona, y la presentacion solo la ve quien
+                  ya ha pulsado. */}
+              <Pressable accessibilityRole="button" onPress={() => router.push('/cana/condiciones')}>
+                <Text style={styles.enlace}>Cómo funciona La Caña</Text>
+              </Pressable>
             </Card>
 
             {estado.pideMayoriaDeEdad ? (
               <Casilla marcada={mayorDeEdad} onCambiar={setMayorDeEdad} texto="Soy mayor de edad" />
             ) : null}
 
+            {/* La primera vez este boton NO activa: lleva a la presentacion, y
+                es alli "Activar y ver quién hay" quien activa (con el
+                consentimiento). Llamarlo "Activar y presentarme" prometia algo
+                que no hacia. Las siguientes veces si activa directamente. */}
             <Button
-              title={estado.primeraVez ? 'Activar y presentarme' : 'Activar'}
+              title={estado.primeraVez ? 'Presentarme' : 'Activar'}
               onPress={onActivar}
               disabled={estado.pideMayoriaDeEdad && !mayorDeEdad}
               loading={cambiando}
@@ -426,6 +436,8 @@ const styles = StyleSheet.create({
   },
   selloTexto: { fontSize: 19, fontWeight: '800', color: colors.stamp, letterSpacing: 1 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  // El mismo enlace de texto que en la presentacion (cana/presentacion.tsx).
+  enlace: { fontSize: 14, fontWeight: '700', color: colors.beerDark },
   barra: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
   activado: {
     flexDirection: 'row',

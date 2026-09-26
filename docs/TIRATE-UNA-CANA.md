@@ -63,7 +63,7 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D3 | El estado de la pregunta pertenece a la **pareja**: cerrar y reabrir la conexion no deja volver a preguntar. |
 | D4 | Pregunta cualquiera de los dos, con **una sola pregunta viva** a la vez. |
 | D5 | "Dentro de un rato": se puede volver a preguntar a los **30 min**, con **2 aplazamientos** como maximo. |
-| D6 | El filtro Me gusta **incluye las conexiones**. |
+| D6 | El filtro Me gusta **NO incluye las conexiones**: cada tarjeta esta en un solo estado, y al hacerse conexion pasa de Me gusta a Conexiones. (Hasta 2026-09-26 las incluia y la tarjeta salia en los dos filtros.) |
 | D7 | Tras el Si, **1 texto por persona** de hasta 120 caracteres (eran 2 hasta la 0008). |
 | D8 | Desactivar es una **pausa**: desapareces de grillas y chats y todo vuelve al reactivar. |
 | D9 | La foto **no es obligatoria**; sin ella se ven las iniciales. |

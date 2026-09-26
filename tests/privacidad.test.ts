@@ -4,7 +4,13 @@ import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { CORREO_PRIVACIDAD, PENDIENTE, RESPONSABLE } from '../src/features/legal/responsable.ts';
+import { politica } from '../src/features/legal/politica.ts';
+import {
+  CORREO_PRIVACIDAD,
+  DIAS_CONSERVACION,
+  PENDIENTE,
+  RESPONSABLE,
+} from '../src/features/legal/responsable.ts';
 
 /**
  * La informacion sobre el tratamiento de datos (RGPD art. 13).
@@ -26,7 +32,30 @@ const sinComentarios = (codigo: string) =>
 
 const pantalla = sinComentarios(leer('app/privacidad.tsx'));
 
+// El texto vive en legal/politica.ts (lo comparten la pantalla y la pagina
+// estatica de la web). Se comprueba el texto YA montado, en el orden en que se lee.
+const politicaMontada = politica({
+  responsable: RESPONSABLE,
+  correo: CORREO_PRIVACIDAD,
+  diasConservacion: DIAS_CONSERVACION,
+});
+const texto = [
+  politicaMontada.presentacion,
+  ...politicaMontada.secciones.flatMap((s) => [
+    s.titulo,
+    ...s.bloques.flatMap((b) => [...(b.subtitulo ? [b.subtitulo] : []), ...b.puntos]),
+  ]),
+  politicaMontada.verLoQueGuardamos.titulo,
+  ...politicaMontada.verLoQueGuardamos.parrafos,
+].join('\n');
+
 describe('se informa donde se recogen los datos', () => {
+  it('en la pantalla de entrada, que es la portada de la app y donde se entra con Google por primera vez', () => {
+    const entrada = sinComentarios(leer('app/(auth)/login.tsx')).replace(/["`]/g, "'");
+    assert.match(entrada, /router\.push\('\/privacidad'\)/);
+    assert.match(entrada, /Política de privacidad/);
+  });
+
   it('en el registro', () => {
     const registro = sinComentarios(leer('app/(auth)/registro.tsx')).replace(/["`]/g, "'");
     assert.match(registro, /router\.push\('\/privacidad'\)/);
@@ -69,39 +98,105 @@ describe('mientras sea un borrador, se dice', () => {
     assert.match(pantalla, /Borrador/);
   });
 
-  it('el responsable y el correo salen de UN solo sitio', () => {
-    // Escritos a mano en la pantalla, al rellenarlos se olvidaria alguno.
-    assert.match(pantalla, /\{RESPONSABLE\}/);
-    assert.match(pantalla, /\{CORREO_PRIVACIDAD\}/);
+  it('el responsable, el correo y los dias salen de UN solo sitio', () => {
+    // Escritos a mano, al rellenarlos se olvidaria alguno. La pantalla los
+    // pasa al texto comun, y la pagina estatica de la web tambien.
+    assert.match(pantalla, /responsable: RESPONSABLE/);
+    assert.match(pantalla, /correo: CORREO_PRIVACIDAD/);
+    assert.match(pantalla, /diasConservacion: DIAS_CONSERVACION/);
+    assert.ok(texto.includes(RESPONSABLE));
+    assert.ok(texto.includes(CORREO_PRIVACIDAD));
+  });
+});
+
+describe('la pantalla pinta el texto comun, no una copia', () => {
+  it('usa politica() y recorre sus secciones, subtitulos y puntos', () => {
+    assert.match(pantalla, /politica\(\{/);
+    assert.match(pantalla, /texto\.secciones\.map/);
+    assert.match(pantalla, /bloque\.subtitulo/);
+    assert.match(pantalla, /bloque\.puntos\.map/);
+    assert.match(pantalla, /texto\.verLoQueGuardamos/);
   });
 });
 
 describe('el texto dice lo que tiene que decir', () => {
+  it('de que app es y quien la lleva (Google lo exige)', () => {
+    assert.match(texto, /política de privacidad de Ruta de Bares/);
+    assert.match(texto, /que desarrolla y lleva Ruta de Bares/);
+  });
+
   it('lo que se recoge, incluido el GPS de los sellos', () => {
-    assert.match(pantalla, /coordenadas y hora/);
+    assert.match(texto, /coordenadas y hora/);
   });
 
   it('cuanto se conserva, sacado de la constante', () => {
-    assert.match(pantalla, /\{DIAS_CONSERVACION\}/);
+    assert.ok(texto.includes(`Un máximo de ${DIAS_CONSERVACION} días`));
   });
 
   it('que el registro de moderacion sobrevive al borrado de la cuenta', () => {
     // Es lo mas sorprendente de todo y por eso hay que contarlo antes.
-    assert.match(pantalla, /registro de moderación[\s\S]{0,120}borres tu cuenta/);
+    assert.match(texto, /registro de moderación[\s\S]{0,120}borres tu cuenta/);
   });
 
   it('los derechos, y a donde reclamar si no convence la respuesta', () => {
     for (const trozo of ['Descargar todo lo tuyo', 'Borrar tu cuenta', 'Reclamar una decisi', 'aepd.es']) {
-      assert.ok(pantalla.includes(trozo), `falta "${trozo}"`);
+      assert.ok(texto.includes(trozo), `falta "${trozo}"`);
     }
   });
 
   it('que se puede avisar SIN tener cuenta (DSA art. 16)', () => {
-    assert.match(pantalla, /no hace falta\s*\n?\s*registrarse para avisarnos/);
+    assert.match(texto, /no hace falta registrarse para avisarnos/);
   });
 
   it('y que la edad no se comprueba de verdad', () => {
-    assert.match(pantalla, /No lo verificamos/);
+    assert.match(texto, /No lo verificamos/);
+  });
+});
+
+/**
+ * Lo que pide Google para verificar el "Continuar con Google"
+ * (support.google.com/cloud/answer/13806988): que datos de Google se leen,
+ * para que, con quien se comparten, como se protegen, cuanto se guardan, que
+ * usos quedan prohibidos y que se avisa si cambia.
+ */
+describe('lo que exige Google de los datos que da Google', () => {
+  it('que se lee y para que: solo para saber que eres tu', () => {
+    assert.match(texto, /Si entras con Google/);
+    assert.match(texto, /tu correo, tu nombre, la foto de tu cuenta de Google y un identificador/);
+    assert.match(texto, /Los usamos solo para saber que eres tú cuando entras/);
+    assert.match(texto, /No le pedimos a Google nada más/);
+  });
+
+  it('con quien se comparte: con nadie, salvo Supabase por encargo', () => {
+    assert.match(texto, /No se vende ni se cede a terceros/);
+    assert.match(texto, /Supabase \([^)]*también lo que nos da Google\)/);
+  });
+
+  it('como se protege', () => {
+    assert.match(texto, /Cómo los protegemos/);
+    assert.match(texto, /HTTPS/);
+    assert.match(texto, /cifradas en los servidores de Supabase/);
+    assert.match(texto, /enlaces que caducan/);
+  });
+
+  it('cuanto se guarda y como se borra', () => {
+    assert.match(texto, /si entraste con Google, lo que nos dio Google\) se guarda mientras la tengas/);
+    assert.match(texto, /Eso incluye lo que nos dio Google/);
+  });
+
+  it('los usos prohibidos por la politica de Uso Limitado, uno por uno', () => {
+    for (const trozo of ['publicidad', 'intermediarios de datos', 'solvente', 'inteligencia artificial', 'Uso Limitado']) {
+      assert.ok(texto.includes(trozo), `falta "${trozo}"`);
+    }
+  });
+
+  it('como quitarle el acceso desde la cuenta de Google', () => {
+    assert.match(texto, /myaccount\.google\.com\/connections/);
+  });
+
+  it('y que se avisa antes si cambia como se usan', () => {
+    assert.match(texto, /Si cambia esta política/);
+    assert.match(texto, /te lo avisaremos en la app antes de que el cambio se aplique/);
   });
 });
 
@@ -109,19 +204,21 @@ describe('una sola seccion para que se recoge, para que y quien lo ve', () => {
   // Antes eran tres secciones ("Que se recoge, y para que", "Quien lo ve" y
   // "La Caña" aparte). Separarlas dejaba un hueco entre leer que se guarda un
   // dato y leer, mucho despues, quien puede verlo.
+  const titulos = politicaMontada.secciones.map((s) => s.titulo);
+
   it('el titulo nuevo existe, y los tres viejos ya no', () => {
-    assert.match(pantalla, /Qué se recoge, para qué y quién puede verlo/);
-    assert.doesNotMatch(pantalla, /Qué se recoge, y para qué/);
-    assert.doesNotMatch(pantalla, />Quién lo ve</);
-    assert.doesNotMatch(pantalla, />La Caña</);
+    assert.ok(titulos.includes('Qué se recoge, para qué y quién puede verlo'));
+    assert.ok(!titulos.includes('Qué se recoge, y para qué'));
+    assert.ok(!titulos.includes('Quién lo ve'));
+    assert.ok(!titulos.includes('La Caña'));
   });
 
   it('ya no hay una frase que remita "mas abajo" a la seccion de La Caña: esta aqui mismo', () => {
-    assert.doesNotMatch(pantalla, /Si activas La Caña:.*más abajo/);
+    assert.doesNotMatch(texto, /Si activas La Caña:.*más abajo/);
   });
 
   it('lo de La Caña esta DENTRO de esa misma seccion, tras su propio subtitulo', () => {
-    const seccion = /Qué se recoge, para qué y quién puede verlo([\s\S]*?)Si te sancionamos/.exec(pantalla)?.[1] ?? '';
+    const seccion = /Qué se recoge, para qué y quién puede verlo([\s\S]*?)Si te sancionamos/.exec(texto)?.[1] ?? '';
     assert.match(seccion, /Además, si activas La Caña/);
     assert.match(seccion, /A quién le das Me gusta[\s\S]{0,60}es privado/);
     assert.match(seccion, /Puedes desactivarla cuando quieras/);
@@ -130,8 +227,8 @@ describe('una sola seccion para que se recoge, para que y quien lo ve', () => {
 
 describe('el orden de las secciones: las sanciones antes que la conservacion', () => {
   it('"huella de tu correo" sale antes que "Cuánto tiempo"', () => {
-    const iSanciones = pantalla.indexOf('huella de tu correo');
-    const iTiempo = pantalla.indexOf('Cuánto tiempo');
+    const iSanciones = texto.indexOf('huella de tu correo');
+    const iTiempo = texto.indexOf('Cuánto tiempo');
     assert.ok(iSanciones > -1 && iTiempo > -1);
     assert.ok(iSanciones < iTiempo, 'las sanciones tienen que ir antes que cuanto tiempo se conserva');
   });
@@ -139,22 +236,22 @@ describe('el orden de las secciones: las sanciones antes que la conservacion', (
 
 describe('las tres frases que se pidio cambiar, tal cual', () => {
   it('la contraseña, sin nombrar a Supabase', () => {
-    assert.match(pantalla, /La contraseña no la vemos, se guarda cifrada\./);
-    assert.doesNotMatch(pantalla, /la guarda Supabase cifrada/);
+    assert.match(texto, /La contraseña no la vemos, se guarda cifrada\./);
+    assert.doesNotMatch(texto, /la guarda Supabase cifrada/);
   });
 
   it('borrar la cuenta, en cualquier momento y junto con todos los datos', () => {
-    assert.match(pantalla, /Puedes borrar tu cuenta junto con todos tus datos en cualquier momento desde Mi perfil\./);
+    assert.match(texto, /Puedes borrar tu cuenta junto con todos tus datos en cualquier momento desde Mi perfil\./);
   });
 
   it('la conservacion del evento, con la aspiracion de las 24h', () => {
-    assert.match(pantalla, /Un máximo de \{DIAS_CONSERVACION\} días tras la celebración del evento\./);
-    assert.match(pantalla, /idealmente, lo borraremos\s+todo a las 24h/);
+    assert.ok(texto.includes(`Un máximo de ${DIAS_CONSERVACION} días tras la celebración del evento.`));
+    assert.match(texto, /idealmente, lo borraremos todo a las 24h/);
   });
 });
 
 describe('el HMAC del correo se explica entero', () => {
-  const seccion = pantalla.slice(pantalla.indexOf('huella de tu correo'));
+  const seccion = texto.slice(texto.indexOf('huella de tu correo'));
 
   it('que NO es el correo y no sirve para identificar a nadie', () => {
     assert.match(seccion, /no se puede leer/);

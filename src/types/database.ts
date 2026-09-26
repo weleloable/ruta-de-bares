@@ -219,6 +219,19 @@ export type MatchAdminReportRow = {
   resolution: MatchReportResolution | null;
 };
 
+/**
+ * Una foto guardada como prueba de una denuncia (0032): la congelada al
+ * denunciar y, si fue otra, la que se le retiro desde ella.
+ */
+export type FotoDenunciaRow = {
+  foto_url: string;
+  /** Alguien la tiene puesta: no se libera, se retira (con motivo y aviso). */
+  en_uso: boolean;
+  liberada_el: string | null;
+  /** Denuncias SIN RESOLVER, aparte de esta, que tambien la tienen. */
+  otras_abiertas: number;
+};
+
 /** El ticket abierto: match_admin_report (0013, ampliada en la 0014). */
 export type MatchAdminTicketRow = MatchAdminReportRow & {
   route_name: string;
@@ -372,7 +385,7 @@ export type AvatarAdminRequestRow = {
   decided_at: string | null;
 };
 
-/** Una fila del ranking de un minijuego en una ruta (0030). */
+/** Una fila del ranking de un minijuego en una ruta (0034). */
 export type MinigameRankingRow = {
   pos: number;
   user_id: string;
@@ -382,7 +395,7 @@ export type MinigameRankingRow = {
   is_me: boolean;
 };
 
-/** Una cerveza de Maestro Cervecero, con su autor (0030). */
+/** Una cerveza de Maestro Cervecero, con su autor (0034). */
 export type MaestroBeerRow = {
   id: string;
   user_id: string;
@@ -436,6 +449,13 @@ export type Database = {
         // es quien genera el token. El UPDATE existe para anular (revoked_at).
         Insert: never;
         Update: Partial<Pick<RouteInviteRow, 'revoked_at'>>;
+        Relationships: [];
+      };
+      /** Que admin ya vio el aviso de una ruta terminada (0033): apaga su punto rojo. */
+      admin_rutas_terminadas_vistas: {
+        Row: { admin_id: string; route_id: string; vista_el: string };
+        Insert: { admin_id: string; route_id: string };
+        Update: never;
         Relationships: [];
       };
       route_members: {
@@ -514,7 +534,7 @@ export type Database = {
         Args: Record<string, never>;
         Returns: unknown;
       };
-      /** Minijuegos (0030): ranking por ruta y cervezas de Maestro Cervecero. */
+      /** Minijuegos (0034): ranking por ruta y cervezas de Maestro Cervecero. */
       minigame_submit_score: {
         Args: { p_route_id: string; p_game: string; p_score: number };
         Returns: { best: number; is_record: boolean };
@@ -703,6 +723,29 @@ export type Database = {
       match_admin_remove_photo: {
         Args: { p_user_id: string; p_reason: string; p_report_id?: string | null; p_note?: string };
         Returns: undefined;
+      };
+      /** Fotos que ya no usa nadie y no son prueba (0032): la app las borra de Storage. */
+      mis_fotos_sobrantes: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+      avatar_admin_sobrantes: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+      /** Tus ficheros que son prueba de una denuncia: Borrar Cuenta los deja (0032). */
+      mis_fotos_retenidas: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+      match_admin_fotos_denuncia: {
+        Args: { p_report_id: string };
+        Returns: FotoDenunciaRow[];
+      };
+      /** Devuelve cuantas denuncias sin resolver, aparte de esta, tenian la foto. */
+      match_admin_liberar_foto: {
+        Args: { p_report_id: string; p_foto_url: string };
+        Returns: number;
       };
       match_admin_deactivate: {
         Args: { p_user_id: string; p_reason: string; p_report_id?: string | null; p_note?: string };

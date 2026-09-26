@@ -137,14 +137,41 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    caen en la bandeja de Alertas como una fuente mas. **Ojo con el orden**: si
    despliegas antes, los dos botones salen pero fallan al enviar, y la bandeja
    avisa de que no puede leer los mensajes.
-30. [`supabase/migrations/0030_minijuegos.sql`](../supabase/migrations/0030_minijuegos.sql)
-   y **Run**, despues de la 0029. Crea `minigame_scores` y `maestro_beers` (sin
+27. [`supabase/migrations/0027_rutas_terminadas.sql`](../supabase/migrations/0027_rutas_terminadas.sql)
+   y **Run**. Una ruta termina, y borrarla se lleva sus datos (tambien el veto
+   de cana de esa ruta).
+28. [`supabase/migrations/0028_la_denuncia_congela_la_prueba.sql`](../supabase/migrations/0028_la_denuncia_congela_la_prueba.sql)
+   y **Run**. La denuncia guarda la foto y la frase de ese momento.
+29. [`supabase/migrations/0029_etiquetas_reales.sql`](../supabase/migrations/0029_etiquetas_reales.sql)
+   y **Run**. Catalogo de etiquetas de La Caña real en vez de los placeholders.
+30. [`supabase/migrations/0030_etiquetas_cultura_pop.sql`](../supabase/migrations/0030_etiquetas_cultura_pop.sql)
+   y **Run**. Las 30 etiquetas, en primera persona y por orden alfabetico.
+   Quien ya tenia una marcada la conserva con el texto nuevo.
+31. [`supabase/migrations/0031_exportar_datos_de_acceso.sql`](../supabase/migrations/0031_exportar_datos_de_acceso.sql)
+   y **Run**. "Ver lo que guardamos" trae tambien lo del sistema de acceso: con
+   Google, el correo, nombre, foto e identificador que dio Google. Sin orden
+   que cuidar: la app ensena lo que venga.
+32. [`supabase/migrations/0032_fotos_que_sobran_y_pruebas.sql`](../supabase/migrations/0032_fotos_que_sobran_y_pruebas.sql)
+   y **Run**. Las fotos que ya no usa nadie (sustituidas, rechazadas) se borran
+   al momento; la foto de una denuncia se guarda como prueba hasta que un admin
+   la elimina desde la ficha o se borra la ruta, y nadie puede borrarla antes,
+   tampoco llamando a la API. Borrarse la cuenta ya no se bloquea por tener una
+   denuncia abierta. El orden da igual: una app nueva sobre una base sin la
+   0032 funciona como antes (solo que sin limpiar ni ficha de la foto). **La
+   primera limpieza borra de verdad** lo que se acumulo desde la 0020 (fotos
+   rechazadas y sustituidas): si quieres conservarlo, haz copia del bucket antes.
+33. [`supabase/migrations/0033_rutas_terminadas_vistas.sql`](../supabase/migrations/0033_rutas_terminadas_vistas.sql)
+   y **Run**. Apunta que admin ha visto ya el aviso de una ruta terminada (el de
+   arriba de Alertas de administracion), para apagar su punto rojo. Sin ella la
+   app funciona: el aviso sale igual, solo que el punto rojo no cuenta las rutas.
+34. [`supabase/migrations/0034_minijuegos.sql`](../supabase/migrations/0034_minijuegos.sql)
+   y **Run**, despues de la 0033. Crea `minigame_scores` y `maestro_beers` (sin
    privilegios para la app: todo pasa por funciones) y rehace `export_my_data()`
    para que "Ver mis datos" incluya los minijuegos. Es el **ranking por ruta** de
    La Cana Perfecta y la lista de cervezas de Maestro Cervecero, que solo ven
    quienes estan dentro de esa ruta. **Ojo con el orden**: si despliegas la app
    antes, la pestana Juegos funciona pero al guardar avisa de que falta la
-   migracion. Tras pegarla, la 0025 ya no se vuelve a pegar.
+   migracion. Tras pegarla, la 0031 ya no se vuelve a pegar.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;
@@ -503,9 +530,21 @@ poco segun el idioma.
    **Continuar** > **Crear**.
 3. **Branding** (menu izquierdo). Pagina principal:
    `https://weleloable.github.io/ruta-de-bares/`. Politica de privacidad:
-   `https://weleloable.github.io/ruta-de-bares/privacidad`. Dominios autorizados:
-   anade `weleloable.github.io` y `supabase.co`. **Guardar**. Ojo: la pantalla de
-   privacidad aun es un borrador (`src/features/legal/responsable.ts`, `PENDIENTE`).
+   `https://weleloable.github.io/ruta-de-bares/privacidad/` (con la barra final:
+   es la pagina HTML estatica que genera `scripts/generar-privacidad.mjs` al
+   publicar y responde 200; sin barra, Pages redirige a esa). Dominios autorizados:
+   anade `weleloable.github.io` y `supabase.co`. **Guardar**. Ojo: la
+   politica aun es un borrador (`src/features/legal/responsable.ts`, `PENDIENTE`),
+   y Google no acepta plantillas ni borradores: hay que cerrarla antes de pedir
+   la verificacion de la marca.
+   Para que Google de por bueno el dominio hay que verificarlo en **Google Search
+   Console** (<https://search.google.com/search-console>) con la misma cuenta del
+   proyecto. `github.io` es un sufijo publico, asi que `weleloable.github.io` cuenta
+   como dominio propio; esta sin probar si basta verificar la propiedad de prefijo
+   de URL `https://weleloable.github.io/ruta-de-bares/` o hace falta la raiz.
+   Lo que exige Google de la politica esta en
+   <https://support.google.com/cloud/answer/13806988>, y como se cubre, en
+   `src/features/legal/politica.ts`.
 4. **Acceso a los datos** > **Anadir o quitar permisos**. Marca SOLO
    `.../auth/userinfo.email`, `.../auth/userinfo.profile` y `openid` >
    **Actualizar** > **Guardar**. Son los no sensibles: no piden verificacion.
