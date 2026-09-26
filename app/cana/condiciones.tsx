@@ -41,11 +41,11 @@ export default function CondicionesCana() {
         </Seccion>
 
         <Seccion titulo="Lo que no se puede hacer">
-          <Punto>Usar una foto que no sea tuya, ni de otra persona sin su permiso.</Punto>
-          <Punto>Subir contenido sexual.</Punto>
-          <Punto>Insistir a quien no te responde, insultar o acosar, dentro o fuera de la app.</Punto>
-          <Punto>Hacerte pasar por otra persona.</Punto>
-          <Punto>Estar aquí siendo menor de edad.</Punto>
+          <Punto>Está prohibido usar una foto que no sea tuya, ni de otra persona sin su permiso.</Punto>
+          <Punto>Está prohibido subir contenido sexual.</Punto>
+          <Punto>Está prohibido insistir a quien no te responde, insultar o acosar, dentro o fuera de la app.</Punto>
+          <Punto>Está prohibido hacerte pasar por otra persona.</Punto>
+          <Punto>Está prohibido estar aquí siendo menor de edad.</Punto>
         </Seccion>
 
         <Seccion titulo="Qué pasa si alguien lo incumple">
