@@ -25,6 +25,6 @@ export type JuegoDef = {
   titulo: string;
   /** Una linea: se lee de pasada en un bar. */
   descripcion: string;
-  icono: 'beer' | 'musical-notes' | 'eye' | 'timer';
+  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer';
   Componente: ComponentType<PropsJuego>;
 };
