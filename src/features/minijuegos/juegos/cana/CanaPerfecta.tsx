@@ -5,10 +5,11 @@ import { Button } from '../../../../components/ui';
 import { colors, radius, space, typography } from '../../../../lib/theme';
 import { feedback } from '../../feedback';
 import type { PropsJuego } from '../../tipos';
+import { SelectorAngulo } from './SelectorAngulo';
+import { useTecladoCana } from './teclado';
+import { useInclinacion } from './useInclinacion';
 import { avanzar, desbordado, ESTADO_VACIO, LINEA, puntuar, total, type Estado } from './modelo';
 
-/** Fase 1: el vaso no se inclina todavia, va siempre a este angulo (fase 2: acelerometro). */
-const ANGULO_FIJO = 20;
 const ALTO_VASO = 300;
 /** Un fotograma largo (pestana en segundo plano) no debe llenar el vaso de golpe. */
 const DT_MAX = 0.05;
@@ -17,6 +18,8 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   const [estado, setEstado] = useState<Estado>(ESTADO_VACIO);
   const [sirviendo, setSirviendo] = useState(false);
   const [rebosa, setRebosa] = useState(false);
+  const [inclinado, setInclinado] = useState(0);
+  const { modo, angulo, empezar, usarManual, fijar } = useInclinacion();
 
   // Refs para el bucle: leer el estado de React dentro de rAF leeria uno viejo.
   const estadoRef = useRef<Estado>(ESTADO_VACIO);
@@ -57,28 +60,34 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
       const dt = Math.min((ahora - ultimo) / 1000, DT_MAX);
       ultimo = ahora;
       if (!acabadoRef.current) {
-        estadoRef.current = avanzar(estadoRef.current, dt, sirviendoRef.current, ANGULO_FIJO);
+        estadoRef.current = avanzar(estadoRef.current, dt, sirviendoRef.current, angulo.current);
         setEstado(estadoRef.current);
+        setInclinado(angulo.current);
         if (desbordado(estadoRef.current)) terminar(true);
       }
       raf = requestAnimationFrame(bucle);
     };
     raf = requestAnimationFrame(bucle);
     return () => cancelAnimationFrame(raf);
-  }, [terminar]);
+  }, [terminar, angulo]);
 
-  const abrir = () => {
+  const abrir = useCallback(() => {
     if (acabadoRef.current) return;
     // El reloj de la rapidez arranca con el primer chorro, no al abrir la pantalla.
     inicioRef.current ??= Date.now();
     sirviendoRef.current = true;
     setSirviendo(true);
     feedback.toque();
-  };
-  const cerrar = () => {
+  }, []);
+  const cerrar = useCallback(() => {
     sirviendoRef.current = false;
     setSirviendo(false);
-  };
+  }, []);
+
+  useTecladoCana(
+    { abrir, cerrar, ajustar: (delta) => modo === 'manual' && fijar(angulo.current + delta) },
+    modo !== 'inicio',
+  );
 
   const haServido = inicioRef.current !== null;
   const alto = (fraccion: number) => Math.min(Math.max(fraccion, 0), 1) * ALTO_VASO;
@@ -92,7 +101,8 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
           {sirviendo ? <View style={styles.chorro} /> : null}
         </View>
 
-        <View style={styles.vaso}>
+        {/* Siempre se inclina hacia el mismo lado: el signo del sensor no es fiable entre plataformas. */}
+        <View style={[styles.vaso, { transform: [{ rotate: `${inclinado}deg` }], transformOrigin: 'bottom' }]}>
           <View style={[styles.liquido, { height: alto(estado.liquido) }]} />
           <View style={[styles.espuma, { bottom: alto(estado.liquido), height: alto(estado.espuma) }]} />
           <View style={[styles.linea, { bottom: alto(LINEA) }]} />
@@ -102,26 +112,43 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
         </Text>
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Mantén pulsado para servir cerveza"
-        onPressIn={abrir}
-        onPressOut={cerrar}
-        style={({ pressed }) => [styles.servir, pressed && styles.servirPulsado]}
-      >
-        <Text style={styles.servirTexto}>{sirviendo ? 'Sirviendo…' : 'Mantén para servir'}</Text>
-      </Pressable>
-      <Button
-        title="Servir"
-        variant="secondary"
-        disabled={!haServido || total(estado) <= 0}
-        onPress={() => terminar(false)}
-      />
+      {modo === 'inicio' ? (
+        <View style={styles.inicio}>
+          <Text style={typography.muted}>
+            Empieza con el vaso inclinado y ponlo recto al final para formar la corona.
+          </Text>
+          <Button title="Empezar" onPress={empezar} />
+        </View>
+      ) : (
+        <>
+          {modo === 'manual' ? (
+            <SelectorAngulo valor={inclinado} onChange={fijar} />
+          ) : (
+            <Button title="Usar deslizador" variant="ghost" onPress={usarManual} />
+          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Mantén pulsado para servir cerveza"
+            onPressIn={abrir}
+            onPressOut={cerrar}
+            style={({ pressed }) => [styles.servir, pressed && styles.servirPulsado]}
+          >
+            <Text style={styles.servirTexto}>{sirviendo ? 'Sirviendo…' : 'Mantén para servir'}</Text>
+          </Pressable>
+          <Button
+            title="Entregar"
+            variant="secondary"
+            disabled={!haServido || total(estado) <= 0}
+            onPress={() => terminar(false)}
+          />
+        </>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  inicio: { gap: space.md },
   raiz: { flex: 1, gap: space.md, justifyContent: 'flex-end' },
   escenario: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: space.sm },
   grifo: { alignItems: 'center', height: 56 },
