@@ -27,23 +27,40 @@ export const IBU_IPA = 40;
 const IBU_BASE = 10;
 const IBU_RANGO = 50;
 
-const ABV_BASE = 4.2;
-const ABV_POR_MACERACION = 1.8;
-/** Lo que suma cada estilo por ser, de por si, mas o menos fuerte. */
-const ABV_ESTILO: Record<Estilo, number> = {
+/** Graduacion en MILESIMAS de grado: parte de 4,2 % y cada punto de maceracion suma 0,018. */
+const ABV_BASE = 4200;
+const ABV_POR_PUNTO_MACERACION = 18;
+
+/** Lo que suma cada estilo por ser, de por si, mas o menos fuerte, en DECIMAS de grado. */
+const ABV_ESTILO_DECIMAS: Record<Estilo, number> = {
   Pilsner: 0,
-  'Lager ámbar': 0.2,
-  Dunkel: 0.2,
-  Schwarzbier: 0.3,
+  'Lager ámbar': 2,
+  Dunkel: 2,
+  Schwarzbier: 3,
   Rubia: 0,
-  IPA: 0.8,
-  'Amber Ale': 0.3,
-  Tostada: 0.2,
-  Stout: 0.6,
+  IPA: 8,
+  'Amber Ale': 3,
+  Tostada: 2,
+  Stout: 6,
 };
 
-const CUERPO_MALTA: Record<MaltaId, number> = { palida: 1, caramelo: 2, tostada: 2, negra: 2.5 };
-const CUERPO_POR_MACERACION = 1.2;
+/** Cuerpo de cada malta, en MILESIMAS (la negra, 2,5). Y lo que suma cada punto de maceracion (0,012). */
+const CUERPO_MALTA_MILESIMAS: Record<MaltaId, number> = { palida: 1000, caramelo: 2000, tostada: 2000, negra: 2500 };
+const CUERPO_POR_PUNTO_MACERACION = 12;
+
+/**
+ * TODO el calculo se hace con enteros sobre PORCENTAJES (0..100), no con las
+ * fracciones que devuelven los microjuegos. Es un espejo de
+ * `maestro_calcular_cerveza` (migracion 0030), que hace lo mismo en el
+ * servidor: con decimales, un 0,1 + 0,2 de coma flotante bastaria para que el
+ * cliente y el servidor no coincidieran en un redondeo de medio punto.
+ */
+export function aPorcentaje(fraccion: number): number {
+  return Math.round(Math.min(Math.max(fraccion, 0), 1) * 100);
+}
+
+/** n / d redondeado a la mitad hacia arriba (como round() de Postgres con positivos). d ha de ser par. */
+const dividir = (n: number, d: number) => Math.floor((n + d / 2) / d);
 
 /** Cada estilo sale de malta + levadura; en la ale palida decide ademas el amargor. */
 export function calcularEstilo(malta: MaltaId, levadura: 'ale' | 'lager', ibu: number): Estilo {
@@ -54,25 +71,28 @@ export function calcularEstilo(malta: MaltaId, levadura: 'ale' | 'lager', ibu: n
   return { caramelo: 'Amber Ale', tostada: 'Tostada', negra: 'Stout' }[malta] as Estilo;
 }
 
+/** `maceracion` en fraccion (0..1), como la entrega el microjuego. */
 export function calcularCuerpo(malta: MaltaId, maceracion: number): Cuerpo {
-  const v = CUERPO_MALTA[malta] + CUERPO_POR_MACERACION * maceracion;
-  if (v < 2) return 'ligero';
-  if (v < 3) return 'medio';
+  const v = CUERPO_MALTA_MILESIMAS[malta] + CUERPO_POR_PUNTO_MACERACION * aPorcentaje(maceracion);
+  if (v < 2000) return 'ligero';
+  if (v < 3000) return 'medio';
   return 'con cuerpo';
 }
 
 /** 40 % maceracion, 30 % amargor y 30 % aroma: lo que se hizo con las manos. */
 export function calcularPuntuacion(r: RecetaCompleta): number {
-  return Math.round(40 * r.maceracion + 30 * r.lupulo.amargor + 30 * r.lupulo.aroma);
+  const suma = 40 * aPorcentaje(r.maceracion) + 30 * aPorcentaje(r.lupulo.amargor) + 30 * aPorcentaje(r.lupulo.aroma);
+  return dividir(suma, 100);
 }
 
 export function calcularCerveza(r: RecetaCompleta): Cerveza {
-  const ibu = Math.round(IBU_BASE + IBU_RANGO * r.lupulo.amargor);
+  const maceracion = aPorcentaje(r.maceracion);
+  const ibu = IBU_BASE + dividir(IBU_RANGO * aPorcentaje(r.lupulo.amargor), 100);
   const estilo = calcularEstilo(r.malta, r.levadura, ibu);
-  const abv = Math.round((ABV_BASE + ABV_POR_MACERACION * r.maceracion + ABV_ESTILO[estilo]) * 10) / 10;
+  const milesimas = ABV_BASE + ABV_POR_PUNTO_MACERACION * maceracion + 100 * ABV_ESTILO_DECIMAS[estilo];
   return {
     estilo,
-    abv,
+    abv: dividir(milesimas, 100) / 10,
     ibu,
     cuerpo: calcularCuerpo(r.malta, r.maceracion),
     puntuacion: calcularPuntuacion(r),

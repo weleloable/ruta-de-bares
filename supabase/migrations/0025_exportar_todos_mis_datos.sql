@@ -1,6 +1,7 @@
 -- Ruta de Bares - 0025: llevarte TODOS tus datos, no solo los de la cana.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0024.
--- Idempotente: se puede re-ejecutar sin romper nada.
+-- NO SE PUEDE RE-EJECUTAR una vez aplicada la 0030: export_my_data() la rehace la 0030
+-- (le anade los datos de los minijuegos); pegar esta despues la dejaria sin ellos.
 --
 -- Por que existe. `match_export_my_data` (0010) devuelve siete bloques y los
 -- siete son de la cana. El derecho de acceso del art. 15 del RGPD cubre TODOS
