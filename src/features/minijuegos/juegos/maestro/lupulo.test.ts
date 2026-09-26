@@ -38,7 +38,7 @@ test('despues de la primera marca, el siguiente toque va al aroma', () => {
   let r = tocar(enTiempo(en('amargor')));
   r = tocar({ ...r.estado, t: en('aroma') - 0.3 });
   assert.equal(r.marca, 'aroma');
-  assert.ok(Math.abs(r.precision - 0.8) < 1e-9);
+  assert.ok(Math.abs(r.precision - (1 - 0.3 / VENTANA)) < 1e-9);
 });
 
 test('una marca que se deja pasar vale 0 y el toque siguiente ya va a la otra', () => {
