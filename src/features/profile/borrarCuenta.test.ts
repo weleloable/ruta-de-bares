@@ -1,7 +1,31 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { CONFIRMAR_BORRADO, rutasDeFotos, textoDeImpedimentos, traducirErrorBorrado } from './borrarCuenta.ts';
+import {
+  CONFIRMAR_BORRADO,
+  fotosABorrar,
+  rutasDeFotos,
+  textoDeImpedimentos,
+  traducirErrorBorrado,
+} from './borrarCuenta.ts';
+
+describe('fotosABorrar (0032)', () => {
+  const U = 'u1';
+  it('todo menos lo retenido como prueba de una denuncia', () => {
+    assert.deepEqual(fotosABorrar([`${U}/a.jpg`, `${U}/b.jpg`, `${U}/c.jpg`], [`${U}/b.jpg`]), [
+      `${U}/a.jpg`,
+      `${U}/c.jpg`,
+    ]);
+  });
+
+  it('si solo queda la prueba, no queda nada que borrar: la cuenta se puede borrar igual', () => {
+    assert.deepEqual(fotosABorrar([`${U}/b.jpg`], [`${U}/b.jpg`]), []);
+  });
+
+  it('sin pruebas, todo', () => {
+    assert.deepEqual(fotosABorrar([`${U}/a.jpg`], []), [`${U}/a.jpg`]);
+  });
+});
 
 describe('textoDeImpedimentos', () => {
   it('sin impedimentos, null: se puede seguir', () => {
@@ -9,7 +33,7 @@ describe('textoDeImpedimentos', () => {
   });
 
   it('cada codigo del servidor tiene su frase, y ninguna es el codigo crudo', () => {
-    for (const codigo of ['ADMIN_CANNOT_DELETE', 'OWNS_ROUTES', 'HAS_OPEN_REPORTS']) {
+    for (const codigo of ['ADMIN_CANNOT_DELETE', 'OWNS_ROUTES']) {
       const texto = textoDeImpedimentos([codigo]);
       assert.ok(texto && !texto.includes(codigo), `${codigo} sin frase propia`);
     }
@@ -20,7 +44,13 @@ describe('textoDeImpedimentos', () => {
   });
 
   it('con varios, sale el primero', () => {
-    assert.equal(textoDeImpedimentos(['OWNS_ROUTES', 'HAS_OPEN_REPORTS']), textoDeImpedimentos(['OWNS_ROUTES']));
+    assert.equal(textoDeImpedimentos(['OWNS_ROUTES', 'ADMIN_CANNOT_DELETE']), textoDeImpedimentos(['OWNS_ROUTES']));
+  });
+});
+
+describe('HAS_OPEN_REPORTS ya no impide borrarse (0032)', () => {
+  it('si llegase (una base sin la 0032), cae en el codigo desconocido y PARA igual', () => {
+    assert.match(textoDeImpedimentos(['HAS_OPEN_REPORTS']) ?? '', /no se puede borrar/);
   });
 });
 
@@ -62,7 +92,7 @@ describe('traducirErrorBorrado', () => {
   });
 
   it('el resto de impedimentos tambien llegan traducidos', () => {
-    for (const codigo of ['OWNS_ROUTES', 'HAS_OPEN_REPORTS']) {
+    for (const codigo of ['OWNS_ROUTES', 'ADMIN_CANNOT_DELETE']) {
       assert.equal(traducirErrorBorrado(codigo), textoDeImpedimentos([codigo]));
     }
   });

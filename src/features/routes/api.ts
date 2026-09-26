@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type { RouteBarRow, RouteRow } from '../../types/database';
+import { borrarFotosSobrantes } from '../profile/fotosSobrantes';
 import { changedPositions, type SortAssignment } from './validation';
 
 export type RouteWithBars = { route: RouteRow; bars: RouteBarRow[] };
@@ -98,6 +99,9 @@ export async function updateRoute(
 export async function deleteRoute(routeId: string): Promise<void> {
   const { error } = await supabase.from('routes').delete().eq('id', routeId);
   if (error) throw new Error(error.message);
+  // Las denuncias de la ruta se van con ella (cascada), y con ellas lo que
+  // hacia de sus fotos una prueba. Los ficheros no caen solos: fuera aqui (0032).
+  await borrarFotosSobrantes('todas');
 }
 
 export async function saveBar(input: BarInput): Promise<RouteBarRow> {

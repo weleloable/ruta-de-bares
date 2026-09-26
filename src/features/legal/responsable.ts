@@ -32,4 +32,4 @@ export const CORREO_PRIVACIDAD = '[PENDIENTE: correo de privacidad]';
 export const DIAS_CONSERVACION = 30;
 
 /** La version del texto, para poder decir "aceptaste la del dia X". */
-export const VERSION_POLITICA = '2026-09-20';
+export const VERSION_POLITICA = '2026-09-26';

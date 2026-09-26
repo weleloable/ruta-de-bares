@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
-import { space, typography } from '../../src/lib/theme';
+import { colors, space, typography } from '../../src/lib/theme';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -91,6 +91,16 @@ export default function LoginScreen() {
               onPress={() => router.push('/registro')}
               disabled={enviando}
             />
+            {/* Esta es la portada de la app y aqui se crea la cuenta la primera
+                vez que se entra con Google, asi que la politica se enlaza aqui
+                tambien (art. 13 RGPD; Google lo exige para verificar el acceso). */}
+            <Text
+              style={[typography.muted, styles.centrado, styles.enlace]}
+              accessibilityRole="link"
+              onPress={() => router.push('/privacidad')}
+            >
+              Política de privacidad
+            </Text>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -104,4 +114,5 @@ const styles = StyleSheet.create({
   centrado: { textAlign: 'center' },
   formulario: { gap: space.lg },
   pie: { gap: space.xs, marginTop: space.md },
+  enlace: { fontWeight: '700', color: colors.beerDark, textDecorationLine: 'underline' },
 });

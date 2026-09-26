@@ -1,45 +1,25 @@
--- Ruta de Bares - 0025: llevarte TODOS tus datos, no solo los de la cana.
--- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0024.
--- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
--- Sus sentencias no dan error al repetirse, pero definen funciones que una
--- migracion POSTERIOR rehizo: volver a pegarla las devuelve a esta version,
--- en silencio y sin avisar. Ya paso una vez (re-ejecutar la 0006 dejo a
--- match_require_target sin la comprobacion de bloqueos, o sea que la gente
--- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
---   * export_my_data() la rehace la 0031
+-- Ruta de Bares - 0031: la descarga de datos incluye lo que guarda el sistema
+-- de acceso, y en particular lo que da Google al entrar con Google.
+-- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0030.
+-- Idempotente: se puede re-ejecutar sin romper nada (solo rehace una funcion
+-- que no rehace nadie despues).
 --
--- Por que existe. `match_export_my_data` (0010) devuelve siete bloques y los
--- siete son de la cana. El derecho de acceso del art. 15 del RGPD cubre TODOS
--- los datos personales, no los de una pestana. Faltaban:
+-- Por que existe. Al entrar con Google, Supabase guarda en su sistema de acceso
+-- lo que Google le da: correo, nombre, foto y el identificador de la cuenta de
+-- Google (`auth.identities.identity_data`, copiado ademas en
+-- `auth.users.raw_user_meta_data`). La politica de privacidad dice que eso se
+-- guarda, y promete que "Ver lo que guardamos" lo trae TODO; pero
+-- `export_my_data()` (0025) solo leia `profiles` y el correo. Decir que se
+-- guarda y no entregarlo al pedir los datos es justo lo que el art. 15 del RGPD
+-- no deja, y Google exige que la politica cuente con exactitud que hace la app
+-- con sus datos.
 --
---   * los AVISOS de moderacion y sus motivos (`user_notices`): las decisiones
---     tomadas contra ti son datos tuyos de libro, y ademas son justo lo que
---     necesitas para reclamar;
---   * tu SUSPENSION y tus VETOS (`account_suspensions`, `route_bans`,
---     `cana_bans`), **incluido el HMAC de tu correo**: no se puede decir en la
---     politica que se guarda y luego esconderlo cuando alguien pide sus datos;
---   * y nada de fuera de la cana: tu perfil, tus SELLOS con sus coordenadas y
---     su hora, y a que rutas perteneces.
---
--- Pesa mas desde la 0021: se puede BORRAR la cuenta entera pero solo se podia
--- DESCARGAR el trozo de la cana. El art. 20 del DSA da seis meses para
--- reclamar, asi que quien se va tiene que poder llevarse su expediente ANTES de
--- irse; si no, pierde el acceso a lo unico con lo que podria reclamar.
---
--- Decisiones que conviene conocer:
---
---   * `match_export_my_data` NO se toca y se sigue usando: la nueva la llama y
---     mete su resultado dentro, en la clave `cana`. Asi no hay dos copias de la
---     misma consulta que puedan separarse.
---   * Las coordenadas de los sellos SI salen. Son tuyas, y que las tengamos es
---     precisamente lo que hay que poder ensenar.
---   * Lo que NO sale, y es deliberado: las denuncias que otras personas
---     pusieron SOBRE ti mientras siguen abiertas. Entregar el texto y el nombre
---     de quien denuncia, antes de que se resuelva, es entregar datos de un
---     tercero y una invitacion a las represalias (art. 15.4: el derecho de
---     acceso no puede afectar a los derechos de otros). SI sale lo que se
---     decidio sobre ti, que es lo que te afecta y lo que puedes reclamar: eso
---     esta en `avisos`.
+-- Se parte del cuerpo de la 0025 tal cual (regla de la 0019: nunca de memoria)
+-- y solo se anade `sobre_las_fotos` (un aviso: `avatar_url` identifica la
+-- foto, no la descarga) y la clave `acceso`: una fila por cada forma de entrar
+-- (correo y contrasena, Google), con lo que guarda cada una, y los metadatos
+-- de la cuenta. No sale nada de secretos: ni la contrasena cifrada ni tokens,
+-- que estan en otras columnas de `auth.users` que no se leen.
 
 create or replace function public.export_my_data()
 returns jsonb
@@ -60,6 +40,13 @@ begin
   return jsonb_build_object(
     'generado_el', now(),
 
+    -- `avatar_url` parece un enlace y no lo es: desde la 0023 el bucket es
+    -- privado y esa direccion no descarga nada. Se dice aqui, dentro de la
+    -- descarga, para que nadie piense que se le esta negando la imagen.
+    'sobre_las_fotos',
+      'avatar_url y avatar_thumb_url identifican tu foto; no son enlaces para descargarla. '
+      || 'Si quieres una copia de la imagen, pidela desde Mi perfil > Escribir a la organizacion.',
+
     'cuenta', (
       select to_jsonb(x) from (
         select p.id, p.display_name, p.role, p.avatar_url, p.avatar_thumb_url,
@@ -67,6 +54,23 @@ begin
                public.correo_de(v_uid) as correo
           from public.profiles p where p.id = v_uid
       ) x
+    ),
+
+    -- Como entras y que guarda de ti cada via. Con Google: correo, nombre,
+    -- foto e identificador de la cuenta de Google, tal cual los dio Google.
+    'acceso', jsonb_build_object(
+      'formas_de_entrar', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'via', i.provider,
+                 'datos', i.identity_data,
+                 'vinculada_el', i.created_at,
+                 'ultimo_acceso', i.last_sign_in_at
+               ) order by i.created_at)
+          from auth.identities i where i.user_id = v_uid
+      ), '[]'::jsonb),
+      'metadatos_de_la_cuenta', (
+        select u.raw_user_meta_data from auth.users u where u.id = v_uid
+      )
     ),
 
     -- A que rutas perteneces. El nombre y la fecha del evento, no la ruta

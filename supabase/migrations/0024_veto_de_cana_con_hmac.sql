@@ -7,6 +7,7 @@
 -- match_require_target sin la comprobacion de bloqueos, o sea que la gente
 -- bloqueada volvia a poder interactuar). Aqui quedan obsoletas:
 --   * match_admin_deactivate() la rehace la 0027
+--   * delete_my_account_blockers() la rehace la 0032
 --
 -- Por que existe. La 0021 eligio `CANA_BLOCKED` como impedimento para borrar la
 -- cuenta, y el razonamiento era correcto: el veto de cana vive en

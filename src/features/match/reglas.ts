@@ -94,8 +94,9 @@ export function pasaFiltro(filtro: Filtro, estado: EstadoTarjeta): boolean {
     case 'todos':
       return true;
     case 'me-gusta':
-      // Una conexion tambien es un Me gusta que has dado (D6).
-      return estado === 'me-gusta' || estado === 'conexion';
+      // Solo lo que aun no es conexion (D6, cambiada): al hacerse conexion la
+      // tarjeta pasa a Conexiones y sale de aqui. Cada tarjeta, un solo estado.
+      return estado === 'me-gusta';
     case 'visto':
       return estado === 'visto';
     case 'conexiones':

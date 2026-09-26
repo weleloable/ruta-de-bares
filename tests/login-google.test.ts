@@ -94,7 +94,8 @@ describe('contrato con el resto de la app', () => {
   });
 
   it('la politica de privacidad cuenta que datos da Google', () => {
-    assert.match(leer('app/privacidad.tsx'), /Si entras con Google/);
+    // El texto vive en legal/politica.ts, lo comparten la app y la web estatica.
+    assert.match(leer('src/features/legal/politica.ts'), /Si entras con Google/);
   });
 
   it('expo-web-browser esta en package.json', () => {

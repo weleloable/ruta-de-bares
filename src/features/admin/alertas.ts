@@ -235,6 +235,25 @@ export function hace(iso: string, ahora: Date): string {
 export const MOTIVO_MAX = 500;
 
 /**
+ * El dialogo antes de "Eliminar foto de la base de datos" (0032). Borrarla es
+ * sobre la IMAGEN, no sobre una denuncia: si hay otras abiertas que la tienen
+ * como prueba, se quedan sin ella, y eso hay que decirlo antes y no despues.
+ */
+export function avisoEliminarFoto(otrasAbiertas: number): { titulo: string; mensaje: string } {
+  if (otrasAbiertas <= 0) {
+    return {
+      titulo: '¿Eliminar la foto?',
+      mensaje: 'Se borra para siempre, también de esta denuncia. Hazlo cuando ya no haga falta como prueba.',
+    };
+  }
+  const cuantas = otrasAbiertas === 1 ? 'Hay 1 denuncia abierta más' : `Hay ${otrasAbiertas} denuncias abiertas más`;
+  return {
+    titulo: '¿Seguro que quieres borrarla?',
+    mensaje: `${cuantas} contra esta imagen. Si la borras, se quedan sin ella como prueba.`,
+  };
+}
+
+/**
  * El motivo es obligatorio en toda accion que restrinja el servicio: lo exige
  * el servidor (REASON_REQUIRED) porque lo exige el art. 17 del DSA. Aqui solo
  * se adelanta, para poder apagar el boton antes de llamar.
