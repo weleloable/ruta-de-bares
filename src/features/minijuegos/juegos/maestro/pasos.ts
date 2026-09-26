@@ -5,19 +5,44 @@ export const PASOS = ['malta', 'maceracion', 'lupulo', 'fermentacion'] as const;
 export type PasoJuego = (typeof PASOS)[number];
 export type Paso = PasoJuego | 'resultado';
 
-/** Lo que el jugador ha ido decidiendo. Los microjuegos de precision se anaden en la fase 2. */
+/** Lo que salio del hervido: cuanto se acerco el toque a cada momento, de 0 a 1. */
+export type ResultadoLupulo = {
+  amargor: number;
+  aroma: number;
+};
+
+/**
+ * Lo que el jugador ha ido decidiendo o consiguiendo. `null` = todavia no se ha
+ * jugado ese paso. `maceracion` es la precision (0..1, tiempo en la zona verde).
+ */
 export type Receta = {
   malta: MaltaId | null;
+  maceracion: number | null;
+  lupulo: ResultadoLupulo | null;
   levadura: LevaduraId | null;
 };
 
-export const RECETA_VACIA: Receta = { malta: null, levadura: null };
+export type RecetaCompleta = {
+  malta: MaltaId;
+  maceracion: number;
+  lupulo: ResultadoLupulo;
+  levadura: LevaduraId;
+};
+
+export const RECETA_VACIA: Receta = { malta: null, maceracion: null, lupulo: null, levadura: null };
+
+/** La receta con todo relleno, o null si aun falta algo (no se puede calcular la cerveza). */
+export function recetaCompleta(r: Receta): RecetaCompleta | null {
+  if (r.malta === null || r.maceracion === null || r.lupulo === null || r.levadura === null) return null;
+  return { malta: r.malta, maceracion: r.maceracion, lupulo: r.lupulo, levadura: r.levadura };
+}
 
 /** Solo se puede avanzar cuando el paso tiene lo que necesita. */
 export function puedeAvanzar(paso: Paso, receta: Receta): boolean {
   if (paso === 'malta') return receta.malta !== null;
+  if (paso === 'maceracion') return receta.maceracion !== null;
+  if (paso === 'lupulo') return receta.lupulo !== null;
   if (paso === 'fermentacion') return receta.levadura !== null;
-  // Maceracion y lupulo son de habilidad: se pueden pasar con la nota que salga.
   return true;
 }
 

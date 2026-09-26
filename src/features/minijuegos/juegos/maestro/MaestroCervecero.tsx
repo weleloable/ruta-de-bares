@@ -6,6 +6,8 @@ import { colors, radius, space, typography } from '../../../../lib/theme';
 import type { PropsJuego } from '../../tipos';
 import { buscarMalta, LEVADURAS, MALTAS } from './datos';
 import { anterior, numeroPaso, PASOS, puedeAvanzar, RECETA_VACIA, siguiente, type Paso, type Receta } from './pasos';
+import { PasoLupulo } from './PasoLupulo';
+import { PasoMaceracion } from './PasoMaceracion';
 import { VasoCerveza } from './VasoCerveza';
 
 const TITULOS: Record<Paso, string> = {
@@ -23,9 +25,9 @@ const COLOR_NEUTRO = '#E9B54B';
 const NOMBRE_FIJO = 'Ale Complutense';
 
 /**
- * Fase 1: estructura de pasos y navegacion. Malta y levadura ya se eligen de
- * verdad; maceracion y lupulo son un hueco (fase 2) y el resultado lleva datos
- * FIJOS (fase 3 los calcula). La puntuacion que sale es provisional: 0.
+ * Estructura de pasos y navegacion. Malta y levadura se eligen; maceracion y
+ * lupulo son de habilidad. El resultado lleva datos FIJOS hasta la fase 3, que
+ * los calcula, y la puntuacion que sale es provisional: 0.
  */
 export function MaestroCervecero({ onFinish }: PropsJuego) {
   const [paso, setPaso] = useState<Paso>('malta');
@@ -62,12 +64,10 @@ export function MaestroCervecero({ onFinish }: PropsJuego) {
         ) : null}
 
         {paso === 'maceracion' ? (
-          <Hueco texto="Aquí irá el termómetro: mantén la aguja en la zona verde durante 15 segundos." />
+          <PasoMaceracion onTerminar={(maceracion) => setReceta((r) => ({ ...r, maceracion }))} />
         ) : null}
 
-        {paso === 'lupulo' ? (
-          <Hueco texto="Aquí irá el hervido: toca en los momentos marcados para el amargor y el aroma." />
-        ) : null}
+        {paso === 'lupulo' ? <PasoLupulo onTerminar={(lupulo) => setReceta((r) => ({ ...r, lupulo }))} /> : null}
 
         {paso === 'fermentacion' ? (
           <View style={styles.rejilla}>
@@ -123,15 +123,6 @@ function TarjetaResultado({ color }: { color: string }) {
       <Text style={[typography.sectionTitle, styles.centrado]}>{NOMBRE_FIJO}</Text>
       <Text style={typography.muted}>Ale · 5,0 % vol · 25 IBU</Text>
       <Text style={styles.nota}>Puntuación: 0 (provisional)</Text>
-    </Card>
-  );
-}
-
-function Hueco({ texto }: { texto: string }) {
-  return (
-    <Card>
-      <Text style={typography.body}>{texto}</Text>
-      <Text style={typography.muted}>Próximamente. Por ahora, pasa al siguiente paso.</Text>
     </Card>
   );
 }
