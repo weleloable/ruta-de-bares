@@ -17,17 +17,26 @@ export type Estado = {
    */
   vertido: number;
   espumaHecha: number;
+  /** Lo que se ha salido por el borde (fraccion del vaso). Solo sube. */
+  derramado: number;
 };
 
 /** Un estado "recien tirado": lo vertido es lo que hay, sin asentar. Para tests y para partir de cero. */
-export function vaso(liquido: number, espuma: number): Estado {
-  return { liquido, espuma, vertido: liquido + espuma, espumaHecha: espuma };
+export function vaso(liquido: number, espuma: number, derramado = 0): Estado {
+  return { liquido, espuma, vertido: liquido + espuma, espumaHecha: espuma, derramado };
 }
 
 /** A que altura esta el borde del vaso: la caña se sirve llena, y pasarse es derramar. */
 export const LLENO = 1;
 /** Margen para que el redondeo de decimales no cuente como derrame. */
 const EPSILON = 1e-9;
+/**
+ * Derrame a partir del cual el vaso se da por perdido y la partida termina sola.
+ * Y el derrame con el que la penalizacion llega a su maximo.
+ */
+export const DERRAME_MAX = 0.3;
+/** Parte de la nota que se pierde con el derrame maximo. No es 1: es un castigo fuerte, no un cero. */
+export const PENALIZACION_MAX = 0.8;
 /** Lo que entra por segundo con el grifo abierto (unos 4 s en llenar el vaso). */
 export const CAUDAL = 0.22;
 /**
@@ -65,7 +74,7 @@ export function fraccionEspuma(anguloGrados: number): number {
 
 /** Un paso de `dt` segundos. `sirviendo` = grifo abierto. */
 export function avanzar(e: Estado, dt: number, sirviendo: boolean, anguloGrados: number): Estado {
-  let { liquido, espuma, vertido, espumaHecha } = e;
+  let { liquido, espuma, vertido, espumaHecha, derramado } = e;
 
   if (sirviendo) {
     const entra = CAUDAL * dt;
@@ -81,17 +90,39 @@ export function avanzar(e: Estado, dt: number, sirviendo: boolean, anguloGrados:
   espuma -= seAsienta;
   liquido += seAsienta;
 
-  return { liquido, espuma, vertido, espumaHecha };
+  // Lo que pasa del borde se sale: primero la espuma, que es lo que hay arriba.
+  const exceso = liquido + espuma - LLENO;
+  if (exceso > EPSILON) {
+    const deEspuma = Math.min(espuma, exceso);
+    espuma -= deEspuma;
+    liquido -= exceso - deEspuma;
+    derramado += exceso;
+  }
+
+  return { liquido, espuma, vertido, espumaHecha, derramado };
 }
 
-export function desbordado(e: Estado): boolean {
-  return total(e) > LLENO + EPSILON;
+/** ¿Se esta saliendo cerveza ahora mismo o se ha salido ya? */
+export function haDerramado(e: Estado): boolean {
+  return e.derramado > EPSILON;
+}
+
+/** ¿El vaso esta hasta el borde? (con el grifo abierto, lo que entre se derrama) */
+export function estaLleno(e: Estado): boolean {
+  return total(e) >= LLENO - EPSILON;
+}
+
+/** El derrame ya es tan grande que no tiene sentido seguir. */
+export function derrameTotal(e: Estado): boolean {
+  return e.derramado >= DERRAME_MAX;
 }
 
 export type Desglose = {
   nivel: number;
   espuma: number;
   rapidez: number;
+  /** Puntos que se han perdido por derramar (ya descontados de `total`). */
+  penalizacion: number;
   total: number;
 };
 
@@ -103,15 +134,14 @@ const limitar = (x: number) => Math.min(Math.max(x, 0), 1);
 
 /**
  * Nota de 0 a 100: nivel respecto al borde (40), proporcion de espuma (40) y
- * rapidez (20). Derramar es un fallo y vale 0 entero: no hay medias tintas con
- * una jarra que rebosa. `segundos` es lo que se tardo desde el primer toque.
+ * rapidez (20). Derramar penaliza fuerte pero no anula: la nota se multiplica
+ * por un factor que baja hasta 0.2 con `DERRAME_MAX`. `segundos` es lo que se
+ * tardo desde el primer toque.
  */
-export function puntuar(e: Estado, segundos: number, seDesbordo: boolean): Desglose {
-  if (seDesbordo || desbordado(e)) return { nivel: 0, espuma: 0, rapidez: 0, total: 0 };
-
+export function puntuar(e: Estado, segundos: number): Desglose {
   const t = total(e);
   // Con el vaso vacio no hay proporcion que valorar.
-  if (t <= 0) return { nivel: 0, espuma: 0, rapidez: 0, total: 0 };
+  if (t <= 0) return { nivel: 0, espuma: 0, rapidez: 0, penalizacion: 0, total: 0 };
 
   // Un error de 0.3 (un 30% del vaso) ya es 0 puntos.
   const nivel = Math.round(40 * limitar(1 - Math.abs(t - LLENO) / 0.3));
@@ -128,5 +158,8 @@ export function puntuar(e: Estado, segundos: number, seDesbordo: boolean): Desgl
 
   const rapidez = Math.round(20 * limitar((TIEMPO_LENTO - segundos) / (TIEMPO_LENTO - TIEMPO_RAPIDO)));
 
-  return { nivel, espuma, rapidez, total: nivel + espuma + rapidez };
+  const base = nivel + espuma + rapidez;
+  const factor = 1 - PENALIZACION_MAX * limitar(e.derramado / DERRAME_MAX);
+  const final = Math.round(base * factor);
+  return { nivel, espuma, rapidez, penalizacion: base - final, total: final };
 }

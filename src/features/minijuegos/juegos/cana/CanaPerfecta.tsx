@@ -8,7 +8,17 @@ import type { PropsJuego } from '../../tipos';
 import { SelectorAngulo } from './SelectorAngulo';
 import { useTecladoCana } from './teclado';
 import { useInclinacion } from './useInclinacion';
-import { avanzar, desbordado, ESTADO_VACIO, puntuar, total, type Estado } from './modelo';
+import {
+  avanzar,
+  derrameTotal,
+  DERRAME_MAX,
+  ESTADO_VACIO,
+  estaLleno,
+  haDerramado,
+  puntuar,
+  total,
+  type Estado,
+} from './modelo';
 
 const ALTO_VASO = 260;
 /** Del pico del grifo a la boca del vaso, en px (ver `grifo` y `escenario` en los estilos). */
@@ -19,7 +29,6 @@ const DT_MAX = 0.05;
 export function CanaPerfecta({ onFinish }: PropsJuego) {
   const [estado, setEstado] = useState<Estado>(ESTADO_VACIO);
   const [sirviendo, setSirviendo] = useState(false);
-  const [rebosa, setRebosa] = useState(false);
   const [inclinado, setInclinado] = useState(0);
   const { modo, angulo, empezar, usarManual, fijar } = useInclinacion();
 
@@ -28,6 +37,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   const sirviendoRef = useRef(false);
   const inicioRef = useRef<number | null>(null);
   const acabadoRef = useRef(false);
+  const derramoRef = useRef(false);
 
   const terminar = useCallback(
     (seDesbordo: boolean) => {
@@ -36,9 +46,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
       sirviendoRef.current = false;
       setSirviendo(false);
       const segundos = inicioRef.current === null ? 0 : (Date.now() - inicioRef.current) / 1000;
-      const d = puntuar(estadoRef.current, segundos, seDesbordo);
-      if (seDesbordo) feedback.fallo();
-      setRebosa(seDesbordo);
+      const d = puntuar(estadoRef.current, segundos);
       onFinish({
         juego: 'cana-perfecta',
         puntuacion: d.total,
@@ -46,6 +54,8 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
           nivel: d.nivel,
           espuma: d.espuma,
           rapidez: d.rapidez,
+          penalizacion: d.penalizacion,
+          derramado: Math.round(estadoRef.current.derramado * 100),
           segundos: Math.round(segundos * 10) / 10,
           desbordada: seDesbordo,
         },
@@ -65,7 +75,12 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
         estadoRef.current = avanzar(estadoRef.current, dt, sirviendoRef.current, angulo.current);
         setEstado(estadoRef.current);
         setInclinado(angulo.current);
-        if (desbordado(estadoRef.current)) terminar(true);
+        // Una sola vibracion al empezar a derramar, no una por fotograma.
+        if (haDerramado(estadoRef.current) && !derramoRef.current) {
+          derramoRef.current = true;
+          feedback.fallo();
+        }
+        if (derrameTotal(estadoRef.current)) terminar(true);
       }
       raf = requestAnimationFrame(bucle);
     };
@@ -92,15 +107,20 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   );
 
   const haServido = inicioRef.current !== null;
+  const derramando = sirviendo && estaLleno(estado);
   const largoChorro = CAIDA_A_LA_BOCA + (1 - Math.min(total(estado), 1)) * ALTO_VASO * Math.cos((inclinado * Math.PI) / 180);
   const alto = (fraccion: number) => Math.min(Math.max(fraccion, 0), 1) * ALTO_VASO;
 
   return (
     <View style={styles.raiz}>
       <View style={styles.escenario}>
-        <Text style={[typography.muted, styles.lineaTexto]}>
-          {rebosa ? '¡Se ha desbordado!' : 'Llénalo hasta arriba, sin derramar'}
-        </Text>
+        {derramando ? (
+          <Text style={[styles.aviso, styles.avisoDerrame]}>¡Se está derramando! Suelta</Text>
+        ) : (
+          <Text style={[typography.muted, styles.aviso]}>
+            {haDerramado(estado) ? 'Has derramado, pierdes puntos' : 'Llénalo hasta arriba, sin derramar'}
+          </Text>
+        )}
         <View style={styles.columna}>
           <View style={styles.grifo}>
             <View style={styles.grifoCuerpo} />
@@ -115,6 +135,10 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
           {/* Despues del vaso para pintarse encima; acaba en la superficie del liquido. */}
           {sirviendo ? <View pointerEvents="none" style={[styles.chorro, { height: largoChorro }]} /> : null}
         </View>
+        {/* Charco bajo el vaso: crece con lo derramado. */}
+        {haDerramado(estado) ? (
+          <View style={[styles.charco, { width: 40 + Math.min(estado.derramado / DERRAME_MAX, 1) * 180 }]} />
+        ) : null}
       </View>
 
       {modo === 'inicio' ? (
@@ -193,7 +217,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: colors.beerSoft,
   },
-  lineaTexto: { textAlign: 'center' },
+  aviso: { textAlign: 'center', minHeight: 24 },
+  avisoDerrame: { fontSize: 18, fontWeight: '800', color: colors.danger },
+  charco: { height: 10, borderRadius: radius.pill, backgroundColor: colors.beer, opacity: 0.85 },
   servir: {
     minHeight: 96,
     borderRadius: radius.lg,
