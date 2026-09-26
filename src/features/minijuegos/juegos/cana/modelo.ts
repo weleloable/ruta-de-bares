@@ -16,8 +16,12 @@ export type Estado = {
 export const LINEA = 0.88;
 /** Lo que entra por segundo con el grifo abierto (unos 4 s en llenar el vaso). */
 export const CAUDAL = 0.22;
-/** Lo que la espuma se convierte en liquido por segundo. Lento: asi hay que tirar con cabeza. */
-export const ASENTAMIENTO = 0.05;
+/**
+ * Fraccion de la espuma que se vuelve liquido por segundo. Es PROPORCIONAL, no
+ * una cantidad fija: con una fija, dos dedos de espuma se iban en 4 s y no tenia
+ * sentido. Asi la corona aguanta (mitad a los ~17 s) y nunca llega a 0 del todo.
+ */
+export const ASENTAMIENTO = 0.04;
 /** Angulo (grados) a partir del cual el vaso ya esta "bien inclinado". */
 export const ANGULO_BUENO = 45;
 /** Proporcion de espuma sobre el total que se considera perfecta ("dos dedos"). */
@@ -50,7 +54,8 @@ export function avanzar(e: Estado, dt: number, sirviendo: boolean, anguloGrados:
     liquido += entra * (1 - parteEspuma);
   }
 
-  const seAsienta = Math.min(espuma, ASENTAMIENTO * dt);
+  // Decaimiento exponencial exacto (no `espuma * k * dt`): no depende del dt del fotograma.
+  const seAsienta = espuma * (1 - Math.exp(-ASENTAMIENTO * dt));
   espuma -= seAsienta;
   liquido += seAsienta;
 

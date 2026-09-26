@@ -13,12 +13,27 @@ test('con el grifo cerrado no entra nada y la espuma se asienta en liquido', () 
   const antes = { liquido: 0.4, espuma: 0.2 };
   const despues = avanzar(antes, 1, false, 0);
   assert.ok(Math.abs(total(despues) - total(antes)) < 1e-9);
-  assert.ok(Math.abs(despues.espuma - (0.2 - ASENTAMIENTO)) < 1e-9);
+  assert.ok(Math.abs(despues.espuma - 0.2 * Math.exp(-ASENTAMIENTO)) < 1e-9);
 });
 
-test('la espuma no se asienta por debajo de cero', () => {
+test('la espuma no desaparece en pocos segundos: aguanta la corona', () => {
+  let e = { liquido: 0.7, espuma: 0.18 };
+  for (let i = 0; i < 10 * 60; i++) e = avanzar(e, 1 / 60, false, 0);
+  // 10 s despues sigue quedando mas de la mitad.
+  assert.ok(e.espuma > 0.09, `quedan ${e.espuma}`);
+  assert.ok(Math.abs(total(e) - 0.88) < 1e-9);
+});
+
+test('el asentamiento no depende del tamano del fotograma', () => {
+  const grande = avanzar({ liquido: 0.5, espuma: 0.2 }, 1, false, 0);
+  let pequeno = { liquido: 0.5, espuma: 0.2 };
+  for (let i = 0; i < 100; i++) pequeno = avanzar(pequeno, 0.01, false, 0);
+  assert.ok(Math.abs(grande.espuma - pequeno.espuma) < 1e-9);
+});
+
+test('la espuma nunca se vuelve negativa', () => {
   const despues = avanzar({ liquido: 0.5, espuma: 0.001 }, 5, false, 0);
-  assert.equal(despues.espuma, 0);
+  assert.ok(despues.espuma >= 0);
 });
 
 test('con el grifo abierto el total sube', () => {
