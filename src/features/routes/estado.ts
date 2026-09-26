@@ -56,7 +56,7 @@ export function corteDeFin(eventDate: string | null | undefined): Date | null {
 /** Lo que hace falta saber de los bares: cual va el ultimo y cuando cierra. */
 export type BarDeRuta = { sort_order: number; closes_at: string | null };
 
-type RutaEstado = {
+export type RutaEstado = {
   is_published: boolean;
   event_date: string | null;
   finished_at?: string | null;
@@ -118,18 +118,36 @@ export function puedeTerminarseAMano(ruta: RutaEstado, ahora: Date): boolean {
 }
 
 /**
+ * Cuando termino una ruta terminada: cuando se marco a mano o, si no, cuando
+ * cerro su ultimo bar. Es desde donde cuentan los dias para borrarla. null si
+ * no esta terminada o no hay forma de saberlo.
+ */
+export function terminoEl(ruta: RutaEstado, ahora: Date): Date | null {
+  if (estadoDeRuta(ruta, ahora) !== 'terminada') return null;
+  const desde = ruta.finished_at ? new Date(ruta.finished_at) : finDeLaRuta(ruta);
+  return desde && !Number.isNaN(desde.getTime()) ? desde : null;
+}
+
+/**
+ * Lo que pasa al borrar una ruta terminada, dicho igual en el editor y en el
+ * aviso de Alertas de administracion (admin/rutasTerminadas.ts, que no puede
+ * importarlo: un test comprueba que son la misma frase).
+ */
+export const AL_BORRARLA = 'Al borrarla, también se borrarán todos los datos de la gente que participó en ella.';
+
+/**
  * Lo que se le dice a quien organiza sobre una ruta terminada, para empujarle a
  * borrarla. Es el unico recordatorio que hay: sin cron, si nadie pulsa, los
  * datos del evento se quedan.
  */
 export function avisoDeRutaTerminada(ruta: RutaEstado, ahora: Date): string | null {
   if (estadoDeRuta(ruta, ahora) !== 'terminada') return null;
-  const desde = ruta.finished_at ? new Date(ruta.finished_at) : finDeLaRuta(ruta);
-  if (!desde || Number.isNaN(desde.getTime())) return 'Ya terminó. Borra sus datos cuando quieras.';
+  const desde = terminoEl(ruta, ahora);
+  if (!desde) return `Ya terminó. ${AL_BORRARLA}`;
   const dias = Math.floor((ahora.getTime() - desde.getTime()) / 86_400_000);
-  if (dias <= 0) return 'Terminó hoy. Al borrarla se van sus datos.';
-  if (dias === 1) return 'Terminó ayer. Al borrarla se van sus datos.';
-  return `Terminó hace ${dias} días. Al borrarla se van sus datos.`;
+  if (dias <= 0) return `Terminó hoy. ${AL_BORRARLA}`;
+  if (dias === 1) return `Terminó ayer. ${AL_BORRARLA}`;
+  return `Terminó hace ${dias} días. ${AL_BORRARLA}`;
 }
 
 /**

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +8,9 @@ import { Banner, Button, Card, Field, Loading } from '../../../src/components/ui
 import {
   desactivarCana,
   expulsarDeRuta,
+  fotosDeDenuncia,
   leerMensajesDenunciados,
+  liberarFotoDenuncia,
   leerTicket,
   reactivarCuenta,
   reclamarAlerta,
@@ -19,6 +22,7 @@ import {
 } from '../../../src/features/admin/api';
 import {
   accionesTicket,
+  avisoEliminarFoto,
   ESTADOS,
   etiquetaMotivo,
   etiquetaResolucion,
@@ -29,10 +33,12 @@ import {
   resolucionSugerida,
 } from '../../../src/features/admin/alertas';
 import { AvatarCana } from '../../../src/features/match/piezas';
+import { useAvatarFirmado } from '../../../src/features/profile/avatarFirmado';
 import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
 import { hora } from '../../../src/lib/fechas';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
 import type {
+  FotoDenunciaRow,
   MatchAdminReportMessageRow,
   MatchAdminTicketRow,
   MatchReportResolution,
@@ -57,6 +63,9 @@ export default function AlertaAdmin() {
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
   const [ticket, setTicket] = useState<MatchAdminTicketRow | null>(null);
   const [mensajes, setMensajes] = useState<MatchAdminReportMessageRow[]>([]);
+  // Las fotos guardadas como prueba (0032) y la que se esta a punto de eliminar.
+  const [fotos, setFotos] = useState<FotoDenunciaRow[]>([]);
+  const [eliminando, setEliminando] = useState<FotoDenunciaRow | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -77,6 +86,9 @@ export default function AlertaAdmin() {
       const leido = await leerTicket(reportId);
       setTicket(leido);
       setMensajes(leido.mensajes > 0 ? await leerMensajesDenunciados(reportId) : []);
+      // Sin la 0032 (app desplegada antes que la migracion) la funcion no
+      // existe: la ficha se abre igual, solo que sin la tarjeta de la foto.
+      setFotos(await fotosDeDenuncia(reportId).catch(() => []));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo abrir la alerta.');
@@ -145,6 +157,7 @@ export default function AlertaAdmin() {
   // pero ya no hay a quien sancionar (0017).
   const objetivo = ticket.reported_id;
   const elegida = resolucion ?? resolucionSugerida(ticket, hechas);
+  const avisoFoto = avisoEliminarFoto(eliminando?.otras_abiertas ?? 0);
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
@@ -188,6 +201,21 @@ export default function AlertaAdmin() {
           <Text style={styles.motivo}>{etiquetaMotivo(ticket.reason)}</Text>
           {ticket.detail ? <Text style={styles.detalle}>«{ticket.detail}»</Text> : null}
         </Card>
+
+        {fotos.length > 0 ? (
+          <Card style={styles.pruebas}>
+            <Text style={typography.overline}>{fotos.length === 1 ? 'Foto denunciada' : 'Fotos de la denuncia'}</Text>
+            {fotos.map((foto) => (
+              <FotoPrueba
+                key={foto.foto_url}
+                foto={foto}
+                retirada={foto.foto_url !== ticket.reported_avatar_url}
+                ocupado={ocupado}
+                onEliminar={() => setEliminando(foto)}
+              />
+            ))}
+          </Card>
+        ) : null}
 
         {mensajes.length > 0 ? (
           <Card>
@@ -475,6 +503,25 @@ export default function AlertaAdmin() {
         </>
       ) : null}
 
+      {/* Fuera del bloque de `objetivo`: la prueba se puede eliminar tambien
+          cuando la persona ya se borro la cuenta. */}
+      <DialogoConfirmar
+        visible={eliminando !== null}
+        titulo={avisoFoto.titulo}
+        mensaje={avisoFoto.mensaje}
+        textoConfirmar="Eliminar"
+        destructivo
+        ocupado={ocupado}
+        onConfirmar={() => {
+          const foto = eliminando;
+          if (!foto) return;
+          void ejecutar(() => liberarFotoDenuncia(ticket.id, foto.foto_url), null, 'Foto eliminada.').finally(() =>
+            setEliminando(null),
+          );
+        }}
+        onCancelar={() => setEliminando(null)}
+      />
+
       <DialogoConfirmar
         visible={confirmando === 'resolver'}
         titulo="¿Cerrar la alerta?"
@@ -487,6 +534,73 @@ export default function AlertaAdmin() {
         onCancelar={() => setConfirmando(null)}
       />
     </SafeAreaView>
+  );
+}
+
+/**
+ * Una foto guardada como prueba (0032). Tres estados: la tiene puesta (no se
+ * elimina desde aqui: quitarla es "Retirar la foto", con motivo y aviso), ya no
+ * la usa (se puede eliminar), o ya se elimino.
+ */
+function FotoPrueba({
+  foto,
+  retirada,
+  ocupado,
+  onEliminar,
+}: {
+  foto: FotoDenunciaRow;
+  /** La que se retiro desde la denuncia, si no es la congelada al denunciar. */
+  retirada: boolean;
+  ocupado: boolean;
+  onEliminar: () => void;
+}) {
+  const firmada = useAvatarFirmado(foto.liberada_el ? null : foto.foto_url);
+
+  if (foto.liberada_el) {
+    return (
+      <Text style={styles.dato}>
+        {retirada ? 'La foto retirada' : 'La foto denunciada'} se eliminó {hace(foto.liberada_el, new Date())}.
+      </Text>
+    );
+  }
+
+  const explicacion = foto.en_uso
+    ? 'Es su foto de perfil ahora mismo. Para quitarla, usa «Retirar la foto»: lleva motivo y aviso.'
+    : retirada
+      ? 'Se la retiraste desde esta denuncia. Se guarda solo como prueba.'
+      : 'Ya no es su foto de perfil. Se guarda solo como prueba de este caso.';
+
+  return (
+    <View style={styles.prueba}>
+      <View style={styles.pruebaFila}>
+        {firmada ? (
+          <Image source={{ uri: firmada }} style={styles.pruebaFoto} contentFit="cover" accessibilityLabel="Foto denunciada" />
+        ) : (
+          <View style={[styles.pruebaFoto, styles.pruebaVacia]} />
+        )}
+        <View style={styles.pruebaTexto}>
+          <Text style={styles.dato}>{explicacion}</Text>
+          {foto.otras_abiertas > 0 ? (
+            <Text style={styles.dato}>
+              También es prueba en {foto.otras_abiertas === 1 ? 'otra denuncia abierta' : `${foto.otras_abiertas} denuncias abiertas más`}.
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {foto.en_uso ? null : (
+        <>
+          <Button
+            title="Eliminar foto de la base de datos"
+            variant="secondary"
+            style={styles.eliminar}
+            textStyle={styles.eliminarTexto}
+            onPress={onEliminar}
+            disabled={ocupado}
+          />
+          <Text style={styles.dato}>Se borra para siempre. Hazlo cuando ya no haga falta como prueba.</Text>
+        </>
+      )}
+    </View>
   );
 }
 
@@ -526,6 +640,14 @@ const styles = StyleSheet.create({
   dato: { fontSize: 13, color: colors.inkSoft },
   motivo: { ...typography.cardTitle },
   detalle: { fontSize: 14, color: colors.ink, fontStyle: 'italic' },
+  pruebas: { gap: space.md },
+  prueba: { gap: space.sm },
+  pruebaFila: { flexDirection: 'row', gap: space.md, alignItems: 'center' },
+  pruebaFoto: { width: 88, height: 88, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  pruebaVacia: { backgroundColor: colors.paperDeep },
+  pruebaTexto: { flex: 1, gap: space.xs },
+  eliminar: { borderColor: colors.danger },
+  eliminarTexto: { color: colors.danger },
   mensaje: {
     backgroundColor: colors.paperDeep,
     borderRadius: radius.md,

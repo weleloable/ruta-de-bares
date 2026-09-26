@@ -117,12 +117,19 @@ export default function FotoAdmin() {
             <Text style={typography.sectionTitle}>{fila.user_name}</Text>
             <Text style={typography.muted}>La subió {hace(fila.created_at, new Date())}</Text>
 
-            <Image
-              source={{ uri: fotoNueva ?? undefined }}
-              style={styles.foto}
-              contentFit="cover"
-              accessibilityLabel={`Foto nueva de ${fila.user_name}`}
-            />
+            {/* Una rechazada ya no existe: se borra al rechazarla (0032). Queda el motivo. */}
+            {fila.status === 'rechazada' ? (
+              <Text style={typography.muted}>
+                La foto se borró al rechazarla: no la iba a usar nadie. Se conserva el motivo.
+              </Text>
+            ) : (
+              <Image
+                source={{ uri: fotoNueva ?? undefined }}
+                style={styles.foto}
+                contentFit="cover"
+                accessibilityLabel={`Foto nueva de ${fila.user_name}`}
+              />
+            )}
 
             {/*
               La MINIATURA tambien se ve, y es a proposito: es un fichero aparte

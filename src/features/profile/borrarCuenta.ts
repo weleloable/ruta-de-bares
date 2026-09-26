@@ -8,6 +8,16 @@ export function rutasDeFotos(userId: string, nombres: readonly string[]): string
   return nombres.filter((nombre) => nombre !== '').map((nombre) => `${userId}/${nombre}`);
 }
 
+/**
+ * Lo que Borrar Cuenta tiene que borrar: todo menos lo retenido como prueba de
+ * una denuncia (0032, `mis_fotos_retenidas`). Eso la policy no deja borrarlo, y
+ * sin este filtro la cuenta no se podria borrar nunca mientras exista la prueba.
+ */
+export function fotosABorrar(rutas: readonly string[], retenidas: readonly string[]): string[] {
+  const guardar = new Set(retenidas);
+  return rutas.filter((ruta) => !guardar.has(ruta));
+}
+
 /** Codigos de delete_my_account_blockers() / delete_my_account() (0021). */
 const IMPEDIMENTOS: Record<string, string> = {
   ADMIN_CANNOT_DELETE:
@@ -16,9 +26,10 @@ const IMPEDIMENTOS: Record<string, string> = {
   OWNS_ROUTES:
     'No puedes borrar tu cuenta mientras seas quien creó alguna ruta. Escríbenos desde Mi perfil, en "Escribir a la ' +
     'organización", y lo resolvemos contigo.',
-  HAS_OPEN_REPORTS:
-    'Ahora mismo hay una denuncia sin resolver sobre tu cuenta, así que no se puede borrar todavía. ' +
-    'Podrás hacerlo cuando la organización la resuelva.',
+  // HAS_OPEN_REPORTS estuvo aqui y lo quito la 0032. Una denuncia sin resolver
+  // ya no impide borrarse: la denuncia se queda con su prueba y con un HMAC del
+  // correo, y si la persona vuelve con el mismo correo la denuncia la encuentra.
+  // El RGPD deja conservar la prueba (art. 17.3.e), no retener a la persona.
   // CANA_BLOCKED estuvo aqui y lo quito la 0024. Tener la cana desactivada ya
   // no impide borrarse: el veto sobrevive por su cuenta (HMAC del correo, como
   // el de ruta y la suspension) en vez de retener a la persona. Era el escalon

@@ -1,7 +1,14 @@
 import { supabase } from '../../lib/supabase';
 import { contarMensajes, listarMensajes } from '../contacto/api';
+import { diaLargo } from '../../lib/fechas';
+import { DIAS_CONSERVACION } from '../legal/responsable';
+import { borrarFotosSobrantes } from '../profile/fotosSobrantes';
+import { listRoutes } from '../routes/api';
+import { terminoEl } from '../routes/estado';
+import { avisosDeRutasTerminadas, rutasSinVer, type AvisoRutaTerminada } from './rutasTerminadas';
 import type {
   AvatarAdminRequestRow,
+  FotoDenunciaRow,
   ModeracionRow,
   MatchAdminReportMessageRow,
   MatchAdminReportRow,
@@ -35,7 +42,7 @@ function codigo(mensaje: string): string | null {
   const encontrado =
     // Incluye REASON_* aunque describirError ya los traducia: este patron no los
     // dejaba pasar y el mensaje llegaba a la pantalla como texto crudo.
-    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION|TARGET_IS_ADMIN|INVALID_TARGET|REASON_REQUIRED|REASON_TOO_LONG|REQUEST_NOT_FOUND|REQUEST_NOT_PENDING|INVALID_URL|FILE_MISSING)\b/.exec(
+    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION|TARGET_IS_ADMIN|INVALID_TARGET|REASON_REQUIRED|REASON_TOO_LONG|REQUEST_NOT_FOUND|REQUEST_NOT_PENDING|INVALID_URL|FILE_MISSING|PHOTO_IN_USE|PHOTO_NOT_IN_REPORT)\b/.exec(
       mensaje,
     );
   return encontrado ? encontrado[1] : null;
@@ -67,6 +74,10 @@ function describirError(mensaje: string): string {
       return 'La dirección de la foto no es válida.';
     case 'FILE_MISSING':
       return 'La persona ha borrado la foto después de enviarla: no se puede aprobar. Recházala y que suba otra.';
+    case 'PHOTO_IN_USE':
+      return 'Es la foto que tiene puesta ahora: para quitarla, usa «Retirar la foto».';
+    case 'PHOTO_NOT_IN_REPORT':
+      return 'Esa foto no es de esta denuncia.';
     default:
       return mensaje;
   }
@@ -96,13 +107,55 @@ export async function contarAlertas(): Promise<number> {
   // (o cae la consulta de fotos) la burbuja cuenta lo otro en vez de
   // desaparecer. Un fallo en las denuncias, en cambio, sigue siendo un fallo:
   // ya lo era antes y no se disimula.
-  const [denuncias, fotos, mensajes] = await Promise.all([
+  const [denuncias, fotos, mensajes, rutas] = await Promise.all([
     supabase.rpc('match_admin_alert_count'),
     contarSolicitudesFoto().catch(() => 0),
     contarMensajes().catch(() => 0),
+    // Rutas terminadas cuyo aviso este admin aun no ha visto (0033). Cuenta
+    // aqui y no en una fuente aparte: asi el punto rojo y la burbuja de Mi
+    // perfil se apagan a la vez al abrir la bandeja.
+    contarRutasTerminadasSinVer().catch(() => 0),
   ]);
   if (denuncias.error) fallo(denuncias.error);
-  return (denuncias.data ?? 0) + fotos + mensajes;
+  return (denuncias.data ?? 0) + fotos + mensajes + rutas;
+}
+
+/**
+ * Los avisos de rutas terminadas para lo alto de la bandeja: TODAS las
+ * terminadas, las haya visto o no (el aviso solo se va al borrar la ruta).
+ */
+export async function listarAvisosRutasTerminadas(): Promise<AvisoRutaTerminada[]> {
+  const ahora = new Date();
+  const terminadas = (await listRoutes()).flatMap((ruta) => {
+    const fin = terminoEl(ruta, ahora);
+    return fin ? [{ routeId: ruta.id, nombre: ruta.name, terminoEl: fin }] : [];
+  });
+  return avisosDeRutasTerminadas(terminadas, ahora, DIAS_CONSERVACION, diaLargo);
+}
+
+async function rutasTerminadasVistas(): Promise<Set<string>> {
+  const { data, error } = await supabase.from('admin_rutas_terminadas_vistas').select('route_id');
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((fila) => fila.route_id));
+}
+
+export async function contarRutasTerminadasSinVer(): Promise<number> {
+  const [avisos, vistas] = await Promise.all([listarAvisosRutasTerminadas(), rutasTerminadasVistas()]);
+  return rutasSinVer(avisos, vistas);
+}
+
+/** Este admin ya ha visto estos avisos: su punto rojo se apaga (el aviso se queda). */
+export async function marcarRutasTerminadasVistas(routeIds: readonly string[]): Promise<void> {
+  if (routeIds.length === 0) return;
+  const uid = (await supabase.auth.getSession()).data.session?.user.id;
+  if (!uid) return;
+  const { error } = await supabase
+    .from('admin_rutas_terminadas_vistas')
+    .upsert(
+      routeIds.map((route_id) => ({ admin_id: uid, route_id })),
+      { onConflict: 'admin_id,route_id', ignoreDuplicates: true },
+    );
+  if (error) throw new Error(error.message);
 }
 
 /** Cuantas fotos de perfil esperan aprobacion (0020). */
@@ -321,6 +374,27 @@ export async function decidirFoto(
     p_thumb_url: decision.aprobar ? urlPublicaAvatar(solicitud.thumb_path) : null,
   });
   if (error) fallo(error);
+  // Rechazada, la foto no la va a usar nadie; aprobada, la anterior tampoco.
+  // Fuera ahora (0032). Lo que sea prueba de una denuncia se queda.
+  await borrarFotosSobrantes('todas');
+}
+
+/** Las fotos guardadas como prueba de una denuncia (0032), para su ficha. */
+export async function fotosDeDenuncia(reportId: string): Promise<FotoDenunciaRow[]> {
+  const { data, error } = await supabase.rpc('match_admin_fotos_denuncia', { p_report_id: reportId });
+  if (error) fallo(error);
+  return data ?? [];
+}
+
+/**
+ * "Eliminar foto de la base de datos": deja de ser prueba y se borra de
+ * Storage. Es sobre la IMAGEN, no sobre esta denuncia: si otras la tenian, se
+ * quedan sin ella (por eso la pantalla avisa antes con `otras_abiertas`).
+ */
+export async function liberarFotoDenuncia(reportId: string, fotoUrl: string): Promise<void> {
+  const { error } = await supabase.rpc('match_admin_liberar_foto', { p_report_id: reportId, p_foto_url: fotoUrl });
+  if (error) fallo(error);
+  await borrarFotosSobrantes('todas');
 }
 
 export type { AvatarAdminRequestRow };

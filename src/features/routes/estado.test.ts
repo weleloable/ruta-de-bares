@@ -10,7 +10,31 @@ import {
   finDeLaRuta,
   HORA_FIN,
   puedeTerminarseAMano,
+  terminoEl,
 } from './estado.ts';
+
+describe('terminoEl: desde donde cuentan los dias para borrarla', () => {
+  const ahora = new Date('2026-09-26T12:00:00.000Z');
+  const bares = [
+    { sort_order: 1, closes_at: '2026-09-20T01:00:00.000Z' },
+    { sort_order: 2, closes_at: '2026-09-20T03:00:00.000Z' },
+  ];
+
+  it('una publicada que ya cerro su ultimo bar: ese cierre', () => {
+    const ruta = { is_published: true, event_date: '2026-09-19', route_bars: bares };
+    assert.equal(terminoEl(ruta, ahora)?.toISOString(), '2026-09-20T03:00:00.000Z');
+  });
+
+  it('marcada terminada a mano: esa fecha, aunque el ultimo bar aun no haya cerrado', () => {
+    const ruta = { is_published: true, event_date: '2026-09-30', finished_at: '2026-09-25T10:00:00.000Z', route_bars: [] };
+    assert.equal(terminoEl(ruta, ahora)?.toISOString(), '2026-09-25T10:00:00.000Z');
+  });
+
+  it('sin terminar (o en borrador), null: no hay nada que contar', () => {
+    assert.equal(terminoEl({ is_published: true, event_date: '2026-10-10', route_bars: [] }, ahora), null);
+    assert.equal(terminoEl({ is_published: false, event_date: '2026-09-19', route_bars: bares }, ahora), null);
+  });
+});
 
 /** Una hora local concreta, sin pasar por ISO (que seria UTC). */
 const local = (a: number, m: number, d: number, h = 0, min = 0) => new Date(a, m - 1, d, h, min);
@@ -129,7 +153,7 @@ describe('avisoDeRutaTerminada', () => {
   it('cuenta los dias, y dice que borrarla se lleva los datos', () => {
     const texto = avisoDeRutaTerminada(PUBLICADA, local(2026, 9, 24, 9)) ?? '';
     assert.match(texto, /hace 3 d/);
-    assert.match(texto, /se van sus datos/);
+    assert.match(texto, /también se borrarán todos los datos de la gente que participó en ella\./);
   });
 
   it('el mismo dia y el dia siguiente se dicen con palabras', () => {

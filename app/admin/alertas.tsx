@@ -4,7 +4,13 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
-import { listarAlertas, listarAlertasMensajes, listarSolicitudesFoto } from '../../src/features/admin/api';
+import {
+  listarAlertas,
+  listarAlertasMensajes,
+  listarAvisosRutasTerminadas,
+  listarSolicitudesFoto,
+  marcarRutasTerminadasVistas,
+} from '../../src/features/admin/api';
 import {
   cuentaPorFiltro,
   detalleAlerta,
@@ -17,6 +23,8 @@ import {
   type Alerta,
   type FiltroAlerta,
 } from '../../src/features/admin/alertas';
+import type { AvisoRutaTerminada } from '../../src/features/admin/rutasTerminadas';
+import { useNotificaciones } from '../../src/features/notificaciones/Notificaciones';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 /**
@@ -33,6 +41,10 @@ import { colors, radius, space, typography } from '../../src/lib/theme';
 export default function AlertasAdmin() {
   const router = useRouter();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  // Rutas terminadas por borrar (0033). No son alertas de la lista: no se
+  // reclaman ni se resuelven, solo desaparecen al borrar la ruta.
+  const [rutasTerminadas, setRutasTerminadas] = useState<AvisoRutaTerminada[]>([]);
+  const { refrescar } = useNotificaciones();
   const [filtro, setFiltro] = useState<FiltroAlerta>('abiertas');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,11 +55,19 @@ export default function AlertasAdmin() {
     // vuelve a pedir nada. Las dos fuentes por separado: si una falla (p. ej.
     // el proyecto aun no tiene la 0020) la otra se ve igual, y el aviso dice
     // cual ha fallado.
-    const [denuncias, fotos, mensajes] = await Promise.allSettled([
+    const [denuncias, fotos, mensajes, rutas] = await Promise.allSettled([
       listarAlertas(true),
       listarSolicitudesFoto(true),
       listarAlertasMensajes(true),
+      listarAvisosRutasTerminadas(),
     ]);
+    if (rutas.status === 'fulfilled') {
+      setRutasTerminadas(rutas.value);
+      // Verlos aqui apaga el punto rojo de este admin; los avisos se quedan.
+      void marcarRutasTerminadasVistas(rutas.value.map((r) => r.routeId))
+        .then(refrescar)
+        .catch(() => {});
+    }
     const mensaje = (r: PromiseRejectedResult) => (r.reason instanceof Error ? r.reason.message : 'error desconocido');
 
     setAlertas(
@@ -68,7 +88,7 @@ export default function AlertasAdmin() {
     }
     setError(avisos.length > 0 ? avisos.join(' ') : null);
     setCargando(false);
-  }, []);
+  }, [refrescar]);
 
   // Cada tipo tiene su ticket: una denuncia lleva a sus mensajes y sanciones, una
   // foto a aprobar o rechazar, y un mensaje a responderlo.
@@ -105,6 +125,10 @@ export default function AlertasAdmin() {
       >
         {error ? <Banner tone="error">{error}</Banner> : null}
 
+        {rutasTerminadas.map((aviso) => (
+          <AvisoRuta key={aviso.routeId} aviso={aviso} onIr={() => router.push('/editor')} />
+        ))}
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtros}>
           {FILTROS.map(({ id, etiqueta }) => {
             const elegido = id === filtro;
@@ -140,6 +164,23 @@ export default function AlertasAdmin() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Una ruta terminada que hay que borrar: se queda aqui hasta que se borra. */
+function AvisoRuta({ aviso, onIr }: { aviso: AvisoRutaTerminada; onIr(): void }) {
+  return (
+    <View style={styles.avisoRuta} accessibilityRole="summary">
+      <Text style={styles.avisoRutaTitulo}>{aviso.titulo}</Text>
+      <Text style={styles.avisoRutaCuerpo}>{aviso.cuerpo}</Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onIr}
+        style={({ pressed }) => [styles.avisoRutaBoton, pressed && styles.ticketPulsado]}
+      >
+        <Text style={styles.avisoRutaBotonTexto}>Ir al editor para borrarla</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -192,6 +233,25 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ticketPulsado: { backgroundColor: colors.paperDeep },
+  avisoRuta: {
+    backgroundColor: colors.paperDeep,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: space.md,
+    gap: space.sm,
+  },
+  avisoRutaTitulo: { fontSize: 15, fontWeight: '700', color: colors.ink },
+  avisoRutaCuerpo: { fontSize: 14, color: colors.inkSoft, lineHeight: 20 },
+  avisoRutaBoton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs + 2,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.beerDark,
+  },
+  avisoRutaBotonTexto: { fontSize: 13, fontWeight: '700', color: colors.beerDark },
   ticketCabecera: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   estado: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   punto: { width: 8, height: 8, borderRadius: radius.pill },

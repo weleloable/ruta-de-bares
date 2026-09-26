@@ -6,6 +6,7 @@ import {
   accionesTicket,
   alertaDeDenuncia,
   alertaDeSolicitudFoto,
+  avisoEliminarFoto,
   detalleAlerta,
   MOTIVO_MAX,
   motivoValido,
@@ -18,6 +19,21 @@ import {
 } from './alertas.ts';
 
 const AHORA = new Date('2026-09-18T21:00:00.000Z');
+
+describe('avisoEliminarFoto (0032)', () => {
+  it('sin otras denuncias abiertas, solo recuerda que es para siempre', () => {
+    const { titulo, mensaje } = avisoEliminarFoto(0);
+    assert.equal(titulo, '¿Eliminar la foto?');
+    assert.match(mensaje, /para siempre/);
+    assert.doesNotMatch(mensaje, /denuncias? abiertas?/);
+  });
+
+  it('con otras abiertas, pregunta si estas seguro y dice cuantas', () => {
+    assert.equal(avisoEliminarFoto(1).titulo, '¿Seguro que quieres borrarla?');
+    assert.match(avisoEliminarFoto(1).mensaje, /^Hay 1 denuncia abierta más contra esta imagen/);
+    assert.match(avisoEliminarFoto(3).mensaje, /^Hay 3 denuncias abiertas más contra esta imagen/);
+  });
+});
 
 function denuncia(parcial: Partial<MatchAdminReportRow> = {}): MatchAdminReportRow {
   return {

@@ -2,7 +2,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
-import { rutasDeFotos, textoDeImpedimentos, traducirErrorBorrado } from './borrarCuenta';
+import { fotosABorrar, rutasDeFotos, textoDeImpedimentos, traducirErrorBorrado } from './borrarCuenta';
+import { borrarFotosSobrantes } from './fotosSobrantes';
 import {
   nombresFicheroAvatar,
   traducirErrorFoto,
@@ -106,6 +107,9 @@ export async function uploadAvatar(userId: string, image: PickedImage): Promise<
     p_thumb_url: thumbUrl,
   });
   if (error) throw new Error(traducirErrorFoto(error.message));
+  // Lo que se sustituyo (una pendiente anterior; la foto vieja si es admin y se
+  // auto-aprueba) ya no sirve: fuera ahora (0032).
+  await borrarFotosSobrantes('mias');
   return data;
 }
 
@@ -141,8 +145,8 @@ export async function ultimaSolicitudFoto(userId: string): Promise<SolicitudFoto
  * listar al final, en vez de fiarse de que no hubo error.
  */
 export async function deleteMyAccount(userId: string): Promise<void> {
-  // Antes de tocar nada: si la cuenta no se puede borrar (admin, denuncia sin
-  // resolver...), las fotos no se pierden para nada.
+  // Antes de tocar nada: si la cuenta no se puede borrar (admin, duena de
+  // rutas), las fotos no se pierden para nada.
   const { data: impedimentos, error: errorPrevio } = await supabase.rpc('delete_my_account_blockers');
   if (errorPrevio) throw new Error(traducirErrorBorrado(errorPrevio.message));
   const motivo = textoDeImpedimentos(impedimentos ?? []);
@@ -150,12 +154,19 @@ export async function deleteMyAccount(userId: string): Promise<void> {
 
   const carpeta = supabase.storage.from(AVATAR_BUCKET);
 
+  // Las que son prueba de una denuncia se quedan (0032): la policy no deja
+  // borrarlas, y quedarse no le impide a nadie irse. Si la pregunta falla (una
+  // base sin la 0032), se sigue como antes: no hay pruebas protegidas que
+  // saltarse, y si las hubiera la policy las guarda y el recuento de abajo avisa.
+  const { data: retenidasData } = await supabase.rpc('mis_fotos_retenidas');
+  const retenidas = retenidasData ?? [];
+
   // Acotado a proposito: sin tope, una policy que impida borrar dejaria el bucle
   // girando para siempre.
   for (let vuelta = 0; vuelta < 20; vuelta++) {
     const { data: ficheros, error } = await carpeta.list(userId, { limit: 100 });
     if (error) throw new Error(error.message);
-    const rutas = rutasDeFotos(userId, (ficheros ?? []).map((f) => f.name));
+    const rutas = fotosABorrar(rutasDeFotos(userId, (ficheros ?? []).map((f) => f.name)), retenidas);
     if (rutas.length === 0) break;
     const { data: borrados, error: errorBorrado } = await carpeta.remove(rutas);
     if (errorBorrado) throw new Error(errorBorrado.message);
@@ -163,9 +174,11 @@ export async function deleteMyAccount(userId: string): Promise<void> {
       throw new Error('No se pudieron borrar todas tus fotos. Prueba otra vez.');
     }
   }
-  const { data: quedan, error: errorFinal } = await carpeta.list(userId, { limit: 1 });
+  const { data: quedan, error: errorFinal } = await carpeta.list(userId, { limit: 100 });
   if (errorFinal) throw new Error(errorFinal.message);
-  if ((quedan ?? []).length > 0) throw new Error('No se pudieron borrar todas tus fotos. Prueba otra vez.');
+  if (fotosABorrar(rutasDeFotos(userId, (quedan ?? []).map((f) => f.name)), retenidas).length > 0) {
+    throw new Error('No se pudieron borrar todas tus fotos. Prueba otra vez.');
+  }
 
   const { error } = await supabase.rpc('delete_my_account');
   if (error) throw new Error(traducirErrorBorrado(error.message));

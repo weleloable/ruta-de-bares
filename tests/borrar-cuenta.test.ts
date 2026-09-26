@@ -136,7 +136,9 @@ describe('contrato SQL <-> app', () => {
 
   it('todos los codigos que emite el SQL tienen frase en la app', () => {
     const codigos = [...ultimoBlockers().matchAll(/array_append\(v_res, '([A-Z_]+)'::text\)/g)].map((m) => m[1]);
-    assert.ok(codigos.length >= 3, `se esperaban varios impedimentos y salieron ${codigos.length}`);
+    // Dos desde la 0032 (ADMIN_CANNOT_DELETE y OWNS_ROUTES): los que son de
+    // organizacion. Menos que eso seria que el regex ha dejado de encontrarlos.
+    assert.ok(codigos.length >= 2, `se esperaban varios impedimentos y salieron ${codigos.length}`);
     const app = leer('src/features/profile/borrarCuenta.ts');
     for (const codigo of codigos) assert.match(app, new RegExp(`\\b${codigo}:`), `${codigo} sin texto en borrarCuenta.ts`);
   });
@@ -148,7 +150,7 @@ describe('contrato SQL <-> app', () => {
     const app = leer('src/features/profile/borrarCuenta.ts');
     const cuerpoMapa = app.slice(app.indexOf('const IMPEDIMENTOS'), app.indexOf('/** El primer impedimento'));
     const enLaApp = [...cuerpoMapa.matchAll(/^\s{2}([A-Z_]+):/gm)].map((m) => m[1]);
-    assert.ok(enLaApp.length >= 3);
+    assert.ok(enLaApp.length >= 2);
     for (const codigo of enLaApp) {
       assert.match(sql, new RegExp(`'${codigo}'`), `${codigo} tiene frase en la app y el SQL ya no lo emite`);
     }
