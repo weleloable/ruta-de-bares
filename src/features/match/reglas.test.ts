@@ -60,20 +60,23 @@ describe('filtros de la grilla', () => {
     );
   });
 
-  it('Me gusta incluye las conexiones (D6) y Todos lo incluye todo', () => {
+  it('una conexion ya NO sale en Me gusta (D6, cambiada); Todos lo incluye todo', () => {
     assert.deepEqual(contarPorFiltro(estados), {
       todos: 5,
-      'me-gusta': 2,
+      'me-gusta': 1,
       visto: 1,
       conexiones: 1,
       nuevos: 2,
     });
+    assert.equal(pasaFiltro('me-gusta', 'conexion'), false);
   });
 
-  it('cada estado cae en Todos y en al menos otro filtro', () => {
+  it('cada estado cae en Todos y en exactamente UN filtro mas', () => {
+    // Un Me gusta que se hace conexion salia en los dos filtros a la vez, y son
+    // estados distintos.
     for (const estado of ['nuevo', 'me-gusta', 'visto', 'conexion'] as const) {
       const donde = FILTROS.filter((f) => pasaFiltro(f.id, estado)).map((f) => f.id);
-      assert.ok(donde.includes('todos') && donde.length >= 2, `${estado} solo aparece en ${donde}`);
+      assert.ok(donde.includes('todos') && donde.length === 2, `${estado} aparece en ${donde}`);
     }
   });
 });
