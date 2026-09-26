@@ -64,6 +64,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="minijuegos"
+        options={{
+          title: 'Juegos',
+          tabBarIcon: ({ color, size }) => <Ionicons name="game-controller" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="perfil"
         options={{
           title: 'Mi perfil',
