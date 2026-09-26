@@ -164,6 +164,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**. Apunta que admin ha visto ya el aviso de una ruta terminada (el de
    arriba de Alertas de administracion), para apagar su punto rojo. Sin ella la
    app funciona: el aviso sale igual, solo que el punto rojo no cuenta las rutas.
+34. [`supabase/migrations/0034_minijuegos.sql`](../supabase/migrations/0034_minijuegos.sql)
+   y **Run**, despues de la 0033. Crea `minigame_scores` y `maestro_beers` (sin
+   privilegios para la app: todo pasa por funciones) y rehace `export_my_data()`
+   para que "Ver mis datos" incluya los minijuegos. Es el **ranking por ruta** de
+   La Cana Perfecta y la lista de cervezas de Maestro Cervecero, que solo ven
+   quienes estan dentro de esa ruta. **Ojo con el orden**: si despliegas la app
+   antes, la pestana Juegos funciona pero al guardar avisa de que falta la
+   migracion. Tras pegarla, la 0031 ya no se vuelve a pegar.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;

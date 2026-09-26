@@ -98,6 +98,16 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
               'Puedes desactivarla cuando quieras sin borrar tu cuenta: se guarda todo tal cual para cuando vuelvas.',
             ],
           },
+          {
+            subtitulo: 'Además, si juegas a los minijuegos',
+            puntos: [
+              'Tu mejor nota en La Caña Perfecta y las cervezas que hagas en Maestro Cervecero (con el nombre ' +
+                'que les pongas) las ve la gente de esa misma ruta, con tu nombre visible. No cruzan de una ruta ' +
+                'a otra.',
+              'Del ranking se guarda solo tu mejor nota, no cada partida. Puedes borrar tus cervezas cuando ' +
+                'quieras, y se borran con tu cuenta y con la ruta.',
+            ],
+          },
         ],
       },
 
@@ -163,7 +173,7 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
             puntos: [
               `Un máximo de ${diasConservacion} días tras la celebración del evento. (Aunque, idealmente, lo ` +
                 'borraremos todo a las 24h)',
-              'Eso es lo del evento: sellos, rutas y La Caña. Tu cuenta (tu correo, tu nombre visible, tu foto ' +
+              'Eso es lo del evento: sellos, rutas, minijuegos y La Caña. Tu cuenta (tu correo, tu nombre visible, tu foto ' +
                 'y, si entraste con Google, lo que nos dio Google) se guarda mientras la tengas.',
               'Puedes borrar tu cuenta junto con todos tus datos en cualquier momento desde Mi perfil. Eso ' +
                 'incluye lo que nos dio Google.',
@@ -228,7 +238,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
       parrafos: [
         'Todo: tu cuenta y tu correo, lo que nos dio Google si entraste con Google, las rutas en las que estás, ' +
           'tus sellos con la hora y el sitio, las fotos que enviaste a revisión, lo que se ha decidido sobre tu ' +
-          'cuenta y por qué, y lo de La Caña (perfil, Me gusta y Vistos, conexiones y los mensajes que escribiste tú).',
+          'cuenta y por qué, lo de los minijuegos (tu mejor nota y tus cervezas) y lo de La Caña (perfil, Me gusta ' +
+          'y Vistos, conexiones y los mensajes que escribiste tú).',
         'No salen los mensajes de la otra persona, que son suyos, ni el texto de una denuncia sobre ti que siga ' +
           'sin resolver: eso llevaría el nombre de quien la puso. Lo que se decidió sí sale, y es lo que necesitas ' +
           'para reclamar.',

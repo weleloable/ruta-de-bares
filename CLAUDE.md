@@ -113,6 +113,7 @@ supabase/
   migrations/0031_*.sql     la descarga de datos trae lo que dio Google al entrar
   migrations/0032_*.sql     fotos que sobran se borran; la denunciada es prueba
   migrations/0033_*.sql     que admin ya vio el aviso de una ruta terminada
+  migrations/0034_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -120,7 +121,7 @@ tests/                    tests que no encajan en un feature (p.ej. migration.te
 
 Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `route_invites`,
 `route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
-`admin_rutas_terminadas_vistas`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -239,6 +240,19 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **Minijuegos (`src/features/minijuegos/`, pestana Juegos)**: solo son visibles
+  dentro de una ruta (el boton depende de `activeRoute`) y el ranking y las
+  cervezas son POR RUTA (`0034`). Las tablas `minigame_scores` y `maestro_beers`
+  no tienen privilegios para la app: todo pasa por funciones SECURITY DEFINER,
+  como las `match_*`. El servidor NO se fia de la nota de una cerveza: recibe la
+  receta y la calcula con `maestro_calcular_cerveza`, espejo de `estilo.ts` (los
+  dos con enteros sobre porcentajes; `tests/migration-0034.test.ts` los compara
+  con 39 000 combinaciones). Lo que no puede saber es si un porcentaje se gano
+  jugando: se frena con ritmo minimo y tope por ruta, no se evita del todo.
+  Cada juego es un componente que llama a `onFinish`; como se guarda en la ruta
+  lo declara su `JuegoDef.enviar`. Sin ruta (`rutaId = null`) todo sigue
+  funcionando con el record local.
 
 - **`react-dom` fijado a `19.2.3` en `overrides`**: `expo-router` arrastra
   `react-dom` para soporte web, y la resolución normal de npm elige una

@@ -3,10 +3,12 @@ import { Tabs } from 'expo-router';
 
 import { BarraSuperior } from '../../src/components/BarraSuperior';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
+import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors } from '../../src/lib/theme';
 
 export default function TabsLayout() {
   const { avisos } = useAvisosCana();
+  const { activeRoute } = useActiveRoute();
 
   return (
     <Tabs
@@ -61,6 +63,15 @@ export default function TabsLayout() {
           // burbujita de "Chats" dentro de la pestana.
           tabBarBadge: avisos > 0 ? avisos : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.stamp, color: colors.white, fontSize: 11, fontWeight: '800' },
+        }}
+      />
+      <Tabs.Screen
+        name="minijuegos"
+        options={{
+          title: 'Juegos',
+          // Los minijuegos son de cada ruta: sin estar dentro de una, no hay boton.
+          href: activeRoute ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="game-controller" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

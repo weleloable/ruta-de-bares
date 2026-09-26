@@ -95,7 +95,9 @@ describe('la pagina estatica lleva la politica entera en el HTML', () => {
 });
 
 describe('el workflow publica la pagina donde Pages responde 200', () => {
+  // En Windows git saca el fichero con CRLF y las regex de abajo cuentan con \n.
   const workflow = readFileSync(join(raiz, '.github/workflows/deploy-web.yml'), 'utf8')
+    .replace(/\r\n/g, '\n')
     .split('\n')
     .filter((l) => !l.trimStart().startsWith('#'))
     .join('\n');

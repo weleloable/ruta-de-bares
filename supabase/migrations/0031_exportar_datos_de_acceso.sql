@@ -1,8 +1,10 @@
 -- Ruta de Bares - 0031: la descarga de datos incluye lo que guarda el sistema
 -- de acceso, y en particular lo que da Google al entrar con Google.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0030.
--- Idempotente: se puede re-ejecutar sin romper nada (solo rehace una funcion
--- que no rehace nadie despues).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * export_my_data() la rehace la 0034
 --
 -- Por que existe. Al entrar con Google, Supabase guarda en su sistema de acceso
 -- lo que Google le da: correo, nombre, foto y el identificador de la cuenta de

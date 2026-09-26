@@ -93,7 +93,7 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
     assert.match(sinComentarios(leer('src/components/BarraSuperior.tsx')), /paddingTop:\s*insets\.top/);
   });
 
-  describe('barra inferior: Ruta, Sellos y Caña, en ese orden', () => {
+  describe('barra inferior: Ruta, Sellos, Caña y Juegos, en ese orden', () => {
     const layout = sinComentarios(leer('app/(tabs)/_layout.tsx'));
     // Se parte por "<Tabs.Screen" y no con un regex hasta el primer "/>": el
     // icono de la pestana (<Ionicons ... />) cierra antes de llegar a `href`.
@@ -114,9 +114,14 @@ describe('BarraSuperior: margen del notch una sola vez', () => {
       for (const nombre of ['ruta', 'index', 'cana']) assert.doesNotMatch(opciones(nombre), /\bhref:/, nombre);
     });
 
-    it('el orden de la barra es Ruta, Sellos, Caña: el de los Tabs.Screen', () => {
+    it('juegos solo tiene boton dentro de una ruta: href depende de la ruta activa, nunca es null a secas', () => {
+      assert.match(opciones('minijuegos'), /href:\s*activeRoute\s*\?\s*undefined\s*:\s*null/);
+      assert.doesNotMatch(opciones('minijuegos'), /href:\s*null\s*,/);
+    });
+
+    it('el orden de la barra es Ruta, Sellos, Caña, Juegos: el de los Tabs.Screen', () => {
       const orden = [...layout.replace(/"/g, "'").matchAll(/<Tabs\.Screen\s+name='(\w+)'/g)].map((m) => m[1]);
-      assert.deepEqual(orden.filter((n) => n !== 'perfil'), ['ruta', 'index', 'cana']);
+      assert.deepEqual(orden.filter((n) => n !== 'perfil'), ['ruta', 'index', 'cana', 'minijuegos']);
     });
 
     it('sellos se llama Sellos y lleva su icono de cinta', () => {
