@@ -8,7 +8,7 @@ import type { PropsJuego } from '../../tipos';
 import { SelectorAngulo } from './SelectorAngulo';
 import { useTecladoCana } from './teclado';
 import { useInclinacion } from './useInclinacion';
-import { avanzar, desbordado, ESTADO_VACIO, LINEA, puntuar, total, type Estado } from './modelo';
+import { avanzar, desbordado, ESTADO_VACIO, puntuar, total, type Estado } from './modelo';
 
 const ALTO_VASO = 260;
 /** Del pico del grifo a la boca del vaso, en px (ver `grifo` y `escenario` en los estilos). */
@@ -99,7 +99,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
     <View style={styles.raiz}>
       <View style={styles.escenario}>
         <Text style={[typography.muted, styles.lineaTexto]}>
-          {rebosa ? '¡Se ha desbordado!' : 'Llénalo hasta la línea'}
+          {rebosa ? '¡Se ha desbordado!' : 'Llénalo hasta arriba, sin derramar'}
         </Text>
         <View style={styles.columna}>
           <View style={styles.grifo}>
@@ -111,7 +111,6 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
           <View style={[styles.vaso, { transform: [{ rotate: `${inclinado}deg` }], transformOrigin: 'top' }]}>
             <View style={[styles.liquido, { height: alto(estado.liquido) }]} />
             <View style={[styles.espuma, { bottom: alto(estado.liquido), height: alto(estado.espuma) }]} />
-            <View style={[styles.linea, { bottom: alto(LINEA) }]} />
           </View>
           {/* Despues del vaso para pintarse encima; acaba en la superficie del liquido. */}
           {sirviendo ? <View pointerEvents="none" style={[styles.chorro, { height: largoChorro }]} /> : null}
@@ -194,7 +193,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: colors.beerSoft,
   },
-  linea: { position: 'absolute', left: 0, right: 0, height: 3, backgroundColor: colors.stamp },
   lineaTexto: { textAlign: 'center' },
   servir: {
     minHeight: 96,
