@@ -1,13 +1,28 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card } from '../../../../components/ui';
 import { colors, radius, space, typography } from '../../../../lib/theme';
+import { useAuth } from '../../../auth/AuthProvider';
 import type { PropsJuego } from '../../tipos';
+import { elegirDato } from './curiosidades';
 import { buscarMalta, LEVADURAS, MALTAS } from './datos';
-import { anterior, numeroPaso, PASOS, puedeAvanzar, RECETA_VACIA, siguiente, type Paso, type Receta } from './pasos';
+import { calcularCerveza } from './estilo';
 import { PasoLupulo } from './PasoLupulo';
 import { PasoMaceracion } from './PasoMaceracion';
+import {
+  anterior,
+  numeroPaso,
+  PASOS,
+  puedeAvanzar,
+  RECETA_VACIA,
+  recetaCompleta,
+  siguiente,
+  type Paso,
+  type PasoJuego,
+  type Receta,
+} from './pasos';
+import { ResultadoCerveza } from './ResultadoCerveza';
 import { VasoCerveza } from './VasoCerveza';
 
 const TITULOS: Record<Paso, string> = {
@@ -18,24 +33,53 @@ const TITULOS: Record<Paso, string> = {
   resultado: 'Tu cerveza',
 };
 
-// Color del vaso mientras aun no se ha elegido malta.
-const COLOR_NEUTRO = '#E9B54B';
-
-// Datos fijos de la fase 1 (la fase 3 los calcula).
-const NOMBRE_FIJO = 'Ale Complutense';
+const pct = (x: number) => Math.round(x * 100);
 
 /**
- * Estructura de pasos y navegacion. Malta y levadura se eligen; maceracion y
- * lupulo son de habilidad. El resultado lleva datos FIJOS hasta la fase 3, que
- * los calcula, y la puntuacion que sale es provisional: 0.
+ * Cuatro microjuegos encadenados que acaban en "tu cerveza". Entre paso y paso
+ * sale un dato curioso (una frase) que se salta con un toque. `onFinish` se
+ * llama al pulsar "Terminar" en la tarjeta final, con el nombre elegido.
  */
 export function MaestroCervecero({ onFinish }: PropsJuego) {
+  const { profile } = useAuth();
   const [paso, setPaso] = useState<Paso>('malta');
   const [receta, setReceta] = useState<Receta>(RECETA_VACIA);
+  // Dato curioso que se ve ENTRE dos pasos; null = se esta en un paso.
+  const [dato, setDato] = useState<string | null>(null);
 
   const n = numeroPaso(paso);
   const atras = anterior(paso);
-  const malta = buscarMalta(receta.malta);
+  const completa = recetaCompleta(receta);
+  const cerveza = useMemo(() => (completa ? calcularCerveza(completa) : null), [receta]);
+
+  const avanzar = () => {
+    if (paso === 'resultado') return;
+    setDato(elegirDato(paso as PasoJuego, Math.random));
+  };
+  const seguir = () => {
+    setDato(null);
+    setPaso(siguiente(paso));
+  };
+
+  const terminar = (nombre: string) => {
+    if (!completa || !cerveza) return;
+    onFinish({
+      juego: 'maestro-cervecero',
+      puntuacion: cerveza.puntuacion,
+      detalles: {
+        nombre,
+        estilo: cerveza.estilo,
+        malta: completa.malta,
+        levadura: completa.levadura,
+        graduacion: cerveza.abv,
+        ibu: cerveza.ibu,
+        cuerpo: cerveza.cuerpo,
+        maceracion: pct(completa.maceracion),
+        amargor: pct(completa.lupulo.amargor),
+        aroma: pct(completa.lupulo.aroma),
+      },
+    });
+  };
 
   return (
     <View style={styles.raiz}>
@@ -45,85 +89,80 @@ export function MaestroCervecero({ onFinish }: PropsJuego) {
         ))}
       </View>
       <Text style={typography.overline}>{n === null ? 'Listo' : `Paso ${n} de ${PASOS.length}`}</Text>
-      <Text style={typography.sectionTitle}>{TITULOS[paso]}</Text>
+      <Text style={typography.sectionTitle}>{dato !== null ? '¿Sabías que…?' : TITULOS[paso]}</Text>
 
-      <ScrollView contentContainerStyle={styles.cuerpo} showsVerticalScrollIndicator={false}>
-        {paso === 'malta' ? (
-          <View style={styles.rejilla}>
-            {MALTAS.map((m) => (
-              <Opcion
-                key={m.id}
-                seleccionada={receta.malta === m.id}
-                titulo={m.nombre}
-                descripcion={m.descripcion}
-                onPress={() => setReceta({ ...receta, malta: m.id })}
-                muestra={<VasoCerveza color={m.color} alto={56} ancho={36} />}
+      {dato !== null ? (
+        <View style={styles.cuerpoFijo}>
+          <Card>
+            <Text style={styles.dato}>{dato}</Text>
+          </Card>
+          <Button title="Seguir" onPress={seguir} />
+        </View>
+      ) : (
+        <>
+          <ScrollView
+            contentContainerStyle={styles.cuerpo}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {paso === 'malta' ? (
+              <View style={styles.rejilla}>
+                {MALTAS.map((m) => (
+                  <Opcion
+                    key={m.id}
+                    seleccionada={receta.malta === m.id}
+                    titulo={m.nombre}
+                    descripcion={m.descripcion}
+                    onPress={() => setReceta({ ...receta, malta: m.id })}
+                    muestra={<VasoCerveza color={m.color} alto={56} ancho={36} />}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            {paso === 'maceracion' ? (
+              <PasoMaceracion onTerminar={(maceracion) => setReceta((r) => ({ ...r, maceracion }))} />
+            ) : null}
+
+            {paso === 'lupulo' ? <PasoLupulo onTerminar={(lupulo) => setReceta((r) => ({ ...r, lupulo }))} /> : null}
+
+            {paso === 'fermentacion' ? (
+              <View style={styles.rejilla}>
+                {LEVADURAS.map((l) => (
+                  <Opcion
+                    key={l.id}
+                    seleccionada={receta.levadura === l.id}
+                    titulo={l.nombre}
+                    descripcion={l.descripcion}
+                    onPress={() => setReceta({ ...receta, levadura: l.id })}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            {paso === 'resultado' && cerveza ? (
+              <ResultadoCerveza
+                cerveza={cerveza}
+                color={buscarMalta(receta.malta)?.color ?? MALTAS[0].color}
+                jugador={profile?.display_name ?? ''}
+                onTerminar={terminar}
               />
-            ))}
-          </View>
-        ) : null}
+            ) : null}
+          </ScrollView>
 
-        {paso === 'maceracion' ? (
-          <PasoMaceracion onTerminar={(maceracion) => setReceta((r) => ({ ...r, maceracion }))} />
-        ) : null}
-
-        {paso === 'lupulo' ? <PasoLupulo onTerminar={(lupulo) => setReceta((r) => ({ ...r, lupulo }))} /> : null}
-
-        {paso === 'fermentacion' ? (
-          <View style={styles.rejilla}>
-            {LEVADURAS.map((l) => (
-              <Opcion
-                key={l.id}
-                seleccionada={receta.levadura === l.id}
-                titulo={l.nombre}
-                descripcion={l.descripcion}
-                onPress={() => setReceta({ ...receta, levadura: l.id })}
+          <View style={styles.botones}>
+            {paso !== 'resultado' ? (
+              <Button
+                title={paso === 'fermentacion' ? 'Ver mi cerveza' : 'Siguiente'}
+                disabled={!puedeAvanzar(paso, receta)}
+                onPress={avanzar}
               />
-            ))}
+            ) : null}
+            {atras ? <Button title="Atrás" variant="secondary" onPress={() => setPaso(atras)} /> : null}
           </View>
-        ) : null}
-
-        {paso === 'resultado' ? <TarjetaResultado color={malta?.color ?? COLOR_NEUTRO} /> : null}
-      </ScrollView>
-
-      <View style={styles.botones}>
-        {paso === 'resultado' ? (
-          <Button
-            title="Terminar"
-            onPress={() =>
-              onFinish({
-                juego: 'maestro-cervecero',
-                puntuacion: 0,
-                detalles: {
-                  nombre: NOMBRE_FIJO,
-                  malta: receta.malta ?? '',
-                  levadura: receta.levadura ?? '',
-                  provisional: true,
-                },
-              })
-            }
-          />
-        ) : (
-          <Button
-            title={paso === 'fermentacion' ? 'Ver mi cerveza' : 'Siguiente'}
-            disabled={!puedeAvanzar(paso, receta)}
-            onPress={() => setPaso(siguiente(paso))}
-          />
-        )}
-        {atras ? <Button title="Atrás" variant="secondary" onPress={() => setPaso(atras)} /> : null}
-      </View>
+        </>
+      )}
     </View>
-  );
-}
-
-function TarjetaResultado({ color }: { color: string }) {
-  return (
-    <Card style={styles.tarjeta}>
-      <VasoCerveza color={color} alto={150} ancho={92} />
-      <Text style={[typography.sectionTitle, styles.centrado]}>{NOMBRE_FIJO}</Text>
-      <Text style={typography.muted}>Ale · 5,0 % vol · 25 IBU</Text>
-      <Text style={styles.nota}>Puntuación: 0 (provisional)</Text>
-    </Card>
   );
 }
 
@@ -163,6 +202,8 @@ const styles = StyleSheet.create({
   punto: { flex: 1, height: 6, borderRadius: radius.pill, backgroundColor: colors.border },
   puntoHecho: { backgroundColor: colors.beer },
   cuerpo: { gap: space.md, paddingVertical: space.sm },
+  cuerpoFijo: { flex: 1, gap: space.md, paddingVertical: space.sm },
+  dato: { fontSize: 18, lineHeight: 26, color: colors.ink },
   rejilla: { gap: space.md },
   opcion: {
     flexDirection: 'row',
@@ -177,8 +218,5 @@ const styles = StyleSheet.create({
   },
   opcionElegida: { borderColor: colors.beer, backgroundColor: colors.beerSoft },
   opcionTextos: { flex: 1, gap: 2 },
-  tarjeta: { alignItems: 'center' },
-  centrado: { textAlign: 'center' },
-  nota: { fontSize: 13, fontWeight: '700', color: colors.beerDark },
   botones: { gap: space.sm },
 });
