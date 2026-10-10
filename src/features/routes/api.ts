@@ -24,6 +24,8 @@ export type BarInput = {
   opensAt: Date;
   closesAt: Date;
   notes: string;
+  /** data URL del sello (bar propio) o null: se copia a la parada para que los jugadores la vean. */
+  logo: string | null;
 };
 
 /**
@@ -116,6 +118,7 @@ export async function saveBar(input: BarInput): Promise<RouteBarRow> {
     opens_at: input.opensAt.toISOString(),
     closes_at: input.closesAt.toISOString(),
     notes: input.notes.trim(),
+    logo: input.logo,
   };
 
   const query = input.id

@@ -24,7 +24,7 @@ const RADIO_NUMERO = 12;
 /** Cuanto se deja libre entre la marca y el borde del mapa. */
 const AIRE = 8;
 
-export type ParadaMapa = { id: string; nombre: string; lat: number; lng: number };
+export type ParadaMapa = { id: string; nombre: string; lat: number; lng: number; logo?: string | null };
 
 export function MapaEstatico({
   paradas,
@@ -77,7 +77,7 @@ export function MapaEstatico({
           ]}
         >
           {marca === 'sellos' ? (
-            <BarLogo nombre={paradas[i].nombre} tamano={radio * 2 - 4} />
+            <BarLogo nombre={paradas[i].nombre} logo={paradas[i].logo} tamano={radio * 2 - 4} />
           ) : (
             <Text style={styles.pinNumero}>{i + 1}</Text>
           )}

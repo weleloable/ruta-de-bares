@@ -20,11 +20,14 @@ export const OPACIDAD_SELLO_PENDIENTE = 0.5;
 export function StampSeal({
   index,
   name,
+  logo,
   stampedAt,
   onPress,
 }: {
   index: number;
   name: string;
+  /** `route_bars.logo` de la parada (0035). */
+  logo?: string | null;
   stampedAt: Date | null;
   onPress: () => void;
 }) {
@@ -43,7 +46,7 @@ export function StampSeal({
     >
       <View style={styles.sello}>
         <View style={{ opacity: sellado ? 1 : OPACIDAD_SELLO_PENDIENTE }}>
-          <BarLogo nombre={name} tamano={TAMANO} />
+          <BarLogo nombre={name} logo={logo} tamano={TAMANO} />
         </View>
         {sellado ? <ChapaSellado tamanoLogo={TAMANO} /> : null}
       </View>

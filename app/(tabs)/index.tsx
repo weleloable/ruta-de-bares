@@ -148,6 +148,7 @@ export default function SellosScreen() {
                   key={bar.id}
                   index={indice}
                   name={bar.name}
+                  logo={bar.logo}
                   stampedAt={sello ? new Date(sello.stamped_at) : null}
                   onPress={() => setAbierto(bar.id)}
                 />
@@ -177,7 +178,7 @@ export default function SellosScreen() {
           nombre={profile?.display_name ?? ''}
           ruta={activeRoute.name}
           foto={profile?.avatar_url ?? null}
-          paradas={bars.map((b) => ({ id: b.id, nombre: b.name, lat: b.lat, lng: b.lng }))}
+          paradas={bars.map((b) => ({ id: b.id, nombre: b.name, lat: b.lat, lng: b.lng, logo: b.logo }))}
         />
       ) : null}
     </SafeAreaView>

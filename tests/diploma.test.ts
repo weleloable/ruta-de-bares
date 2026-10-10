@@ -26,7 +26,7 @@ describe('pantalla Sellos', () => {
     assert.match(bloque[1], /nombre=\{profile\?\.display_name \?\? ''\}/);
     assert.match(bloque[1], /ruta=\{activeRoute\.name\}/);
     assert.match(bloque[1], /foto=\{profile\?\.avatar_url \?\? null\}/);
-    assert.match(bloque[1], /paradas=\{bars\.map\(\(b\) => \(\{ id: b\.id, nombre: b\.name, lat: b\.lat, lng: b\.lng \}\)\)\}/);
+    assert.match(bloque[1], /paradas=\{bars\.map\(\(b\) => \(\{ id: b\.id, nombre: b\.name, lat: b\.lat, lng: b\.lng, logo: b\.logo \}\)\)\}/);
   });
 });
 
@@ -121,7 +121,7 @@ describe('Mapa del diploma', () => {
   it('las paradas se marcan por defecto con el SELLO (logo) del bar, y hay opcion de numeros', () => {
     assert.match(codigo, /marca = 'sellos'/);
     assert.match(codigo, /marca\?: 'sellos' \| 'numeros'/);
-    assert.match(codigo, /<BarLogo nombre=\{paradas\[i\]\.nombre\} tamano=\{radio \* 2 - 4\} \/>/);
+    assert.match(codigo, /<BarLogo nombre=\{paradas\[i\]\.nombre\} logo=\{paradas\[i\]\.logo\} tamano=\{radio \* 2 - 4\} \/>/);
   });
 
   it('las teselas se dibujan con el lado que compensa el zoom decimal, no con 256 fijo', () => {

@@ -65,16 +65,16 @@ describe('alta de un bar propio', () => {
     assert.match(leer('src/features/routes/BarLogo.tsx'), /useCatalogo\(\)/);
   });
 
-  it('el almacen espera a leer antes de escribir, o guardar machacaria lo que ya habia', () => {
+  it('el catalogo espera a cargar antes de validar y guardar, o validaria contra una lista incompleta', () => {
     const store = leer('src/features/routes/catalogoStore.ts');
     const cuerpo = store.slice(store.indexOf('export async function guardarBarPropio'));
     assert.ok(cuerpo.indexOf('await cargar()') > -1, 'guardarBarPropio no espera a cargar()');
-    assert.ok(cuerpo.indexOf('await cargar()') < cuerpo.indexOf('setItem'), 'espera despues de escribir');
+    assert.ok(cuerpo.indexOf('await cargar()') < cuerpo.indexOf('crearBarCompartido('), 'espera despues de guardar');
   });
 
-  it('el almacen solo publica en memoria DESPUES de guardar en el dispositivo', () => {
+  it('el catalogo solo publica en memoria DESPUES de que Postgres acepte el bar (0035)', () => {
     const store = leer('src/features/routes/catalogoStore.ts');
     const cuerpo = store.slice(store.indexOf('export async function guardarBarPropio'));
-    assert.ok(cuerpo.indexOf('setItem') < cuerpo.indexOf('publicar(nuevos)'));
+    assert.ok(cuerpo.indexOf('crearBarCompartido(') < cuerpo.indexOf('publicar('));
   });
 });

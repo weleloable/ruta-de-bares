@@ -2,11 +2,13 @@
  * Catalogo de bares predefinidos: de aqui se elige al anadir una parada, en
  * vez de escribir nombre, direccion y marcar el mapa a mano cada vez.
  *
- * Vive en el codigo y no en Postgres a proposito (prueba local: no se toca el
- * esquema). Al guardar, el bar se copia a `route_bars` con nombre, direccion,
- * posicion y radio, asi que la ruta no depende del catalogo una vez creada.
- * Consecuencia: `route_bars` no guarda el logo, por eso se recupera casando el
- * nombre del bar con el del catalogo (`buscarPorNombre`, ver BarLogo.tsx).
+ * Esta lista cerrada vive en el codigo. Los bares que anaden los admins viven en
+ * Postgres (`catalog_bars`, 0035) y se mezclan con esta en catalogoStore.ts.
+ * Al guardar, el bar se copia a `route_bars` con nombre, direccion, posicion,
+ * radio y, si es propio, su logo (`route_bars.logo`), asi que la ruta no
+ * depende del catalogo una vez creada. Los logos de ESTA lista no se copian:
+ * son ficheros de assets/ y se recuperan casando el nombre del bar con el del
+ * catalogo (`buscarPorNombre`, ver BarLogo.tsx).
  *
  * Origen de los datos: "LISTA BARES - FINAL" (nombre, plus code de Google Maps
  * y logo de cada bar). `plusCode` es el codigo tal cual viene de Google Maps y
@@ -31,11 +33,11 @@ export type BarCatalogo = {
   lng: number;
   /**
    * Solo los bares propios (ver catalogoPropio.ts): la imagen va dentro, como
-   * data URL, porque vive en el dispositivo y no hay fichero en assets/. Los de
-   * la lista cerrada usan logos.ts.
+   * data URL, porque no hay fichero en assets/. Los de la lista cerrada usan
+   * logos.ts.
    */
   logoUri?: string;
-  /** true = lo anadio un admin desde el editor, no viene en el codigo. */
+  /** true = lo anadio un admin desde el editor (catalog_bars), no viene en el codigo. */
   propio?: boolean;
 };
 
