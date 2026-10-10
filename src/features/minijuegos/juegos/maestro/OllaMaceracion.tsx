@@ -86,7 +86,10 @@ const Vapor = memo(function Vapor({ indice, visible }: { indice: number; visible
       ]}
     >
       <Animated.View
-        style={[styles.vaporNube, { opacity: v.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 0.9, 0.5, 0] }) }]}
+        style={[
+          styles.vaporNube,
+          { opacity: v.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 0.9, 0.5, 0] }) },
+        ]}
       />
     </Animated.View>
   );
@@ -144,7 +147,10 @@ const Llama = memo(function Llama({ pulsos }: { pulsos: number }) {
     Animated.spring(empuje, { toValue: 1, friction: 6, tension: 40, useNativeDriver: NATIVO }).start();
   }, [pulsos, empuje]);
 
-  const escala = Animated.multiply(empuje, temblor.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.9, 1.08, 0.9] }));
+  const escala = Animated.multiply(
+    empuje,
+    temblor.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.9, 1.08, 0.9] }),
+  );
 
   return (
     <View style={styles.fogon}>
@@ -182,60 +188,76 @@ export function OllaMaceracion({
   pulsos,
   hervor = false,
   hijos,
+  escala = 1,
+  etiqueta = true,
 }: {
   temp?: number;
   pulsos: number;
   hervor?: boolean;
   hijos?: ReactNode;
+  /** 1 = tamano natural (ANCHO_OLLA x ALTO_OLLA). La escena se dibuja entera y se encoge: nada cambia de sitio. */
+  escala?: number;
+  /** El texto de debajo ("Hirviendo", "Se esta enfriando"). En una olla pequena sobra: ocupa sitio. */
+  etiqueta?: boolean;
 }) {
   const clima = hervor ? ({ modo: 'justo', intensidad: 0 } as const) : climaOlla(temp);
   const vapores = hervor ? VAPOR_HERVOR : clima.modo === 'caliente' ? particulasVisibles(clima, VAPORES) : 0;
   const copos = clima.modo === 'frio' ? particulasVisibles(clima, COPOS) : 0;
 
   return (
-    <View style={styles.raiz} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <View style={styles.escena}>
-        {Array.from({ length: COPOS }, (_, i) => (
-          <Copo key={`c${i}`} indice={i} visible={particulaVisible(i, copos, COPOS)} />
-        ))}
+    <View
+      style={[styles.raiz, { width: ANCHO_OLLA * escala }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {/* Caja del tamano ya encogido: el diseno se pinta a tamano natural dentro y se escala desde su esquina. */}
+      <View style={{ width: ANCHO_OLLA * escala, height: ALTO * escala, overflow: 'hidden' }}>
+        <View style={[styles.escena, { transform: [{ scale: escala }], transformOrigin: '0% 0%' }]}>
+          {Array.from({ length: COPOS }, (_, i) => (
+            <Copo key={`c${i}`} indice={i} visible={particulaVisible(i, copos, COPOS)} />
+          ))}
 
-        <Llama pulsos={pulsos} />
-        <View style={styles.parrilla} />
+          <Llama pulsos={pulsos} />
+          <View style={styles.parrilla} />
 
-        <View style={styles.asaIzq} />
-        <View style={styles.asaDer} />
-        <View style={styles.cuerpo}>
-          <View style={styles.brillo} />
-          {/* Escarcha si se enfria, brasa abajo si se pasa: el metal tambien lo cuenta. */}
-          <View
-            style={[styles.tinte, { backgroundColor: '#BFE3F5', opacity: clima.modo === 'frio' ? clima.intensidad * 0.55 : 0 }]}
-          />
-          <View
-            style={[styles.brasa, { opacity: clima.modo === 'caliente' ? clima.intensidad * 0.5 : 0 }]}
-          />
+          <View style={styles.asaIzq} />
+          <View style={styles.asaDer} />
+          <View style={styles.cuerpo}>
+            <View style={styles.brillo} />
+            {/* Escarcha si se enfria, brasa abajo si se pasa: el metal tambien lo cuenta. */}
+            <View
+              style={[
+                styles.tinte,
+                { backgroundColor: '#BFE3F5', opacity: clima.modo === 'frio' ? clima.intensidad * 0.55 : 0 },
+              ]}
+            />
+            <View style={[styles.brasa, { opacity: clima.modo === 'caliente' ? clima.intensidad * 0.5 : 0 }]} />
+          </View>
+          <View style={styles.borde} />
+          <View style={[styles.mosto, { backgroundColor: colorMosto(temp) }]} />
+
+          {Array.from({ length: BURBUJAS }, (_, i) => (
+            <Burbuja key={`b${i}`} indice={i} visible={clima.modo === 'justo'} />
+          ))}
+          {hijos}
+          {Array.from({ length: VAPORES }, (_, i) => (
+            <Vapor key={`v${i}`} indice={i} visible={particulaVisible(i, vapores, VAPORES)} />
+          ))}
         </View>
-        <View style={styles.borde} />
-        <View style={[styles.mosto, { backgroundColor: colorMosto(temp) }]} />
-
-        {Array.from({ length: BURBUJAS }, (_, i) => (
-          <Burbuja key={`b${i}`} indice={i} visible={clima.modo === 'justo'} />
-        ))}
-        {hijos}
-        {Array.from({ length: VAPORES }, (_, i) => (
-          <Vapor key={`v${i}`} indice={i} visible={particulaVisible(i, vapores, VAPORES)} />
-        ))}
       </View>
-      <Text
-        style={[
-          typography.muted,
-          styles.estado,
-          clima.modo === 'justo' && { color: hervor ? colors.beerDark : colors.green },
-          clima.modo === 'frio' && { color: '#3E78A8' },
-          clima.modo === 'caliente' && { color: colors.stamp },
-        ]}
-      >
-        {hervor ? 'Hirviendo' : texto(clima.modo)}
-      </Text>
+      {etiqueta ? (
+        <Text
+          style={[
+            typography.muted,
+            styles.estado,
+            clima.modo === 'justo' && { color: hervor ? colors.beerDark : colors.green },
+            clima.modo === 'frio' && { color: '#3E78A8' },
+            clima.modo === 'caliente' && { color: colors.stamp },
+          ]}
+        >
+          {hervor ? 'Hirviendo' : texto(clima.modo)}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -270,7 +292,13 @@ const styles = StyleSheet.create({
   },
   lengua: { width: 22, height: 26, alignItems: 'center', justifyContent: 'flex-end' },
   // Gota de llama: un cuadrado redondeado con una esquina en punta, girado para que la punta mire arriba.
-  gota: { position: 'absolute', bottom: 2, borderRadius: 999, borderTopLeftRadius: 0, transform: [{ rotate: '45deg' }] },
+  gota: {
+    position: 'absolute',
+    bottom: 2,
+    borderRadius: 999,
+    borderTopLeftRadius: 0,
+    transform: [{ rotate: '45deg' }],
+  },
   gotaFuera: { width: 18, height: 18, backgroundColor: '#E8742A' },
   gotaCentro: { width: 21, height: 21 },
   gotaDentro: { width: 10, height: 10, bottom: 3, backgroundColor: '#F6C343' },

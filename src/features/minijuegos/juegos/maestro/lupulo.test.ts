@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { avanzar, DURACION, estadoBolsa, INICIO, MARCAS, resumen, terminado, tocar, VENTANA, type Estado } from './lupulo.ts';
+import {
+  avanzar,
+  DURACION,
+  estadoBolsa,
+  INICIO,
+  MARCAS,
+  resumen,
+  terminado,
+  tocar,
+  VENTANA,
+  type Estado,
+} from './lupulo.ts';
 
 const en = (id: 'amargor' | 'aroma') => MARCAS.find((m) => m.id === id)!.en;
 const enTiempo = (t: number): Estado => ({ ...INICIO, t });

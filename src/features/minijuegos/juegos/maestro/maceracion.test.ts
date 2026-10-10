@@ -3,11 +3,14 @@ import { test } from 'node:test';
 
 import {
   acierto,
+  ALTO_APP_RESERVADO,
   avanzar,
   calentar,
   climaOlla,
   colorMosto,
   DURACION,
+  escalaOlla,
+  ESCALA_OLLA_MIN,
   INICIO,
   INTENSIDAD_MINIMA,
   particulaVisible,
@@ -134,4 +137,30 @@ test('olla: el mosto es dorado en su punto, palido en frio, tostado en caliente'
   assert.ok(cg < jg && cr < jr + 1, 'el caliente es mas tostado');
   assert.equal(colorMosto(ZONA.min), colorMosto(ZONA.max));
   assert.notEqual(colorMosto(ZONA.max + 1), colorMosto(ZONA.max + 3));
+});
+
+test('olla: en una pantalla grande va a tamano natural', () => {
+  assert.equal(escalaOlla(ALTO_APP_RESERVADO + 232 + 240 + 100, 232, 240), 1);
+});
+
+test('olla: se encoge lo justo para que el paso quepa, y deja el hueco exacto', () => {
+  const ventana = ALTO_APP_RESERVADO + 232 + 120;
+  const escala = escalaOlla(ventana, 232, 240);
+  assert.ok(Math.abs(escala - 0.5) < 1e-9);
+  assert.ok(232 + 240 * escala + ALTO_APP_RESERVADO <= ventana + 1e-9, 'el paso cabe');
+});
+
+test('olla: nunca baja del minimo, ni con una ventana absurda', () => {
+  assert.equal(escalaOlla(300, 232, 240), ESCALA_OLLA_MIN);
+  assert.equal(escalaOlla(0, 232, 240), ESCALA_OLLA_MIN);
+  assert.equal(escalaOlla(NaN, 232, 240), ESCALA_OLLA_MIN);
+});
+
+test('olla: crece con la ventana, sin saltos hacia atras', () => {
+  let anterior = 0;
+  for (let h = 500; h <= 1000; h += 10) {
+    const e = escalaOlla(h, 232, 240);
+    assert.ok(e >= anterior);
+    anterior = e;
+  }
 });

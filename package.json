@@ -48,7 +48,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
     "doctor": "expo-doctor",
     "check": "npm run typecheck && npm test",
-    "verificar:web": "node scripts/verificar-mapa-web.mjs"
+    "verificar:web": "node scripts/verificar-mapa-web.mjs",
+    "verificar:juego": "node scripts/verificar-juego-web.mjs"
   },
   "private": true,
   "overrides": {

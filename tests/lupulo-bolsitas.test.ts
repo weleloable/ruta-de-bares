@@ -14,11 +14,19 @@ const paso = leer('src/features/minijuegos/juegos/maestro/PasoLupulo.tsx');
 const bolsas = leer('src/features/minijuegos/juegos/maestro/BolsitaLupulo.tsx');
 
 describe('paso del lupulo: bolsitas y olla', () => {
-  it('el boton va ANTES que la olla: la olla es alta y debajo de ella el boton se salia de la pantalla', () => {
+  it('el boton va DEBAJO de la olla, y para que quepa la olla se escala segun el alto de la ventana', () => {
     const boton = paso.indexOf('accessibilityLabel={empezado ?');
     const olla = paso.indexOf('<OllaMaceracion');
     assert.ok(boton > 0 && olla > 0);
-    assert.ok(boton < olla, 'el boton esta despues de la olla');
+    assert.ok(olla < boton, 'el boton tiene que ir despues de la olla');
+    assert.match(paso, /useWindowDimensions\(\)/);
+    assert.match(paso, /escalaOlla\(altoVentana, ALTO_RESTO_PASO, ALTO_OLLA\)/);
+    assert.match(paso, /<OllaMaceracion\s+hervor\s+escala=\{escala\}/);
+  });
+
+  it('el paso es compacto: una sola linea de texto y sin la fila "Inicio / Final" que ocupaba sitio', () => {
+    assert.match(paso, /numberOfLines=\{1\}/);
+    assert.doesNotMatch(paso, /Inicio del hervido/);
   });
 
   it('las bolsitas cuelgan ENCIMA de la barra y la olla va debajo', () => {
@@ -46,7 +54,7 @@ describe('paso del lupulo: bolsitas y olla', () => {
   });
 
   it('la olla hierve y recibe las bolsas dentro de su escena, y la llamarada sigue a las bolsas', () => {
-    assert.match(paso, /<OllaMaceracion\s+hervor\s+pulsos=\{enOlla\.length\}/);
+    assert.match(paso, /<OllaMaceracion[^>]*\bhervor\b[^>]*pulsos=\{enOlla\.length\}/s);
     assert.match(paso, /<BolsaEnOlla key=\{id\} id=\{id\} \/>/);
   });
 

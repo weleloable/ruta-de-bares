@@ -131,3 +131,32 @@ export function colorMosto(temp: number): string {
   if (modo === 'justo') return hex(MOSTO_JUSTO);
   return hex(mezclar(MOSTO_JUSTO, modo === 'frio' ? MOSTO_FRIO : MOSTO_CALIENTE, intensidad));
 }
+
+// --- Que quepa en la pantalla ------------------------------------------------
+
+/**
+ * Alto de la ventana que se lleva TODO lo que no es el paso: la barra de
+ * arriba y las pestanas de abajo (~120), el margen de la pantalla, la cabecera
+ * del juego, "Paso 3 de 4" y su titulo, y los botones Siguiente y Atras (~280).
+ * Es una medida, no un calculo: si cambia la pantalla de los juegos, se
+ * recalcula midiendo en Chrome (ver el PR). Lo usan los dos pasos que llevan
+ * olla: la maceracion y el hervido.
+ */
+export const ALTO_APP_RESERVADO = 412;
+/** La olla no se encoge mas de esto: por debajo ya no se distinguen la nieve ni las bolsas. */
+export const ESCALA_OLLA_MIN = 0.35;
+
+/**
+ * Que escala (de ESCALA_OLLA_MIN a 1) tiene que tener la olla para que el paso
+ * entero quepa SIN scroll. `altoResto` es lo que ocupa el paso sin la olla
+ * (texto, barra, boton...) y `altoOlla` lo que mide la olla a tamano
+ * natural. En una pantalla grande la olla va entera; en una pequena se encoge
+ * hasta el minimo y, si ni asi cabe, es el unico caso en que habra scroll.
+ */
+export function escalaOlla(altoVentana: number, altoResto: number, altoOlla: number): number {
+  const hueco = altoVentana - ALTO_APP_RESERVADO - altoResto;
+  const escala = hueco / altoOlla;
+  if (!Number.isFinite(escala)) return ESCALA_OLLA_MIN;
+  return Math.min(Math.max(escala, ESCALA_OLLA_MIN), 1);
+}
+

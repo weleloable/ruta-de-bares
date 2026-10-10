@@ -13,9 +13,21 @@ const leer = (ruta: string) => readFileSync(ruta, 'utf8').replace(/\r\n/g, '\n')
 const paso = leer('src/features/minijuegos/juegos/maestro/PasoMaceracion.tsx');
 const olla = leer('src/features/minijuegos/juegos/maestro/OllaMaceracion.tsx');
 
+describe('maceracion: que quepa en la pantalla', () => {
+  it('olla y termometro se encogen JUNTOS con la misma escala, y el boton Calentar va debajo', () => {
+    assert.match(paso, /escalaOlla\(altoVentana, ALTO_RESTO_PASO, ALTO\)/);
+    assert.match(paso, /height: altoTermometro/);
+    assert.match(paso, /pos\(estado\.temp, altoTermometro\)/);
+    assert.ok(paso.indexOf('<OllaMaceracion') < paso.indexOf('accessibilityLabel="Calentar"'));
+  });
+});
+
 describe('olla de maceracion', () => {
   it('la pantalla la pinta a la izquierda del termometro, con la temperatura del juego', () => {
-    assert.match(paso, /<OllaMaceracion temp=\{estado\.temp\} pulsos=\{pulsos\} \/>\s*<View style=\{styles\.termometro\}>/);
+    assert.match(
+      paso,
+      /<OllaMaceracion temp=\{estado\.temp\} pulsos=\{pulsos\} escala=\{escala\} \/>\s*<View style=\{\[styles\.termometro,/,
+    );
   });
 
   it('cada toque de Calentar suma un pulso (la llamarada)', () => {

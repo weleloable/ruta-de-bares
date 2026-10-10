@@ -20,6 +20,11 @@ import { ANCHO_OLLA, MOSTO_ARRIBA, NATIVO, useBucle } from './OllaMaceracion';
 export const BOLSA_ANCHO = 38;
 /** Alto de todo el conjunto: etiqueta, hilo y bolsa. */
 export const BOLSA_ALTO = 70;
+/**
+ * Las bolsas de arriba se dibujan mas pequenas que las de la olla: el paso tiene
+ * que caber en la pantalla sin scroll y arriba solo hace falta reconocerlas.
+ */
+export const ESCALA_BOLSA_ARRIBA = 0.72;
 /** Lo que se mete en el mosto: donde aterriza, respecto a su superficie. */
 const HUNDIDA = 30;
 /** A cada lado del centro de la olla, para que las dos bolsas no se pisen. */
@@ -56,8 +61,12 @@ export const Bolsita = memo(function Bolsita({
       >
         <View style={[styles.pliegue, { backgroundColor: tela.borde }]} />
         {/* Lupulo entrevisto a traves de la tela: dos hojas y un cono. */}
-        <View style={[styles.hoja, { backgroundColor: tela.hoja, left: 5, top: 12, transform: [{ rotate: '-35deg' }] }]} />
-        <View style={[styles.hoja, { backgroundColor: tela.hoja, right: 5, top: 14, transform: [{ rotate: '35deg' }] }]} />
+        <View
+          style={[styles.hoja, { backgroundColor: tela.hoja, left: 5, top: 12, transform: [{ rotate: '-35deg' }] }]}
+        />
+        <View
+          style={[styles.hoja, { backgroundColor: tela.hoja, right: 5, top: 14, transform: [{ rotate: '35deg' }] }]}
+        />
         <View style={[styles.cono, { backgroundColor: tela.borde }]} />
       </View>
     </View>
@@ -68,7 +77,15 @@ export const Bolsita = memo(function Bolsita({
  * La bolsa de arriba. La que toca echar se balancea colgada de su hilo; las
  * demas, quietas. `perdida`: apagada y sin moverse.
  */
-export const BolsaColgante = memo(function BolsaColgante({ id, estado }: { id: MarcaId; estado: EstadoBolsa }) {
+export const BolsaColgante = memo(function BolsaColgante({
+  id,
+  estado,
+  escala = ESCALA_BOLSA_ARRIBA,
+}: {
+  id: MarcaId;
+  estado: EstadoBolsa;
+  escala?: number;
+}) {
   const v = useBucle(1500, id === 'amargor' ? 0 : 400);
   const mover = estado === 'siguiente';
   return (
@@ -77,8 +94,20 @@ export const BolsaColgante = memo(function BolsaColgante({ id, estado }: { id: M
         styles.colgante,
         // transformOrigin: la bolsa cuelga del extremo de ARRIBA, no de su centro.
         { transformOrigin: '50% 0%' },
-        mover && {
-          transform: [{ rotate: v.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ['0deg', '7deg', '0deg', '-7deg', '0deg'] }) }],
+        {
+          transform: [
+            { scale: escala },
+            ...(mover
+              ? [
+                  {
+                    rotate: v.interpolate({
+                      inputRange: [0, 0.25, 0.5, 0.75, 1],
+                      outputRange: ['0deg', '7deg', '0deg', '-7deg', '0deg'],
+                    }),
+                  },
+                ]
+              : []),
+          ],
         },
       ]}
     >
@@ -108,7 +137,11 @@ export const BolsaEnOlla = memo(function BolsaEnOlla({ id }: { id: MarcaId }) {
     <Animated.View
       style={[
         styles.enOlla,
-        { left: izquierda, top: arriba, transform: [{ translateY: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 3, 0] }) }] },
+        {
+          left: izquierda,
+          top: arriba,
+          transform: [{ translateY: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 3, 0] }) }],
+        },
       ]}
     >
       <Bolsita id={id} />
@@ -119,18 +152,24 @@ export const BolsaEnOlla = memo(function BolsaEnOlla({ id }: { id: MarcaId }) {
 /**
  * La bolsa que cae de su sitio de arriba a la olla. Las coordenadas son las de
  * quien la pinta (un overlay absoluto sobre toda la pantalla del paso):
- * `desde` y `hasta` son la esquina de arriba a la izquierda. Al llegar avisa
+ * `desde` y `hasta` son el punto de ARRIBA en el CENTRO de la bolsa (de ahi
+ * cuelga, y es lo que no se mueve al escalar). Va cambiando de tamano de
+ * `escalaDesde` (la de arriba) a `escalaHasta` (la de la olla). Al llegar avisa
  * con `alTerminar`, y entonces se quita esta y aparece `BolsaEnOlla`.
  */
 export function BolsaVolando({
   id,
   desde,
   hasta,
+  escalaDesde = ESCALA_BOLSA_ARRIBA,
+  escalaHasta,
   alTerminar,
 }: {
   id: MarcaId;
   desde: { x: number; y: number };
   hasta: { x: number; y: number };
+  escalaDesde?: number;
+  escalaHasta: number;
   alTerminar: () => void;
 }) {
   const p = useRef(new Animated.Value(0)).current;
@@ -170,13 +209,15 @@ export function BolsaVolando({
       style={[
         styles.volando,
         {
-          left: desde.x,
+          left: desde.x - BOLSA_ANCHO / 2,
           top: desde.y,
+          transformOrigin: '50% 0%',
           transform: [
             { translateX: p.interpolate({ inputRange: [0, 1], outputRange: [0, dx] }) },
             // Primero un saltito hacia arriba (-14) y luego cae: se nota que la sueltan.
             { translateY: p.interpolate({ inputRange: [0, 0.18, 1], outputRange: [0, -14, dy] }) },
             { rotate: p.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '-14deg', '6deg'] }) },
+            { scale: p.interpolate({ inputRange: [0, 1], outputRange: [escalaDesde, escalaHasta] }) },
           ],
         },
       ]}
@@ -216,5 +257,14 @@ const styles = StyleSheet.create({
   // Costura de arriba: la tela se pliega y se cose, como en una bolsita de te.
   pliegue: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, opacity: 0.55 },
   hoja: { position: 'absolute', width: 11, height: 17, borderRadius: 8, opacity: 0.8 },
-  cono: { position: 'absolute', left: '50%', top: 14, width: 9, height: 12, marginLeft: -4.5, borderRadius: 5, opacity: 0.6 },
+  cono: {
+    position: 'absolute',
+    left: '50%',
+    top: 14,
+    width: 9,
+    height: 12,
+    marginLeft: -4.5,
+    borderRadius: 5,
+    opacity: 0.6,
+  },
 });

@@ -735,3 +735,18 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   punto rojo y la burbuja de Mi perfil se apagan a la vez. `rutasTerminadas.ts`
   no importa nada en tiempo de ejecucion (node --test no resuelve rutas sin
   extension): recibe `terminoEl` ya calculado y el formateador de fecha.
+- **Los pasos de Maestro Cervecero con olla tienen que caber en la pantalla SIN
+  scroll** (`PasoMaceracion.tsx`, `PasoLupulo.tsx`, `escalaOlla` en
+  `maceracion.ts`): el paso comparte pantalla con la barra de arriba, las
+  pestanas, la cabecera del juego y los botones Siguiente / Atras, y a 808 px de
+  ventana solo le quedan ~400. Si no cabe, el boton queda tapado por Siguiente
+  (paso con el Calentar de la maceracion y con el boton del lupulo). Por eso la
+  olla (y el termometro) se ESCALAN con el alto de la ventana (`escalaOlla`, de
+  0,35 a 1) y todo lo demas tiene altos fijos y compactos: una sola linea de
+  texto, sin la fila "Inicio / Final". `ALTO_APP_RESERVADO` (412) es una MEDIDA,
+  no un calculo: si se toca la pantalla de los juegos (cabecera, botones,
+  barra), hay que correr `npm run verificar:juego`, que recorre el juego en
+  Chrome headless en tres alturas (740, 808, 915) y mide scroll y botones tapados
+  (~4 min, periodico, no del gate). Por debajo de ~720 px de ventana ni con la
+  olla al minimo cabe y queda un poco de scroll. En el hervido el boton va
+  DEBAJO de la olla y las bolsitas de lupulo cuelgan sobre la barra.
