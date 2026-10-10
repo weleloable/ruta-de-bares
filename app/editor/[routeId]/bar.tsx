@@ -11,7 +11,7 @@ import {
   saveBar,
 } from '../../../src/features/routes/api';
 import { buscarPorNombre, idsYaEnRuta, type BarCatalogo } from '../../../src/features/routes/catalogo';
-import { consumirUltimoCreado, useCatalogo } from '../../../src/features/routes/catalogoStore';
+import { consumirUltimoCreado, reintentarCatalogo, useCatalogo } from '../../../src/features/routes/catalogoStore';
 import { construirVentana, formatHora } from '../../../src/features/routes/horas';
 import { CampoHora, RelojHora } from '../../../src/features/routes/RelojHora';
 import { SelectorBar } from '../../../src/features/routes/SelectorBar';
@@ -216,6 +216,7 @@ export default function EditorDeBar() {
                 setElegido(desdeCatalogo(bar));
                 setErrores([]);
               }}
+              onReintentar={reintentarCatalogo}
               onNuevo={() => router.push({ pathname: '/editor/[routeId]/bar-nuevo', params: { routeId } })}
             />
           </View>

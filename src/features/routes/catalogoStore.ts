@@ -117,6 +117,11 @@ function cargar(): Promise<void> {
   return carga;
 }
 
+/** Vuelve a pedir el catalogo (boton "Reintentar" del selector de bares). */
+export function reintentarCatalogo(): void {
+  recargar();
+}
+
 function recargar(): void {
   generacion += 1;
   carga = null;

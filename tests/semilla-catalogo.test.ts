@@ -23,7 +23,7 @@ const sql = leer('supabase/migrations/0036_catalogo_en_tabla.sql');
 
 /** Las filas del `insert ... values` de la migracion: (nombre, lat, lng, logo). */
 function filasDelInsert(): { nombre: string; lat: number; lng: number; logo: string }[] {
-  const cuerpo = sql.slice(sql.indexOf('insert into public.catalog_bars'), sql.indexOf('on conflict'));
+  const cuerpo = sql.slice(sql.indexOf('insert into public.catalog_bars'), sql.indexOf('-- Copia el logo'));
   const filas = [...cuerpo.matchAll(/^\s+\('((?:[^']|'')*)', ([\d.\-]+), ([\d.\-]+), '(data:image\/png;base64,[A-Za-z0-9+/=]+)'\)/gm)];
   return filas.map((m) => ({ nombre: (m[1] as string).replace(/''/g, "'"), lat: Number(m[2]), lng: Number(m[3]), logo: m[4] as string }));
 }
@@ -96,6 +96,12 @@ describe('0036 dice lo mismo que las fuentes', () => {
 
   it('el fichero se puede pegar en el SQL Editor sin colgarlo (menos de 300 KB)', () => {
     assert.ok(statSync('supabase/migrations/0036_catalogo_en_tabla.sql').size < 300_000);
+  });
+
+  it('un insert por bar, cada uno con su on conflict (si el editor se corta se ve en cual)', () => {
+    const inserts = sql.match(/^insert into public\.catalog_bars/gm) ?? [];
+    assert.equal(inserts.length, bares.length);
+    assert.equal((sql.match(/on conflict \(lower\(btrim\(name\)\)\) do nothing;/g) ?? []).length, bares.length);
   });
 
   it('es idempotente por construccion: ignora nombres ya presentes y solo toca paradas sin logo', () => {

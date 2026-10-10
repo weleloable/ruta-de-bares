@@ -88,15 +88,20 @@ def logo_data_url(ruta: Path) -> str:
 
 def main() -> None:
     bares = json.loads((FUENTE / 'bares.json').read_text(encoding='utf8'))
-    filas = []
+    # Un insert por bar y no uno de 14 filas: si el SQL Editor rechaza el pegado
+    # o se corta, se ve en cual, y cada sentencia pesa ~13 KB.
+    inserts = []
     for bar in bares:
         logo = logo_data_url(FUENTE / 'logos' / f"{bar['id']}.png")
-        filas.append(f"  ({sql_texto(bar['nombre'])}, {bar['lat']}, {bar['lng']}, {sql_texto(logo)})")
+        inserts.append(
+            'insert into public.catalog_bars (name, lat, lng, logo) values\n'
+            f"  ({sql_texto(bar['nombre'])}, {bar['lat']}, {bar['lng']}, {sql_texto(logo)})\n"
+            'on conflict (lower(btrim(name))) do nothing;\n'
+        )
 
     cuerpo = (
-        'insert into public.catalog_bars (name, lat, lng, logo) values\n'
-        + ',\n'.join(filas)
-        + '\non conflict (lower(btrim(name))) do nothing;\n\n'
+        '\n'.join(inserts)
+        + '\n'
         + '-- Copia el logo a las paradas ya creadas (mismo nombre, sin distinguir mayusculas).\n'
         + 'update public.route_bars rb\n'
         + 'set logo = c.logo\n'

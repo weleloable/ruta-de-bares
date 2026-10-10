@@ -29,6 +29,7 @@ export function SelectorBar({
   ocupados,
   onElegir,
   onNuevo,
+  onReintentar,
 }: {
   opciones: readonly BarCatalogo[];
   elegido: Elegido | null;
@@ -36,6 +37,8 @@ export function SelectorBar({
   ocupados: ReadonlySet<string>;
   onElegir: (bar: BarCatalogo) => void;
   onNuevo: () => void;
+  /** Vuelve a pedir el catalogo; se ofrece cuando la lista llega vacia. */
+  onReintentar: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
 
@@ -68,6 +71,17 @@ export function SelectorBar({
 
       {abierto ? (
         <ScrollView style={styles.lista} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+          {opciones.length === 0 ? (
+            // Sin lista no se puede elegir ningun bar: se dice por que en vez de abrir un hueco mudo.
+            <View style={styles.vacia}>
+              <Text style={typography.muted}>
+                No hay bares en la lista. Puede que no haya conexion o que falte aplicar la migracion 0036 en Supabase.
+              </Text>
+              <Pressable accessibilityRole="button" onPress={onReintentar} style={styles.reintentar}>
+                <Text style={typography.cardTitle}>Reintentar</Text>
+              </Pressable>
+            </View>
+          ) : null}
           {opciones.map((bar) => {
             const ocupado = ocupados.has(bar.id);
             const activo = bar.id === seleccionadoId;
@@ -124,6 +138,8 @@ export function SelectorBar({
 }
 
 const styles = StyleSheet.create({
+  vacia: { padding: space.md, gap: space.sm },
+  reintentar: { paddingVertical: space.sm },
   caja: {
     borderWidth: 1,
     borderColor: colors.borderStrong,
