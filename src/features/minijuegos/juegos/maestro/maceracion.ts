@@ -67,3 +67,67 @@ export function terminado(e: Estado): boolean {
 export function precision(e: Estado): number {
   return limitar(e.acumulado / DURACION, 0, 1);
 }
+
+// ---------------------------------------------------------------------------
+// La olla (OllaMaceracion.tsx).
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo que la olla de maceracion ENSENA segun la temperatura: nieve si se ha
+ * enfriado, vapor si se ha pasado, burbujas suaves si esta en su punto. Logica
+ * pura; OllaMaceracion.tsx solo la pinta. Vive aqui y no en un fichero
+ * aparte porque los tests cargan esto en Node, que no resuelve imports entre
+ * hermanos sin extension.
+ *
+ * Usa las mismas ZONA y TOLERANCIA que puntuan: la olla dice lo
+ * mismo que el termometro, y a la distancia a la que ya no se puntua nada la
+ * senal esta al maximo.
+ */
+
+export type Clima = {
+  modo: 'frio' | 'justo' | 'caliente';
+  /** 0 a 1. Fuera de la zona nunca baja de INTENSIDAD_MINIMA: medio grado ya se tiene que notar. */
+  intensidad: number;
+};
+
+/** Lo minimo que se ve nada mas salir de la zona. Por debajo, una mota sola no se distingue. */
+export const INTENSIDAD_MINIMA = 0.25;
+
+export function climaOlla(temp: number): Clima {
+  if (temp >= ZONA.min && temp <= ZONA.max) return { modo: 'justo', intensidad: 0 };
+  const distancia = temp < ZONA.min ? ZONA.min - temp : temp - ZONA.max;
+  const intensidad = limitar(INTENSIDAD_MINIMA + (1 - INTENSIDAD_MINIMA) * (distancia / TOLERANCIA), 0, 1);
+  return { modo: temp < ZONA.min ? 'frio' : 'caliente', intensidad };
+}
+
+/** Cuantas de `total` particulas se ven con esta intensidad (0 en la zona, al menos 1 fuera). */
+export function particulasVisibles(clima: Clima, total: number): number {
+  if (clima.modo === 'justo') return 0;
+  return limitar(Math.ceil(clima.intensidad * total), 1, total);
+}
+
+/**
+ * Si la particula `indice` de `total` se ve cuando tocan `visibles`. Las que se
+ * ven quedan REPARTIDAS por la olla (con 2 de 7, no salen las dos pegadas a la
+ * izquierda) y son exactamente `visibles`.
+ */
+export function particulaVisible(indice: number, visibles: number, total: number): boolean {
+  return (indice * visibles) % total < visibles;
+}
+
+// Mosto frio (palido, casi gris), en su punto (dorado) y pasado (tostado rojizo).
+const MOSTO_FRIO: Rgb = [200, 186, 150];
+const MOSTO_JUSTO: Rgb = [214, 150, 58];
+const MOSTO_CALIENTE: Rgb = [190, 82, 38];
+
+type Rgb = [number, number, number];
+
+const hex = (c: Rgb) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+const mezclar = (a: Rgb, b: Rgb, t: number): Rgb => [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t) as Rgb;
+
+/** Color de la superficie del mosto: dorado en la zona, se apaga al enfriarse y se tuesta al pasarse. */
+export function colorMosto(temp: number): string {
+  const { modo, intensidad } = climaOlla(temp);
+  if (modo === 'justo') return hex(MOSTO_JUSTO);
+  return hex(mezclar(MOSTO_JUSTO, modo === 'frio' ? MOSTO_FRIO : MOSTO_CALIENTE, intensidad));
+}

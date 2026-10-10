@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, space, typography } from '../../../../lib/theme';
 import { feedback } from '../../feedback';
+import { OllaMaceracion } from './OllaMaceracion';
 import { avanzar, calentar, DURACION, INICIO, precision, TEMP_MAX, TEMP_MIN, terminado, ZONA, type Estado } from './maceracion';
 
 const ALTO = 240;
@@ -23,6 +24,8 @@ function veredicto(p: number): string {
 export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number) => void }) {
   const [estado, setEstado] = useState<Estado>(INICIO);
   const [empezado, setEmpezado] = useState(false);
+  // Cuenta de toques: la olla da una llamarada cada vez que cambia.
+  const [pulsos, setPulsos] = useState(0);
 
   const estadoRef = useRef<Estado>(INICIO);
   const empezadoRef = useRef(false);
@@ -67,6 +70,7 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
     }
     estadoRef.current = calentar(estadoRef.current);
     setEstado(estadoRef.current);
+    setPulsos((n) => n + 1);
     feedback.toque();
   };
 
@@ -85,7 +89,15 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
             : 'Toca para calentar. El reloj empieza con el primer toque.'}
       </Text>
 
+      <View style={styles.cabecera}>
+        <Text style={styles.tiempo}>{Math.ceil(restante)} s</Text>
+        <Text style={typography.muted}>Zona: {ZONA.min}–{ZONA.max} °C</Text>
+      </View>
+
+      {/* Olla a la izquierda y termometro a la derecha, centrados: la olla se ve de reojo
+          mientras se mira la aguja. */}
       <View style={styles.fila}>
+        <OllaMaceracion temp={estado.temp} pulsos={pulsos} />
         <View style={styles.termometro}>
           <View
             style={[
@@ -95,10 +107,6 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
           />
           <View style={[styles.aguja, { bottom: pos(estado.temp) - AGUJA / 2 }, enZona && styles.agujaBien]} />
           <Text style={[styles.grados, { bottom: pos(estado.temp) - 10 }]}>{Math.round(estado.temp)} °C</Text>
-        </View>
-        <View style={styles.lateral}>
-          <Text style={styles.tiempo}>{Math.ceil(restante)} s</Text>
-          <Text style={typography.muted}>Zona: {ZONA.min}–{ZONA.max} °C</Text>
         </View>
       </View>
 
@@ -119,7 +127,9 @@ const AGUJA = 26;
 
 const styles = StyleSheet.create({
   raiz: { gap: space.md },
-  fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xl },
+  cabecera: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  // El margen derecho deja sitio a los grados, que se salen del carril del termometro.
+  fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingRight: 64 },
   termometro: {
     width: 32,
     height: ALTO,
@@ -141,7 +151,6 @@ const styles = StyleSheet.create({
   },
   agujaBien: { backgroundColor: colors.green },
   grados: { position: 'absolute', left: 44, fontSize: 16, fontWeight: '800', color: colors.ink, width: 70 },
-  lateral: { gap: space.xs, minWidth: 120 },
   tiempo: { fontSize: 44, fontWeight: '800', color: colors.beerDark },
   boton: {
     minHeight: 88,

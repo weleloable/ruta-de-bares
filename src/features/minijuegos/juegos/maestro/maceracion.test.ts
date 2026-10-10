@@ -1,7 +1,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { acierto, avanzar, calentar, DURACION, INICIO, precision, terminado, TOLERANCIA, ZONA, type Estado } from './maceracion.ts';
+import {
+  acierto,
+  avanzar,
+  calentar,
+  climaOlla,
+  colorMosto,
+  DURACION,
+  INICIO,
+  INTENSIDAD_MINIMA,
+  particulaVisible,
+  particulasVisibles,
+  precision,
+  TEMP_INICIAL,
+  terminado,
+  TOLERANCIA,
+  ZONA,
+  type Estado,
+} from './maceracion.ts';
 
 const DT = 1 / 60;
 
@@ -62,4 +79,59 @@ test('la temperatura nunca sale del rango del termometro', () => {
   assert.ok(e.temp <= 85);
   const f = jugar(() => false, -1);
   assert.ok(f.temp >= 40);
+});
+
+// --- La olla -----------------------------------------------------------------
+
+test('olla: en la zona (bordes incluidos) esta en su punto y no echa ni vapor ni nieve', () => {
+  for (const t of [ZONA.min, 65, ZONA.max]) {
+    assert.deepEqual(climaOlla(t), { modo: 'justo', intensidad: 0 });
+    assert.equal(particulasVisibles(climaOlla(t), 6), 0);
+  }
+});
+
+test('olla: por debajo nieva y por encima echa vapor, y medio grado ya se nota', () => {
+  const frio = climaOlla(ZONA.min - 0.1);
+  const caliente = climaOlla(ZONA.max + 0.1);
+  assert.equal(frio.modo, 'frio');
+  assert.equal(caliente.modo, 'caliente');
+  assert.ok(frio.intensidad >= INTENSIDAD_MINIMA);
+  assert.equal(particulasVisibles(frio, 7), 2);
+  assert.ok(particulasVisibles(caliente, 6) >= 1);
+});
+
+test('olla: la senal crece con la distancia y esta al maximo donde ya no se puntua', () => {
+  const cerca = climaOlla(ZONA.max + 1).intensidad;
+  const lejos = climaOlla(ZONA.max + 3).intensidad;
+  assert.ok(lejos > cerca);
+  assert.equal(climaOlla(ZONA.max + TOLERANCIA).intensidad, 1);
+  assert.equal(climaOlla(ZONA.min - TOLERANCIA - 10).intensidad, 1);
+  assert.equal(particulasVisibles(climaOlla(ZONA.min - TOLERANCIA), 7), 7);
+});
+
+test('olla: la temperatura inicial ya es fria (antes del primer toque se ve nevar)', () => {
+  assert.ok(TEMP_INICIAL < ZONA.min);
+  assert.equal(climaOlla(TEMP_INICIAL).modo, 'frio');
+});
+
+test('olla: se ven exactamente las que tocan, repartidas y no pegadas a un lado', () => {
+  for (const total of [6, 7]) {
+    for (let visibles = 0; visibles <= total; visibles++) {
+      const encendidas = Array.from({ length: total }, (_, i) => i).filter((i) => particulaVisible(i, visibles, total));
+      assert.equal(encendidas.length, visibles, `${visibles} de ${total}`);
+      if (visibles >= 2) assert.ok(encendidas.at(-1)! >= total / 2, `${visibles} de ${total}: ${encendidas.join(',')}`);
+    }
+  }
+});
+
+test('olla: el mosto es dorado en su punto, palido en frio, tostado en caliente', () => {
+  const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [jr, jg, jb] = rgb(colorMosto(65));
+  const [fr, fg, fb] = rgb(colorMosto(ZONA.min - TOLERANCIA));
+  const [cr, cg, cb] = rgb(colorMosto(ZONA.max + TOLERANCIA));
+  assert.match(colorMosto(65), /^#[0-9A-F]{6}$/);
+  assert.ok(fb > jb && fg > jg, 'el frio es mas palido');
+  assert.ok(cg < jg && cr < jr + 1, 'el caliente es mas tostado');
+  assert.equal(colorMosto(ZONA.min), colorMosto(ZONA.max));
+  assert.notEqual(colorMosto(ZONA.max + 1), colorMosto(ZONA.max + 3));
 });
