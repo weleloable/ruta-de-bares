@@ -6,7 +6,7 @@ import { colors, radius, space, typography } from '../../../../lib/theme';
 import { useAuth } from '../../../auth/AuthProvider';
 import type { PropsJuego } from '../../tipos';
 import { elegirDato } from './curiosidades';
-import { buscarMalta, LEVADURAS, MALTAS } from './datos';
+import { LEVADURAS, MALTAS } from './datos';
 import { calcularCerveza } from './estilo';
 import { PasoLupulo } from './PasoLupulo';
 import { PasoMaceracion } from './PasoMaceracion';
@@ -114,7 +114,7 @@ export function MaestroCervecero({ onFinish }: PropsJuego) {
                     titulo={m.nombre}
                     descripcion={m.descripcion}
                     onPress={() => setReceta({ ...receta, malta: m.id })}
-                    muestra={<VasoCerveza color={m.color} alto={56} ancho={36} />}
+                    muestra={<VasoCerveza malta={m.id} alto={64} ancho={40} />}
                   />
                 ))}
               </View>
@@ -143,7 +143,7 @@ export function MaestroCervecero({ onFinish }: PropsJuego) {
             {paso === 'resultado' && cerveza ? (
               <ResultadoCerveza
                 cerveza={cerveza}
-                color={buscarMalta(receta.malta)?.color ?? MALTAS[0].color}
+                malta={receta.malta ?? MALTAS[0].id}
                 jugador={profile?.display_name ?? ''}
                 onTerminar={terminar}
               />

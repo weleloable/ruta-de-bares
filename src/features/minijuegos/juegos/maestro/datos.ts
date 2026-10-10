@@ -11,8 +11,6 @@ export type Malta = {
   nombre: string;
   /** Una frase: se lee de pasada en un bar. */
   descripcion: string;
-  /** Color del liquido en el vaso. */
-  color: string;
 };
 
 export type Levadura = {
@@ -23,10 +21,10 @@ export type Levadura = {
 
 // El orden es el de la pantalla: de mas clara a mas oscura.
 export const MALTAS: readonly Malta[] = [
-  { id: 'palida', nombre: 'Pálida', descripcion: 'Ligera y dorada', color: '#E9B54B' },
-  { id: 'caramelo', nombre: 'Caramelo', descripcion: 'Dulzor y cuerpo', color: '#C4722A' },
-  { id: 'tostada', nombre: 'Tostada', descripcion: 'Sabor a pan tostado', color: '#7A4526' },
-  { id: 'negra', nombre: 'Negra', descripcion: 'Café y cacao', color: '#2B1A12' },
+  { id: 'palida', nombre: 'Pálida', descripcion: 'Ligera y dorada' },
+  { id: 'caramelo', nombre: 'Caramelo', descripcion: 'Dulzor y cuerpo' },
+  { id: 'tostada', nombre: 'Tostada', descripcion: 'Sabor a pan tostado' },
+  { id: 'negra', nombre: 'Negra', descripcion: 'Café y cacao' },
 ];
 
 export const LEVADURAS: readonly Levadura[] = [

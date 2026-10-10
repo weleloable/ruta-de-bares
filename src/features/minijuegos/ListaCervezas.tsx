@@ -5,7 +5,6 @@ import { Banner, Button, Card, EmptyState, Loading } from '../../components/ui';
 import { colors, space, typography } from '../../lib/theme';
 import type { MaestroBeerRow } from '../../types/database';
 import { borrarCerveza, listarCervezas } from './api';
-import { buscarMalta, type MaltaId } from './juegos/maestro/datos';
 import { VasoCerveza } from './juegos/maestro/VasoCerveza';
 
 const POR_PAGINA = 30;
@@ -79,7 +78,7 @@ export function ListaCervezas({ rutaId }: { rutaId: string }) {
       {cervezas?.map((c) => (
         <Card key={c.id} style={styles.tarjeta}>
           <View style={styles.fila}>
-            <VasoCerveza color={buscarMalta(c.malta as MaltaId)?.color ?? colors.beer} alto={64} ancho={40} />
+            <VasoCerveza malta={c.malta} alto={72} ancho={46} />
             <View style={styles.textos}>
               <Text style={typography.cardTitle} numberOfLines={2}>{c.name}</Text>
               <Text style={typography.muted}>

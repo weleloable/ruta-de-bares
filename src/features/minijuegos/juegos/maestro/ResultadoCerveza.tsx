@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card } from '../../../../components/ui';
 import { colors, radius, space, typography } from '../../../../lib/theme';
+import type { MaltaId } from './datos';
 import { veredicto, type Cerveza } from './estilo';
 import { NOMBRE_MAX, nombreFinal, sugerirNombre } from './nombres';
 import { VasoCerveza } from './VasoCerveza';
@@ -15,13 +16,13 @@ import { VasoCerveza } from './VasoCerveza';
  */
 export function ResultadoCerveza({
   cerveza,
-  color,
+  malta,
   jugador,
   onTerminar,
 }: {
   cerveza: Cerveza;
-  /** Color del liquido: el de la malta. */
-  color: string;
+  /** La malta elegida: decide el vaso. */
+  malta: MaltaId;
   jugador: string;
   onTerminar: (nombre: string) => void;
 }) {
@@ -37,7 +38,7 @@ export function ResultadoCerveza({
   return (
     <View style={styles.raiz}>
       <Card style={styles.tarjeta}>
-        <VasoCerveza color={color} alto={150} ancho={92} />
+        <VasoCerveza malta={malta} alto={180} ancho={110} />
 
         <View style={styles.campoFila}>
           <Ionicons name="pencil" size={18} color={colors.inkFaint} />
