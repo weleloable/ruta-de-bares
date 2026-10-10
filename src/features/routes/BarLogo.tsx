@@ -6,20 +6,30 @@ import { useCatalogo } from './catalogoStore';
 import { LOGOS } from './logos';
 
 /**
- * Logo de un bar, buscado por nombre en el catalogo vivo (route_bars no guarda
- * el logo, ver catalogo.ts): los de la lista cerrada salen de assets/bares/ y
- * los propios de la imagen guardada en el dispositivo. Un bar que no esta en el
- * catalogo, o un propio en otro dispositivo, se pinta como un sello con sus
+ * Logo de un bar. Orden: `uri` (vista previa de un bar aun sin guardar), `logo`
+ * (el de la parada, `route_bars.logo`, copiado del catalogo al anadirla: es el
+ * unico que puede tener un jugador), el del catalogo vivo (un bar propio, que
+ * leen los admins) y por ultimo el de la lista cerrada, que sale de
+ * assets/bares/ y se busca por nombre. Sin ninguno se pinta un sello con las
  * iniciales: el hueco nunca queda vacio.
- *
- * `uri` fuerza una imagen concreta: es la vista previa de un bar que aun no se
- * ha guardado, cuando todavia no esta en el catalogo.
  */
-export function BarLogo({ nombre, tamano = 44, uri }: { nombre: string; tamano?: number; uri?: string | null }) {
+export function BarLogo({
+  nombre,
+  tamano = 44,
+  uri,
+  logo,
+}: {
+  nombre: string;
+  tamano?: number;
+  uri?: string | null;
+  logo?: string | null;
+}) {
   const catalogo = useCatalogo();
   const caja = { width: tamano, height: tamano, borderRadius: radius.pill };
   const bar = buscarPorNombre(nombre, catalogo);
-  const fuente = uri ? { uri } : bar?.logoUri ? { uri: bar.logoUri } : bar ? LOGOS[bar.id] : undefined;
+  // `logo` es el de la parada (route_bars.logo): lo unico que tiene un jugador, que no lee el catalogo.
+  const guardado = uri ?? logo ?? bar?.logoUri;
+  const fuente = guardado ? { uri: guardado } : bar ? LOGOS[bar.id] : undefined;
 
   if (fuente) {
     return <Image source={fuente} accessibilityLabel={`Logo de ${nombre}`} style={caja} />;

@@ -114,12 +114,13 @@ supabase/
   migrations/0032_*.sql     fotos que sobran se borran; la denunciada es prueba
   migrations/0033_*.sql     que admin ya vio el aviso de una ruta terminada
   migrations/0034_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
+  migrations/0035_*.sql     bares propios compartidos entre admins (`catalog_bars`) y `route_bars.logo`
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
 ```
 
-Tablas: `profiles`, `routes`, `route_bars`, `stamps`, `route_invites`,
+Tablas: `profiles`, `routes`, `route_bars`, `catalog_bars`, `stamps`, `route_invites`,
 `route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
 `admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
@@ -378,19 +379,32 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   los bares creados antes lo llevan escrito en `route_bars.address`, y esa
   tabla no se toca. Cuatro pantallas lo pintan: si aparece una quinta, tiene
   que pasar por el filtro.
-- **Los bares propios viven en el DISPOSITIVO, no en Supabase**
-  (`catalogoStore.ts` + `catalogoPropio.ts`, AsyncStorage / localStorage en
-  web): el admin puede anadir un bar que no esta en la lista cerrada (nombre,
-  ubicacion en el mapa, imagen del sello) y queda disponible para futuras
-  rutas. Se hizo asi porque la prueba no toca el esquema. LIMITE REAL: otro
-  movil, otro navegador u otro admin no ven esos bares, y lo que llega a
-  `route_bars` es nombre y posicion pero NO la imagen, asi que los jugadores
-  veran un sello con iniciales. Para compartirlos hace falta una tabla y un
-  bucket en Postgres (cambio de esquema: decision pendiente, no se ha tocado).
-  La imagen va como data URL de 256 px dentro del propio JSON y no como ruta:
-  en nativo la ruta del picker es cache que el sistema borra, y en web es un
-  `blob:` que muere al recargar. No hay forma de editar ni borrar un bar propio
-  desde la app todavia.
+- **Los bares propios viven en Postgres, `catalog_bars`, y los comparten los
+  admins** (`0035`, `catalogoStore.ts` + `catalogoCompartido.ts` + las
+  funciones puras de `catalogoPropio.ts`): el admin anade un bar que no esta en
+  la lista cerrada (nombre, ubicacion, imagen del sello) y lo ven todos los
+  admins. Antes vivian en AsyncStorage / localStorage y otro admin no los veia.
+  **Solo los admins leen y escriben la tabla** (no es publica: los nombres de
+  una ruta sin publicar son una sorpresa). Solo se ANADE y se BORRA, no se edita
+  (hay `insert` y `delete`, no `update`): editar cambiaria el logo de lo que
+  otros ya copiaron a sus rutas. Borra quien lo creo, o cualquier admin si el
+  autor borro su cuenta (`created_by` queda a null). El logo es una data URL de
+  256 px dentro de la fila (tope 300.000 caracteres, repetido en
+  `route_bars.logo`), sin bucket: son 15-40 KB por bar. **El jugador ve el logo
+  porque se COPIA a `route_bars.logo` al anadir la parada**, igual que nombre y
+  posicion, y `BarLogo` lo recibe por la prop `logo` (orden: `uri` > `logo` >
+  catalogo vivo > assets/). Quien pinte una parada de la ruta tiene que pasar
+  `logo`: no da error si se olvida, da iniciales; lo vigila
+  `tests/logo-en-parada.test.ts`. Los ids de la tabla se ensenan en la app como
+  `propio-<uuid>` para no romper lo que espera `fusionarCatalogo`. Los bares que
+  un admin ya tenia en su dispositivo se SUBEN solos la primera vez que abre el
+  catalogo con sesion y, si todos suben, se borra la copia local; si algo falla
+  se quedan y se reintenta. **Al desplegar, la migracion va ANTES que la app**
+  (la app nueva escribe `route_bars.logo`; sin la columna no se guarda ningun bar). **Limites reales**: la UI no tiene boton de borrar
+  un bar del catalogo (la policy lo permite, falta la pantalla); las paradas
+  creadas ANTES de la 0035 con un bar propio siguen con iniciales hasta volver a
+  guardarlas; y sin red no se puede crear un bar (a proposito: un fallback local
+  traeria de vuelta el bug).
 - **La foto de perfil nueva la aprueba un admin** (`0020`): subirla crea una
   solicitud (`avatar_requests`, via `avatar_request_submit()`) y la foto
   anterior se sigue viendo hasta que se aprueba en Alertas de administracion

@@ -172,6 +172,21 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    quienes estan dentro de esa ruta. **Ojo con el orden**: si despliegas la app
    antes, la pestana Juegos funciona pero al guardar avisa de que falta la
    migracion. Tras pegarla, la 0031 ya no se vuelve a pegar.
+35. [`supabase/migrations/0035_bares_compartidos.sql`](../supabase/migrations/0035_bares_compartidos.sql)
+   y **Run**, despues de la 0034. Crea `catalog_bars` (los bares propios que los
+   admins anaden desde el editor, con su logo; solo los leen y escriben admins) y
+   la columna `route_bars.logo`. Es lo que hace que **un admin vea los bares que
+   creo otro** y que los jugadores vean el sello con su imagen y no con
+   iniciales. **Ojo con el orden: la migracion va ANTES que la app**
+   (al reves que la 0023). La app nueva escribe `route_bars.logo` al guardar una
+   parada; si llega antes de la migracion, Postgres contesta que la columna no
+   existe y NO se puede guardar ningun bar de ninguna ruta hasta pegarla. En
+   cambio la app vieja con la migracion ya pegada funciona igual que siempre.
+   Los bares que un admin tenia ya en su
+   dispositivo se **suben solos** la primera vez que abre el editor con la app
+   nueva; si ese admin ya no tiene el dispositivo, esos bares no se pueden
+   recuperar. Las paradas ya creadas con un bar propio siguen con iniciales
+   hasta volver a guardarlas (editar la parada y Guardar copia el logo).
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;

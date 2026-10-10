@@ -30,12 +30,14 @@ type BarElegido = {
   address: string;
   lat: number;
   lng: number;
+  /** Se copia a la parada: es lo unico que ven los jugadores de un bar propio (0035). */
+  logo: string | null;
 };
 
 function desdeCatalogo(bar: BarCatalogo): BarElegido {
   // address vacia: el plus code del catalogo es un dato interno y no se guarda
   // como direccion (ver direccionVisible en catalogo.ts).
-  return { name: bar.name, address: '', lat: bar.lat, lng: bar.lng };
+  return { name: bar.name, address: '', lat: bar.lat, lng: bar.lng, logo: bar.logoUri ?? null };
 }
 
 /**
@@ -106,6 +108,7 @@ export default function EditorDeBar() {
             address: existente.address,
             lat: existente.lat,
             lng: existente.lng,
+            logo: existente.logo,
           });
           setRadio(existente.radius_m);
           setAbre(formatHora(new Date(existente.opens_at)));
@@ -156,6 +159,7 @@ export default function EditorDeBar() {
       address: elegido.address,
       lat: elegido.lat,
       lng: elegido.lng,
+      logo: elegido.logo,
       radiusM: radio,
       opensAt: resultadoVentana.ventana.opensAt,
       closesAt: resultadoVentana.ventana.closesAt,

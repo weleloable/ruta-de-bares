@@ -192,7 +192,7 @@ export default function EditorDeRuta() {
                 <View style={styles.numero}>
                   <Text style={styles.numeroTexto}>{indice + 1}</Text>
                 </View>
-                <BarLogo nombre={bar.name} tamano={40} />
+                <BarLogo nombre={bar.name} logo={bar.logo} tamano={40} />
                 <View style={styles.tituloTexto}>
                   <Text style={typography.cardTitle}>{bar.name}</Text>
                   <Text style={typography.muted}>

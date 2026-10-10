@@ -14,11 +14,10 @@ import { colors, space, typography } from '../../../src/lib/theme';
 /**
  * Alta de un bar que no esta en la lista: nombre, ubicacion e imagen del sello.
  *
- * Al guardar entra en el catalogo de ESTE dispositivo (catalogoStore.ts) y esta
- * disponible en el desplegable de cualquier ruta, no solo en la que se estaba
- * editando. El formulario de bar, que sigue montado debajo, lo deja elegido al
- * volver. Nada de esto toca Supabase: el bar solo llega a la BBDD cuando se
- * anade a una ruta, con nombre y posicion.
+ * Al guardar entra en `catalog_bars` (0035) y lo ven TODOS los admins en el
+ * desplegable de cualquier ruta, no solo en la que se estaba editando. El
+ * formulario de bar, que sigue montado debajo, lo deja elegido al volver. El
+ * logo llega a los jugadores cuando el bar se anade a una ruta (route_bars.logo).
  */
 export default function BarNuevo() {
   const router = useRouter();

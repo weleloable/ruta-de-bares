@@ -56,6 +56,22 @@ export type RouteBarRow = {
   opens_at: string;
   closes_at: string;
   notes: string;
+  /**
+   * data URL del sello de un bar propio (0035), copiada del catalogo al anadir
+   * la parada para que los jugadores la vean. null: logo de assets/ o iniciales.
+   */
+  logo: string | null;
+  created_at: string;
+};
+
+/** Bar propio compartido entre admins (0035). Solo lo leen y escriben admins. */
+export type CatalogBarRow = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  logo: string | null;
+  created_by: string | null;
   created_at: string;
 };
 
@@ -432,8 +448,15 @@ export type Database = {
       };
       route_bars: {
         Row: RouteBarRow;
-        Insert: Insert<RouteBarRow, 'id' | 'address' | 'radius_m' | 'notes' | 'created_at'>;
+        Insert: Insert<RouteBarRow, 'id' | 'address' | 'radius_m' | 'notes' | 'logo' | 'created_at'>;
         Update: Partial<RouteBarRow>;
+        Relationships: [];
+      };
+      catalog_bars: {
+        Row: CatalogBarRow;
+        Insert: Insert<CatalogBarRow, 'id' | 'logo' | 'created_by' | 'created_at'>;
+        // Sin update a proposito (0035): se anade y se borra.
+        Update: never;
         Relationships: [];
       };
       stamps: {
