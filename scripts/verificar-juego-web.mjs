@@ -15,7 +15,9 @@
  *
  *   1. el contenedor del paso no tiene scroll (nada se sale);
  *   2. el boton del paso queda entero y por encima de "Siguiente", no tapado;
- *   3. en el lupulo, un toque a tiempo echa la bolsita y la olla acaba con ella dentro.
+ *   3. en el lupulo, un toque a tiempo echa la bolsita y la olla acaba con ella dentro;
+ *   4. en la siembra se mantiene el grifo, avisa de soltar (inercia), se siembra
+ *      y la tarjeta final ensena la fermentacion.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
  * lento en headless). Es del carril periodico, no del gate de cada commit:
@@ -175,16 +177,38 @@ async function abrirChrome(chrome, perfil, url, { ancho, alto }) {
       }
       throw new Error(`no encuentro "${txt}" en la pantalla`);
     },
+    /** Aprieta y NO suelta (para el grifo de la siembra). Devuelve la funcion que suelta. */
+    async mantener(txt) {
+      const p = await centro(txt);
+      if (!p) throw new Error(`no encuentro "${txt}" en la pantalla`);
+      const [x, y] = p;
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
+      return () => cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 });
+    },
+    /** Lo que marca el termometro ("57 °C" junto al carril), o null. */
+    temperatura: () =>
+      ev(`(() => {
+        const t = [...document.querySelectorAll('body *')].find((x) => x.children.length === 0 && /^\\d+ °C$/.test((x.innerText || '').trim()));
+        return t ? Number(t.innerText.trim().split(' ')[0]) : null;
+      })()`),
     texto: () => ev('document.body.innerText'),
     /** Espera a que el texto de la pagina case. Con `tocar`, mientras espera va pulsando ese boton. */
     async hasta(re, { tocar, limite = 90000 } = {}) {
       const ini = Date.now();
       while (Date.now() - ini < limite) {
-        if (new RegExp(re).test(await api.texto())) return true;
+        // Sin distinguir mayusculas: un `textTransform: uppercase` cambia lo que devuelve innerText.
+        if (new RegExp(re, 'i').test(await api.texto())) return true;
         if (tocar) await api.clic(tocar, 2).catch(() => {});
         await esperar(tocar ? 90 : 300);
       }
       return false;
+    },
+    /** Con `FOTOS=<carpeta>` guarda una captura con ese nombre; sin ella, no hace nada. */
+    async foto(nombre) {
+      if (!process.env.FOTOS) return;
+      const { result } = await cdp('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(join(process.env.FOTOS, `${alto}-${nombre}.png`), Buffer.from(result.data, 'base64'));
     },
     cerrar() {
       ws.close();
@@ -198,7 +222,7 @@ async function abrirChrome(chrome, perfil, url, { ancho, alto }) {
 /** Mide un boton del paso: si el contenedor con scroll tiene algo de mas y si "Siguiente" lo tapa. */
 const medir = (etiquetaBoton) => `(() => {
   const b = [...document.querySelectorAll('[aria-label]')].find((x) => /${etiquetaBoton}/.test(x.getAttribute('aria-label')));
-  const sig = [...document.querySelectorAll('[role="button"]')].find((x) => (x.innerText || '').trim().startsWith('Siguiente'));
+  const sig = [...document.querySelectorAll('[role="button"]')].find((x) => /^(Siguiente|Ver mi cerveza)/.test((x.innerText || '').trim()));
   if (!b || !sig) return null;
   let sc = null;
   for (let e = b; e && !sc; e = e.parentElement) {
@@ -208,7 +232,7 @@ const medir = (etiquetaBoton) => `(() => {
   return { botonAbajo: Math.round(r.bottom), siguienteArriba: Math.round(sig.getBoundingClientRect().top), scrollDeMas: sc ? sc.scrollHeight - sc.clientHeight : 0 };
 })()`;
 
-/** Recorre el juego hasta el lupulo en un tamano de ventana y devuelve las medidas. */
+/** Recorre el juego entero en un tamano de ventana y devuelve las medidas. */
 async function recorrer(chrome, perfil, url, tamano) {
   const c = await abrirChrome(chrome, perfil, url, tamano);
   try {
@@ -240,7 +264,39 @@ async function recorrer(chrome, perfil, url, tamano) {
       const boton = [...document.querySelectorAll('[aria-label]')].find((x) => /Echar lúpulo/.test(x.getAttribute('aria-label')));
       return { barraY: Math.round(barraY), botonY: Math.round(boton.getBoundingClientRect().top) };
     })()`);
-    return { maceracion, lupulo, echada, bolsasEnOlla, stderr: c.stderr() };
+
+    // Paso 4: enfriar y sembrar.
+    await c.hasta('Hervido terminado', { limite: 40000 });
+    await c.clic('Siguiente');
+    await c.clic('Seguir');
+    await esperar(1200);
+    await c.clic('Ale');
+    await esperar(400);
+    const siembra = await c.ev(medir('^Enfriar$'));
+    const soltar = await c.mantener('Enfriar');
+    // Se suelta cuando el juego avisa de que la inercia ya llega (la pista que lo ensena).
+    const pista = await c.hasta('¡Suelta!', { limite: 40000 });
+    await c.foto('siembra-enfriando');
+    await soltar();
+    // Y se echa cuando el termometro entra en la ventana de la ale (o ya se paso).
+    const ini = Date.now();
+    while (Date.now() - ini < 30000) {
+      const t = await c.temperatura();
+      if (t !== null && t <= 22) break;
+      await esperar(120);
+    }
+    const tempAlEchar = await c.temperatura();
+    await c.clic('Echar levadura');
+    const sembradaFoto = c.foto('siembra-echada');
+    const sembrada = await c.hasta('· \\d+ %', { limite: 5000 });
+    const resultadoSiembra = (await c.texto()).split('\n').find((l) => /· \d+ %/.test(l)) ?? '';
+    // "Ver mi cerveza" lleva primero al dato curioso; "Seguir", a la tarjeta.
+    await c.clic('Ver mi cerveza');
+    await c.clic('Seguir');
+    const tarjeta = await c.hasta('Fermentación', { limite: 8000 });
+    await sembradaFoto;
+    await c.foto('tarjeta');
+    return { maceracion, lupulo, echada, bolsasEnOlla, siembra, pista, tempAlEchar, sembrada, resultadoSiembra, tarjeta, stderr: c.stderr() };
   } finally {
     c.cerrar();
     // taskkill vuelve antes de que los procesos hijos suelten el perfil.
@@ -304,8 +360,14 @@ async function main() {
         // Entre la barra (su etiqueta "Amargor") y el boton cabe la olla entera, que mide al menos ~80 px.
         ['lupulo: el boton esta debajo de la olla', r.bolsasEnOlla && r.bolsasEnOlla.botonY > r.bolsasEnOlla.barraY + 80],
         ['lupulo: un toque a tiempo echa la bolsita', r.echada],
+        ['siembra: sin scroll', r.siembra && r.siembra.scrollDeMas === 0],
+        ['siembra: los botones no quedan tapados por Siguiente', r.siembra && r.siembra.botonAbajo <= r.siembra.siguienteArriba],
+        ['siembra: al mantener el grifo, avisa de soltar antes de llegar (inercia)', r.pista],
+        ['siembra: se siembra y dice como le fue a la levadura', r.sembrada],
+        ['resultado: la tarjeta ensena la fermentacion', r.tarjeta],
       ];
-      console.log(JSON.stringify({ maceracion: r.maceracion, lupulo: r.lupulo }));
+      console.log(JSON.stringify({ maceracion: r.maceracion, lupulo: r.lupulo, siembra: r.siembra }));
+      console.log(`siembra: echada a ${r.tempAlEchar} °C -> "${r.resultadoSiembra}"`);
       for (const [nombre, ok] of comprobaciones) {
         console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
         if (!ok) fallos += 1;

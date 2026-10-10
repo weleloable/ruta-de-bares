@@ -164,3 +164,14 @@ test('olla: crece con la ventana, sin saltos hacia atras', () => {
     anterior = e;
   }
 });
+
+test('olla: con la zona de una levadura, el "en su punto" es esa zona y no la de la maceracion', () => {
+  const ale = { min: 18, max: 22 };
+  assert.equal(climaOlla(20, ale).modo, 'justo');
+  assert.equal(climaOlla(65, ale).modo, 'caliente');
+  assert.equal(climaOlla(10, ale).modo, 'frio');
+  assert.equal(climaOlla(96, ale).intensidad, 1);
+  // Sin zona, la de siempre.
+  assert.equal(climaOlla(65).modo, 'justo');
+  assert.equal(colorMosto(20, ale), colorMosto(65));
+});

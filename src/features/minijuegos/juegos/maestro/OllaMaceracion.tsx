@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, typography } from '../../../../lib/theme';
-import { climaOlla, colorMosto, particulaVisible, particulasVisibles } from './maceracion';
+import { climaOlla, colorMosto, particulaVisible, particulasVisibles, type Zona } from './maceracion';
 
 /**
  * Olla de maceracion animada, al lado del termometro. Dice lo mismo que la
@@ -135,6 +135,38 @@ const Burbuja = memo(function Burbuja({ indice, visible }: { indice: number; vis
   );
 });
 
+/**
+ * Serpentin de agua fria: tres vueltas de tubo azul por delante de la olla, con
+ * el agua corriendo (una raya clara que avanza). Se ve mientras se enfria.
+ */
+const Serpentin = memo(function Serpentin() {
+  const v = useBucle(650, 0);
+  return (
+    <>
+      {[22, 44, 66].map((arriba, i) => (
+        <View key={arriba} style={[styles.vuelta, { top: arriba }]}>
+          <Animated.View
+            style={[
+              styles.corriente,
+              {
+                transform: [
+                  {
+                    translateX: v.interpolate({
+                      inputRange: [0, 1],
+                      // Cada vuelta va en un sentido, como el agua que sube por un tubo en espiral.
+                      outputRange: i % 2 === 0 ? [-30, CUERPO_ANCHO] : [CUERPO_ANCHO, -30],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        </View>
+      ))}
+    </>
+  );
+});
+
 /** Llama del fogon: tiembla sola y da una llamarada en cada toque (`pulsos` cambia). */
 const Llama = memo(function Llama({ pulsos }: { pulsos: number }) {
   const temblor = useBucle(420, 0);
@@ -190,6 +222,10 @@ export function OllaMaceracion({
   hijos,
   escala = 1,
   etiqueta = true,
+  zona,
+  fuego = true,
+  enfriando = false,
+  burbujas,
 }: {
   temp?: number;
   pulsos: number;
@@ -199,8 +235,16 @@ export function OllaMaceracion({
   escala?: number;
   /** El texto de debajo ("Hirviendo", "Se esta enfriando"). En una olla pequena sobra: ocupa sitio. */
   etiqueta?: boolean;
+  /** Cuando esta "en su punto". Por defecto, la de la maceracion; la siembra pasa la de su levadura. */
+  zona?: Zona;
+  /** Fogon encendido. Al enfriar el mosto (siembra) se apaga. */
+  fuego?: boolean;
+  /** Serpentin de agua fria dentro de la olla, con el agua corriendo. */
+  enfriando?: boolean;
+  /** Fuerza las burbujas (true: fermentando) o las quita (false). Sin decir nada, salen en su punto. */
+  burbujas?: boolean;
 }) {
-  const clima = hervor ? ({ modo: 'justo', intensidad: 0 } as const) : climaOlla(temp);
+  const clima = hervor ? ({ modo: 'justo', intensidad: 0 } as const) : climaOlla(temp, zona);
   const vapores = hervor ? VAPOR_HERVOR : clima.modo === 'caliente' ? particulasVisibles(clima, VAPORES) : 0;
   const copos = clima.modo === 'frio' ? particulasVisibles(clima, COPOS) : 0;
 
@@ -217,7 +261,7 @@ export function OllaMaceracion({
             <Copo key={`c${i}`} indice={i} visible={particulaVisible(i, copos, COPOS)} />
           ))}
 
-          <Llama pulsos={pulsos} />
+          {fuego ? <Llama pulsos={pulsos} /> : null}
           <View style={styles.parrilla} />
 
           <View style={styles.asaIzq} />
@@ -232,12 +276,20 @@ export function OllaMaceracion({
               ]}
             />
             <View style={[styles.brasa, { opacity: clima.modo === 'caliente' ? clima.intensidad * 0.5 : 0 }]} />
+            {enfriando ? <Serpentin /> : null}
           </View>
           <View style={styles.borde} />
-          <View style={[styles.mosto, { backgroundColor: colorMosto(temp) }]} />
+          <View style={[styles.mosto, { backgroundColor: colorMosto(temp, zona) }]} />
+          {/* Tubos del serpentin: entra el agua fria por la izquierda y sale por la derecha. */}
+          {enfriando ? (
+            <>
+              <View style={[styles.tubo, { left: ANCHO_OLLA / 2 - 34 }]} />
+              <View style={[styles.tubo, { left: ANCHO_OLLA / 2 + 30 }]} />
+            </>
+          ) : null}
 
           {Array.from({ length: BURBUJAS }, (_, i) => (
-            <Burbuja key={`b${i}`} indice={i} visible={clima.modo === 'justo'} />
+            <Burbuja key={`b${i}`} indice={i} visible={burbujas ?? clima.modo === 'justo'} />
           ))}
           {hijos}
           {Array.from({ length: VAPORES }, (_, i) => (
@@ -373,6 +425,28 @@ const styles = StyleSheet.create({
     width: 120,
     height: 20,
     borderRadius: 60,
+  },
+  vuelta: {
+    position: 'absolute',
+    left: -2,
+    right: -2,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#4A8CC4',
+    borderWidth: 1.5,
+    borderColor: '#2F6797',
+    overflow: 'hidden',
+  },
+  corriente: { position: 'absolute', top: 1, width: 26, height: 4, borderRadius: 2, backgroundColor: '#CFE6F7' },
+  tubo: {
+    position: 'absolute',
+    bottom: BORDE_ABAJO + 10,
+    width: 8,
+    height: 34,
+    borderRadius: 4,
+    backgroundColor: '#4A8CC4',
+    borderWidth: 1.5,
+    borderColor: '#2F6797',
   },
   burbuja: {
     position: 'absolute',

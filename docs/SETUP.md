@@ -199,6 +199,15 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    si un admin sube despues un bar propio (los que tenia en su dispositivo),
    pega solo el `update public.route_bars ...` del fichero para que sus paradas
    reciban el logo.
+37. [`supabase/migrations/0037_siembra.sql`](../supabase/migrations/0037_siembra.sql)
+   y **Run**, despues de la 0036 y **ANTES de desplegar la app**. El paso 4 de
+   Maestro Cervecero pasa a ser "enfriar y sembrar" y entra en la nota (30
+   maceracion, 25 amargor, 25 aroma, 20 siembra). Anade `maestro_beers.siembra`
+   y las funciones `maestro_calcular_cerveza_v2` y `maestro_submit_beer_v2`; las
+   de la 0034 se quedan para quien tenga la app vieja en cache. Si la app nueva
+   llega antes, la cerveza se juega igual pero al guardarla en la ruta avisa de
+   que falta una migracion. Rehace `export_my_data()`, asi que despues de esta
+   la 0034 ya **no se vuelve a pegar**.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;

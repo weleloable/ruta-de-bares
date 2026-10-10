@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../../components/ui';
 import { colors, radius, space, typography } from '../../../../lib/theme';
 import { feedback } from '../../feedback';
+import { pasoDeTiempo } from '../../reloj';
 import type { PropsJuego } from '../../tipos';
 import { SelectorAngulo } from './SelectorAngulo';
 import { useTecladoCana } from './teclado';
@@ -69,7 +70,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
     let ultimo = Date.now();
     const bucle = () => {
       const ahora = Date.now();
-      const dt = Math.min((ahora - ultimo) / 1000, DT_MAX);
+      const dt = pasoDeTiempo(ahora, ultimo, DT_MAX);
       ultimo = ahora;
       if (!acabadoRef.current) {
         estadoRef.current = avanzar(estadoRef.current, dt, sirviendoRef.current, angulo.current);

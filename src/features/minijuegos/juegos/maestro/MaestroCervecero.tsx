@@ -6,10 +6,11 @@ import { colors, radius, space, typography } from '../../../../lib/theme';
 import { useAuth } from '../../../auth/AuthProvider';
 import type { PropsJuego } from '../../tipos';
 import { elegirDato } from './curiosidades';
-import { LEVADURAS, MALTAS } from './datos';
+import { MALTAS } from './datos';
 import { calcularCerveza } from './estilo';
 import { PasoLupulo } from './PasoLupulo';
 import { PasoMaceracion } from './PasoMaceracion';
+import { PasoSiembra } from './PasoSiembra';
 import {
   anterior,
   numeroPaso,
@@ -29,7 +30,7 @@ const TITULOS: Record<Paso, string> = {
   malta: 'Elige la malta',
   maceracion: 'Maceración',
   lupulo: 'Lúpulo',
-  fermentacion: 'Elige la levadura',
+  fermentacion: 'Enfría y siembra',
   resultado: 'Tu cerveza',
 };
 
@@ -77,6 +78,7 @@ export function MaestroCervecero({ onFinish }: PropsJuego) {
         maceracion: pct(completa.maceracion),
         amargor: pct(completa.lupulo.amargor),
         aroma: pct(completa.lupulo.aroma),
+        siembra: pct(completa.siembra),
       },
     });
   };
@@ -127,23 +129,21 @@ export function MaestroCervecero({ onFinish }: PropsJuego) {
             {paso === 'lupulo' ? <PasoLupulo onTerminar={(lupulo) => setReceta((r) => ({ ...r, lupulo }))} /> : null}
 
             {paso === 'fermentacion' ? (
-              <View style={styles.rejilla}>
-                {LEVADURAS.map((l) => (
-                  <Opcion
-                    key={l.id}
-                    seleccionada={receta.levadura === l.id}
-                    titulo={l.nombre}
-                    descripcion={l.descripcion}
-                    onPress={() => setReceta({ ...receta, levadura: l.id })}
-                  />
-                ))}
-              </View>
+              <PasoSiembra
+                levadura={receta.levadura}
+                // Otra levadura es otra ventana: lo sembrado con la anterior ya no vale.
+                onElegirLevadura={(levadura) => setReceta((r) => ({ ...r, levadura, siembra: null }))}
+                // Repetir el paso (volviendo con Atras) anula la siembra de antes hasta sembrar otra vez.
+                onEmpezar={() => setReceta((r) => ({ ...r, siembra: null }))}
+                onTerminar={(siembra) => setReceta((r) => ({ ...r, siembra }))}
+              />
             ) : null}
 
             {paso === 'resultado' && cerveza ? (
               <ResultadoCerveza
                 cerveza={cerveza}
                 malta={receta.malta ?? MALTAS[0].id}
+                siembra={completa?.siembra ?? 0}
                 jugador={profile?.display_name ?? ''}
                 onTerminar={terminar}
               />

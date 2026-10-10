@@ -79,10 +79,27 @@ export function calcularCuerpo(malta: MaltaId, maceracion: number): Cuerpo {
   return 'con cuerpo';
 }
 
-/** 40 % maceracion, 30 % amargor y 30 % aroma: lo que se hizo con las manos. */
+/**
+ * 30 % maceracion, 25 % amargor, 25 % aroma y 20 % siembra: lo que se hizo con
+ * las manos. Espejo de `maestro_calcular_cerveza_v2` (migracion 0037).
+ */
 export function calcularPuntuacion(r: RecetaCompleta): number {
-  const suma = 40 * aPorcentaje(r.maceracion) + 30 * aPorcentaje(r.lupulo.amargor) + 30 * aPorcentaje(r.lupulo.aroma);
+  const suma =
+    30 * aPorcentaje(r.maceracion) +
+    25 * aPorcentaje(r.lupulo.amargor) +
+    25 * aPorcentaje(r.lupulo.aroma) +
+    20 * aPorcentaje(r.siembra);
   return dividir(suma, 100);
+}
+
+/**
+ * La nota de ANTES de que hubiera siembra (40 / 30 / 30). Ya no la usa la app:
+ * esta para el test que vigila que `maestro_calcular_cerveza` (0034), la que
+ * siguen llamando las versiones viejas de la app que alguien tenga en cache,
+ * no cambie por debajo.
+ */
+export function calcularPuntuacionSinSiembra(maceracion: number, amargor: number, aroma: number): number {
+  return dividir(40 * aPorcentaje(maceracion) + 30 * aPorcentaje(amargor) + 30 * aPorcentaje(aroma), 100);
 }
 
 export function calcularCerveza(r: RecetaCompleta): Cerveza {

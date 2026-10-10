@@ -578,6 +578,20 @@ export type Database = {
         };
         Returns: { id: string; name: string; estilo: string; abv: number; ibu: number; cuerpo: string; score: number };
       };
+      /** La de la 0037: con la siembra (paso 4) en la nota. La de arriba queda para la app vieja. */
+      maestro_submit_beer_v2: {
+        Args: {
+          p_route_id: string;
+          p_name: string;
+          p_malta: string;
+          p_levadura: string;
+          p_maceracion: number;
+          p_amargor: number;
+          p_aroma: number;
+          p_siembra: number;
+        };
+        Returns: { id: string; name: string; estilo: string; abv: number; ibu: number; cuerpo: string; score: number };
+      };
       maestro_list_beers: {
         Args: { p_route_id: string; p_limit?: number; p_offset?: number; p_only_mine?: boolean };
         Returns: MaestroBeerRow[];

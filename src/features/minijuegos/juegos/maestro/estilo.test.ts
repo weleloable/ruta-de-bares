@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { calcularCerveza, calcularCuerpo, calcularEstilo, calcularPuntuacion, IBU_IPA, veredicto } from './estilo.ts';
+import {
+  calcularCerveza,
+  calcularCuerpo,
+  calcularEstilo,
+  calcularPuntuacion,
+  calcularPuntuacionSinSiembra,
+  IBU_IPA,
+  veredicto,
+} from './estilo.ts';
 import type { RecetaCompleta } from './pasos.ts';
 
 const receta = (parcial: Partial<RecetaCompleta> = {}): RecetaCompleta => ({
@@ -9,6 +17,7 @@ const receta = (parcial: Partial<RecetaCompleta> = {}): RecetaCompleta => ({
   maceracion: 1,
   lupulo: { amargor: 1, aroma: 1 },
   levadura: 'ale',
+  siembra: 1,
   ...parcial,
 });
 
@@ -64,12 +73,26 @@ test('el cuerpo depende de la malta y de la maceracion', () => {
   assert.ok(['ligero', 'medio'].includes(calcularCuerpo('palida', 1)));
 });
 
-test('la puntuacion va de 0 a 100 y pesa 40 / 30 / 30', () => {
-  assert.equal(calcularPuntuacion(receta({ maceracion: 0, lupulo: { amargor: 0, aroma: 0 } })), 0);
+test('la puntuacion va de 0 a 100 y pesa 30 / 25 / 25 / 20 (maceracion, amargor, aroma, siembra)', () => {
+  const cero = { maceracion: 0, lupulo: { amargor: 0, aroma: 0 }, siembra: 0 };
+  assert.equal(calcularPuntuacion(receta(cero)), 0);
   assert.equal(calcularPuntuacion(receta()), 100);
-  assert.equal(calcularPuntuacion(receta({ maceracion: 1, lupulo: { amargor: 0, aroma: 0 } })), 40);
-  assert.equal(calcularPuntuacion(receta({ maceracion: 0, lupulo: { amargor: 1, aroma: 0 } })), 30);
-  assert.equal(calcularPuntuacion(receta({ maceracion: 0, lupulo: { amargor: 0, aroma: 1 } })), 30);
+  assert.equal(calcularPuntuacion(receta({ ...cero, maceracion: 1 })), 30);
+  assert.equal(calcularPuntuacion(receta({ ...cero, lupulo: { amargor: 1, aroma: 0 } })), 25);
+  assert.equal(calcularPuntuacion(receta({ ...cero, lupulo: { amargor: 0, aroma: 1 } })), 25);
+  assert.equal(calcularPuntuacion(receta({ ...cero, siembra: 1 })), 20);
+});
+
+test('la siembra cuenta: matar la levadura con todo lo demas perfecto se queda en 80', () => {
+  assert.equal(calcularPuntuacion(receta({ siembra: 0 })), 80);
+  assert.equal(calcularPuntuacion(receta({ siembra: 0.5 })), 90);
+});
+
+test('la nota de antes de la siembra (la de la app vieja) sigue siendo 40 / 30 / 30', () => {
+  assert.equal(calcularPuntuacionSinSiembra(1, 1, 1), 100);
+  assert.equal(calcularPuntuacionSinSiembra(1, 0, 0), 40);
+  assert.equal(calcularPuntuacionSinSiembra(0, 1, 0), 30);
+  assert.equal(calcularPuntuacionSinSiembra(0, 0, 1), 30);
 });
 
 test('el veredicto cambia con la nota y cubre todo el rango', () => {

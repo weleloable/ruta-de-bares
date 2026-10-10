@@ -16,8 +16,8 @@ const olla = leer('src/features/minijuegos/juegos/maestro/OllaMaceracion.tsx');
 describe('maceracion: que quepa en la pantalla', () => {
   it('olla y termometro se encogen JUNTOS con la misma escala, y el boton Calentar va debajo', () => {
     assert.match(paso, /escalaOlla\(altoVentana, ALTO_RESTO_PASO, ALTO\)/);
-    assert.match(paso, /height: altoTermometro/);
-    assert.match(paso, /pos\(estado\.temp, altoTermometro\)/);
+    assert.match(paso, /<Termometro temp=\{estado\.temp\} min=\{TEMP_MIN\} max=\{TEMP_MAX\} zona=\{ZONA\} alto=\{altoTermometro\} \/>/);
+    assert.match(paso, /const altoTermometro = ALTO \* escala;/);
     assert.ok(paso.indexOf('<OllaMaceracion') < paso.indexOf('accessibilityLabel="Calentar"'));
   });
 });
@@ -26,7 +26,7 @@ describe('olla de maceracion', () => {
   it('la pantalla la pinta a la izquierda del termometro, con la temperatura del juego', () => {
     assert.match(
       paso,
-      /<OllaMaceracion temp=\{estado\.temp\} pulsos=\{pulsos\} escala=\{escala\} \/>\s*<View style=\{\[styles\.termometro,/,
+      /<OllaMaceracion temp=\{estado\.temp\} pulsos=\{pulsos\} escala=\{escala\} \/>\s*<Termometro /,
     );
   });
 
@@ -35,8 +35,9 @@ describe('olla de maceracion', () => {
     assert.match(tocar, /setPulsos\(\(n\) => n \+ 1\)/);
   });
 
-  it('decide con climaOlla, la misma ZONA que puntua, y no con umbrales propios', () => {
-    assert.match(olla, /climaOlla\(temp\)/);
+  it('decide con climaOlla, la misma ZONA que puntua (o la de la levadura), y no con umbrales propios', () => {
+    assert.match(olla, /climaOlla\(temp, zona\)/);
+    assert.match(olla, /colorMosto\(temp, zona\)/);
     assert.doesNotMatch(olla, /\b6[0-9]\b\s*[<>]=?|[<>]=?\s*\b6[0-9]\b/);
   });
 

@@ -1,5 +1,5 @@
 /**
- * Traduce los errores de las funciones de la 0034 a algo que se pueda leer en
+ * Traduce los errores de las funciones de la 0034 (y la 0037) a algo que se pueda leer en
  * un bar. Los codigos (TOO_FAST, FORBIDDEN...) los lanza Postgres tal cual.
  */
 export function traducirErrorMinijuegos(mensaje: string): string {
@@ -10,9 +10,11 @@ export function traducirErrorMinijuegos(mensaje: string): string {
   if (/LIMIT_REACHED/.test(mensaje)) return 'Has llegado al máximo de cervezas en esta ruta. Borra alguna.';
   if (/INVALID_NAME/.test(mensaje)) return 'El nombre debe tener entre 1 y 30 caracteres.';
   if (/INVALID_(SCORE|GAME|RECIPE)/.test(mensaje)) return 'No se pudo guardar esta partida.';
-  // PostgREST cuando la funcion no existe: la migracion 0034 no esta pegada.
+  // PostgREST cuando la funcion no existe: falta una migracion de los minijuegos.
+  // Puede ser la 0034 (todo) o la 0037 (guardar cervezas con la siembra): se
+  // nombran las dos, porque mandar a mirar solo una que ya esta pegada despista.
   if (/PGRST202|Could not find the function|schema cache/i.test(mensaje)) {
-    return 'Falta aplicar la migración 0034 en Supabase (ver docs/SETUP.md).';
+    return 'Falta aplicar una migración de los minijuegos en Supabase (la 0034 o la 0037, ver docs/SETUP.md).';
   }
   return mensaje || 'No se pudo completar.';
 }

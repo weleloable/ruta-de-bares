@@ -116,6 +116,7 @@ supabase/
   migrations/0034_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
   migrations/0035_*.sql     bares propios compartidos entre admins (`catalog_bars`) y `route_bars.logo`
   migrations/0036_*.sql     los 14 bares originales y sus logos pasan a `catalog_bars` (GENERADA, ver scripts/semilla-catalogo/)
+  migrations/0037_*.sql     Maestro Cervecero: la siembra (paso 4) entra en la nota; funciones `_v2`
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -750,3 +751,26 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   (~4 min, periodico, no del gate). Por debajo de ~720 px de ventana ni con la
   olla al minimo cabe y queda un poco de scroll. En el hervido el boton va
   DEBAJO de la olla y las bolsitas de lupulo cuelgan sobre la barra.
+- **Paso 4 de Maestro Cervecero: "enfriar y sembrar", y cuenta en la nota**
+  (`siembra.ts`, `PasoSiembra.tsx`, migracion `0037`). Se elige ale o lager,
+  se MANTIENE pulsado el grifo de agua fria (el mosto sale a 96 grados) y hay
+  que echar la levadura en SU ventana (ale 18-22, lager 8-12). El truco es la
+  inercia: al soltar sigue enfriando, asi que hay que soltar antes; la pista
+  "¡Suelta!" sale cuando `inerciaRestante` ya llega (si sobra facil, es lo
+  primero que quitar). La nota pasa de 40/30/30 a **30/25/25/20** (maceracion,
+  amargor, aroma, siembra). **El servidor recalcula la nota**: por eso hay
+  `maestro_calcular_cerveza_v2` y `maestro_submit_beer_v2` NUEVAS y no se tocan
+  las de la 0034, que siguen sirviendo (con la nota vieja) a quien tenga la app
+  en cache; sobrecargar el mismo nombre con un argumento por defecto daria
+  "function is not unique". `tests/migration-0037.test.ts` compara la v2 con
+  `calcularCerveza` en ~117.000 combinaciones y `migration-0034` sigue
+  vigilando la v1 con `calcularPuntuacionSinSiembra`. Cambiar la levadura
+  borra la siembra (otra ventana). `Termometro.tsx` es el de la maceracion
+  sacado a componente; la olla admite `zona`, `fuego`, `enfriando` y `burbujas`.
+  **Riesgo abierto, a proposito**: la `maestro_submit_beer` de la 0034 sigue
+  concedida a `authenticated`, asi que un cliente MODIFICADO puede guardar una
+  cerveza con la nota de antes (40/30/30), saltandose la siembra (hasta +20
+  puntos en la lista de cervezas; el ranking no cambia, que ya acepta la nota
+  del cliente). Se deja para no romper la app en cache; cuando ya no quede
+  nadie con la version vieja, una migracion le quita el `grant`.
+

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions, type LayoutRect
 
 import { colors, radius, space } from '../../../../lib/theme';
 import { feedback } from '../../feedback';
+import { pasoDeTiempo } from '../../reloj';
 import {
   BOLSA_ALTO,
   BOLSA_ANCHO,
@@ -72,7 +73,7 @@ export function PasoLupulo({ onTerminar }: { onTerminar: (r: ResultadoLupulo) =>
     let ultimo = Date.now();
     const bucle = () => {
       const ahora = Date.now();
-      const dt = Math.min((ahora - ultimo) / 1000, DT_MAX);
+      const dt = pasoDeTiempo(ahora, ultimo, DT_MAX);
       ultimo = ahora;
       if (empezadoRef.current && !terminado(estadoRef.current)) {
         estadoRef.current = avanzar(estadoRef.current, dt);

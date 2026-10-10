@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import type { PGlite } from '@electric-sql/pglite';
 
-import { calcularCerveza } from '../src/features/minijuegos/juegos/maestro/estilo.ts';
+import { calcularCerveza, calcularPuntuacionSinSiembra } from '../src/features/minijuegos/juegos/maestro/estilo.ts';
 import type { LevaduraId, MaltaId } from '../src/features/minijuegos/juegos/maestro/datos.ts';
 import { crearBase, escenario, leerFichero, type Actor } from './pglite-supabase.ts';
 
@@ -270,10 +270,15 @@ describe('0034: Maestro Cervecero, el servidor calcula la cerveza', () => {
 
       const distintos: string[] = [];
       for (const r of rows) {
-        const ts = calcularCerveza({
-          malta: r.malta, levadura: r.levadura, maceracion: r.m / 100,
-          lupulo: { amargor: r.am / 100, aroma: r.ar / 100 },
-        });
+        // Desde la 0037 la app usa la nota con siembra (maestro_calcular_cerveza_v2); esta
+        // funcion la siguen llamando las versiones viejas en cache, con la nota de antes.
+        const ts = {
+          ...calcularCerveza({
+            malta: r.malta, levadura: r.levadura, maceracion: r.m / 100,
+            lupulo: { amargor: r.am / 100, aroma: r.ar / 100 }, siembra: 0,
+          }),
+          puntuacion: calcularPuntuacionSinSiembra(r.m / 100, r.am / 100, r.ar / 100),
+        };
         const sql = { estilo: r.estilo, abv: Number(r.abv), ibu: r.ibu, cuerpo: r.cuerpo, puntuacion: r.score };
         if (JSON.stringify(ts) !== JSON.stringify(sql)) {
           distintos.push(`${r.malta}/${r.levadura} ${r.m}/${r.am}/${r.ar}: ts=${JSON.stringify(ts)} sql=${JSON.stringify(sql)}`);

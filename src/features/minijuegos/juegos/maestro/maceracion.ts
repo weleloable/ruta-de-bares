@@ -93,11 +93,14 @@ export type Clima = {
 /** Lo minimo que se ve nada mas salir de la zona. Por debajo, una mota sola no se distingue. */
 export const INTENSIDAD_MINIMA = 0.25;
 
-export function climaOlla(temp: number): Clima {
-  if (temp >= ZONA.min && temp <= ZONA.max) return { modo: 'justo', intensidad: 0 };
-  const distancia = temp < ZONA.min ? ZONA.min - temp : temp - ZONA.max;
+/** Una zona de temperatura "en su punto". Por defecto la de la maceracion; la siembra pasa la de su levadura. */
+export type Zona = { readonly min: number; readonly max: number };
+
+export function climaOlla(temp: number, zona: Zona = ZONA): Clima {
+  if (temp >= zona.min && temp <= zona.max) return { modo: 'justo', intensidad: 0 };
+  const distancia = temp < zona.min ? zona.min - temp : temp - zona.max;
   const intensidad = limitar(INTENSIDAD_MINIMA + (1 - INTENSIDAD_MINIMA) * (distancia / TOLERANCIA), 0, 1);
-  return { modo: temp < ZONA.min ? 'frio' : 'caliente', intensidad };
+  return { modo: temp < zona.min ? 'frio' : 'caliente', intensidad };
 }
 
 /** Cuantas de `total` particulas se ven con esta intensidad (0 en la zona, al menos 1 fuera). */
@@ -126,8 +129,8 @@ const hex = (c: Rgb) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, 
 const mezclar = (a: Rgb, b: Rgb, t: number): Rgb => [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t) as Rgb;
 
 /** Color de la superficie del mosto: dorado en la zona, se apaga al enfriarse y se tuesta al pasarse. */
-export function colorMosto(temp: number): string {
-  const { modo, intensidad } = climaOlla(temp);
+export function colorMosto(temp: number, zona: Zona = ZONA): string {
+  const { modo, intensidad } = climaOlla(temp, zona);
   if (modo === 'justo') return hex(MOSTO_JUSTO);
   return hex(mezclar(MOSTO_JUSTO, modo === 'frio' ? MOSTO_FRIO : MOSTO_CALIENTE, intensidad));
 }

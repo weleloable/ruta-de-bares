@@ -21,6 +21,7 @@ export const CURIOSIDADES: Record<PasoJuego, readonly string[]> = {
   fermentacion: [
     'La levadura convierte el azúcar en alcohol y gas carbónico: las burbujas de la cerveza son ese gas.',
     'Las levaduras ale trabajan a temperaturas más altas que las lager, que fermentan en frío.',
+    'Antes de echar la levadura hay que enfriar el mosto: recién hervido, el calor la mataría.',
   ],
 };
 

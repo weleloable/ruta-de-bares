@@ -3,7 +3,9 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 
 import { colors, radius, space } from '../../../../lib/theme';
 import { feedback } from '../../feedback';
+import { pasoDeTiempo } from '../../reloj';
 import { ALTO_OLLA, OllaMaceracion } from './OllaMaceracion';
+import { Termometro } from './Termometro';
 import {
   avanzar,
   calentar,
@@ -31,13 +33,10 @@ const HUECOS = 3;
 const HOLGURA = 12;
 /** Todo lo del paso menos la olla y el termometro: lo que entra en la cuenta de `escalaOlla`. */
 export const ALTO_RESTO_PASO = ALTO_TEXTO + ALTO_TIEMPO + ALTO_ETIQUETA + ALTO_BOTON + HUECOS * space.sm + HOLGURA;
-const RANGO = TEMP_MAX - TEMP_MIN;
 /** Cada cuantos segundos cambia el rumbo de la deriva: mas seguido seria un temblor, no una deriva. */
 const CAMBIO_RUMBO = 0.6;
 const DT_MAX = 0.05;
 
-/** Altura de una temperatura en un termometro de `alto` px. */
-const pos = (temp: number, alto: number) => ((temp - TEMP_MIN) / RANGO) * alto;
 
 function veredicto(p: number): string {
   if (p < 0.4) return 'Agua tibia';
@@ -65,7 +64,7 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
     let proximoCambio = 0;
     const bucle = () => {
       const ahora = Date.now();
-      const dt = Math.min((ahora - ultimo) / 1000, DT_MAX);
+      const dt = pasoDeTiempo(ahora, ultimo, DT_MAX);
       ultimo = ahora;
       // El reloj y la deriva no corren hasta el primer toque.
       if (empezadoRef.current && !terminado(estadoRef.current)) {
@@ -100,7 +99,6 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
   };
 
   const fin = terminado(estado);
-  const enZona = estado.temp >= ZONA.min && estado.temp <= ZONA.max;
   const restante = Math.max(DURACION - estado.t, 0);
   const p = precision(estado);
 
@@ -127,16 +125,7 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
           mientras se mira la aguja. */}
       <View style={styles.fila}>
         <OllaMaceracion temp={estado.temp} pulsos={pulsos} escala={escala} />
-        <View style={[styles.termometro, { height: altoTermometro }]}>
-          <View
-            style={[
-              styles.zona,
-              { bottom: pos(ZONA.min, altoTermometro), height: pos(ZONA.max, altoTermometro) - pos(ZONA.min, altoTermometro) },
-            ]}
-          />
-          <View style={[styles.aguja, { bottom: pos(estado.temp, altoTermometro) - AGUJA / 2 }, enZona && styles.agujaBien]} />
-          <Text style={[styles.grados, { bottom: pos(estado.temp, altoTermometro) - 10 }]}>{Math.round(estado.temp)} °C</Text>
-        </View>
+        <Termometro temp={estado.temp} min={TEMP_MIN} max={TEMP_MAX} zona={ZONA} alto={altoTermometro} />
       </View>
 
       <Pressable
@@ -152,8 +141,6 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
   );
 }
 
-const AGUJA = 26;
-
 const styles = StyleSheet.create({
   raiz: { gap: space.sm },
   texto: { height: ALTO_TEXTO, lineHeight: ALTO_TEXTO, fontSize: 14, color: colors.inkSoft },
@@ -161,26 +148,6 @@ const styles = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   // El margen derecho deja sitio a los grados, que se salen del carril del termometro.
   fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingRight: 64 },
-  termometro: {
-    width: 32,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    // El texto de grados se sale a la derecha del carril.
-    overflow: 'visible',
-  },
-  zona: { position: 'absolute', left: 0, right: 0, backgroundColor: colors.green, opacity: 0.55, borderRadius: radius.sm },
-  aguja: {
-    position: 'absolute',
-    left: 3,
-    width: AGUJA,
-    height: AGUJA,
-    borderRadius: AGUJA / 2,
-    backgroundColor: colors.stamp,
-    borderWidth: 3,
-    borderColor: colors.white,
-  },
-  agujaBien: { backgroundColor: colors.green },
-  grados: { position: 'absolute', left: 44, fontSize: 16, fontWeight: '800', color: colors.ink, width: 70 },
   tiempo: { fontSize: 36, lineHeight: ALTO_TIEMPO, fontWeight: '800', color: colors.beerDark },
   boton: {
     height: ALTO_BOTON,

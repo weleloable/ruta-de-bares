@@ -1,8 +1,11 @@
 -- Ruta de Bares - 0034: minijuegos. Ranking POR RUTA y cervezas guardadas.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0033.
--- Idempotente: se puede re-ejecutar sin romper nada (tablas con `if not exists`,
--- funciones con `or replace`). Ojo al reves: esta migracion rehace export_my_data()
--- a partir de la 0031, asi que la 0031 ya no se puede volver a pegar despues.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * export_my_data() la rehace la 0037
+-- (Ademas, esta rehace export_my_data() a partir de la 0031, asi que la 0031
+-- tampoco se puede volver a pegar despues.)
 --
 -- Que hace. La pestana Juegos guarda ahora dos cosas EN LA RUTA:
 --

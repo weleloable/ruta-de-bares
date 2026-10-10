@@ -38,11 +38,13 @@ export type RecetaEnviada = {
   maceracion: number;
   amargor: number;
   aroma: number;
+  siembra: number;
 };
 
 /** El servidor NO recibe la nota ni el estilo: los calcula el a partir de la receta. */
 export async function enviarCerveza(routeId: string, r: RecetaEnviada): Promise<void> {
-  const { error } = await supabase.rpc('maestro_submit_beer', {
+  // La v2 (0037) es la que lleva la siembra; la de 7 argumentos queda para la app vieja en cache.
+  const { error } = await supabase.rpc('maestro_submit_beer_v2', {
     p_route_id: routeId,
     p_name: r.nombre,
     p_malta: r.malta,
@@ -50,6 +52,7 @@ export async function enviarCerveza(routeId: string, r: RecetaEnviada): Promise<
     p_maceracion: r.maceracion,
     p_amargor: r.amargor,
     p_aroma: r.aroma,
+    p_siembra: r.siembra,
   });
   if (error) throw new Error(traducirErrorMinijuegos(error.message));
 }
