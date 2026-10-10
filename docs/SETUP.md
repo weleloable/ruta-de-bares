@@ -199,6 +199,10 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    si un admin sube despues un bar propio (los que tenia en su dispositivo),
    pega solo el `update public.route_bars ...` del fichero para que sus paradas
    reciban el logo.
+37. [`supabase/migrations/0037_estadisticas_de_ruta.sql`](../supabase/migrations/0037_estadisticas_de_ruta.sql)
+   y **Run**. La pantalla de Estadisticas de "Detras de la barra" (solo admins):
+   totales de una ruta, nunca nada por persona. Sin ella, la pantalla abre y
+   dice que no puede leer las cifras.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;

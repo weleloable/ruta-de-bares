@@ -61,7 +61,8 @@ app/                      pantallas (Expo Router)
   (tabs)/                 Ruta, Sellos y Cana (ese orden); Perfil sin boton abajo
   cana/                   presentacion, ficha, chat, bloqueados, condiciones
   admin/                  bandeja de alertas de administracion, ficha de una denuncia
-                          (alerta/) y decidir una foto de perfil (foto/)
+                          (alerta/), decidir una foto de perfil (foto/) y
+                          estadisticas de una ruta (estadisticas.tsx)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   contacto.tsx            escribir a la organizacion y reclamar una decision
   privacidad.tsx          que datos se recogen, quien los ve y descargarlos
@@ -116,6 +117,7 @@ supabase/
   migrations/0034_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
   migrations/0035_*.sql     bares propios compartidos entre admins (`catalog_bars`) y `route_bars.logo`
   migrations/0036_*.sql     los 14 bares originales y sus logos pasan a `catalog_bars` (GENERADA, ver scripts/semilla-catalogo/)
+  migrations/0037_*.sql     estadisticas de una ruta para los admins (solo totales)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -735,3 +737,21 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   punto rojo y la burbuja de Mi perfil se apagan a la vez. `rutasTerminadas.ts`
   no importa nada en tiempo de ejecucion (node --test no resuelve rutas sin
   extension): recibe `terminoEl` ya calculado y el formateador de fecha.
+- **Estadisticas de una ruta, en "Detras de la barra"** (`0037`,
+  `app/admin/estadisticas.tsx`, `admin/estadisticas.ts`): una sola funcion,
+  `admin_estadisticas_ruta(ruta)`, solo admins, que devuelve un JSON con
+  totales (personas, sellos, completaron, La Caña, top 5 de etiquetas,
+  denuncias y vetos). **Solo totales, nunca nada por persona**: la politica
+  promete que a quien das Me gusta no lo ve nadie, "ni quien organiza"; un
+  total de la ruta no dice nada de nadie, "quien recibe mas" si. El test
+  (`tests/migration-0037.test.ts`) falla si la respuesta lleva un solo id de
+  usuario. Son cifras de AHORA (quitar un Me gusta lo descuenta) y se van con
+  la ruta: no hay historico. Las etiquetas cuentan solo a gente de ESA ruta
+  con La Caña activada (el perfil de la cana es de la persona, no de la ruta).
+  Dentro de La Caña hay dos tarjetas con barras: el **embudo** (PERSONAS por
+  paso: en la ruta -> la activaron -> hicieron conexion -> preguntaron ->
+  tuvieron un si) y **como acaba la pregunta de la cerveza** (si, mas tarde, no,
+  sin contestar, por conexion). En el embudo "la activaron" es ALGUNA VEZ
+  (`first_activated_at`) y no "activada ahora": si no, quien conecto y luego la
+  apago haria que un paso fuese mayor que el anterior. Solo cuenta a quien
+  sigue en la ruta.

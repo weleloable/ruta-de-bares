@@ -761,6 +761,11 @@ export type Database = {
         Args: Record<string, never>;
         Returns: string[];
       };
+      /** Totales de una ruta para "Detras de la barra" (0037). Nada por persona. */
+      admin_estadisticas_ruta: {
+        Args: { p_route_id: string };
+        Returns: unknown;
+      };
       match_admin_fotos_denuncia: {
         Args: { p_report_id: string };
         Returns: FotoDenunciaRow[];

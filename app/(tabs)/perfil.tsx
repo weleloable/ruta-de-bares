@@ -415,6 +415,12 @@ export default function PerfilScreen() {
               textStyle={styles.textoAccionBarra}
               onPress={() => router.push('/admin/moderacion')}
             />
+            <Button
+              title="Estadísticas"
+              variant="secondary"
+              textStyle={styles.textoAccionBarra}
+              onPress={() => router.push('/admin/estadisticas')}
+            />
           </Card>
         ) : null}
 
