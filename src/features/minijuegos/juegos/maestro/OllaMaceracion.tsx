@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, typography } from '../../../../lib/theme';
@@ -19,13 +19,16 @@ import { climaOlla, colorMosto, particulaVisible, particulasVisibles } from './m
 
 export const ANCHO_OLLA = 170;
 const ALTO = 240;
+export const ALTO_OLLA = ALTO;
 
 const VAPORES = 6;
 const COPOS = 7;
 const BURBUJAS = 4;
+/** Vapor que sube de una olla hirviendo: poco, que no tape las bolsitas. */
+const VAPOR_HERVOR = 2;
 
 // En web no hay modulo nativo de animacion: avisaria en cada animacion.
-const NATIVO = Platform.OS !== 'web';
+export const NATIVO = Platform.OS !== 'web';
 
 /**
  * Un valor que va de 0 a 1 en bucle, empezando con `retraso` ms para que las
@@ -33,7 +36,7 @@ const NATIVO = Platform.OS !== 'web';
  * sistema se queda quieto a la mitad: la nieve o el vapor se siguen viendo
  * (dicen algo del juego), pero sin moverse.
  */
-function useBucle(duracion: number, retraso: number): Animated.Value {
+export function useBucle(duracion: number, retraso: number): Animated.Value {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     let animacion: Animated.CompositeAnimation | null = null;
@@ -167,9 +170,26 @@ function texto(modo: 'frio' | 'justo' | 'caliente'): string {
   return 'En su punto';
 }
 
-export function OllaMaceracion({ temp, pulsos }: { temp: number; pulsos: number }) {
-  const clima = climaOlla(temp);
-  const vapores = clima.modo === 'caliente' ? particulasVisibles(clima, VAPORES) : 0;
+/**
+ * `hervor` es la olla del paso del lupulo: hirviendo a fuego vivo, con burbujas
+ * y un poco de vapor, y sin la lectura de frio o calor (alli la temperatura no
+ * se juega). `hijos` se pinta DENTRO de la escena, sobre el mosto: las bolsitas
+ * de lupulo que van cayendo. Estan en el mismo sistema de coordenadas que la
+ * olla (`MOSTO_ARRIBA` es la superficie), para que lo que cae aterrice justo.
+ */
+export function OllaMaceracion({
+  temp = 65,
+  pulsos,
+  hervor = false,
+  hijos,
+}: {
+  temp?: number;
+  pulsos: number;
+  hervor?: boolean;
+  hijos?: ReactNode;
+}) {
+  const clima = hervor ? ({ modo: 'justo', intensidad: 0 } as const) : climaOlla(temp);
+  const vapores = hervor ? VAPOR_HERVOR : clima.modo === 'caliente' ? particulasVisibles(clima, VAPORES) : 0;
   const copos = clima.modo === 'frio' ? particulasVisibles(clima, COPOS) : 0;
 
   return (
@@ -200,6 +220,7 @@ export function OllaMaceracion({ temp, pulsos }: { temp: number; pulsos: number 
         {Array.from({ length: BURBUJAS }, (_, i) => (
           <Burbuja key={`b${i}`} indice={i} visible={clima.modo === 'justo'} />
         ))}
+        {hijos}
         {Array.from({ length: VAPORES }, (_, i) => (
           <Vapor key={`v${i}`} indice={i} visible={particulaVisible(i, vapores, VAPORES)} />
         ))}
@@ -208,12 +229,12 @@ export function OllaMaceracion({ temp, pulsos }: { temp: number; pulsos: number 
         style={[
           typography.muted,
           styles.estado,
-          clima.modo === 'justo' && { color: colors.green },
+          clima.modo === 'justo' && { color: hervor ? colors.beerDark : colors.green },
           clima.modo === 'frio' && { color: '#3E78A8' },
           clima.modo === 'caliente' && { color: colors.stamp },
         ]}
       >
-        {texto(clima.modo)}
+        {hervor ? 'Hirviendo' : texto(clima.modo)}
       </Text>
     </View>
   );
@@ -229,6 +250,8 @@ const CUERPO_ANCHO = 124;
 const CUERPO_ALTO = 92;
 const CUERPO_ABAJO = FOGON + PARRILLA;
 const BORDE_ABAJO = CUERPO_ABAJO + CUERPO_ALTO - 15;
+/** Donde esta la superficie del mosto, medida desde arriba de la escena. */
+export const MOSTO_ARRIBA = ALTO - (BORDE_ABAJO + 5 + 20);
 
 const styles = StyleSheet.create({
   raiz: { width: ANCHO_OLLA, alignItems: 'center' },

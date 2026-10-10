@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { avanzar, DURACION, INICIO, MARCAS, resumen, terminado, tocar, VENTANA, type Estado } from './lupulo.ts';
+import { avanzar, DURACION, estadoBolsa, INICIO, MARCAS, resumen, terminado, tocar, VENTANA, type Estado } from './lupulo.ts';
 
 const en = (id: 'amargor' | 'aroma') => MARCAS.find((m) => m.id === id)!.en;
 const enTiempo = (t: number): Estado => ({ ...INICIO, t });
@@ -69,4 +69,35 @@ test('cuando no queda ninguna marca, tocar no hace nada', () => {
   r = tocar({ ...r.estado, t: en('aroma') });
   const otra = tocar({ ...r.estado, t: DURACION - 0.5 });
   assert.equal(otra.marca, null);
+});
+
+test('bolsitas: al empezar toca la del amargor y la del aroma espera', () => {
+  assert.equal(estadoBolsa('amargor', INICIO, []), 'siguiente');
+  assert.equal(estadoBolsa('aroma', INICIO, []), 'pendiente');
+});
+
+test('bolsitas: tras echar el amargor, esa esta echada y el turno pasa al aroma', () => {
+  const r = tocar(enTiempo(en('amargor')));
+  assert.equal(estadoBolsa('amargor', r.estado, ['amargor']), 'echada');
+  assert.equal(estadoBolsa('aroma', r.estado, ['amargor']), 'siguiente');
+});
+
+test('bolsitas: dejar pasar la ventana la deja perdida, aunque tenga resultado 0, y el turno pasa al aroma', () => {
+  const tarde = avanzar(enTiempo(en('amargor') + VENTANA), 0.1);
+  assert.equal(tarde.resultados.amargor, 0);
+  assert.equal(estadoBolsa('amargor', tarde, []), 'perdida');
+  assert.equal(estadoBolsa('aroma', tarde, []), 'siguiente');
+});
+
+test('bolsitas: tocar justo en el borde de la ventana (precision 0) sigue siendo echarla, no perderla', () => {
+  const r = tocar(enTiempo(en('amargor') + VENTANA));
+  assert.equal(r.estado.resultados.amargor, 0);
+  assert.equal(estadoBolsa('amargor', r.estado, ['amargor']), 'echada');
+});
+
+test('bolsitas: al terminar, cada una es echada o perdida; nunca queda pendiente', () => {
+  const fin = avanzar(enTiempo(DURACION - 0.01), 1);
+  for (const m of MARCAS) assert.equal(estadoBolsa(m.id, fin, []), 'perdida');
+  const r = tocar(enTiempo(en('amargor')));
+  assert.equal(estadoBolsa('aroma', avanzar(r.estado, DURACION), ['amargor']), 'perdida');
 });

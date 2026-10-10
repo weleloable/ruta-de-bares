@@ -1,12 +1,16 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
 
 import { colors, radius, space, typography } from '../../../../lib/theme';
 import { feedback } from '../../feedback';
+import { BOLSA_ANCHO, BOLSA_ALTO, BolsaColgante, BolsaEnOlla, BolsaVolando, posicionEnOlla } from './BolsitaLupulo';
+import { avanzar, DURACION, estadoBolsa, INICIO, MARCAS, resumen, terminado, tocar, VENTANA, type Estado, type MarcaId } from './lupulo';
+import { ANCHO_OLLA, OllaMaceracion } from './OllaMaceracion';
 import type { ResultadoLupulo } from './pasos';
-import { avanzar, DURACION, INICIO, MARCAS, resumen, terminado, tocar, VENTANA, type Estado, type MarcaId } from './lupulo';
 
 const DT_MAX = 0.05;
+/** Ancho de la escena de la olla: la olla va centrada, y de aqui sale donde empieza. */
+const ANCHO_ESCENA = ANCHO_OLLA;
 const pct = (segundos: number) => `${(segundos / DURACION) * 100}%` as const;
 
 const NOMBRE: Record<MarcaId, string> = { amargor: 'Amargor', aroma: 'Aroma' };
@@ -15,6 +19,14 @@ export function PasoLupulo({ onTerminar }: { onTerminar: (r: ResultadoLupulo) =>
   const [estado, setEstado] = useState<Estado>(INICIO);
   const [empezado, setEmpezado] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
+  // A las que se ha tocado (no lo mismo que "tienen resultado": dejar pasar una tambien lo tiene).
+  const [echadas, setEchadas] = useState<MarcaId[]>([]);
+  // Las que van cayendo y las que ya estan flotando en la olla.
+  const [volando, setVolando] = useState<MarcaId[]>([]);
+  const [enOlla, setEnOlla] = useState<MarcaId[]>([]);
+  // Donde esta cada cosa, para que la bolsa caiga de su sitio a la olla de verdad.
+  const [filaBolsas, setFilaBolsas] = useState<LayoutRectangle | null>(null);
+  const [zonaOlla, setZonaOlla] = useState<LayoutRectangle | null>(null);
 
   const estadoRef = useRef<Estado>(INICIO);
   const empezadoRef = useRef(false);
@@ -58,6 +70,8 @@ export function PasoLupulo({ onTerminar }: { onTerminar: (r: ResultadoLupulo) =>
     }
     estadoRef.current = r.estado;
     setEstado(r.estado);
+    setEchadas((hechas) => [...hechas, r.marca as MarcaId]);
+    setVolando((v) => [...v, r.marca as MarcaId]);
     setMensaje(`${NOMBRE[r.marca]}: ${Math.round(r.precision * 100)} %`);
     if (r.precision >= 0.5) feedback.acierto();
     else feedback.fallo();
@@ -77,6 +91,18 @@ export function PasoLupulo({ onTerminar }: { onTerminar: (r: ResultadoLupulo) =>
             ? 'Toca cuando el indicador llegue a cada marca'
             : 'El lúpulo del principio amarga y el del final da aroma.'}
       </Text>
+
+      {/* Las bolsitas cuelgan sobre su marca de la barra (mismo ancho y mismo %). */}
+      <View style={styles.filaBolsas} onLayout={(e) => setFilaBolsas(e.nativeEvent.layout)}>
+        {MARCAS.map((m) => {
+          const e = estadoBolsa(m.id, estado, echadas);
+          return (
+            <View key={m.id} pointerEvents="none" style={[styles.huecoBolsa, { left: pct(m.en) }]}>
+              {e === 'echada' ? <View style={styles.huecoVacio} /> : <BolsaColgante id={m.id} estado={e} />}
+            </View>
+          );
+        })}
+      </View>
 
       <View style={styles.barraZona}>
         <View style={styles.barra}>
@@ -103,6 +129,7 @@ export function PasoLupulo({ onTerminar }: { onTerminar: (r: ResultadoLupulo) =>
 
       <Text style={styles.mensaje}>{mensaje ?? ' '}</Text>
 
+      {/* El boton va ANTES de la olla: la olla es alta y, debajo de ella, el boton se salia de la pantalla. */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={empezado ? 'Echar lúpulo' : 'Empezar el hervido'}
@@ -112,6 +139,36 @@ export function PasoLupulo({ onTerminar }: { onTerminar: (r: ResultadoLupulo) =>
       >
         <Text style={styles.botonTexto}>{fin ? 'Hervido terminado' : empezado ? '¡Lúpulo!' : 'Empezar hervido'}</Text>
       </Pressable>
+
+      <View style={styles.zonaOlla} onLayout={(e) => setZonaOlla(e.nativeEvent.layout)}>
+        <OllaMaceracion
+          hervor
+          pulsos={enOlla.length}
+          hijos={enOlla.map((id) => (
+            <BolsaEnOlla key={id} id={id} />
+          ))}
+        />
+      </View>
+
+      {/* Las que estan cayendo van por encima de todo, en coordenadas de este paso. */}
+      {filaBolsas && zonaOlla
+        ? volando.map((id) => {
+            const m = MARCAS.find((x) => x.id === id)!;
+            const destino = posicionEnOlla(id);
+            return (
+              <BolsaVolando
+                key={id}
+                id={id}
+                desde={{ x: filaBolsas.x + (m.en / DURACION) * filaBolsas.width - BOLSA_ANCHO / 2, y: filaBolsas.y }}
+                hasta={{ x: zonaOlla.x + (zonaOlla.width - ANCHO_ESCENA) / 2 + destino.izquierda, y: zonaOlla.y + destino.arriba }}
+                alTerminar={() => {
+                  setVolando((v) => v.filter((x) => x !== id));
+                  setEnOlla((v) => [...v, id]);
+                }}
+              />
+            );
+          })
+        : null}
     </View>
   );
 }
@@ -119,6 +176,10 @@ export function PasoLupulo({ onTerminar }: { onTerminar: (r: ResultadoLupulo) =>
 const styles = StyleSheet.create({
   raiz: { gap: space.md },
   // Alto de sobra para las etiquetas de las marcas, que cuelgan por debajo de la barra.
+  filaBolsas: { height: BOLSA_ALTO + 4 },
+  huecoBolsa: { position: 'absolute', top: 0, width: 0, alignItems: 'center' },
+  huecoVacio: { width: BOLSA_ANCHO, height: BOLSA_ALTO },
+  zonaOlla: { alignItems: 'center' },
   barraZona: { height: 84, justifyContent: 'flex-start', paddingTop: 24 },
   barra: { height: 14, borderRadius: radius.pill, backgroundColor: colors.border, overflow: 'hidden' },
   progreso: { height: 14, backgroundColor: colors.beer },

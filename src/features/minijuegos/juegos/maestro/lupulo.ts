@@ -67,6 +67,24 @@ export function terminado(e: Estado): boolean {
   return e.t >= DURACION - 1e-9;
 }
 
+/**
+ * Lo que ensena cada bolsita de lupulo (PasoLupulo.tsx):
+ *  - `siguiente`: la que toca echar ahora, se balancea;
+ *  - `pendiente`: la que viene despues, quieta;
+ *  - `echada`: ya esta en la olla;
+ *  - `perdida`: se dejo pasar su ventana sin tocar, y sigue colgada y apagada.
+ *
+ * `echadas` son las marcas a las que de verdad se toco. No se deduce de
+ * `resultados`, porque una marca que se deja pasar tambien tiene resultado (0).
+ */
+export type EstadoBolsa = 'pendiente' | 'siguiente' | 'echada' | 'perdida';
+
+export function estadoBolsa(id: MarcaId, e: Estado, echadas: readonly MarcaId[]): EstadoBolsa {
+  if (echadas.includes(id)) return 'echada';
+  if (e.resultados[id] !== null) return 'perdida';
+  return MARCAS.find((m) => e.resultados[m.id] === null)?.id === id ? 'siguiente' : 'pendiente';
+}
+
 /** Lo que se lleva la receta: lo que no se jugo cuenta como 0. */
 export function resumen(e: Estado): { amargor: number; aroma: number } {
   return { amargor: e.resultados.amargor ?? 0, aroma: e.resultados.aroma ?? 0 };
