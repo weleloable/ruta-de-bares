@@ -1,0 +1,100 @@
+[
+  {
+    "id": "quinto-tapon",
+    "nombre": "Quinto Tapon",
+    "plusCode": "FJMQ+XP",
+    "lat": 40.484937,
+    "lng": -3.360688
+  },
+  {
+    "id": "el-hidalgo",
+    "nombre": "El Hidalgo",
+    "plusCode": "FJMP+CJ",
+    "lat": 40.483562,
+    "lng": -3.363438
+  },
+  {
+    "id": "anexo",
+    "nombre": "Anexo",
+    "plusCode": "FJMP+8H",
+    "lat": 40.483312,
+    "lng": -3.363563
+  },
+  {
+    "id": "astures",
+    "nombre": "Astures",
+    "plusCode": "FJMP+6C",
+    "lat": 40.483062,
+    "lng": -3.363938
+  },
+  {
+    "id": "la-oveja-negra",
+    "nombre": "La Oveja Negra",
+    "plusCode": "FJJP+J5",
+    "lat": 40.481562,
+    "lng": -3.364563
+  },
+  {
+    "id": "lola",
+    "nombre": "Lola",
+    "plusCode": "FJJM+RR",
+    "lat": 40.482062,
+    "lng": -3.365437
+  },
+  {
+    "id": "wheelans",
+    "nombre": "Wheelan's",
+    "plusCode": "FJJM+P9",
+    "lat": 40.481812,
+    "lng": -3.366563
+  },
+  {
+    "id": "retintas",
+    "nombre": "Retintas",
+    "plusCode": "FJJM+M9",
+    "lat": 40.481687,
+    "lng": -3.366563
+  },
+  {
+    "id": "lucrecia",
+    "nombre": "Lucrecia",
+    "plusCode": "FJJJ+MX",
+    "lat": 40.481687,
+    "lng": -3.367563
+  },
+  {
+    "id": "green-factory",
+    "nombre": "Green Factory",
+    "plusCode": "FJJJ+HM",
+    "lat": 40.481437,
+    "lng": -3.368313
+  },
+  {
+    "id": "panaderia",
+    "nombre": "Panaderia",
+    "plusCode": "FJJJ+GJ",
+    "lat": 40.481312,
+    "lng": -3.368438
+  },
+  {
+    "id": "la-magistral",
+    "nombre": "La Magistral",
+    "plusCode": "FJJJ+55",
+    "lat": 40.480437,
+    "lng": -3.369563
+  },
+  {
+    "id": "la-ruina",
+    "nombre": "La Ruina",
+    "plusCode": "FJHH+XX",
+    "lat": 40.479937,
+    "lng": -3.370063
+  },
+  {
+    "id": "karaoke",
+    "nombre": "Karaoke",
+    "plusCode": "FJHM+4H",
+    "lat": 40.477812,
+    "lng": -3.366063
+  }
+]

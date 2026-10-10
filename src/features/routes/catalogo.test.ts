@@ -3,12 +3,18 @@ import { describe, it } from 'node:test';
 
 import {
   buscarPorNombre,
-  CATALOGO_BARES,
+  type BarCatalogo,
   direccionVisible,
   idsYaEnRuta,
   iniciales,
 } from './catalogo.ts';
-import { RADIO_INICIAL_M, validateBarDraft } from './validation.ts';
+
+// La lista de verdad vive en Postgres (0036); esto es solo un catalogo de prueba.
+const CATALOGO: readonly BarCatalogo[] = [
+  { id: 'la-oveja-negra', name: 'La Oveja Negra', lat: 40.481562, lng: -3.364563 },
+  { id: 'la-ruina', name: 'La Ruina', lat: 40.479937, lng: -3.370063 },
+  { id: 'lola', name: 'Lola', lat: 40.482062, lng: -3.365437 },
+];
 
 describe('direccionVisible', () => {
   it('oculta un plus code, con o sin ciudad detras (asi lo guardaba la version anterior)', () => {
@@ -16,12 +22,6 @@ describe('direccionVisible', () => {
     assert.equal(direccionVisible('FJMQ+XP'), '');
     assert.equal(direccionVisible('  fjmq+xp Alcalá de Henares '), '');
     assert.equal(direccionVisible('8CGRFJMQ+XP'), '');
-  });
-
-  it('un plus code guardado por cada bar del catalogo se oculta', () => {
-    for (const bar of CATALOGO_BARES) {
-      assert.equal(direccionVisible(`${bar.plusCode} Alcala de Henares`), '', bar.id);
-    }
   });
 
   it('una direccion de verdad pasa tal cual (sin espacios de los bordes)', () => {
@@ -38,83 +38,26 @@ describe('direccionVisible', () => {
   });
 });
 
-describe('CATALOGO_BARES', () => {
-  it('no esta vacio', () => {
-    assert.ok(CATALOGO_BARES.length > 0);
-  });
-
-  it('ids y nombres son unicos (el nombre es la clave para recuperar el logo)', () => {
-    const ids = CATALOGO_BARES.map((b) => b.id);
-    const nombres = CATALOGO_BARES.map((b) => b.name.trim().toLowerCase());
-    assert.equal(new Set(ids).size, ids.length);
-    assert.equal(new Set(nombres).size, nombres.length);
-  });
-
-  it('cada entrada pasa la misma validacion que el servidor exigiria al guardar', () => {
-    const ahora = new Date('2026-01-01T19:00:00Z');
-    const despues = new Date('2026-01-01T20:00:00Z');
-    for (const bar of CATALOGO_BARES) {
-      const problemas = validateBarDraft({
-        name: bar.name,
-        address: '',
-        lat: bar.lat,
-        lng: bar.lng,
-        radiusM: RADIO_INICIAL_M,
-        opensAt: ahora,
-        closesAt: despues,
-        notes: '',
-      });
-      assert.deepEqual(problemas, [], `${bar.id}: ${problemas.join(' ')}`);
-    }
-  });
-
-  it('son los 14 bares de la lista final', () => {
-    assert.equal(CATALOGO_BARES.length, 14);
-  });
-
-  it('todas las posiciones caen en el casco de Alcala de Henares (caza un digito mal copiado)', () => {
-    // Caja generosa alrededor del centro (40.482, -3.364): unos 2,5 km de lado.
-    for (const bar of CATALOGO_BARES) {
-      assert.ok(bar.lat > 40.47 && bar.lat < 40.495, `${bar.id} lat ${bar.lat}`);
-      assert.ok(bar.lng > -3.38 && bar.lng < -3.35, `${bar.id} lng ${bar.lng}`);
-    }
-  });
-
-  it('el plus code de Google Maps esta bien formado y no se repite', () => {
-    const codigos = CATALOGO_BARES.map((b) => b.plusCode ?? '');
-    for (const c of codigos) assert.match(c, /^[23456789CFGHJMPQRVWX]{4}\+[23456789CFGHJMPQRVWX]{2}$/);
-    assert.equal(new Set(codigos).size, codigos.length);
-  });
-
-  it('el plus code es interno: el catalogo no tiene direccion que ensenar', () => {
-    for (const bar of CATALOGO_BARES) {
-      assert.equal('address' in bar, false, bar.id);
-    }
-  });
-
-  it('ninguna entrada esta en (0, 0), el valor que validateBarDraft trata como "sin marcar"', () => {
-    for (const bar of CATALOGO_BARES) {
-      assert.ok(!(bar.lat === 0 && bar.lng === 0), bar.id);
-    }
-  });
-});
-
 describe('buscarPorNombre', () => {
   it('encuentra sin distinguir mayusculas ni espacios de los bordes', () => {
-    assert.equal(buscarPorNombre('  la OVEJA negra ')?.id, 'la-oveja-negra');
+    assert.equal(buscarPorNombre('  la OVEJA negra ', CATALOGO)?.id, 'la-oveja-negra');
   });
 
   it('devuelve undefined para un bar que no esta en el catalogo', () => {
-    assert.equal(buscarPorNombre('Bar de la esquina'), undefined);
+    assert.equal(buscarPorNombre('Bar de la esquina', CATALOGO), undefined);
   });
 });
 
 describe('idsYaEnRuta', () => {
   it('marca los bares del catalogo que ya estan en la ruta', () => {
-    const ocupados = idsYaEnRuta([
-      { id: '1', name: 'La Ruina' },
-      { id: '2', name: 'Un bar de antes del catalogo' },
-    ]);
+    const ocupados = idsYaEnRuta(
+      [
+        { id: '1', name: 'La Ruina' },
+        { id: '2', name: 'Un bar de antes del catalogo' },
+      ],
+      undefined,
+      CATALOGO,
+    );
     assert.deepEqual([...ocupados], ['la-ruina']);
   });
 
@@ -125,12 +68,13 @@ describe('idsYaEnRuta', () => {
         { id: '2', name: 'Lola' },
       ],
       '1',
+      CATALOGO,
     );
     assert.deepEqual([...ocupados], ['lola']);
   });
 
   it('ruta vacia: nada ocupado', () => {
-    assert.equal(idsYaEnRuta([]).size, 0);
+    assert.equal(idsYaEnRuta([], undefined, CATALOGO).size, 0);
   });
 });
 

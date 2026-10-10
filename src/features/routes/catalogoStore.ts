@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
 import { supabase } from '../../lib/supabase';
-import { CATALOGO_BARES, type BarCatalogo } from './catalogo';
+import type { BarCatalogo } from './catalogo';
 import { crearBarCompartido, listarBaresCompartidos, subirBarLocal } from './catalogoCompartido';
 import {
   CLAVE_ALMACEN,
@@ -14,10 +14,9 @@ import {
 } from './catalogoPropio';
 
 /**
- * Catalogo vivo: la lista cerrada del codigo mas los bares propios que los
- * admins van anadiendo. Los propios viven en Postgres (`catalog_bars`, 0035) y
- * los ven y los crean TODOS los admins; para un jugador la tabla sale vacia por
- * RLS y el catalogo es solo la lista cerrada. El logo de un bar propio le llega
+ * Catalogo vivo: los bares de `catalog_bars` (0035 y 0036), que ven y crean
+ * TODOS los admins. Ya no hay lista en el codigo: hasta que la tabla responde el
+ * catalogo esta vacio, y para un jugador lo esta siempre (RLS). El logo le llega
  * al jugador por otro camino: se copia a `route_bars.logo` al anadir la parada.
  *
  * Antes de la 0035 los propios se guardaban en este dispositivo (AsyncStorage:
@@ -33,7 +32,7 @@ import {
 let compartidos: BarCatalogo[] = [];
 // Los del dispositivo que aun no estan en la tabla (sin sesion de admin, sin red...).
 let locales: BarCatalogo[] = [];
-let fusion: readonly BarCatalogo[] = CATALOGO_BARES;
+let fusion: readonly BarCatalogo[] = [];
 let carga: Promise<void> | null = null;
 let ultimoCreado: string | null = null;
 // Cada recarga invalida las que siguen en vuelo: si no, una respuesta vieja
@@ -48,7 +47,7 @@ function publicar(nuevosCompartidos: BarCatalogo[], nuevosLocales: BarCatalogo[]
   locales = nuevosLocales;
   // Referencia nueva SOLO cuando cambia algo: useSyncExternalStore compara por
   // identidad y una referencia distinta en cada lectura entra en bucle.
-  fusion = fusionarCatalogo(CATALOGO_BARES, [...compartidos, ...locales]);
+  fusion = fusionarCatalogo(compartidos, locales);
   oyentes.forEach((oyente) => oyente());
 }
 
@@ -160,7 +159,7 @@ function suscribir(oyente: () => void): () => void {
   };
 }
 
-/** Lista cerrada + propios. Se actualiza sola cuando se anade un bar. */
+/** Bares del catalogo. Se actualiza sola cuando se anade un bar. */
 export function useCatalogo(): readonly BarCatalogo[] {
   return useSyncExternalStore(suscribir, () => fusion, () => fusion);
 }

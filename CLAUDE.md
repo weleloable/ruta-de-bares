@@ -115,6 +115,7 @@ supabase/
   migrations/0033_*.sql     que admin ya vio el aviso de una ruta terminada
   migrations/0034_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
   migrations/0035_*.sql     bares propios compartidos entre admins (`catalog_bars`) y `route_bars.logo`
+  migrations/0036_*.sql     los 14 bares originales y sus logos pasan a `catalog_bars` (GENERADA, ver scripts/semilla-catalogo/)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -362,17 +363,24 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **`tests/migration.test.ts` parsea el SQL real** con `pg-query-emscripten`
   (el parser de Postgres compilado a wasm) para comprobar invariantes de RLS
   y de `claim_stamp` que no se pueden perder por un refactor descuidado.
-- **Los bares salen de un catalogo en codigo, no de la BBDD**
-  (`src/features/routes/catalogo.ts`): el editor ya no deja escribir nombre ni
-  marcar posicion a mano, se elige de una lista cerrada de 14 bares de Alcala.
-  Se hizo asi porque un admin tecleando coordenadas colocaba bares mal y creaba
-  el mismo bar con tres nombres distintos. Esta en codigo y no en Postgres
-  porque era una prueba local y no se queria tocar el esquema; si el catalogo
-  crece o lo edita alguien que no despliega, ahi es donde deja de valer.
-  Al guardar se COPIA a `route_bars`, asi que una ruta ya creada no depende del
-  catalogo. Consecuencia: el logo no se guarda, se recupera casando el nombre
-  (`buscarPorNombre`), y renombrar un bar en el catalogo deja sin logo a los
-  que ya estaban guardados con el nombre viejo.
+- **Los bares salen del catalogo (`catalog_bars`), no se escriben a mano**
+  (`src/features/routes/catalogo.ts` solo tiene tipos y funciones puras): el
+  editor no deja teclear nombre ni marcar posicion al anadir una parada, se
+  elige de la lista. Se hizo asi porque un admin tecleando coordenadas colocaba
+  bares mal y creaba el mismo bar con tres nombres distintos. **Ya no hay lista
+  en el codigo ni logos empaquetados** (`0036`): los 14 bares de Alcala y sus
+  logos son filas de la tabla, y su semilla esta en `scripts/semilla-catalogo/`
+  (`bares.json` + `logos/*.png`; `python scripts/generar-semilla-catalogo.py`
+  regenera `0036_catalogo_en_tabla.sql`, que NO se edita a mano, y
+  `tests/semilla-catalogo.test.ts` falla si fuente y migracion se separan).
+  Los logos van cuantizados a 64 colores para que el fichero quepa en el SQL
+  Editor (190 KB en vez de 970 KB). Al guardar una parada se COPIA a
+  `route_bars` (nombre, posicion y logo), asi que una ruta ya creada no depende
+  del catalogo. **Los jugadores no leen `catalog_bars`: su unico logo es
+  `route_bars.logo`**, y la 0036 lo rellena en las paradas que ya existian por
+  nombre. Una parada guardada con un nombre distinto del de la tabla sale con
+  iniciales; la consulta del final de la 0036 las lista. Los 14 originales
+  tienen `created_by` NULL, o sea que cualquier admin puede borrarlos.
 - **El plus code de Google Maps es interno y nunca se enseña**
   (`direccionVisible` en `catalogo.ts`): es de donde salen `lat`/`lng`, no una
   direccion para el usuario. Se filtra AL PINTAR y no solo al guardar porque
@@ -382,8 +390,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **Los bares propios viven en Postgres, `catalog_bars`, y los comparten los
   admins** (`0035`, `catalogoStore.ts` + `catalogoCompartido.ts` + las
   funciones puras de `catalogoPropio.ts`): el admin anade un bar que no esta en
-  la lista cerrada (nombre, ubicacion, imagen del sello) y lo ven todos los
-  admins. Antes vivian en AsyncStorage / localStorage y otro admin no los veia.
+  la lista (nombre, ubicacion, imagen del sello) y lo ven todos los admins. Antes vivian en AsyncStorage / localStorage y otro admin no los veia.
   **Solo los admins leen y escriben la tabla** (no es publica: los nombres de
   una ruta sin publicar son una sorpresa). Solo se ANADE y se BORRA, no se edita
   (hay `insert` y `delete`, no `update`): editar cambiaria el logo de lo que

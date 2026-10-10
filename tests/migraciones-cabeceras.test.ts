@@ -149,7 +149,10 @@ describe('todas las migraciones son SQL valido', () => {
   for (const f of ficheros) {
     it(`${f}: gramatica y cuerpos plpgsql`, async () => {
       const init = (await import('pg-query-emscripten')).default;
-      const sql = leer(f);
+      // El parser en wasm revienta con literales de decenas de KB (los logos de la
+      // semilla de la 0036, que van como data URL). El contenido de un literal no
+      // cambia la gramatica, asi que se acorta solo para esta comprobacion.
+      const sql = leer(f).replace(/'data:image\/[a-z]+;base64,[A-Za-z0-9+/=]{200,}'/g, "'data:image/png;base64,AAAA'");
       const sintaxis = (await init()).parse(sql);
       assert.ok(!sintaxis.error, `error de sintaxis: ${JSON.stringify(sintaxis.error)}`);
       assert.ok(

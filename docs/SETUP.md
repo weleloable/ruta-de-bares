@@ -186,7 +186,19 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    dispositivo se **suben solos** la primera vez que abre el editor con la app
    nueva; si ese admin ya no tiene el dispositivo, esos bares no se pueden
    recuperar. Las paradas ya creadas con un bar propio siguen con iniciales
-   hasta volver a guardarlas (editar la parada y Guardar copia el logo).
+   hasta volver a guardarlas (editar la parada y Guardar copia el logo), o hasta pegar el `update` de la 0036.
+36. [`supabase/migrations/0036_catalogo_en_tabla.sql`](../supabase/migrations/0036_catalogo_en_tabla.sql)
+   y **Run**, despues de la 0035 y **ANTES de desplegar la app**. Mete en
+   `catalog_bars` los 14 bares de Alcala con sus logos (ya no estan empaquetados
+   en la app) y copia el logo a las paradas que ya existen, que es lo que ven los
+   jugadores. Es un fichero grande (190 KB) generado por
+   `scripts/generar-semilla-catalogo.py`: pegalo entero y espera a que acabe. Al
+   final enseña una tabla con las paradas que siguen SIN logo (su nombre no
+   coincide con el de ningun bar): esas salen con iniciales hasta que se
+   renombren o se guarden de nuevo. Se puede volver a pegar sin duplicar nada;
+   si un admin sube despues un bar propio (los que tenia en su dispositivo),
+   pega solo el `update public.route_bars ...` del fichero para que sus paradas
+   reciban el logo.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;

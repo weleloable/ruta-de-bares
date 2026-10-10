@@ -4,7 +4,6 @@ import { describe, it } from 'node:test';
 import {
   LOGO_MAX_CARACTERES,
   NOMBRE_MAX,
-  PREFIJO_ID,
   aFilaCompartida,
   desdeFilaCompartida,
   desdeFilasCompartidas,
@@ -12,7 +11,7 @@ import {
   pendientesDeSubir,
   traducirErrorAlta,
 } from './catalogoPropio.ts';
-import { CATALOGO_BARES, type BarCatalogo } from './catalogo.ts';
+import type { BarCatalogo } from './catalogo.ts';
 
 const LOGO = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
 const UUID = '5f0c2f6e-8f3e-4a62-9d0b-0a5b4a2f9c11';
@@ -26,17 +25,16 @@ const fila = (cambios: Record<string, unknown> = {}) => ({
   ...cambios,
 });
 
-const local = (id: string, name: string): BarCatalogo => ({ id, name, lat: 40.48, lng: -3.36, propio: true });
+const local = (id: string, name: string): BarCatalogo => ({ id, name, lat: 40.48, lng: -3.36 });
 
 describe('desdeFilaCompartida: lo que llega de catalog_bars', () => {
-  it('una fila buena sale como bar propio con el logo, y el id lleva el prefijo', () => {
+  it('una fila buena sale como entrada del catalogo, con su logo y su id', () => {
     assert.deepEqual(desdeFilaCompartida(fila()), {
-      id: `${PREFIJO_ID}${UUID}`,
+      id: UUID,
       name: 'La Cepa',
       lat: 40.48,
       lng: -3.36,
       logoUri: LOGO,
-      propio: true,
     });
   });
 
@@ -79,14 +77,14 @@ describe('desdeFilasCompartidas', () => {
   it('dos nombres iguales sin distinguir mayusculas dejan el primero', () => {
     const salida = desdeFilasCompartidas([fila(), fila({ id: 'b', name: ' la cepa ' })]);
     assert.equal(salida.length, 1);
-    assert.equal(salida[0].id, `${PREFIJO_ID}${UUID}`);
+    assert.equal(salida[0].id, UUID);
   });
 
-  it('lo que sale se mezcla con la lista cerrada sin pisarla', () => {
-    const fusion = fusionarCatalogo(CATALOGO_BARES, desdeFilasCompartidas([fila(), fila({ id: 'x', name: 'Anexo' })]));
-    assert.equal(fusion.length, CATALOGO_BARES.length + 1);
-    assert.ok(fusion.some((b) => b.name === 'La Cepa'));
-    assert.equal(fusion.filter((b) => b.name === 'Anexo').length, 1);
+  it('lo del dispositivo que aun no esta en la tabla se anade sin pisar lo de la tabla', () => {
+    const tabla = desdeFilasCompartidas([fila(), fila({ id: 'x', name: 'Anexo' })]);
+    const fusion = fusionarCatalogo(tabla, [local('propio-a', 'Anexo'), local('propio-b', 'Solo local')]);
+    assert.deepEqual(fusion.map((b) => b.name), ['La Cepa', 'Anexo', 'Solo local']);
+    assert.equal(fusion.find((b) => b.name === 'Anexo')?.id, 'x');
   });
 });
 
