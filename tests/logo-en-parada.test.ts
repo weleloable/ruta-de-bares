@@ -36,6 +36,16 @@ describe('el logo llega a los jugadores', () => {
   });
 });
 
+describe('un catalogo vacio no deja al admin ante un hueco mudo', () => {
+  it('el selector avisa cuando no hay bares y ofrece reintentar, y el formulario lo conecta al store', () => {
+    const selector = leer('src/features/routes/SelectorBar.tsx');
+    assert.match(selector, /opciones\.length === 0/);
+    assert.match(selector, /onPress=\{onReintentar\}/);
+    assert.match(leer('app/editor/[routeId]/bar.tsx'), /onReintentar=\{reintentarCatalogo\}/);
+    assert.match(leer('src/features/routes/catalogoStore.ts'), /export function reintentarCatalogo/);
+  });
+});
+
 describe('el catalogo ya no vive en el dispositivo', () => {
   it('guardarBarPropio no escribe en AsyncStorage (solo lo lee y lo borra para migrar)', () => {
     const store = leer('src/features/routes/catalogoStore.ts');

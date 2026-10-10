@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { CATALOGO_BARES, buscarPorNombre, idsYaEnRuta } from './catalogo.ts';
+import { buscarPorNombre, idsYaEnRuta, type BarCatalogo } from './catalogo.ts';
 import {
   CENTRO_POR_DEFECTO,
   LOGO_MAX_CARACTERES,
@@ -17,6 +17,13 @@ import {
 import { validateBarDraft } from './validation.ts';
 
 const LOGO = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+
+// Lo que vendria de `catalog_bars`; los bares reales viven en Postgres (0036).
+const CATALOGO_BARES: readonly BarCatalogo[] = [
+  { id: 'quinto-tapon', name: 'Quinto Tapon', lat: 40.484937, lng: -3.360688 },
+  { id: 'la-oveja-negra', name: 'La Oveja Negra', lat: 40.481562, lng: -3.364563 },
+  { id: 'lola', name: 'Lola', lat: 40.482062, lng: -3.365437 },
+];
 
 function borrador(cambios: Partial<BorradorBarPropio> = {}): BorradorBarPropio {
   return { nombre: 'La Cepa', punto: { lat: 40.4823, lng: -3.3641 }, logoUri: LOGO, ...cambios };
@@ -71,7 +78,7 @@ describe('validarBarPropio', () => {
 });
 
 describe('crearBarPropio', () => {
-  it('recorta el nombre y marca el bar como propio, sin plus code', () => {
+  it('recorta el nombre y no lleva plus code', () => {
     const bar = crearBarPropio(borrador({ nombre: '  La Cepa  ' }), 'propio-x');
     assert.deepEqual(bar, {
       id: 'propio-x',
@@ -79,7 +86,6 @@ describe('crearBarPropio', () => {
       lat: 40.4823,
       lng: -3.3641,
       logoUri: LOGO,
-      propio: true,
     });
   });
 
@@ -152,17 +158,12 @@ describe('serializarPropios / leerPropios', () => {
 
   it('una imagen rota pierde la imagen pero no el bar', () => {
     const json = JSON.stringify([{ id: 'propio-a', name: 'Bar A', lat: 40.4, lng: -3.3, logoUri: 'http://x/a.png' }]);
-    assert.deepEqual(leerPropios(json), [{ id: 'propio-a', name: 'Bar A', lat: 40.4, lng: -3.3, propio: true }]);
-  });
-
-  it('siempre devuelve los bares marcados como propios, aunque el JSON no lo diga', () => {
-    const json = JSON.stringify([{ id: 'propio-a', name: 'Bar A', lat: 40.4, lng: -3.3 }]);
-    assert.equal(leerPropios(json)[0].propio, true);
+    assert.deepEqual(leerPropios(json), [{ id: 'propio-a', name: 'Bar A', lat: 40.4, lng: -3.3 }]);
   });
 });
 
 describe('fusionarCatalogo', () => {
-  it('la lista cerrada va primero y los propios detras', () => {
+  it('lo de la tabla va primero y lo del dispositivo detras', () => {
     const propio = crearBarPropio(borrador(), 'propio-a');
     const lista = fusionarCatalogo(CATALOGO_BARES, [propio]);
     assert.equal(lista.length, CATALOGO_BARES.length + 1);
@@ -170,7 +171,7 @@ describe('fusionarCatalogo', () => {
     assert.equal(lista.at(-1)?.id, 'propio-a');
   });
 
-  it('un propio con el nombre de uno cerrado se descarta: manda el que lleva logo de assets', () => {
+  it('uno del dispositivo con el nombre de uno de la tabla se descarta: manda el compartido', () => {
     const choque = crearBarPropio(borrador({ nombre: 'Lola' }), 'propio-lola');
     const lista = fusionarCatalogo(CATALOGO_BARES, [choque]);
     assert.equal(lista.length, CATALOGO_BARES.length);
@@ -184,7 +185,7 @@ describe('fusionarCatalogo', () => {
     assert.equal(fusionarCatalogo([], [a, b, c]).length, 1);
   });
 
-  it('no muta la lista cerrada', () => {
+  it('no muta la lista de entrada', () => {
     const antes = CATALOGO_BARES.length;
     fusionarCatalogo(CATALOGO_BARES, [crearBarPropio(borrador(), 'propio-a')]);
     assert.equal(CATALOGO_BARES.length, antes);

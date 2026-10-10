@@ -1,62 +1,29 @@
 /**
- * Catalogo de bares predefinidos: de aqui se elige al anadir una parada, en
- * vez de escribir nombre, direccion y marcar el mapa a mano cada vez.
+ * Catalogo de bares: de aqui se elige al anadir una parada, en vez de escribir
+ * nombre, direccion y marcar el mapa a mano cada vez (un admin tecleando
+ * coordenadas colocaba bares mal y creaba el mismo bar con tres nombres).
  *
- * Esta lista cerrada vive en el codigo. Los bares que anaden los admins viven en
- * Postgres (`catalog_bars`, 0035) y se mezclan con esta en catalogoStore.ts.
- * Al guardar, el bar se copia a `route_bars` con nombre, direccion, posicion,
- * radio y, si es propio, su logo (`route_bars.logo`), asi que la ruta no
- * depende del catalogo una vez creada. Los logos de ESTA lista no se copian:
- * son ficheros de assets/ y se recuperan casando el nombre del bar con el del
- * catalogo (`buscarPorNombre`, ver BarLogo.tsx).
+ * Los bares viven en Postgres, tabla `catalog_bars` (0035 y 0036), y los leen y
+ * crean los admins; catalogoStore.ts los trae y los sirve a las pantallas. Ya
+ * no hay lista en el codigo ni logos empaquetados: la semilla de los 14 bares
+ * originales esta en scripts/semilla-catalogo/ y llego a la tabla con la 0036.
  *
- * Origen de los datos: "LISTA BARES - FINAL" (nombre, plus code de Google Maps
- * y logo de cada bar). `plusCode` es el codigo tal cual viene de Google Maps y
- * es INTERNO: documenta de donde salen `lat`/`lng`, pero no se ensena nunca ni
- * se guarda como direccion (ver `direccionVisible`). `lat`/`lng` son el centro
- * de esa celda, decodificada con la libreria oficial open-location-code
- * tomando como referencia el centro de Alcala de Henares. La celda mide unos
- * 14 m, muy por debajo del radio de sellado.
+ * Al guardar una parada, el bar se copia a `route_bars` con nombre, direccion,
+ * posicion, radio y logo (`route_bars.logo`), asi que la ruta no depende del
+ * catalogo una vez creada y los jugadores, que no leen `catalog_bars`, ven el
+ * sello. El radio de sellado no esta aqui: se elige al anadir el bar a la ruta.
  *
- * El radio de sellado no esta aqui: se elige al anadir el bar a la ruta.
- *
- * Los logos son ficheros en assets/bares/<id>.png y se enlazan en logos.ts.
- * Esa parte no esta aqui porque un `require()` de imagen no se puede cargar en
- * los tests (Node), y este fichero si tiene que poder cargarse.
+ * Este fichero solo tiene tipos y funciones puras, sin imports de valores: los
+ * tests lo cargan en Node.
  */
 export type BarCatalogo = {
   id: string;
   name: string;
-  /** Solo los bares de la lista cerrada; los propios no tienen. */
-  plusCode?: string;
   lat: number;
   lng: number;
-  /**
-   * Solo los bares propios (ver catalogoPropio.ts): la imagen va dentro, como
-   * data URL, porque no hay fichero en assets/. Los de la lista cerrada usan
-   * logos.ts.
-   */
+  /** data URL de la imagen del sello (`catalog_bars.logo`). Sin ella sale un sello con iniciales. */
   logoUri?: string;
-  /** true = lo anadio un admin desde el editor (catalog_bars), no viene en el codigo. */
-  propio?: boolean;
 };
-
-export const CATALOGO_BARES: readonly BarCatalogo[] = [
-  { id: 'quinto-tapon', name: 'Quinto Tapon', plusCode: 'FJMQ+XP', lat: 40.484937, lng: -3.360688 },
-  { id: 'el-hidalgo', name: 'El Hidalgo', plusCode: 'FJMP+CJ', lat: 40.483562, lng: -3.363438 },
-  { id: 'anexo', name: 'Anexo', plusCode: 'FJMP+8H', lat: 40.483312, lng: -3.363563 },
-  { id: 'astures', name: 'Astures', plusCode: 'FJMP+6C', lat: 40.483062, lng: -3.363938 },
-  { id: 'la-oveja-negra', name: 'La Oveja Negra', plusCode: 'FJJP+J5', lat: 40.481562, lng: -3.364563 },
-  { id: 'lola', name: 'Lola', plusCode: 'FJJM+RR', lat: 40.482062, lng: -3.365437 },
-  { id: 'wheelans', name: "Wheelan's", plusCode: 'FJJM+P9', lat: 40.481812, lng: -3.366563 },
-  { id: 'retintas', name: 'Retintas', plusCode: 'FJJM+M9', lat: 40.481687, lng: -3.366563 },
-  { id: 'lucrecia', name: 'Lucrecia', plusCode: 'FJJJ+MX', lat: 40.481687, lng: -3.367563 },
-  { id: 'green-factory', name: 'Green Factory', plusCode: 'FJJJ+HM', lat: 40.481437, lng: -3.368313 },
-  { id: 'panaderia', name: 'Panaderia', plusCode: 'FJJJ+GJ', lat: 40.481312, lng: -3.368438 },
-  { id: 'la-magistral', name: 'La Magistral', plusCode: 'FJJJ+55', lat: 40.480437, lng: -3.369563 },
-  { id: 'la-ruina', name: 'La Ruina', plusCode: 'FJHH+XX', lat: 40.479937, lng: -3.370063 },
-  { id: 'karaoke', name: 'Karaoke', plusCode: 'FJHM+4H', lat: 40.477812, lng: -3.366063 },
-];
 
 function normalizar(nombre: string): string {
   return nombre.trim().toLowerCase();
@@ -65,7 +32,7 @@ function normalizar(nombre: string): string {
 /** Casa por nombre, sin distinguir mayusculas ni espacios de los bordes. */
 export function buscarPorNombre(
   nombre: string,
-  catalogo: readonly BarCatalogo[] = CATALOGO_BARES,
+  catalogo: readonly BarCatalogo[],
 ): BarCatalogo | undefined {
   const buscado = normalizar(nombre);
   return catalogo.find((bar) => normalizar(bar.name) === buscado);
@@ -78,8 +45,8 @@ export function buscarPorNombre(
  */
 export function idsYaEnRuta(
   baresDeLaRuta: readonly { id: string; name: string }[],
-  ignorarId?: string,
-  catalogo: readonly BarCatalogo[] = CATALOGO_BARES,
+  ignorarId: string | undefined,
+  catalogo: readonly BarCatalogo[],
 ): Set<string> {
   const ocupados = new Set<string>();
   for (const bar of baresDeLaRuta) {

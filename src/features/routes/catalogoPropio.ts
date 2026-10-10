@@ -94,7 +94,6 @@ export function crearBarPropio(borrador: BorradorBarPropio, id: string): BarCata
     lat: borrador.punto.lat,
     lng: borrador.punto.lng,
     ...(borrador.logoUri ? { logoUri: borrador.logoUri } : {}),
-    propio: true,
   };
 }
 
@@ -130,16 +129,15 @@ export function leerPropios(json: string | null): BarCatalogo[] {
       lat: lat as number,
       lng: lng as number,
       ...(esLogoValido(logoUri) ? { logoUri } : {}),
-      propio: true,
     });
   }
   return propios;
 }
 
 /**
- * Lista cerrada primero y luego los propios. Si un propio choca con la lista
- * cerrada (mismo id o mismo nombre, p. ej. porque ese bar se anadio luego al
- * codigo) manda la cerrada: es la que lleva el logo de assets/.
+ * `base` primero (lo que viene de la tabla) y luego los del dispositivo que aun
+ * no se han subido. Si uno de estos choca con la tabla (mismo id o mismo nombre)
+ * manda la tabla: es la copia compartida y la que ven los demas admins.
  */
 export function fusionarCatalogo(base: readonly BarCatalogo[], propios: readonly BarCatalogo[]): BarCatalogo[] {
   const ids = new Set(base.map((b) => b.id));
@@ -183,13 +181,6 @@ export type NuevoBarCompartido = {
   created_by: string;
 };
 
-/**
- * Los ids de los bares propios siempre empiezan asi, vengan del dispositivo
- * (`propio-<fecha>-<azar>`, formato viejo) o de la tabla (`propio-<uuid>`): es
- * lo que `fusionarCatalogo` y `leerPropios` ya esperan.
- */
-export const PREFIJO_ID = 'propio-';
-
 /** Fila de la tabla -> entrada del catalogo. Lo que no es valido se descarta, no se arregla. */
 export function desdeFilaCompartida(fila: unknown): BarCatalogo | null {
   if (typeof fila !== 'object' || fila === null) return null;
@@ -198,12 +189,11 @@ export function desdeFilaCompartida(fila: unknown): BarCatalogo | null {
   if (typeof name !== 'string' || name.trim().length === 0) return null;
   if (!esPuntoValido(lat, lng)) return null;
   return {
-    id: `${PREFIJO_ID}${id}`,
+    id,
     name: name.trim(),
     lat: lat as number,
     lng: lng as number,
     ...(esLogoValido(logo) ? { logoUri: logo } : {}),
-    propio: true,
   };
 }
 
