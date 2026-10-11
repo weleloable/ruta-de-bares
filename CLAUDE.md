@@ -903,3 +903,19 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   Sin probar con un movil de verdad: el sentido (movil a la derecha, vaso a la
   derecha, giran igual) es una eleccion, y si parece al reves se cambia el signo
   en `inclinacionConSigno`.
+- **El dibujo de La Caña Perfecta (`EscenaCana.tsx`) separa la geometria
+  (`escena.ts`, pura y con tests) del pintado**. Todo cuelga del centro de la
+  boca de la jarra: la jarra gira sobre el, el chorro cae en VERTICAL y acaba
+  en lo primero que toca (superficie, pared baja o fondo; `impactoChorro`), y
+  la cerveza se pinta en el marco del mundo, plana aunque la jarra se incline
+  (`profundidadSuperficie`: biseccion sobre el area, no fisica). Antes el chorro
+  medía "lo que falta" a lo largo del eje del vaso y, inclinado, atravesaba la
+  pared. Si choca con la pared, la cerveza resbala por ella (`regueroPared`).
+  **Licencia a proposito**: inclinada y casi llena, la cerveza se pinta hasta la
+  boca aunque de verdad se saldria antes; el modelo no lo simula y la nota no
+  cambia. Con Views, no SVG (como `VasoCana`: SVG obliga a recompilar el
+  development build). La escena se ESCALA al hueco que queda (`EscenaCana`,
+  `onLayout`): sin eso se montaba sobre la cabecera del juego. El verificador
+  encuentra la jarra por `testID="vaso-cana"` (la palanca y el "mundo" tambien
+  giran) y comprueba con `elementsFromPoint` que la punta del chorro cae dentro
+  del interior; comprobado que falla con la formula vieja.

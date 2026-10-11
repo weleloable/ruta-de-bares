@@ -119,7 +119,9 @@ describe('sensor de inclinacion en web', () => {
       assert.match(hook, /inclinacionConSigno\(/, f);
       assert.doesNotMatch(hook, /anguloDesdeAcelerometro\(/, f);
     }
-    assert.match(cana, /rotate: `\$\{inclinado\}deg`/);
+    // El dibujo vive en EscenaCana: le llega el giro CON signo y la jarra lo usa tal cual.
+    assert.match(cana, /<EscenaCana\s+inclinado=\{inclinado\}/);
+    assert.match(leer('src/features/minijuegos/juegos/cana/EscenaCana.tsx'), /testID="vaso-cana"\s+style=\{\[styles\.jarra, \{ transform: \[\{ rotate: `\$\{inclinado\}deg` \}\]/);
     assert.match(cana, /Math\.abs\(giro\.current\)/);
     assert.match(cana, /<SelectorAngulo valor=\{Math\.abs\(inclinado\)\}/);
   });

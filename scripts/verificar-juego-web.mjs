@@ -20,7 +20,11 @@
  *      y la tarjeta final ensena la fermentacion;
  *   5. La Cana Perfecta con tactil y acelerometro emulados: el sensor inclina el
  *      vaso hacia el lado en que se inclina el movil y de forma fluida, se sirve con un dedo mientras otro mueve el deslizador, salirse del
- *      boton no suelta y levantar el dedo si (ver `recorrerCana`).
+ *      boton no suelta y levantar el dedo si (ver `recorrerCana`). Y el chorro acaba
+ *      DENTRO de la jarra, inclinada y recta (antes, inclinada, la atravesaba).
+ *
+ * `SOLO_CANA=1` se salta Maestro Cervecero. `CAPTURAS=<carpeta>` guarda capturas de
+ * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
  * lento en headless). Es del carril periodico, no del gate de cada commit:
@@ -201,9 +205,33 @@ async function abrirChrome(chrome, perfil, url, { ancho, alto }) {
     /** El giro con el que se dibuja el vaso (grados), o null. */
     giroVaso: () =>
       ev(`(() => {
-        const v = [...document.querySelectorAll('div')].find((d) => /rotate\\(/.test(d.style.transform || ''));
-        return v ? parseFloat(v.style.transform.replace('rotate(', '')) : null;
+        const v = document.querySelector('[data-testid="vaso-cana"]');
+        return v && /rotate\\(/.test(v.style.transform) ? parseFloat(v.style.transform.replace('rotate(', '')) : null;
       })()`),
+    /**
+     * ¿El chorro acaba DENTRO de la jarra? Mira que hay justo encima de su punta: si es el
+     * interior de la jarra (o algo suyo), choca dentro; si no, el chorro la atraviesa.
+     * Null si no hay chorro.
+     */
+    chorroDentro: () =>
+      ev(`(() => {
+        const ch = document.querySelector('[data-testid="chorro-cana"]');
+        const dentro = document.querySelector('[data-testid="vaso-cana-interior"]');
+        if (!ch || !dentro) return null;
+        const c = ch.getBoundingClientRect();
+        // La escena es pointerEvents="none" y elementsFromPoint se salta lo que no se puede tocar:
+        // se hace tocable solo el interior, un instante. Respeta su giro y su recorte.
+        const antes = dentro.style.getPropertyValue('pointer-events');
+        dentro.style.setProperty('pointer-events', 'auto', 'important');
+        const ok = document.elementsFromPoint(c.left + c.width / 2, c.bottom - 3).includes(dentro);
+        dentro.style.setProperty('pointer-events', antes);
+        return ok;
+      })()`),
+    /** Captura PNG de la pantalla en `ruta` (para revisar el dibujo a ojo). */
+    async captura(ruta) {
+      const r = await cdp('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(ruta, Buffer.from(r.result.data, 'base64'));
+    },
     /** Un clic de raton completo (movimiento, pulsar, soltar): RN Web ignora un clic sintetico a medias. */
     async clic(txt, reintentos = 40) {
       for (let i = 0; i < reintentos; i++) {
@@ -367,12 +395,33 @@ async function recorrerCana(chrome, perfil, url, tamano) {
     const giroCon30 = await c.giroVaso();
     const enSensor = /Usar deslizador/.test(await c.texto());
 
+    // El chorro cae en vertical y la jarra esta inclinada: tiene que chocar dentro (con la
+    // jarra vacia a 30 grados, contra la pared baja), no atravesarla. Y recto, en la cerveza.
+    const capturas = process.env.CAPTURAS;
+    const servirUnRato = async (ms, nombre) => {
+      const s = await c.rect('servir');
+      const dedo = { x: s[0] + s[2] / 2, y: s[1] + s[3] / 2, id: 1 };
+      await c.dedos('touchStart', [dedo]);
+      await esperar(ms);
+      const dentro = await c.chorroDentro();
+      if (capturas) await c.captura(join(capturas, `cana-${tamano.alto}-${nombre}.png`));
+      await c.dedos('touchEnd', []);
+      await esperar(300);
+      return dentro;
+    };
+    const chorroDentroInclinado = await servirUnRato(400, 'inclinada');
+    await c.inclinarMovil(0);
+    await esperar(1500);
+    const chorroDentroRecto = await servirUnRato(900, 'recta');
+    await c.inclinarMovil(30);
+    await esperar(1200);
+
     // A la IZQUIERDA el vaso gira a la izquierda (signo negativo), y de forma fluida: un escalon de
     // 0 a 30 grados se reparte en fotogramas. Se graba desde dentro de la pagina (con CDP iria a saltos).
     await c.inclinarMovil(0);
     await esperar(1500);
     await c.ev(`window.__g = []; window.__grabando = true; (function f() {
-      const v = [...document.querySelectorAll('div')].find((d) => /rotate\\(/.test(d.style.transform || ''));
+      const v = document.querySelector('[data-testid="vaso-cana"]');
       window.__g.push(v ? parseFloat(v.style.transform.replace('rotate(', '')) : 0);
       if (window.__grabando) requestAnimationFrame(f);
     })(); true`);
@@ -425,7 +474,16 @@ async function recorrerCana(chrome, perfil, url, tamano) {
     await c.ev(clicLector);
     await esperar(300);
     const lectorCierra = !/Sirviendo/.test(await c.texto());
-    return { giroCon30, giroIzquierda, mayorSalto, intermedios, enSensor, sirveConUnDedo, sirveConDosDedos, inclinacionManual, sirveFuera, paraAlLevantar, lectorAbre, lectorCierra };
+    // Solo para revisar el dibujo: llenar hasta que se derrame (el goteo por el borde y el charco).
+    if (capturas) {
+      const s = await c.rect('servir');
+      await c.dedos('touchStart', [{ x: s[0] + s[2] / 2, y: s[1] + s[3] / 2, id: 1 }]);
+      for (let i = 0; i < 60 && !/derramando/.test(await c.texto()); i++) await esperar(200);
+      await esperar(300);
+      await c.captura(join(capturas, `cana-${tamano.alto}-derrame.png`));
+      await c.dedos('touchEnd', []);
+    }
+    return { chorroDentroInclinado, chorroDentroRecto, giroCon30, giroIzquierda, mayorSalto, intermedios, enSensor, sirveConUnDedo, sirveConDosDedos, inclinacionManual, sirveFuera, paraAlLevantar, lectorAbre, lectorCierra };
   } finally {
     c.cerrar();
     await esperar(1500);
@@ -473,14 +531,16 @@ async function main() {
       const perfil = mkdtempSync(join(tmpdir(), 'rb-chrome-'));
       console.log(`\n${tamano.nombre} (${tamano.ancho}x${tamano.alto}): recorriendo el juego (~1 min)...`);
       let r;
-      try {
+      // SOLO_CANA=1 se salta Maestro Cervecero (para iterar sobre La Cana sin esperar el otro juego).
+      if (process.env.SOLO_CANA) console.log('SOLO_CANA: Maestro Cervecero no se recorre');
+      else try {
         r = await recorrer(chrome, perfil, `http://127.0.0.1:${port}/verificar-juego`, tamano);
       } catch (e) {
         console.log(`FALLA  no se pudo recorrer el juego: ${e.message}`);
         fallos += 1;
         continue;
       }
-      const comprobaciones = [
+      const comprobaciones = !r ? [] : [
         ['maceracion: sin scroll', r.maceracion && r.maceracion.scrollDeMas === 0],
         ['maceracion: el boton Calentar no queda tapado por Siguiente', r.maceracion && r.maceracion.botonAbajo <= r.maceracion.siguienteArriba],
         ['lupulo: sin scroll', r.lupulo && r.lupulo.scrollDeMas === 0],
@@ -494,8 +554,10 @@ async function main() {
         ['siembra: se siembra y dice como le fue a la levadura', r.sembrada],
         ['resultado: la tarjeta ensena la fermentacion', r.tarjeta],
       ];
-      console.log(JSON.stringify({ maceracion: r.maceracion, lupulo: r.lupulo, siembra: r.siembra }));
-      console.log(`siembra: echada a ${r.tempAlEchar} °C -> "${r.resultadoSiembra}"`);
+      if (r) {
+        console.log(JSON.stringify({ maceracion: r.maceracion, lupulo: r.lupulo, siembra: r.siembra }));
+        console.log(`siembra: echada a ${r.tempAlEchar} °C -> "${r.resultadoSiembra}"`);
+      }
       for (const [nombre, ok] of comprobaciones) {
         console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
         if (!ok) fallos += 1;
@@ -515,6 +577,8 @@ async function main() {
         ['cana: el movil a 30 grados a la derecha inclina el vaso ~30 grados a la derecha (sensor web)', k.enSensor && Math.abs((k.giroCon30 ?? -99) - 30) < 2],
         ['cana: a la IZQUIERDA el vaso gira a la izquierda (no siempre al mismo lado)', Math.abs((k.giroIzquierda ?? 99) + 30) < 2],
         ['cana: el giro es fluido (un escalon de 30 grados no salta de golpe)', k.mayorSalto < 8 && k.intermedios >= 8],
+        ['cana: inclinada, el chorro choca dentro de la jarra (no la atraviesa)', k.chorroDentroInclinado === true],
+        ['cana: recta, el chorro acaba dentro de la jarra', k.chorroDentroRecto === true],
         ['cana: mantener "servir" sirve', k.sirveConUnDedo],
         ['cana: con otro dedo en el deslizador sigue sirviendo', k.sirveConDosDedos],
         ['cana: ... y el deslizador si se mueve a la vez', k.inclinacionManual > 0],
