@@ -46,21 +46,22 @@ export function AvisosCanaProvider({ children }: { children: ReactNode }) {
   const yo = session?.user.id ?? '';
   const rutaId = activeRoute?.id ?? null;
 
-  // Una sola consulta por arranque para saber si hay algo que vigilar.
+  // Una sola consulta por arranque (y por ruta: desde la 0040 se activa en
+  // cada una) para saber si hay algo que vigilar.
   useEffect(() => {
-    if (!yo) {
+    if (!yo || !rutaId) {
       setActiva(false);
       setAvisos(0);
       return;
     }
     let vivo = true;
-    getMatchProfile()
+    getMatchProfile(rutaId)
       .then((perfil) => vivo && setActiva(perfil.is_active))
       .catch(() => vivo && setActiva(false));
     return () => {
       vivo = false;
     };
-  }, [yo]);
+  }, [yo, rutaId]);
 
   const mirar = useCallback(async () => {
     if (!rutaId || !yo) return;

@@ -13,6 +13,9 @@
 --   * match_block() la rehace la 0016
 --   * match_inbox() la rehace la 0011
 --   * match_report() la rehace la 0016
+--   * match_grid() la rehace la 0040
+--   * match_require_connection() la rehace la 0040
+--   * match_require_target() la rehace la 0040
 --
 -- Por que existe:
 --   * Bloquear. Quitar el Me gusta ya cierra la conexion y borra el chat, pero

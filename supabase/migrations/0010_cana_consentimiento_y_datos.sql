@@ -9,6 +9,7 @@
 --   * match_activate() la rehace la 0015
 --   * match_admin_purge_route() la rehace la 0015
 --   * match_delete_my_data() la rehace la 0021
+--   * match_export_my_data() la rehace la 0040
 --
 -- Por que existe, en una frase por pieza:
 --   * A quien das Me gusta y lo que escribis son datos de los que se puede

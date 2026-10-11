@@ -221,6 +221,15 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    guardar en la ruta avisa de que falta la 0039. Rehace
    `minigame_submit_score()`, asi que despues de esta la 0034 ya **no se vuelve a
    pegar**. Se puede pegar dos veces.
+40. [`supabase/migrations/0040_cana_por_ruta.sql`](../supabase/migrations/0040_cana_por_ruta.sql)
+   y **Run**, despues de la 0039 y **ANTES de desplegar la app**. La Caña pasa a
+   activarse **por ruta** (tabla `match_route_activations`; el perfil sigue
+   siendo uno) y activarla tiene reglas para quien no es admin: desde 6 h antes
+   de que abra el primer bar hasta que cierra el ultimo, y a 3 km o menos del
+   primer bar. Quien ya la tenia activada queda activada en todas las rutas en
+   las que estaba (solo la primera vez que se pega). Con la app vieja, activar
+   pide actualizar. Rehace funciones de la 0005, 0009, 0010, 0011, 0024, 0028 y
+   0037, que ya **no se vuelven a pegar**. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

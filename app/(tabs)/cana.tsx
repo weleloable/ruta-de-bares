@@ -12,24 +12,31 @@ import {
   getMatchGrid,
   getMatchInbox,
   getMatchProfile,
+  ubicacionParaActivar,
 } from '../../src/features/match/api';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
 import { ListaChats } from '../../src/features/match/ListaChats';
 import { Casilla } from '../../src/features/match/piezas';
 import {
   FILTROS,
+  RADIO_CANA_KM,
   chatsPendientes,
   contarPorFiltro,
   estadoPestana,
   estadoTarjeta,
   pasaFiltro,
+  sePuedeActivar,
+  ventanaCana,
   type Filtro,
+  type VentanaCana,
 } from '../../src/features/match/reglas';
 import { LeyendaVasos, TarjetaPersona } from '../../src/features/match/TarjetaPersona';
 import { VasoCana, type NivelVaso } from '../../src/features/match/VasoCana';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
+import { diaLargo, hora } from '../../src/lib/fechas';
 import { colors, radius, space, typography } from '../../src/lib/theme';
+import { useNow } from '../../src/lib/useNow';
 import { useSondeo } from '../../src/lib/useSondeo';
 import type { MatchGridRow, MatchInboxRow, MatchProfileState } from '../../src/types/database';
 
@@ -72,12 +79,18 @@ const VACIO: Record<Filtro, { title: string; body: string }> = {
  * Desactivado por defecto. La pantalla de desactivado explica ANTES de activar
  * que veran los demas, porque pulsar Activar es el consentimiento. Todas las
  * reglas estan en el servidor (0005_tirate_una_cana.sql); aqui solo se pinta.
+ *
+ * Desde la 0040 se activa POR RUTA (el perfil es uno, el interruptor no) y
+ * solo el dia de la ruta y cerca de su primer bar; los admins, cuando quieran.
+ * La pantalla avisa de cuando se abre, pero quien decide es el servidor.
  */
 export default function CanaScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const yo = session?.user.id ?? '';
   const { activeRoute, loading: cargandoRuta } = useActiveRoute();
+  // Para que "se abre a las 14:00" pase a "Activar" solo, sin recargar.
+  const ahora = useNow();
 
   const [perfil, setPerfil] = useState<MatchProfileState | null>(null);
   const [tarjetas, setTarjetas] = useState<MatchGridRow[]>([]);
@@ -97,14 +110,21 @@ export default function CanaScreen() {
   const cargar = useCallback(async () => {
     setCargando(true);
     setError(null);
+    if (!rutaId) {
+      // Sin ruta no hay nada que activar: la pantalla lo dice (estado sin-ruta).
+      setPerfil(null);
+      setCargando(false);
+      return;
+    }
     try {
-      const actual = await getMatchProfile();
+      const actual = await getMatchProfile(rutaId);
       setPerfil(actual);
       // Activar o desactivar aqui arranca o para las consultas del proveedor,
       // sin que nadie tenga que recargar la app.
       fijarCanaActiva(actual.is_active);
-      const [grilla, chats] =
-        actual.is_active && rutaId ? await Promise.all([getMatchGrid(rutaId), getMatchInbox(rutaId)]) : [[], []];
+      const [grilla, chats] = actual.is_active
+        ? await Promise.all([getMatchGrid(rutaId), getMatchInbox(rutaId)])
+        : [[], []];
       setTarjetas(grilla);
       setBandeja(chats);
       fijarAvisos(chatsPendientes(chats, yo));
@@ -123,6 +143,7 @@ export default function CanaScreen() {
   );
 
   const estado = estadoPestana(activeRoute !== null, perfil);
+  const ventana = ventanaCana(perfil, ahora);
 
   // En segundo plano y sin spinner: alguien nuevo, una conexion, un mensaje.
   // Un fallo puntual de red no pisa la grilla que ya se ve.
@@ -146,7 +167,7 @@ export default function CanaScreen() {
   const pendientes = chatsPendientes(bandeja, yo);
 
   async function onActivar() {
-    if (estado.tipo !== 'desactivado') return;
+    if (estado.tipo !== 'desactivado' || !rutaId) return;
     if (estado.primeraVez) {
       router.push({ pathname: '/cana/presentacion', params: { modo: 'alta', adulto: mayorDeEdad ? '1' : '0' } });
       return;
@@ -154,7 +175,9 @@ export default function CanaScreen() {
     setCambiando(true);
     setError(null);
     try {
-      await activateMatch();
+      // La ubicacion solo se pide a quien tiene la regla de la distancia.
+      const donde = perfil?.sin_reglas ? null : await ubicacionParaActivar();
+      await activateMatch(rutaId, donde);
       await cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo activar.');
@@ -164,10 +187,11 @@ export default function CanaScreen() {
   }
 
   async function onConfirmarDesactivar() {
+    if (!rutaId) return;
     setCambiando(true);
     setError(null);
     try {
-      await deactivateMatch();
+      await deactivateMatch(rutaId);
       setConfirmandoDesactivar(false);
       await cargar();
     } catch (e) {
@@ -220,7 +244,8 @@ export default function CanaScreen() {
               <Punto icono="beer-outline" texto="ofrecerte tomar una cerveza" />
               <Punto icono="chatbubble-outline" texto="escribirte un mensaje, solo si aceptas la cerveza" />
               <Text style={typography.muted}>
-                Mientras esté desactivado nadie te ve. Puedes activarlo y desactivarlo cuando quieras.
+                Mientras esté desactivado nadie te ve. Se activa solo en esta ruta, y puedes desactivarlo cuando
+                quieras.
               </Text>
               {/* Antes de activar, no solo al presentarse: quien duda es aqui
                   donde busca como funciona, y la presentacion solo la ve quien
@@ -229,6 +254,8 @@ export default function CanaScreen() {
                 <Text style={styles.enlace}>Cómo funciona La Caña</Text>
               </Pressable>
             </Card>
+
+            <AvisoVentana ventana={ventana} />
 
             {estado.pideMayoriaDeEdad ? (
               <Casilla marcada={mayorDeEdad} onCambiar={setMayorDeEdad} texto="Soy mayor de edad" />
@@ -241,7 +268,7 @@ export default function CanaScreen() {
             <Button
               title={estado.primeraVez ? 'Presentarme' : 'Activar'}
               onPress={onActivar}
-              disabled={estado.pideMayoriaDeEdad && !mayorDeEdad}
+              disabled={(estado.pideMayoriaDeEdad && !mayorDeEdad) || !sePuedeActivar(ventana)}
               loading={cambiando}
             />
           </>
@@ -337,7 +364,7 @@ export default function CanaScreen() {
       <DialogoConfirmar
         visible={confirmandoDesactivar}
         titulo="Desactivar La Caña"
-        mensaje="Dejarás de aparecer en la grilla y en los chats de tu ruta. Tus votos y conexiones se guardan para cuando vuelvas a activarlo."
+        mensaje="Dejarás de aparecer en la grilla y en los chats de esta ruta. Tus votos y conexiones se guardan para cuando vuelvas a activarlo."
         textoConfirmar="Desactivar"
         ocupado={cambiando}
         onConfirmar={onConfirmarDesactivar}
@@ -407,6 +434,33 @@ function VistaPerfiles({
       )}
     </>
   );
+}
+
+/**
+ * Cuando se puede activar en esta ruta. Fuera de horario el boton se apaga, y
+ * esto dice por que y cuando vuelve; dentro, avisa de que se pedira la ubicacion.
+ */
+function AvisoVentana({ ventana }: { ventana: VentanaCana }) {
+  switch (ventana.tipo) {
+    case 'libre':
+      return <Banner tone="info">Como administrador puedes activarla cuando quieras.</Banner>;
+    case 'abierta':
+      return (
+        <Banner tone="info">
+          {`Abierta hasta las ${hora(ventana.cierra)}. Para activarla tienes que estar a menos de ${RADIO_CANA_KM} km del primer bar: usaremos tu ubicación solo para comprobarlo.`}
+        </Banner>
+      );
+    case 'aun-no':
+      return (
+        <Banner tone="info">
+          {`La Caña de esta ruta se abre el ${diaLargo(ventana.abre)} a las ${hora(ventana.abre)}, 6 horas antes del primer bar.`}
+        </Banner>
+      );
+    case 'cerrada':
+      return <Banner tone="info">La ruta ya ha terminado: La Caña ya no se puede activar en ella.</Banner>;
+    case 'sin-bares':
+      return <Banner tone="info">Esta ruta aún no tiene bares: La Caña se abre cuando los tenga.</Banner>;
+  }
 }
 
 function Punto({ icono, texto }: { icono: ComponentProps<typeof Ionicons>['name']; texto: string }) {

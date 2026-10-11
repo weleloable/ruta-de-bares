@@ -16,6 +16,8 @@
 --   * match_inbox() la rehace la 0007
 --   * match_require_connection() la rehace la 0009
 --   * match_send_text() la rehace la 0008
+--   * match_require_member() la rehace la 0040
+--   * match_vote() la rehace la 0040
 --
 -- Reglas y decisiones de producto: docs/TIRATE-UNA-CANA.md.
 --

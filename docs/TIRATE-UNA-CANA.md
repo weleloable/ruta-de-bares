@@ -71,6 +71,7 @@ la migracion (una nueva, nunca editando la publicada) y su test.
 | D11 | Hasta **5 etiquetas**, sin categorias sensibles (orientacion, salud, religion). Catalogo real desde la 0029: rasgos de comportamiento en la ruta, nunca de identidad. |
 | D12 | Grilla con **sin votar primero** y orden aleatorio estable; nunca por cercania. |
 | D13 | ~~Catalogo propio de GIFs~~. **Retirada en la 0008**: no hay GIFs ni zumbidos, solo la pregunta de la cerveza. |
+| D17 | **Activar es por ruta** (0040): el perfil (frase, etiquetas, consentimiento, veto) es uno, pero el interruptor es de cada ruta, y desactivar solo toca esa. Para activar, salvo admins: desde 6 h antes del primer bar hasta el cierre del ultimo (por orden de la ruta) y a 3 km o menos del primer bar. Se comprueba **solo al activar**; nadie sale por pasar la hora. Moderar sigue siendo por persona: vetar o suspender quita la activacion de todas las rutas. |
 | D16 | **Activar es un si explicito** (0010): se guarda la version de las condiciones aceptadas, y cualquiera puede descargar o borrar sus datos de la cana. |
 | D15 | **Bloquear y denunciar** (0009): bloquear es entre personas, no por ruta; denunciar avisa a quien organiza, bloquea a la vez y se lleva copiados los mensajes de esa persona. |
 | D14 | **Sin "No me gusta"** (17-09-2026): la unica accion es Me gusta. Abrir la ficha o quitar un Me gusta deja a la persona en **Visto**, que la otra persona no ve. Los No me gusta que hubiera pasan a Visto (0006). |

@@ -1,6 +1,9 @@
 -- Ruta de Bares - 0011: saber que chats no has abierto nunca.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0010.
--- Idempotente: se puede re-ejecutar sin romper nada.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * match_inbox() la rehace la 0040
 --
 -- Por que existe: la pestana Cana avisa con una burbujita cuando hay algo que
 -- mirar, y "hay algo que mirar" incluye una conexion recien abierta, aunque

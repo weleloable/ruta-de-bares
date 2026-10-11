@@ -10,6 +10,7 @@ import {
   ETIQUETAS_MAX,
   FILTROS,
   PREGUNTA_ESPERA_MS,
+  RADIO_CANA_KM,
   SOLAPE_SONDEO_MS,
   TEXTOS_POR_PERSONA,
   TEXTO_MAX,
@@ -24,10 +25,12 @@ import {
   fusionarMensajes,
   hiloVacio,
   pasaFiltro,
+  sePuedeActivar,
   recibirDelSondeo,
   recibirEnviado,
   teTocaResponder,
   textoRestante,
+  ventanaCana,
   validarDenuncia,
   validarPresentacion,
   vistaPreviaChat,
@@ -382,5 +385,57 @@ describe('textoRestante', () => {
 
   it('gastado, lo dice en singular', () => {
     assert.equal(textoRestante(0), 'Ya has enviado tu único mensaje. Disfruta de la cerveza.');
+  });
+});
+
+describe('ventanaCana (0040)', () => {
+  const ABRE = '2026-10-17T08:00:00.000Z';
+  const CIERRA = '2026-10-18T02:00:00.000Z';
+  const perfil = { cana_abre: ABRE, cana_cierra: CIERRA, sin_reglas: false };
+
+  it('antes de abrir dice cuando abre, y no deja activar', () => {
+    const v = ventanaCana(perfil, new Date('2026-10-17T07:59:00.000Z'));
+    assert.deepEqual(v, { tipo: 'aun-no', abre: new Date(ABRE) });
+    assert.equal(sePuedeActivar(v), false);
+  });
+
+  it('entre la apertura y el cierre, si', () => {
+    const v = ventanaCana(perfil, new Date('2026-10-17T20:00:00.000Z'));
+    assert.deepEqual(v, { tipo: 'abierta', cierra: new Date(CIERRA) });
+    assert.equal(sePuedeActivar(v), true);
+    // Los dos extremos cuentan, como en el servidor (now() < desde / now() > hasta).
+    assert.equal(ventanaCana(perfil, new Date(ABRE)).tipo, 'abierta');
+    assert.equal(ventanaCana(perfil, new Date(CIERRA)).tipo, 'abierta');
+  });
+
+  it('despues del cierre del ultimo bar, cerrada', () => {
+    assert.equal(ventanaCana(perfil, new Date('2026-10-18T02:00:01.000Z')).tipo, 'cerrada');
+  });
+
+  it('sin bares no hay ventana, y un admin no tiene ninguna', () => {
+    assert.equal(ventanaCana({ cana_abre: null, cana_cierra: null }, new Date()).tipo, 'sin-bares');
+    const admin = ventanaCana({ cana_abre: null, cana_cierra: null, sin_reglas: true }, new Date());
+    assert.equal(admin.tipo, 'libre');
+    assert.equal(sePuedeActivar(admin), true);
+  });
+
+  it('cada error nuevo de la 0040 tiene su texto, y la funcion que falta apunta a la migracion', () => {
+    for (const codigo of [
+      'CANA_ROUTE_WITHOUT_BARS',
+      'CANA_NOT_OPEN_YET',
+      'CANA_CLOSED',
+      'LOCATION_REQUIRED',
+      'CANA_TOO_FAR',
+      'APP_UPDATE_REQUIRED',
+    ]) {
+      const texto = describirErrorCana(`ERROR: P0001: ${codigo}`);
+      assert.ok(!texto.includes(codigo), `${codigo} se ve en crudo`);
+    }
+    assert.match(describirErrorCana(`TOO_FAR`), /TOO_FAR/, 'un trozo de codigo no se confunde con otro');
+    assert.match(describirErrorCana('CANA_TOO_FAR'), new RegExp(`${RADIO_CANA_KM} km`));
+    assert.match(
+      describirErrorCana('Could not find the function public.match_activate_en_ruta in the schema cache'),
+      /0040/,
+    );
   });
 });

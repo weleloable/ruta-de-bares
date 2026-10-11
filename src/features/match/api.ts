@@ -12,6 +12,8 @@ import type {
   MatchReportReason,
   MatchVote,
 } from '../../types/database';
+import { getCurrentPosition, LocationDeniedError } from '../stamps/api';
+import type { LatLng } from '../stamps/rules';
 import { CONSENTIMIENTO_VERSION, codigoErrorCana, describirErrorCana } from './reglas';
 
 /**
@@ -35,8 +37,12 @@ function fallo(error: { message: string }): never {
   throw new ErrorCana(error.message);
 }
 
-export async function getMatchProfile(): Promise<MatchProfileState> {
-  const { data, error } = await supabase.rpc('match_get_profile');
+/**
+ * Tu perfil cervecero (uno para toda la app) con lo de ESTA ruta: si la tienes
+ * activada aqui y cuando se puede activar (0040).
+ */
+export async function getMatchProfile(routeId: string): Promise<MatchProfileState> {
+  const { data, error } = await supabase.rpc('match_get_profile_en_ruta', { p_route_id: routeId });
   if (error) fallo(error);
   const [perfil] = data ?? [];
   if (!perfil) throw new Error('No se pudo leer tu perfil cervecero.');
@@ -44,17 +50,35 @@ export async function getMatchProfile(): Promise<MatchProfileState> {
 }
 
 /**
- * Activa la feature. La primera vez hace falta todo (mayoria de edad, frase y
- * etiquetas); despues basta sin argumentos, porque desactivar es una pausa.
+ * Donde estas, para activar La Caña: el servidor comprueba que estes cerca del
+ * primer bar (0040). Solo se manda al activar y no se guarda.
  */
-export async function activateMatch(primeraVez?: {
-  mayorDeEdad: boolean;
-  bio: string;
-  etiquetas: string[];
-}): Promise<void> {
-  const { error } = await supabase.rpc(
-    'match_activate',
-    primeraVez
+export async function ubicacionParaActivar(): Promise<LatLng> {
+  try {
+    return await getCurrentPosition();
+  } catch (e) {
+    if (e instanceof LocationDeniedError) {
+      throw new Error('Sin permiso de ubicación no se puede activar La Caña. Actívalo en los ajustes del móvil.');
+    }
+    throw e;
+  }
+}
+
+/**
+ * Activa La Caña EN UNA RUTA. La primera vez hace falta todo (mayoria de edad,
+ * frase y etiquetas); despues basta la ruta, porque el perfil es uno. `donde`
+ * puede ser null solo para admins, que no tienen horario ni distancia.
+ */
+export async function activateMatch(
+  routeId: string,
+  donde: LatLng | null,
+  primeraVez?: { mayorDeEdad: boolean; bio: string; etiquetas: string[] },
+): Promise<void> {
+  const { error } = await supabase.rpc('match_activate_en_ruta', {
+    p_route_id: routeId,
+    p_lat: donde?.lat ?? null,
+    p_lng: donde?.lng ?? null,
+    ...(primeraVez
       ? {
           p_adult_confirmed: primeraVez.mayorDeEdad,
           p_bio: primeraVez.bio,
@@ -62,13 +86,14 @@ export async function activateMatch(primeraVez?: {
           // Queda guardado que acepto ESTA version de las condiciones (0010).
           p_consent_version: CONSENTIMIENTO_VERSION,
         }
-      : {},
-  );
+      : {}),
+  });
   if (error) fallo(error);
 }
 
-export async function deactivateMatch(): Promise<void> {
-  const { error } = await supabase.rpc('match_deactivate');
+/** Desactiva La Caña solo en esta ruta: en las demas sigue como estaba. */
+export async function deactivateMatch(routeId: string): Promise<void> {
+  const { error } = await supabase.rpc('match_deactivate_en_ruta', { p_route_id: routeId });
   if (error) fallo(error);
 }
 

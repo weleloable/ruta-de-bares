@@ -1,6 +1,9 @@
 -- Ruta de Bares - 0028: la denuncia guarda la foto y la frase de ese momento.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0027.
--- Idempotente: se puede re-ejecutar sin romper nada.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * match_admin_report() la rehace la 0040
 --
 -- Por que existe. La 0017 ya congela el NOMBRE de quien denuncia y de quien es
 -- denunciado (`reporter_name`, `reported_name`), para que el historial se pueda

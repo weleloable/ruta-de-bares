@@ -120,6 +120,7 @@ supabase/
   migrations/0037_*.sql     estadisticas de una ruta para los admins (solo totales)
   migrations/0038_*.sql     Maestro Cervecero: la siembra (paso 4) entra en la nota; funciones `_v2`
   migrations/0039_*.sql     La Conga Cervecera en el ranking por ruta (tope de nota POR JUEGO)
+  migrations/0040_*.sql     La Caña se activa POR RUTA, solo el dia de la ruta y a 3 km del primer bar (admins sin reglas)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -127,7 +128,7 @@ tests/                    tests que no encajan en un feature (p.ej. migration.te
 
 Tablas: `profiles`, `routes`, `route_bars`, `catalog_bars`, `stamps`, `route_invites`,
 `route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
-`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -247,6 +248,16 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
 
+- **La Caña se activa por ruta (0040), pero `match_profiles.is_active` sigue
+  ahi**: ahora significa "activada en ALGUNA ruta" y lo mantienen al dia
+  `match_activate_en_ruta` / `match_deactivate_en_ruta`. Lo que de verdad manda
+  es `match_route_activations` (`match_activa_en(ruta, persona)`). Las funciones
+  de moderacion (vetar, suspender, borrar tus datos) NO se reescribieron: siguen
+  poniendo `is_active = false` y un disparador (`match_profiles_desactivada`)
+  borra entonces la activacion de todas sus rutas. Otro (`route_members_salida_cana`)
+  la quita de una ruta al salir de ella. Las reglas de activar (horario y 3 km del
+  primer bar; admins sin reglas) se miran SOLO al activar, nunca despues. La vieja
+  `match_activate()` lanza `APP_UPDATE_REQUIRED` para que la app en cache no se las salte.
 - **Minijuegos (`src/features/minijuegos/`, pestana Juegos)**: solo son visibles
   dentro de una ruta (el boton depende de `activeRoute`) y el ranking y las
   cervezas son POR RUTA (`0034`). Las tablas `minigame_scores` y `maestro_beers`

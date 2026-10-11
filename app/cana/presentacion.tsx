@@ -5,11 +5,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, Field, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
-import { activateMatch, getMatchProfile, listMatchTags, updateMatchProfile } from '../../src/features/match/api';
+import {
+  activateMatch,
+  getMatchProfile,
+  listMatchTags,
+  ubicacionParaActivar,
+  updateMatchProfile,
+} from '../../src/features/match/api';
 import { AvatarCana, Casilla, ChipEtiqueta } from '../../src/features/match/piezas';
 import { BIO_MAX, ETIQUETAS_MAX, alternarEtiqueta, validarPresentacion } from '../../src/features/match/reglas';
 import { pickAvatar, uploadAvatar } from '../../src/features/profile/api';
 import { mensajeTrasEnviar } from '../../src/features/profile/fotoRevision';
+import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors, space, typography } from '../../src/lib/theme';
 import type { MatchCatalogRow } from '../../src/types/database';
 
@@ -18,14 +25,17 @@ import type { MatchCatalogRow } from '../../src/types/database';
  * (no es obligatoria, D9).
  *
  * modo=alta   primera activacion; `adulto` trae la casilla de mayoria de edad
- *             de la pestana, y guardar es lo que activa.
+ *             de la pestana, y guardar es lo que activa (en la ruta activa, y
+ *             con la ubicacion salvo admins: 0040).
  * modo=editar cambia frase y etiquetas sin tocar si esta activado.
  */
 export default function PresentacionCana() {
   const { modo, adulto } = useLocalSearchParams<{ modo?: string; adulto?: string }>();
   const alta = modo !== 'editar';
   const router = useRouter();
-  const { session, profile, refreshProfile } = useAuth();
+  const { session, profile, refreshProfile, isAdmin } = useAuth();
+  const { activeRoute } = useActiveRoute();
+  const rutaId = activeRoute?.id ?? null;
 
   const [catalogo, setCatalogo] = useState<MatchCatalogRow[]>([]);
   const [bio, setBio] = useState('');
@@ -43,7 +53,10 @@ export default function PresentacionCana() {
     let activo = true;
     (async () => {
       try {
-        const [etiquetas, perfil] = await Promise.all([listMatchTags(), alta ? null : getMatchProfile()]);
+        const [etiquetas, perfil] = await Promise.all([
+          listMatchTags(),
+          alta || !rutaId ? null : getMatchProfile(rutaId),
+        ]);
         if (!activo) return;
         setCatalogo(etiquetas);
         if (perfil) {
@@ -59,7 +72,7 @@ export default function PresentacionCana() {
     return () => {
       activo = false;
     };
-  }, [alta]);
+  }, [alta, rutaId]);
 
   const errores = validarPresentacion({ bio, etiquetas: seleccion });
   const nombre = profile?.display_name || session?.user.email?.split('@')[0] || '';
@@ -72,7 +85,9 @@ export default function PresentacionCana() {
     setExito(null);
     try {
       if (alta) {
-        await activateMatch({ mayorDeEdad: adulto === '1', bio: bio.trim(), etiquetas: seleccion });
+        if (!rutaId) throw new Error('Entra en una ruta para activar La Caña.');
+        const donde = isAdmin ? null : await ubicacionParaActivar();
+        await activateMatch(rutaId, donde, { mayorDeEdad: adulto === '1', bio: bio.trim(), etiquetas: seleccion });
       } else {
         await updateMatchProfile(bio.trim(), seleccion);
       }

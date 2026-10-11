@@ -136,6 +136,15 @@ export type MatchProfileState = {
   has_activated_before: boolean;
   /** Version de las condiciones que acepto al activar; null si nunca activo (0010). */
   consent_version: string | null;
+  /**
+   * Solo con la ruta (`match_get_profile_en_ruta`, 0040): desde cuando y hasta
+   * cuando se puede activar en ella (6 h antes del primer bar, cierre del
+   * ultimo); null si la ruta no tiene bares.
+   */
+  cana_abre?: string | null;
+  cana_cierra?: string | null;
+  /** Admin: la activa cuando y donde quiera, sin horario ni distancia (0040). */
+  sin_reglas?: boolean;
 };
 
 export type MatchGridRow = {
@@ -546,6 +555,27 @@ export type Database = {
           p_tag_ids?: string[] | null;
           p_consent_version?: string | null;
         };
+        Returns: undefined;
+      };
+      /** La Caña por ruta (0040): el perfil con lo de esa ruta, y activar y desactivar en ella. */
+      match_get_profile_en_ruta: {
+        Args: { p_route_id: string };
+        Returns: MatchProfileState[];
+      };
+      match_activate_en_ruta: {
+        Args: {
+          p_route_id: string;
+          p_lat?: number | null;
+          p_lng?: number | null;
+          p_adult_confirmed?: boolean;
+          p_bio?: string | null;
+          p_tag_ids?: string[] | null;
+          p_consent_version?: string | null;
+        };
+        Returns: undefined;
+      };
+      match_deactivate_en_ruta: {
+        Args: { p_route_id: string };
         Returns: undefined;
       };
       match_export_my_data: {

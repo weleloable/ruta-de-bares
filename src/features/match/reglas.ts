@@ -58,6 +58,42 @@ export function estadoPestana(
   };
 }
 
+// --- Cuando se puede activar (0040) -----------------------------------------
+
+/** Distancia maxima al primer bar para activar La Caña, en km (espejo de la 0040). */
+export const RADIO_CANA_KM = 3;
+
+/**
+ * Si se puede activar La Caña en una ruta ahora mismo, segun lo que manda el
+ * servidor (`match_get_profile_en_ruta`). Es solo para la pantalla: quien
+ * decide es `match_activate_en_ruta`. La distancia no se puede saber aqui sin
+ * pedir la ubicacion, asi que se comprueba al pulsar.
+ */
+export type VentanaCana =
+  | { tipo: 'libre' }
+  | { tipo: 'abierta'; cierra: Date }
+  | { tipo: 'aun-no'; abre: Date }
+  | { tipo: 'cerrada' }
+  | { tipo: 'sin-bares' };
+
+export function ventanaCana(
+  perfil: { cana_abre?: string | null; cana_cierra?: string | null; sin_reglas?: boolean } | null,
+  ahora: Date,
+): VentanaCana {
+  if (perfil?.sin_reglas) return { tipo: 'libre' };
+  if (!perfil?.cana_abre || !perfil.cana_cierra) return { tipo: 'sin-bares' };
+  const abre = new Date(perfil.cana_abre);
+  const cierra = new Date(perfil.cana_cierra);
+  if (ahora < abre) return { tipo: 'aun-no', abre };
+  if (ahora > cierra) return { tipo: 'cerrada' };
+  return { tipo: 'abierta', cierra };
+}
+
+/** Si con esa ventana el boton de activar tiene sentido. */
+export function sePuedeActivar(v: VentanaCana): boolean {
+  return v.tipo === 'libre' || v.tipo === 'abierta';
+}
+
 // --- Grilla -----------------------------------------------------------------
 
 /**
@@ -372,6 +408,13 @@ const MENSAJES: Record<string, string> = {
   NO_PENDING_QUESTION: 'No hay ninguna pregunta que responder.',
   CANNOT_ANSWER_OWN_QUESTION: 'La pregunta la responde la otra persona.',
   INVALID_ANSWER: 'Esa respuesta no es válida.',
+  // Activar por ruta (0040).
+  CANA_ROUTE_WITHOUT_BARS: 'Esta ruta aún no tiene bares: La Caña se abre cuando los tenga.',
+  CANA_NOT_OPEN_YET: 'La Caña de esta ruta aún no está abierta: se abre 6 horas antes del primer bar.',
+  CANA_CLOSED: 'La ruta ya ha terminado: La Caña ya no se puede activar.',
+  LOCATION_REQUIRED: 'Necesitamos tu ubicación para activar La Caña.',
+  CANA_TOO_FAR: `Tienes que estar a menos de ${RADIO_CANA_KM} km del primer bar de la ruta para activar La Caña.`,
+  APP_UPDATE_REQUIRED: 'Hay una versión nueva de la app. Recarga la página o actualízala para activar La Caña.',
 };
 
 /**
@@ -381,7 +424,13 @@ const MENSAJES: Record<string, string> = {
  */
 export function describirErrorCana(mensaje: string): string {
   const codigo = codigoErrorCana(mensaje);
-  return codigo ? MENSAJES[codigo] : mensaje;
+  if (codigo) return MENSAJES[codigo];
+  // PostgREST cuando la funcion no existe: la app es mas nueva que la base. Las
+  // funciones `_en_ruta` llegan con la 0040.
+  if (/PGRST202|Could not find the function/i.test(mensaje)) {
+    return 'Falta aplicar la migración 0040 de La Caña en Supabase (ver docs/SETUP.md).';
+  }
+  return mensaje;
 }
 
 /** El codigo del SQL que trae un mensaje de error, o null si no trae ninguno. */

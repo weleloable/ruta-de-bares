@@ -93,6 +93,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
               'La pregunta de la cerveza, su respuesta y el mensaje que escribas después solo los ve la otra ' +
                 'persona del chat. Quien organiza la ruta no puede leerlo.',
               'Cuándo abres cada chat se guarda para enseñarte a ti lo que tienes sin leer; no se le enseña a nadie.',
+              'La Caña se activa en cada ruta por separado. Al activarla se usa tu ubicación una sola vez, para ' +
+                'comprobar que estás cerca del primer bar; no se guarda. Sí se guarda en qué rutas la tienes activada.',
               'Si denuncias a alguien, lo que esa persona te escribió viaja con la denuncia para que quien ' +
                 'organiza la ruta pueda revisarlo.',
               'Puedes desactivarla cuando quieras sin borrar tu cuenta: se guarda todo tal cual para cuando vuelvas.',
