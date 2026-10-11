@@ -581,7 +581,13 @@ poco segun el idioma.
    no acepta plantillas ni borradores.
    Para que Google de por bueno el dominio hay que verificarlo en **Google Search
    Console** (<https://search.google.com/search-console>) con la misma cuenta del
-   proyecto. `github.io` es un sufijo publico, asi que `weleloable.github.io` cuenta
+   proyecto. Sin esto, la verificacion de marca falla con "El sitio web de la URL
+   de tu pagina principal no esta registrado a tu nombre". Se hizo asi: propiedad
+   de **prefijo de URL** `https://weleloable.github.io/ruta-de-bares/`, metodo
+   **etiqueta HTML**, y la etiqueta `google-site-verification` esta en
+   `public/index.html` (la vigila `tests/search-console.test.ts`): **no se quita**,
+   o la propiedad se desverifica. Tras verificar en Search Console hay que esperar
+   24 horas y pulsar *Corregi los problemas* en la pantalla de la verificacion. `github.io` es un sufijo publico, asi que `weleloable.github.io` cuenta
    como dominio propio; esta sin probar si basta verificar la propiedad de prefijo
    de URL `https://weleloable.github.io/ruta-de-bares/` o hace falta la raiz.
    Lo que exige Google de la politica esta en
