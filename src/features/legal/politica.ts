@@ -88,6 +88,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'tú y la otra persona; quien organiza la ruta, para corregir errores. El QR solo lleva un código ' +
                 'que caduca en un minuto, sin tus datos. Para escanear, la cámara se usa en el momento y no se ' +
                 'guarda ninguna imagen.',
+              'Si quien organiza te cambia de casa, queda apuntado cuándo, de cuál a cuál y por qué. Lo ves en ' +
+                'la descarga de tus datos.',
               'No se vende ni se cede a terceros. Los únicos que tocan los datos por encargo nuestro son Supabase ' +
                 '(base de datos, almacenamiento y el sistema de acceso, también lo que nos da Google) y GitHub ' +
                 'Pages (la web).',

@@ -284,6 +284,13 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    QR, acabar antes de una hora), puntos y limite de personas. Se comprueban
    solos al sellar, al apuntar una consumicion y al registrar un encuentro.
    Se puede pegar dos veces.
+48. [`supabase/migrations/0048_panel_casas.sql`](../supabase/migrations/0048_panel_casas.sql)
+   y **Run**, despues de la 0047 y **ANTES de desplegar la app**. El panel
+   "Casas y puntuaciones" (Mi perfil > Casas y puntuaciones, solo admins):
+   movimientos con filtros, anular con motivo, ajustes a mano, puntos por
+   accion, cambiar de casa (`house_changes`) y estadisticas. Rehace
+   `export_my_data()` (anade consumiciones, encuentros y cambios de casa), asi
+   que la 0044 ya **no se vuelve a pegar**. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

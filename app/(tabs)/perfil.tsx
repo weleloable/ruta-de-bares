@@ -426,6 +426,12 @@ export default function PerfilScreen() {
               textStyle={styles.textoAccionBarra}
               onPress={() => router.push('/admin/estadisticas')}
             />
+            <Button
+              title="Casas y puntuaciones"
+              variant="secondary"
+              textStyle={styles.textoAccionBarra}
+              onPress={() => router.push('/admin/casas')}
+            />
           </Card>
         ) : null}
 

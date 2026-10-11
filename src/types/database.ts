@@ -733,6 +733,75 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** Panel de casas (0048), solo admins. */
+      casas_admin_movimientos: {
+        Args: {
+          p_route_id?: string | null;
+          p_house?: string | null;
+          p_user_id?: string | null;
+          p_action?: string | null;
+          p_incluir_anulados?: boolean;
+          p_limite?: number;
+        };
+        Returns: {
+          id: number;
+          route_id: string;
+          ruta: string;
+          user_id: string | null;
+          persona: string | null;
+          house: string;
+          action: string;
+          points: number;
+          ref: string;
+          detail: unknown;
+          created_at: string;
+          annulled_at: string | null;
+          annul_reason: string | null;
+          anulado_por: string | null;
+        }[];
+      };
+      casas_admin_anular: { Args: { p_id: number; p_motivo: string }; Returns: undefined };
+      casas_admin_ajuste: {
+        Args: { p_route_id: string; p_house: string; p_points: number; p_motivo: string; p_user_id?: string | null };
+        Returns: number;
+      };
+      casas_admin_reglas: {
+        Args: Record<string, never>;
+        Returns: { action: string; points: number; label: string; updated_at: string }[];
+      };
+      casas_admin_regla: { Args: { p_action: string; p_points: number }; Returns: undefined };
+      casas_admin_personas: {
+        Args: { p_busqueda?: string | null };
+        Returns: { user_id: string; nombre: string; house: string | null; puntos: number; rutas: number }[];
+      };
+      casas_admin_cambiar_casa: {
+        Args: { p_user_id: string; p_house: string; p_motivo: string };
+        Returns: { movidos: number; anulados: number };
+      };
+      casas_admin_cambios: {
+        Args: Record<string, never>;
+        Returns: {
+          persona: string | null;
+          de: string | null;
+          a: string;
+          motivo: string;
+          movidos: number;
+          anulados: number;
+          por: string | null;
+          el: string;
+        }[];
+      };
+      casas_admin_estadisticas: {
+        Args: { p_route_id?: string | null };
+        Returns: {
+          house: string;
+          puntos: number;
+          miembros: number;
+          por_accion: Record<string, number>;
+          mejor: string | null;
+          mejor_puntos: number | null;
+        }[];
+      };
       /** Los retos de una ruta con tu progreso (0047). */
       retos_mios: {
         Args: { p_route_id: string };

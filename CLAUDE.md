@@ -129,6 +129,7 @@ supabase/
   migrations/0045_*.sql     consumiciones (`consumiciones`, `registrar_consumicion`, limites en `routes`) y racha de casa
   migrations/0046_*.sql     QR social: codigos temporales (`qr_codigos`) y `encuentros` (preparada para fotos de grupo)
   migrations/0047_*.sql     retos por ruta (`retos`, `retos_evaluar` por disparadores, `retos_mios`)
+  migrations/0048_*.sql     panel "Casas y puntuaciones" (`casas_admin_*`, `house_changes`); rehace export_my_data()
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -280,6 +281,12 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   Los puntos salen del reto, no de `point_rules`. Se evaluan con disparadores
   en stamps, consumiciones y encuentros (no se tocan las funciones de puntos)
   y al llamar a `retos_mios`, por si el reto se creo despues.
+
+- **Cambio de casa (0048)**: `casas_admin_cambiar_casa` mueve de casa los
+  movimientos de la persona (UPDATE de `house`, no se recrean) salvo racha y
+  QR, que se ANULAN si su `detail.usuarios` la incluye. Los podios no se tocan:
+  `casas_podios` ya usa la casa de hoy. Las correcciones a mano son
+  movimientos `action = 'ajuste'` (pueden ser negativos), nunca ediciones.
 
 - **La Caña se activa por ruta (0040), pero `match_profiles.is_active` sigue
   ahi**: ahora significa "activada en ALGUNA ruta" y lo mantienen al dia

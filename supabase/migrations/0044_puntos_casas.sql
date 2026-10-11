@@ -4,6 +4,7 @@
 -- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
 -- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
 --   * puntos_por_sello() la rehace la 0045
+--   * export_my_data() la rehace la 0048
 -- (Ademas, esta rehace export_my_data() a partir de la 0041, asi que la 0041
 -- tampoco se puede volver a pegar despues.)
 --
