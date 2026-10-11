@@ -24,9 +24,12 @@
  *      DENTRO de la jarra, inclinada y recta (antes, inclinada, la atravesaba);
  *   6. Ocupado en horizontal, con un juego de mentira (ver `recorrerOcupado`): la
  *      capa tapa la ventana, solo cuenta el aviso de SU iframe, sale el resultado
- *      (tambien saliendo con la X tras ganar) y salir quita el iframe.
+ *      (tambien saliendo con la X tras ganar) y salir quita el iframe;
+ *   7. ¿Quien quiere ser cervecero? cabe sin scroll con la pregunta, al elegir,
+ *      al plantarse y al revelar, con los textos MAS LARGOS del banco (ver `recorrerQuiz`).
  *
- * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_OCUPADO=1`, Maestro y La Cana. `CAPTURAS=<carpeta>` guarda capturas de
+ * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_OCUPADO=1` deja solo Ocupado
+ * y el quiz; `SOLO_QUIZ=1`, solo el quiz. `CAPTURAS=<carpeta>` guarda capturas de
  * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -48,6 +51,13 @@ import { fileURLToPath } from 'node:url';
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PANTALLA = join(raiz, 'app', '(auth)', 'verificar-juego.tsx');
 
+/** Que juegos se recorren (ver SOLO_* en la cabecera). */
+const HACER = {
+  maestro: !(process.env.SOLO_CANA || process.env.SOLO_OCUPADO || process.env.SOLO_QUIZ),
+  cana: !(process.env.SOLO_OCUPADO || process.env.SOLO_QUIZ),
+  ocupado: !process.env.SOLO_QUIZ,
+};
+
 /** Alturas de ventana (con barra y pestanas incluidas) y ancho de movil a probar. */
 const TAMANOS = [
   { ancho: 390, alto: 740, nombre: 'movil bajo' },
@@ -56,12 +66,48 @@ const TAMANOS = [
 ];
 
 const CODIGO_PANTALLA = `// GENERADO por scripts/verificar-juego-web.mjs. Se borra solo. No commitear.
+import { useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { MenuMinijuegos } from '../../src/features/minijuegos/MenuMinijuegos';
+import { Partida } from '../../src/features/quiz/QuienQuiereSerCervecero';
+import { BANCO } from '../../src/features/quiz/banco';
+import { nuevaPartida } from '../../src/features/quiz/partida';
+import type { BancoPreguntas, Pregunta } from '../../src/features/quiz/tipos';
+
+/** Una pregunta con los textos MAS LARGOS del banco: el peor caso para que quepa. */
+function bancoPeor(): BancoPreguntas {
+  const ps = BANCO.preguntas;
+  const larga = (f: (p: Pregunta) => string) => ps.map(f).reduce((a, b) => (b.length > a.length ? b : a));
+  const opciones = ps.flatMap((p) => [p.correcta, ...p.incorrectas]).sort((a, b) => b.length - a.length);
+  const peor: Pregunta = {
+    id: 'peor',
+    nivel: 1,
+    categoria: 'prueba',
+    pregunta: larga((p) => p.pregunta),
+    correcta: opciones[0],
+    incorrectas: [opciones[1], opciones[2], opciones[3]],
+    explicacion: larga((p) => p.explicacion),
+  };
+  return { ...BANCO, preguntas: [peor, { ...peor, id: 'peor-2' }] };
+}
+
+/** La partida del quiz con esa pregunta, en un hueco del tamano EXACTO que le deja el menu. */
+function QuizPeor({ ancho, alto }: { ancho: number; alto: number }) {
+  const banco = useMemo(bancoPeor, []);
+  const [estado, setEstado] = useState(() => nuevaPartida(banco, [], Math.random));
+  return (
+    <View style={{ width: ancho, height: alto, alignSelf: 'center' }}>
+      <Partida estado={estado} setEstado={(f) => setEstado((e) => f(e) ?? e)} onFinish={() => {}} banco={banco} />
+    </View>
+  );
+}
 
 // 56 px de barra de arriba y 64 de pestanas: lo que la app real le quita a la pantalla del juego.
 export default function VerificarJuego() {
+  const p = useLocalSearchParams<{ quiz?: string; ancho?: string; alto?: string }>();
+  if (p.quiz === 'peor') return <QuizPeor ancho={Number(p.ancho)} alto={Number(p.alto)} />;
   return (
     <View style={{ flex: 1, paddingTop: 56, paddingBottom: 64, backgroundColor: '#F7F1E6' }}>
       <MenuMinijuegos rutaId={null} nombreRuta="Prueba" />
@@ -184,6 +230,10 @@ async function abrirChrome(chrome, perfil, url, { ancho, alto }) {
         await api.inclinarMovil(0);
       }
       await cdp('Page.navigate', { url });
+    },
+    /** Otra pagina en la misma pestana (con la emulacion ya puesta). */
+    async ir(otra) {
+      await cdp('Page.navigate', { url: otra });
     },
     /**
      * El movil girado `grados` de lado (como un volante), en vertical: positivo = a la DERECHA.
@@ -500,6 +550,69 @@ async function recorrerCana(chrome, perfil, url, tamano) {
 }
 
 /**
+ * Lo que le sobra al contenedor con scroll del quiz (0 = cabe) y si `objetivo`
+ * (aria-label o texto) queda entero dentro de el, o sea, a la vista sin desplazar.
+ */
+const medirQuiz = (objetivo) => `(() => {
+  const escalera = document.querySelector('[aria-label^="Pregunta "]');
+  let sc = escalera;
+  while (sc && !(/(auto|scroll)/.test(getComputedStyle(sc).overflowY))) sc = sc.parentElement;
+  if (!sc) return null;
+  const q = ${JSON.stringify(objetivo)};
+  const e = [...document.querySelectorAll('[aria-label]')].find((x) => x.getAttribute('aria-label').startsWith(q))
+    ?? [...document.querySelectorAll('body *')].find((x) => x.children.length === 0 && (x.innerText || '').trim().startsWith(q));
+  const r = e && e.getBoundingClientRect();
+  const c = sc.getBoundingClientRect();
+  return { scroll: sc.scrollHeight - sc.clientHeight, visible: !!r && r.top >= c.top && r.bottom <= c.bottom + 0.5,
+    hueco: [Math.round(c.width), Math.round(sc.clientHeight)] };
+})()`;
+
+/**
+ * ¿Quien quiere ser cervecero? tiene que caber sin scroll. Con una pregunta al
+ * azar no se demuestra nada (casi todas son cortas), asi que:
+ *  1. se abre en el menu de verdad y se mide el HUECO que le deja la app;
+ *  2. en ese mismo hueco se monta la partida con una pregunta hecha con los
+ *     textos MAS LARGOS del banco (`bancoPeor`, en la pantalla de prueba) y se
+ *     mide en cada momento: con la pregunta, al elegir, al plantarse y al revelar.
+ */
+async function recorrerQuiz(chrome, perfil, url, tamano) {
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  try {
+    await c.navegar({ movil: true });
+    await c.clic('Jugar a ¿Quién', 80);
+    // "Jugar" se activa al leer el almacen: se insiste hasta que sale la partida.
+    if (!(await c.hasta('Plantarme con', { tocar: 'Jugar', limite: 15000 }))) throw new Error('no empieza la partida');
+    const real = await c.ev(medirQuiz('Plantarme'));
+    await c.foto('quiz-real');
+
+    await c.ir(`${url}?quiz=peor&ancho=${real.hueco[0]}&alto=${real.hueco[1]}`);
+    if (!(await c.hasta('Plantarme con', { limite: 30000 }))) throw new Error('no carga la partida de prueba');
+    await esperar(500);
+    const pregunta = await c.ev(medirQuiz('Plantarme con'));
+    await c.foto('quiz-peor-1-pregunta');
+    await c.clic('Respuesta A');
+    await esperar(300);
+    const elegida = await c.ev(medirQuiz('¿Respuesta definitiva?'));
+    await c.foto('quiz-peor-2-elegida');
+    await c.clic('Plantarme');
+    await esperar(300);
+    const plantando = await c.ev(medirQuiz('Sí, plantarme'));
+    await c.foto('quiz-peor-3-plantando');
+    await c.clic('Seguir jugando');
+    await esperar(300);
+    await c.clic('¿Respuesta definitiva?');
+    if (!(await c.hasta('Siguiente|Ver resultado', { limite: 8000 }))) throw new Error('no se revela la respuesta');
+    await esperar(300);
+    const revelada = await c.ev(medirQuiz((await c.texto()).includes('Siguiente') ? 'Siguiente' : 'Ver resultado'));
+    await c.foto('quiz-peor-4-revelada');
+    return { real: real.scroll, hueco: real.hueco, pregunta, elegida, plantando, revelada };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
+/**
  * Un "Ocupado" de mentira: la app lo carga en el iframe en vez del juego de Godot (40 MB
  * y depende de GitHub Pages). Avisa de que se gano como el juego real
  * (scripts/core/app_bridge.gd en weleloable/ocupado): 4,5 °C -> 90 puntos. Se sirve en
@@ -637,8 +750,8 @@ async function main() {
       const perfil = mkdtempSync(join(tmpdir(), 'rb-chrome-'));
       console.log(`\n${tamano.nombre} (${tamano.ancho}x${tamano.alto}): recorriendo el juego (~1 min)...`);
       let r;
-      // SOLO_CANA=1 se salta Maestro Cervecero (para iterar sobre La Cana sin esperar el otro juego).
-      if (process.env.SOLO_CANA || process.env.SOLO_OCUPADO) console.log('SOLO_CANA / SOLO_OCUPADO: Maestro Cervecero no se recorre');
+      // SOLO_CANA / SOLO_OCUPADO / SOLO_QUIZ: para iterar sobre un juego sin esperar a los demas.
+      if (!HACER.maestro) console.log('SOLO_*: Maestro Cervecero no se recorre');
       else try {
         r = await recorrer(chrome, perfil, `http://127.0.0.1:${port}/verificar-juego`, tamano);
       } catch (e) {
@@ -669,7 +782,7 @@ async function main() {
         if (!ok) fallos += 1;
       }
 
-      if (!process.env.SOLO_OCUPADO) {
+      if (HACER.cana) {
       console.log(`${tamano.nombre}: La Caña Perfecta con tactil y sensor emulados...`);
       let k;
       try {
@@ -699,6 +812,28 @@ async function main() {
       }
       }
 
+      console.log(`${tamano.nombre}: ¿Quién quiere ser cervecero?, con los textos más largos...`);
+      let q;
+      try {
+        q = await recorrerQuiz(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
+      } catch (e) {
+        console.log(`FALLA  no se pudo jugar al quiz: ${e.message}`);
+        fallos += 1;
+        continue;
+      }
+      console.log(JSON.stringify(q));
+      for (const [nombre, ok] of [
+        ['quiz: con una pregunta del banco, cabe sin scroll', q.real === 0],
+        ['quiz (peor caso): con la pregunta, sin scroll y "Plantarme" a la vista', q.pregunta.scroll === 0 && q.pregunta.visible],
+        ['quiz (peor caso): al elegir, sin scroll y "Sí, definitiva" a la vista', q.elegida.scroll === 0 && q.elegida.visible],
+        ['quiz (peor caso): al plantarse, sin scroll y la confirmacion a la vista', q.plantando.scroll === 0 && q.plantando.visible],
+        ['quiz (peor caso): al revelar, sin scroll y el boton de seguir a la vista', q.revelada.scroll === 0 && q.revelada.visible],
+      ]) {
+        console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+        if (!ok) fallos += 1;
+      }
+
+      if (!HACER.ocupado) continue;
       console.log(`${tamano.nombre}: Ocupado en horizontal...`);
       let o;
       try {

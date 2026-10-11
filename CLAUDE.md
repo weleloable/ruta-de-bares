@@ -921,6 +921,17 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   encuentra la jarra por `testID="vaso-cana"` (la palanca y el "mundo" tambien
   giran) y comprueba con `elementsFromPoint` que la punta del chorro cae dentro
   del interior; comprobado que falla con la formula vieja.
+- **¿Quien quiere ser cervecero? cabe sin scroll con la pregunta MAS LARGA**
+  (`src/features/quiz/`, `Partida` en `QuienQuiereSerCervecero.tsx`). La
+  primera version anadia "¿Respuesta definitiva?" DEBAJO de las opciones y
+  echaba fuera comodines y Plantarme (90 px de mas a 808 de ventana, con el
+  reloj corriendo). Ahora la parte de abajo es una fila de alto fijo cuyo
+  contenido cambia (Plantarme / Plantarme + Si, definitiva / confirmar
+  plantarse) y al revelar el resultado ocupa ese sitio; la respuesta buena ya
+  sale en verde, no se repite en texto. Con preguntas al azar no se demuestra
+  nada (casi todas son cortas): `verificar:juego` mide el hueco que deja el
+  menu y monta ahi la partida con los textos mas largos del banco (`bancoPeor`).
+  Si se anaden preguntas mas largas, esa prueba es la que avisa.
 - **Ocupado (escape room del baño) NO vive en este repo** (`juegos/ocupado/`):
   es un juego de Godot 4 en `weleloable/ocupado`, que se exporta a web y se
   publica en su propio GitHub Pages (`https://weleloable.github.io/ocupado/`;
