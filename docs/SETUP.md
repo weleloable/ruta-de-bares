@@ -270,6 +270,13 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    racha: tres sellos seguidos de la misma casa en un bar dan bonus a la casa.
    Rehace `puntos_por_sello()`, asi que la 0044 ya **no se vuelve a pegar**. Se
    puede pegar dos veces.
+46. [`supabase/migrations/0046_qr_social.sql`](../supabase/migrations/0046_qr_social.sql)
+   y **Run**, despues de la 0045 y **ANTES de desplegar la app**. QR social: el
+   QR temporal de cada persona (`qr_codigos`, caduca al minuto) y los
+   encuentros entre gente de la misma casa (`encuentros`, `qr_escanear`): una
+   vez por pareja y ruta, con tope por persona (`routes.qr_max`, 5) y solo
+   durante la ruta (quien administra puede probarlo cuando quiera). Se puede
+   pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

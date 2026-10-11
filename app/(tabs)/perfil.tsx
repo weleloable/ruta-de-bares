@@ -29,6 +29,7 @@ import {
 import { useInstalarApp } from '../../src/lib/pwaInstalar';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 import type { MyRestrictionsRow } from '../../src/types/database';
+import { QrSocial } from '../../src/features/casas/QrSocial';
 import { TarjetaCasa } from '../../src/features/casas/TarjetaCasa';
 
 export default function PerfilScreen() {
@@ -297,6 +298,7 @@ export default function PerfilScreen() {
         </Card>
 
         <TarjetaCasa />
+        <QrSocial />
 
         {error ? <Banner tone="error">{error}</Banner> : null}
         {exito ? <Banner tone="success">{exito}</Banner> : null}

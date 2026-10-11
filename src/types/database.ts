@@ -49,6 +49,8 @@ export type RouteRow = {
   variedad_max: number;
   /** La racha de casa puede puntuar mas de una vez por bar (0045). */
   racha_repetible: boolean;
+  /** Encuentros por QR que puntuan por persona en la ruta (0046). */
+  qr_max: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -488,6 +490,21 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      /** Tus encuentros (0046): solo lectura, los apunta `qr_escanear`. */
+      encuentros: {
+        Row: {
+          id: string;
+          route_id: string;
+          tipo: string;
+          usuarios: string[];
+          house: string;
+          puntua: boolean;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       /** Solo lectura desde la app: la escribe el servidor (0043). */
       user_houses: {
         Row: UserHouseRow;
@@ -517,6 +534,7 @@ export type Database = {
           | 'consumo_por_ruta'
           | 'variedad_max'
           | 'racha_repetible'
+          | 'qr_max'
           | 'created_at'
           | 'updated_at'
         >;
@@ -669,6 +687,20 @@ export type Database = {
       registrar_consumicion: {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
+      };
+      /** Tu QR temporal y tu ultimo encuentro reciente (0046). */
+      qr_mi_codigo: {
+        Args: Record<string, never>;
+        Returns: {
+          codigo: string;
+          caduca: string;
+          ultimo: { id: string; at: string; casa: string; puntua: boolean; puntos: number; con: string | null } | null;
+        };
+      };
+      /** Escanea el QR de alguien de tu casa en la ruta (0046). */
+      qr_escanear: {
+        Args: { p_route_id: string; p_codigo: string };
+        Returns: { puntos: number; casa: string; puntua: boolean; con: string | null };
       };
       /** Puntos de las cuatro casas en una ruta (0044). */
       casas_ranking: {

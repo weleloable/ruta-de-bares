@@ -20,8 +20,24 @@ export function DescubrimientoCasa() {
   return <AnimacionCasa casa={casa} visible={!vista} onCerrar={() => void marcarVista()} />;
 }
 
-/** La animacion en si, sin saber de donde sale la casa (se puede ensenar sola). */
-export function AnimacionCasa({ casa, visible, onCerrar }: { casa: IdCasa; visible: boolean; onCerrar: () => void }) {
+/** Los textos de la animacion; por defecto, los de descubrir tu casa. */
+export type TextosAnimacion = { antes: string; titulo?: string; lema?: string; explica: string; boton: string };
+
+/**
+ * La animacion en si, sin saber de donde sale la casa (se puede ensenar sola).
+ * Con otros `textos` sirve para celebrar (el encuentro por QR, 0046).
+ */
+export function AnimacionCasa({
+  casa,
+  visible,
+  onCerrar,
+  textos,
+}: {
+  casa: IdCasa;
+  visible: boolean;
+  onCerrar: () => void;
+  textos?: TextosAnimacion;
+}) {
   const { width, height } = useWindowDimensions();
 
   const escala = useRef(new Animated.Value(0)).current;
@@ -63,6 +79,12 @@ export function AnimacionCasa({ casa, visible, onCerrar }: { casa: IdCasa; visib
   }, [visible, escala, giro, texto, confeti]);
 
   const c = CASAS[casa];
+  const t = textos ?? {
+    antes: 'Tu casa es…',
+    lema: `«${c.lema}»`,
+    explica: 'Todo lo que consigas en la ruta suma para tu casa. ¡A por las otras tres!',
+    boton: '¡Vamos!',
+  };
   const rotacion = giro.interpolate({ inputRange: [0, 1], outputRange: ['-720deg', '0deg'] });
 
   return (
@@ -90,22 +112,20 @@ export function AnimacionCasa({ casa, visible, onCerrar }: { casa: IdCasa; visib
           );
         })}
 
-        <Animated.Text style={[styles.antes, { color: c.detalle, opacity: texto }]}>Tu casa es…</Animated.Text>
+        <Animated.Text style={[styles.antes, { color: c.detalle, opacity: texto }]}>{t.antes}</Animated.Text>
         <Animated.View style={{ transform: [{ scale: escala }, { rotate: rotacion }] }}>
           <Escudo casa={casa} tamano={Math.min(180, width * 0.45)} />
         </Animated.View>
         <Animated.View style={[styles.textos, { opacity: texto }]}>
-          <Text style={[styles.nombre, { color: c.texto }]}>{c.nombre}</Text>
-          <Text style={[styles.lema, { color: c.detalle }]}>«{c.lema}»</Text>
-          <Text style={[styles.explica, { color: c.texto }]}>
-            Todo lo que consigas en la ruta suma para tu casa. ¡A por las otras tres!
-          </Text>
+          <Text style={[styles.nombre, { color: c.texto }]}>{t.titulo ?? c.nombre}</Text>
+          {t.lema ? <Text style={[styles.lema, { color: c.detalle }]}>{t.lema}</Text> : null}
+          <Text style={[styles.explica, { color: c.texto }]}>{t.explica}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={onCerrar}
             style={({ pressed }) => [styles.boton, { backgroundColor: c.detalle }, pressed && styles.pulsado]}
           >
-            <Text style={[styles.botonTexto, { color: c.oscuro }]}>¡Vamos!</Text>
+            <Text style={[styles.botonTexto, { color: c.oscuro }]}>{t.boton}</Text>
           </Pressable>
         </Animated.View>
       </View>
