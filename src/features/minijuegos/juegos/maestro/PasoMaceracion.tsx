@@ -1,17 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { colors, radius, space, typography } from '../../../../lib/theme';
+import { colors, radius, space } from '../../../../lib/theme';
 import { feedback } from '../../feedback';
-import { avanzar, calentar, DURACION, INICIO, precision, TEMP_MAX, TEMP_MIN, terminado, ZONA, type Estado } from './maceracion';
+import { pasoDeTiempo } from '../../reloj';
+import { ALTO_OLLA, OllaMaceracion } from './OllaMaceracion';
+import { Termometro } from './Termometro';
+import {
+  avanzar,
+  calentar,
+  DURACION,
+  escalaOlla,
+  INICIO,
+  precision,
+  TEMP_MAX,
+  TEMP_MIN,
+  terminado,
+  ZONA,
+  type Estado,
+} from './maceracion';
 
-const ALTO = 240;
-const RANGO = TEMP_MAX - TEMP_MIN;
+// El paso tiene que caber en la pantalla SIN scroll (si no, el boton queda tapado
+// por "Siguiente"): la olla y el termometro se encogen juntos con `escalaOlla`;
+// lo demas tiene altos fijos y compactos.
+const ALTO = ALTO_OLLA;
+const ALTO_TEXTO = 24;
+const ALTO_TIEMPO = 40;
+const ALTO_ETIQUETA = 22;
+const ALTO_BOTON = 64;
+const HUECOS = 3;
+/** Lo que mide de mas de lo que suman las franjas (alineacion de la fila del tiempo, redondeos): medido con `npm run verificar:juego`. */
+const HOLGURA = 12;
+/** Todo lo del paso menos la olla y el termometro: lo que entra en la cuenta de `escalaOlla`. */
+export const ALTO_RESTO_PASO = ALTO_TEXTO + ALTO_TIEMPO + ALTO_ETIQUETA + ALTO_BOTON + HUECOS * space.sm + HOLGURA;
 /** Cada cuantos segundos cambia el rumbo de la deriva: mas seguido seria un temblor, no una deriva. */
 const CAMBIO_RUMBO = 0.6;
 const DT_MAX = 0.05;
 
-const pos = (temp: number) => ((temp - TEMP_MIN) / RANGO) * ALTO;
 
 function veredicto(p: number): string {
   if (p < 0.4) return 'Agua tibia';
@@ -23,6 +48,8 @@ function veredicto(p: number): string {
 export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number) => void }) {
   const [estado, setEstado] = useState<Estado>(INICIO);
   const [empezado, setEmpezado] = useState(false);
+  // Cuenta de toques: la olla da una llamarada cada vez que cambia.
+  const [pulsos, setPulsos] = useState(0);
 
   const estadoRef = useRef<Estado>(INICIO);
   const empezadoRef = useRef(false);
@@ -37,7 +64,7 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
     let proximoCambio = 0;
     const bucle = () => {
       const ahora = Date.now();
-      const dt = Math.min((ahora - ultimo) / 1000, DT_MAX);
+      const dt = pasoDeTiempo(ahora, ultimo, DT_MAX);
       ultimo = ahora;
       // El reloj y la deriva no corren hasta el primer toque.
       if (empezadoRef.current && !terminado(estadoRef.current)) {
@@ -67,39 +94,38 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
     }
     estadoRef.current = calentar(estadoRef.current);
     setEstado(estadoRef.current);
+    setPulsos((n) => n + 1);
     feedback.toque();
   };
 
   const fin = terminado(estado);
-  const enZona = estado.temp >= ZONA.min && estado.temp <= ZONA.max;
   const restante = Math.max(DURACION - estado.t, 0);
   const p = precision(estado);
 
+  const { height: altoVentana } = useWindowDimensions();
+  const escala = escalaOlla(altoVentana, ALTO_RESTO_PASO, ALTO);
+  const altoTermometro = ALTO * escala;
+
   return (
     <View style={styles.raiz}>
-      <Text style={typography.muted}>
+      <Text style={styles.texto} numberOfLines={1}>
         {fin
           ? `${veredicto(p)}: ${Math.round(p * 100)} % del tiempo en la zona`
           : empezado
             ? 'Mantén la aguja en la zona verde'
-            : 'Toca para calentar. El reloj empieza con el primer toque.'}
+            : 'Toca Calentar para empezar el reloj.'}
       </Text>
 
+      <View style={styles.cabecera}>
+        <Text style={styles.tiempo}>{Math.ceil(restante)} s</Text>
+        <Text style={styles.zonaTexto}>Zona: {ZONA.min}–{ZONA.max} °C</Text>
+      </View>
+
+      {/* Olla a la izquierda y termometro a la derecha, centrados: la olla se ve de reojo
+          mientras se mira la aguja. */}
       <View style={styles.fila}>
-        <View style={styles.termometro}>
-          <View
-            style={[
-              styles.zona,
-              { bottom: pos(ZONA.min), height: pos(ZONA.max) - pos(ZONA.min) },
-            ]}
-          />
-          <View style={[styles.aguja, { bottom: pos(estado.temp) - AGUJA / 2 }, enZona && styles.agujaBien]} />
-          <Text style={[styles.grados, { bottom: pos(estado.temp) - 10 }]}>{Math.round(estado.temp)} °C</Text>
-        </View>
-        <View style={styles.lateral}>
-          <Text style={styles.tiempo}>{Math.ceil(restante)} s</Text>
-          <Text style={typography.muted}>Zona: {ZONA.min}–{ZONA.max} °C</Text>
-        </View>
+        <OllaMaceracion temp={estado.temp} pulsos={pulsos} escala={escala} />
+        <Termometro temp={estado.temp} min={TEMP_MIN} max={TEMP_MAX} zona={ZONA} alto={altoTermometro} />
       </View>
 
       <Pressable
@@ -115,36 +141,16 @@ export function PasoMaceracion({ onTerminar }: { onTerminar: (precision: number)
   );
 }
 
-const AGUJA = 26;
-
 const styles = StyleSheet.create({
-  raiz: { gap: space.md },
-  fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xl },
-  termometro: {
-    width: 32,
-    height: ALTO,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    // El texto de grados se sale a la derecha del carril.
-    overflow: 'visible',
-  },
-  zona: { position: 'absolute', left: 0, right: 0, backgroundColor: colors.green, opacity: 0.55, borderRadius: radius.sm },
-  aguja: {
-    position: 'absolute',
-    left: 3,
-    width: AGUJA,
-    height: AGUJA,
-    borderRadius: AGUJA / 2,
-    backgroundColor: colors.stamp,
-    borderWidth: 3,
-    borderColor: colors.white,
-  },
-  agujaBien: { backgroundColor: colors.green },
-  grados: { position: 'absolute', left: 44, fontSize: 16, fontWeight: '800', color: colors.ink, width: 70 },
-  lateral: { gap: space.xs, minWidth: 120 },
-  tiempo: { fontSize: 44, fontWeight: '800', color: colors.beerDark },
+  raiz: { gap: space.sm },
+  texto: { height: ALTO_TEXTO, lineHeight: ALTO_TEXTO, fontSize: 14, color: colors.inkSoft },
+  zonaTexto: { fontSize: 14, color: colors.inkSoft },
+  cabecera: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  // El margen derecho deja sitio a los grados, que se salen del carril del termometro.
+  fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingRight: 64 },
+  tiempo: { fontSize: 36, lineHeight: ALTO_TIEMPO, fontWeight: '800', color: colors.beerDark },
   boton: {
-    minHeight: 88,
+    height: ALTO_BOTON,
     borderRadius: radius.lg,
     backgroundColor: colors.beer,
     borderWidth: 1,

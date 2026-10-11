@@ -13,13 +13,15 @@ export type ResultadoLupulo = {
 
 /**
  * Lo que el jugador ha ido decidiendo o consiguiendo. `null` = todavia no se ha
- * jugado ese paso. `maceracion` es la precision (0..1, tiempo en la zona verde).
+ * jugado ese paso. `maceracion` es la precision (0..1, tiempo en la zona verde);
+ * `siembra`, lo cerca que se echo la levadura de su temperatura (0..1, siembra.ts).
  */
 export type Receta = {
   malta: MaltaId | null;
   maceracion: number | null;
   lupulo: ResultadoLupulo | null;
   levadura: LevaduraId | null;
+  siembra: number | null;
 };
 
 export type RecetaCompleta = {
@@ -27,14 +29,17 @@ export type RecetaCompleta = {
   maceracion: number;
   lupulo: ResultadoLupulo;
   levadura: LevaduraId;
+  siembra: number;
 };
 
-export const RECETA_VACIA: Receta = { malta: null, maceracion: null, lupulo: null, levadura: null };
+export const RECETA_VACIA: Receta = { malta: null, maceracion: null, lupulo: null, levadura: null, siembra: null };
 
 /** La receta con todo relleno, o null si aun falta algo (no se puede calcular la cerveza). */
 export function recetaCompleta(r: Receta): RecetaCompleta | null {
-  if (r.malta === null || r.maceracion === null || r.lupulo === null || r.levadura === null) return null;
-  return { malta: r.malta, maceracion: r.maceracion, lupulo: r.lupulo, levadura: r.levadura };
+  if (r.malta === null || r.maceracion === null || r.lupulo === null || r.levadura === null || r.siembra === null) {
+    return null;
+  }
+  return { malta: r.malta, maceracion: r.maceracion, lupulo: r.lupulo, levadura: r.levadura, siembra: r.siembra };
 }
 
 /** Solo se puede avanzar cuando el paso tiene lo que necesita. */
@@ -42,7 +47,8 @@ export function puedeAvanzar(paso: Paso, receta: Receta): boolean {
   if (paso === 'malta') return receta.malta !== null;
   if (paso === 'maceracion') return receta.maceracion !== null;
   if (paso === 'lupulo') return receta.lupulo !== null;
-  if (paso === 'fermentacion') return receta.levadura !== null;
+  // Elegir levadura ya no basta: hay que enfriar y sembrarla.
+  if (paso === 'fermentacion') return receta.levadura !== null && receta.siembra !== null;
   return true;
 }
 

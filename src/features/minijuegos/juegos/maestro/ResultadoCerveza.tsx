@@ -4,8 +4,10 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card } from '../../../../components/ui';
 import { colors, radius, space, typography } from '../../../../lib/theme';
+import type { MaltaId } from './datos';
 import { veredicto, type Cerveza } from './estilo';
 import { NOMBRE_MAX, nombreFinal, sugerirNombre } from './nombres';
+import { fermentacion } from './siembra';
 import { VasoCerveza } from './VasoCerveza';
 
 /**
@@ -15,13 +17,16 @@ import { VasoCerveza } from './VasoCerveza';
  */
 export function ResultadoCerveza({
   cerveza,
-  color,
+  malta,
+  siembra,
   jugador,
   onTerminar,
 }: {
   cerveza: Cerveza;
-  /** Color del liquido: el de la malta. */
-  color: string;
+  /** La malta elegida: decide el vaso. */
+  malta: MaltaId;
+  /** Precision de la siembra (0..1): se ensena como la fermentacion. */
+  siembra: number;
   jugador: string;
   onTerminar: (nombre: string) => void;
 }) {
@@ -37,7 +42,7 @@ export function ResultadoCerveza({
   return (
     <View style={styles.raiz}>
       <Card style={styles.tarjeta}>
-        <VasoCerveza color={color} alto={150} ancho={92} />
+        <VasoCerveza malta={malta} alto={180} ancho={110} />
 
         <View style={styles.campoFila}>
           <Ionicons name="pencil" size={18} color={colors.inkFaint} />
@@ -69,6 +74,7 @@ export function ResultadoCerveza({
           <Dato valor={`${cerveza.abv.toString().replace('.', ',')} %`} etiqueta="Graduación" />
           <Dato valor={`${cerveza.ibu} IBU`} etiqueta="Amargor" />
           <Dato valor={cerveza.cuerpo} etiqueta="Cuerpo" />
+          <Dato valor={fermentacion(siembra)} etiqueta="Fermentación" />
         </View>
 
         <View style={styles.nota}>
@@ -109,7 +115,15 @@ const styles = StyleSheet.create({
   campo: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.ink, paddingVertical: space.sm },
   dado: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   estilo: { fontSize: 15, fontWeight: '800', color: colors.beerDark, letterSpacing: 0.4 },
-  datos: { flexDirection: 'row', gap: space.lg, alignSelf: 'stretch', justifyContent: 'space-around' },
+  // Cuatro datos: en un movil estrecho pasan a dos filas en vez de salirse.
+  datos: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: space.md,
+    rowGap: space.sm,
+    alignSelf: 'stretch',
+    justifyContent: 'space-around',
+  },
   dato: { alignItems: 'center', gap: 2 },
   datoValor: { fontSize: 17, fontWeight: '800', color: colors.ink },
   nota: { alignItems: 'center' },

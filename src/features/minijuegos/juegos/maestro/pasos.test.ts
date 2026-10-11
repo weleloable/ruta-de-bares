@@ -32,7 +32,9 @@ test('cada paso exige lo suyo para avanzar', () => {
   assert.equal(puedeAvanzar('lupulo', RECETA_VACIA), false);
   assert.equal(puedeAvanzar('lupulo', { ...RECETA_VACIA, lupulo: { amargor: 0, aroma: 0 } }), true);
   assert.equal(puedeAvanzar('fermentacion', RECETA_VACIA), false);
-  assert.equal(puedeAvanzar('fermentacion', { ...RECETA_VACIA, levadura: 'ale' }), true);
+  // Elegir levadura no basta: hay que sembrarla (y sembrarla mal, 0, tambien es haberlo jugado).
+  assert.equal(puedeAvanzar('fermentacion', { ...RECETA_VACIA, levadura: 'ale' }), false);
+  assert.equal(puedeAvanzar('fermentacion', { ...RECETA_VACIA, levadura: 'ale', siembra: 0 }), true);
 });
 
 test('numeroPaso va de 1 a 4 y el resultado no tiene', () => {
@@ -42,8 +44,10 @@ test('numeroPaso va de 1 a 4 y el resultado no tiene', () => {
 
 test('recetaCompleta solo devuelve algo con todo relleno (0 cuenta como relleno)', () => {
   assert.equal(recetaCompleta(RECETA_VACIA), null);
-  const casi = { malta: 'negra', maceracion: 0.5, lupulo: null, levadura: 'ale' } as const;
+  const casi = { malta: 'negra', maceracion: 0.5, lupulo: null, levadura: 'ale', siembra: 1 } as const;
   assert.equal(recetaCompleta(casi), null);
-  const todo = { malta: 'negra', maceracion: 0, lupulo: { amargor: 0, aroma: 0 }, levadura: 'ale' } as const;
+  const sinSembrar = { malta: 'negra', maceracion: 0, lupulo: { amargor: 0, aroma: 0 }, levadura: 'ale', siembra: null } as const;
+  assert.equal(recetaCompleta(sinSembrar), null);
+  const todo = { malta: 'negra', maceracion: 0, lupulo: { amargor: 0, aroma: 0 }, levadura: 'ale', siembra: 0 } as const;
   assert.deepEqual(recetaCompleta(todo), todo);
 });

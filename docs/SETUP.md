@@ -203,6 +203,15 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**. La pantalla de Estadisticas de "Detras de la barra" (solo admins):
    totales de una ruta, nunca nada por persona. Sin ella, la pantalla abre y
    dice que no puede leer las cifras.
+38. [`supabase/migrations/0038_siembra.sql`](../supabase/migrations/0038_siembra.sql)
+   y **Run**, despues de la 0037 y **ANTES de desplegar la app**. El paso 4 de
+   Maestro Cervecero pasa a ser "enfriar y sembrar" y entra en la nota (30
+   maceracion, 25 amargor, 25 aroma, 20 siembra). Anade `maestro_beers.siembra`
+   y las funciones `maestro_calcular_cerveza_v2` y `maestro_submit_beer_v2`; las
+   de la 0034 se quedan para quien tenga la app vieja en cache. Si la app nueva
+   llega antes, la cerveza se juega igual pero al guardarla en la ruta avisa de
+   que falta una migracion. Rehace `export_my_data()`, asi que despues de esta
+   la 0034 ya **no se vuelve a pegar**.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

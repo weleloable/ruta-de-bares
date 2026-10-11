@@ -118,6 +118,7 @@ supabase/
   migrations/0035_*.sql     bares propios compartidos entre admins (`catalog_bars`) y `route_bars.logo`
   migrations/0036_*.sql     los 14 bares originales y sus logos pasan a `catalog_bars` (GENERADA, ver scripts/semilla-catalogo/)
   migrations/0037_*.sql     estadisticas de una ruta para los admins (solo totales)
+  migrations/0038_*.sql     Maestro Cervecero: la siembra (paso 4) entra en la nota; funciones `_v2`
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -756,3 +757,70 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   embudo (PERSONAS por paso) y "como acaba la pregunta" (por CONEXION). Una al
   lado de la otra, 20 personas con un si y 13 sies (parejas) parecian
   contradecirse. Si vuelven, que cuenten las dos lo mismo o lo digan muy claro.
+- **Los pasos de Maestro Cervecero con olla tienen que caber en la pantalla SIN
+  scroll** (`PasoMaceracion.tsx`, `PasoLupulo.tsx`, `escalaOlla` en
+  `maceracion.ts`): el paso comparte pantalla con la barra de arriba, las
+  pestanas, la cabecera del juego y los botones Siguiente / Atras, y a 808 px de
+  ventana solo le quedan ~400. Si no cabe, el boton queda tapado por Siguiente
+  (paso con el Calentar de la maceracion y con el boton del lupulo). Por eso la
+  olla (y el termometro) se ESCALAN con el alto de la ventana (`escalaOlla`, de
+  0,35 a 1) y todo lo demas tiene altos fijos y compactos: una sola linea de
+  texto, sin la fila "Inicio / Final". `ALTO_APP_RESERVADO` (412) es una MEDIDA,
+  no un calculo: si se toca la pantalla de los juegos (cabecera, botones,
+  barra), hay que correr `npm run verificar:juego`, que recorre el juego en
+  Chrome headless en tres alturas (740, 808, 915) y mide scroll y botones tapados
+  (~4 min, periodico, no del gate). Por debajo de ~720 px de ventana ni con la
+  olla al minimo cabe y queda un poco de scroll. En el hervido el boton va
+  DEBAJO de la olla y las bolsitas de lupulo cuelgan sobre la barra.
+- **Paso 4 de Maestro Cervecero: "enfriar y sembrar", y cuenta en la nota**
+  (`siembra.ts`, `PasoSiembra.tsx`, migracion `0038`). Se elige ale o lager,
+  se MANTIENE pulsado el grifo de agua fria (el mosto sale a 96 grados) y hay
+  que echar la levadura en SU ventana (ale 18-22, lager 8-12). El truco es la
+  inercia: al soltar sigue enfriando, asi que hay que soltar antes; la pista
+  "¡Suelta!" sale cuando `inerciaRestante` ya llega (si sobra facil, es lo
+  primero que quitar). La nota pasa de 40/30/30 a **30/25/25/20** (maceracion,
+  amargor, aroma, siembra). **El servidor recalcula la nota**: por eso hay
+  `maestro_calcular_cerveza_v2` y `maestro_submit_beer_v2` NUEVAS y no se tocan
+  las de la 0034, que siguen sirviendo (con la nota vieja) a quien tenga la app
+  en cache; sobrecargar el mismo nombre con un argumento por defecto daria
+  "function is not unique". `tests/migration-0038.test.ts` compara la v2 con
+  `calcularCerveza` en ~117.000 combinaciones y `migration-0034` sigue
+  vigilando la v1 con `calcularPuntuacionSinSiembra`. Cambiar la levadura
+  borra la siembra (otra ventana). `Termometro.tsx` es el de la maceracion
+  sacado a componente; la olla admite `zona`, `fuego`, `enfriando` y `burbujas`.
+  **Riesgo abierto, a proposito**: la `maestro_submit_beer` de la 0034 sigue
+  concedida a `authenticated`, asi que un cliente MODIFICADO puede guardar una
+  cerveza con la nota de antes (40/30/30), saltandose la siembra (hasta +20
+  puntos en la lista de cervezas; el ranking no cambia, que ya acepta la nota
+  del cliente). Se deja para no romper la app en cache; cuando ya no quede
+  nadie con la version vieja, una migracion le quita el `grant`.
+
+- **Los botones de MANTENER pulsado no son un Pressable en web**
+  (`src/features/minijuegos/BotonMantener.web.tsx`; nativo, `BotonMantener.tsx`
+  con `cancelable={false}`). React Native tiene UN solo "dueno" del toque: en La
+  Cana Perfecta, mantener "servir" con un dedo y mover el deslizador con otro no
+  funcionaba (o el deslizador no se movia, o le quitaba el toque al boton y este
+  "se despulsaba" a los 2-3 s, justo al ir a enderezar el vaso). En web el boton
+  escucha el dedo del navegador (Pointer Events + captura) y solo se suelta al
+  levantar ESE dedo; ademas `touch-action: none`, sin seleccion ni menu de
+  pulsacion larga (el navegador cancelaba el toque si el dedo se deslizaba).
+  Lo usan servir la cana y el grifo de la siembra. La franja del deslizador
+  tiene alto fijo: al pasar solo de sensor a deslizador, el boton no se mueve.
+  Al no ser Pressable hay que dar a mano lo que este daba: Espacio / Enter con
+  el foco, y un `click` sin dedo detras (doble toque de TalkBack / VoiceOver)
+  ALTERNA abrir y cerrar. Ojo: el navegador manda un `click` despues de
+  levantar el dedo; por eso `terminar` apunta la hora, o tras mantener mas de
+  0,7 s ese clic volveria a abrir. Limite conocido: en la cana, Espacio tambien
+  lo escucha `useTecladoCana` (para PC); dedo y tecla a la vez se pisan.
+- **El sensor de inclinacion en web NO usa expo-sensors**
+  (`useInclinacion.web.ts`; en nativo sigue `useInclinacion.ts` con el
+  acelerometro). En web, su "acelerometro" emite los ANGULOS de
+  `deviceorientation` en radianes (no la gravedad), espera un evento antes de
+  pedir el permiso (en iPhone no llega ninguno sin permiso) y lo pide tras un
+  `await`, fuera del toque. Aqui se lee `accelerationIncludingGravity` de
+  `devicemotion` con la MISMA formula que en nativo y el permiso se pide lo
+  primero. **Solo funciona con https**: en `http://<IP>` (probar el movil contra
+  el ordenador) Chrome ni expone el evento; la pantalla lo dice. Para probarlo
+  en Android por http: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+  con la URL; en iPhone, solo en la web publicada. `npm run verificar:juego`
+  emula el acelerometro (30 grados de movil = 30 de vaso) y los dos dedos.
