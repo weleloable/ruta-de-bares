@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../../components/ui';
 import { colors, radius, space, typography } from '../../../../lib/theme';
 import { BotonMantener } from '../../BotonMantener';
+import { EscenaCana } from './EscenaCana';
 import { feedback } from '../../feedback';
 import { pasoDeTiempo } from '../../reloj';
 import type { PropsJuego } from '../../tipos';
@@ -23,11 +24,10 @@ import {
   type Estado,
 } from './modelo';
 
-const ALTO_VASO = 260;
 /** Alto de la franja del deslizador / boton "Usar deslizador" (ver `control`). */
 const ALTO_CONTROL = 96;
-/** Del pico del grifo a la boca del vaso, en px (ver `grifo` y `escenario` en los estilos). */
-const CAIDA_A_LA_BOCA = 22;
+/** Lo que tarda el tirador en abrirse o cerrarse (constante de tiempo, s): se ve el gesto, no un salto. */
+const TAU_PALANCA = 0.07;
 /** Un fotograma largo (pestana en segundo plano) no debe llenar el vaso de golpe. */
 const DT_MAX = 0.05;
 
@@ -35,6 +35,10 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   const [estado, setEstado] = useState<Estado>(ESTADO_VACIO);
   const [sirviendo, setSirviendo] = useState(false);
   const [inclinado, setInclinado] = useState(0);
+  // Solo para el dibujo: el tirador moviendose y el reloj de las burbujas y el chorro.
+  const [animacion, setAnimacion] = useState({ palanca: 0, tiempo: 0 });
+  const palancaRef = useRef(0);
+  const tiempoRef = useRef(0);
   const { modo, motivo, objetivo, giro, avanzarGiro, empezar, usarManual, fijar } = useInclinacion();
 
   // Refs para el bucle: leer el estado de React dentro de rAF leeria uno viejo.
@@ -83,6 +87,9 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
         estadoRef.current = avanzar(estadoRef.current, dt, sirviendoRef.current, Math.abs(giro.current));
         setEstado(estadoRef.current);
         setInclinado(giro.current);
+        palancaRef.current += ((sirviendoRef.current ? 1 : 0) - palancaRef.current) * (1 - Math.exp(-dt / TAU_PALANCA));
+        tiempoRef.current += dt;
+        setAnimacion({ palanca: palancaRef.current, tiempo: tiempoRef.current });
         // Una sola vibracion al empezar a derramar, no una por fotograma.
         if (haDerramado(estadoRef.current) && !derramoRef.current) {
           derramoRef.current = true;
@@ -116,8 +123,6 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
 
   const haServido = inicioRef.current !== null;
   const derramando = sirviendo && estaLleno(estado);
-  const largoChorro = CAIDA_A_LA_BOCA + (1 - Math.min(total(estado), 1)) * ALTO_VASO * Math.cos((inclinado * Math.PI) / 180);
-  const alto = (fraccion: number) => Math.min(Math.max(fraccion, 0), 1) * ALTO_VASO;
 
   return (
     <View style={styles.raiz}>
@@ -129,24 +134,17 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
             {haDerramado(estado) ? 'Has derramado, pierdes puntos' : 'Llénalo hasta arriba, sin derramar'}
           </Text>
         )}
-        <View style={styles.columna}>
-          <View style={styles.grifo}>
-            <View style={styles.grifoCuerpo} />
-            <View style={styles.grifoPico} />
-          </View>
-
-          {/* Gira sobre la boca, no sobre la base: asi sigue bajo el grifo al inclinarse. Con el signo del sensor: inclinas el movil a la derecha y el vaso a la derecha. */}
-          <View style={[styles.vaso, { transform: [{ rotate: `${inclinado}deg` }], transformOrigin: 'top' }]}>
-            <View style={[styles.liquido, { height: alto(estado.liquido) }]} />
-            <View style={[styles.espuma, { bottom: alto(estado.liquido), height: alto(estado.espuma) }]} />
-          </View>
-          {/* Despues del vaso para pintarse encima; acaba en la superficie del liquido. */}
-          {sirviendo ? <View pointerEvents="none" style={[styles.chorro, { height: largoChorro }]} /> : null}
-        </View>
-        {/* Charco bajo el vaso: crece con lo derramado. */}
-        {haDerramado(estado) ? (
-          <View style={[styles.charco, { width: 40 + Math.min(estado.derramado / DERRAME_MAX, 1) * 180 }]} />
-        ) : null}
+        {/* Con el signo del sensor: inclinas el movil a la derecha y la jarra a la derecha. */}
+        <EscenaCana
+          inclinado={inclinado}
+          palanca={animacion.palanca}
+          tiempo={animacion.tiempo}
+          liquido={estado.liquido}
+          espuma={estado.espuma}
+          sirviendo={sirviendo}
+          derramando={derramando}
+          derramado={haDerramado(estado) ? estado.derramado / DERRAME_MAX : 0}
+        />
       </View>
 
       {modo === 'inicio' ? (
@@ -206,46 +204,8 @@ const styles = StyleSheet.create({
   motivo: { fontSize: 12, color: colors.inkSoft, textAlign: 'center' },
   raiz: { flex: 1, gap: space.md, justifyContent: 'flex-end' },
   escenario: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: space.sm },
-  // Columna propia y de tamano fijo: el chorro se coloca en absoluto dentro de ella.
-  columna: { alignItems: 'center', gap: space.sm },
-  grifo: { alignItems: 'center', height: 56 },
-  grifoCuerpo: { width: 80, height: 22, borderRadius: radius.sm, backgroundColor: colors.borderStrong },
-  grifoPico: { width: 16, height: 20, backgroundColor: colors.inkSoft },
-  chorro: {
-    position: 'absolute',
-    // Sale justo del pico: 22 (cuerpo del grifo) + 20 (pico).
-    top: 42,
-    left: '50%',
-    marginLeft: -4,
-    width: 8,
-    backgroundColor: colors.beer,
-    borderRadius: 4,
-    opacity: 0.9,
-  },
-  vaso: {
-    width: 140,
-    height: ALTO_VASO,
-    borderWidth: 3,
-    borderTopWidth: 0,
-    borderColor: colors.inkSoft,
-    borderBottomLeftRadius: radius.md,
-    borderBottomRightRadius: radius.md,
-    // Mas oscuro que la espuma (blanca): sobre el papel claro no se veria.
-    backgroundColor: colors.paperDeep,
-    overflow: 'hidden',
-  },
-  liquido: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.beer },
-  espuma: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white,
-    borderTopWidth: 2,
-    borderTopColor: colors.beerSoft,
-  },
   aviso: { textAlign: 'center', minHeight: 24 },
   avisoDerrame: { fontSize: 18, fontWeight: '800', color: colors.danger },
-  charco: { height: 10, borderRadius: radius.pill, backgroundColor: colors.beer, opacity: 0.85 },
   servir: {
     minHeight: 96,
     borderRadius: radius.lg,
