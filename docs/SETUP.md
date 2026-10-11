@@ -249,10 +249,10 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    y **Run**, despues de la 0042 y **ANTES de desplegar la app**. Las cuatro
    casas (Mahou, Cruzcampo, Estrella Galicia, Alhambra): tabla `user_houses`,
    que solo escribe el servidor. La casa se asigna al entrar por primera vez en
-   una ruta, equilibrando dentro de ella (Pablo... a Cruzcampo y Rodrigo... a
-   Estrella Galicia, por encima del equilibrio). Al pegarla, quien ya estaba en
-   alguna ruta recibe su casa y vera la animacion al abrir la app. Se puede
-   pegar dos veces (no reparte de nuevo).
+   una ruta, equilibrando dentro de ella (la 0050 quita la excepcion por
+   nombre que traia esta). Al pegarla, quien ya estaba en
+   alguna ruta recibe su casa y vera la animacion al abrir la app. Con la 0050
+   ya **no se vuelve a pegar**.
 44. [`supabase/migrations/0044_puntos_casas.sql`](../supabase/migrations/0044_puntos_casas.sql)
    y **Run**, despues de la 0043 y **ANTES de desplegar la app**. Puntos de las
    casas y ranking de la ruta en directo: `point_rules` (cuanto vale cada
@@ -299,6 +299,15 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    ganadora. Temporadas (`temporadas`, `routes.temporada_id`), reiniciar una
    ruta y el ranking historico. Si se borra una ruta con puntos sin cerrar, se
    cierra sola. Se puede pegar dos veces.
+50. [`supabase/migrations/0050_sin_excepcion_nombres.sql`](../supabase/migrations/0050_sin_excepcion_nombres.sql)
+   y **Run**, despues de la 0049. Quita la excepcion de casa por nombre (Pablo
+   y Rodrigo): la casa vuelve a ser solo equilibrio dentro de la ruta. A quien
+   ya tiene casa no se le toca. Se puede pegar dos veces.
+51. [`supabase/migrations/0051_cana_moderador.sql`](../supabase/migrations/0051_cana_moderador.sql)
+   y **Run**, despues de la 0050 y **ANTES de desplegar la app**. La lista de
+   La Cana y la ficha ensenan quien administra: una estrella junto al nombre y
+   la etiqueta "Moderador". Rehace `match_grid()`, asi que la 0040 ya **no se
+   vuelve a pegar**. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

@@ -165,6 +165,13 @@ export default function PersonaCana() {
           </View>
         </View>
 
+        {persona.es_admin ? (
+          <View style={styles.moderador} accessibilityLabel="Moderador">
+            <Ionicons name="star" size={14} color={colors.ink} />
+            <Text style={styles.moderadorTexto}>Moderador</Text>
+          </View>
+        ) : null}
+
         <Text style={[typography.body, styles.frase]}>{persona.bio}</Text>
 
         {persona.tag_ids.length > 0 ? (
@@ -297,6 +304,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   estadoTexto: { fontSize: 12, fontWeight: '700' },
+  moderador: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  moderadorTexto: { fontSize: 14, fontWeight: '800', color: colors.ink },
   frase: { fontSize: 17, lineHeight: 24 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   meGustaBloque: { gap: space.sm },

@@ -1,8 +1,9 @@
 -- Ruta de Bares - 0043: las cuatro casas (Mahou, Cruzcampo, Estrella Galicia, Alhambra).
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0042.
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists`, funciones
--- con `or replace` y el reparto de los que ya estaban solo toca a quien no
--- tiene casa).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * asignar_casa() la rehace la 0050 (quita la excepcion por nombre)
 --
 -- Que hace. Cada persona pertenece a una casa, para siempre (un admin puede
 -- cambiarla mas adelante, desde el panel). Es la base del sistema de puntos:
@@ -14,9 +15,9 @@
 --     cualquier alta en `route_members`), no al registrarse. Se elige la casa
 --     con menos gente DENTRO DE ESA RUTA; si empatan, a sorteo. Asi la primera
 --     ruta de cada uno sale lo mas igualada posible.
---   * Excepciones, por encima del equilibrio: si el nombre visible empieza por
---     "Pablo" va a Cruzcampo, y si empieza por "Rodrigo", a Estrella Galicia
---     (sin distinguir mayusculas ni tildes).
+--   * Excepciones, por encima del equilibrio (QUITADAS en la 0050): si el nombre
+--     visible empieza por "Pablo" va a Cruzcampo, y si empieza por "Rodrigo", a
+--     Estrella Galicia (sin distinguir mayusculas ni tildes).
 --   * Quien ya estaba en alguna ruta recibe casa ahora: ruta a ruta, por orden
 --     de creacion, y dentro de cada una por orden de llegada, con la misma regla.
 --     Quien no esta en ninguna ruta la recibira al entrar en la primera.

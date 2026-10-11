@@ -177,6 +177,8 @@ export type MatchGridRow = {
   my_vote: MatchVote | null;
   connection_id: string | null;
   unread_count: number;
+  /** Administra la app: se le ve como moderador, con una estrella (0051). */
+  es_admin: boolean;
 };
 
 export type MatchInboxRow = {

@@ -133,6 +133,8 @@ supabase/
   migrations/0047_*.sql     retos por ruta (`retos`, `retos_evaluar` por disparadores, `retos_mios`)
   migrations/0048_*.sql     panel "Casas y puntuaciones" (`casas_admin_*`, `house_changes`); rehace export_my_data()
   migrations/0049_*.sql     cierre de rutas (`casas_resultados`), temporadas, historico y pantalla de ganadora
+  migrations/0050_*.sql     quita la excepcion de casa por nombre (Pablo/Rodrigo)
+  migrations/0051_*.sql     `match_grid` devuelve `es_admin`: estrella y "Moderador" en La Cana
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)

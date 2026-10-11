@@ -83,7 +83,7 @@ export function TarjetaPersona({ persona, onPress }: { persona: MatchGridRow; on
     <View style={styles.celda}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${persona.display_name}, ${aspecto.texto}${noLeidos > 0 ? `, ${noLeidos} sin leer` : ''}`}
+        accessibilityLabel={`${persona.display_name}${persona.es_admin ? ', moderador' : ''}, ${aspecto.texto}${noLeidos > 0 ? `, ${noLeidos} sin leer` : ''}`}
         onPress={onPress}
         // Todas las tarjetas llevan el hueco del aro, aunque solo la conexion lo
         // pinte: asi la grilla no se descuadra al cambiar de estado.
@@ -113,16 +113,27 @@ export function TarjetaPersona({ persona, onPress }: { persona: MatchGridRow; on
               style={styles.foto}
             />
           </View>
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.nombre,
-              aspecto.nombreSobreColor ? { backgroundColor: aspecto.borde, color: colors.card } : null,
-              aspecto.apagada ? styles.nombreApagado : null,
-            ]}
-          >
-            {persona.display_name}
-          </Text>
+          <View style={[styles.filaNombre, aspecto.nombreSobreColor ? { backgroundColor: aspecto.borde } : null]}>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.nombre,
+                aspecto.nombreSobreColor ? { color: colors.card } : null,
+                aspecto.apagada ? styles.nombreApagado : null,
+              ]}
+            >
+              {persona.display_name}
+            </Text>
+            {persona.es_admin ? (
+              <Ionicons
+                name="star"
+                size={12}
+                color={aspecto.nombreSobreColor ? colors.card : aspecto.apagada ? colors.inkFaint : colors.ink}
+                accessibilityLabel="Moderador"
+                style={styles.estrella}
+              />
+            ) : null}
+          </View>
         </View>
 
         {aspecto.vaso ? (
@@ -176,7 +187,9 @@ const styles = StyleSheet.create({
   // La opacidad funciona en todas las plataformas; el gris, donde se soporta.
   apagada: { opacity: 0.45, filter: 'grayscale(1)' },
   foto: { width: '100%', aspectRatio: 1 },
-  nombre: { fontSize: 12, fontWeight: '700', color: colors.ink, paddingHorizontal: 6, paddingVertical: 4 },
+  filaNombre: { flexDirection: 'row', alignItems: 'center', paddingRight: 6 },
+  nombre: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.ink, paddingHorizontal: 6, paddingVertical: 4 },
+  estrella: { marginLeft: 2 },
   nombreApagado: { color: colors.inkFaint },
   marca: {
     position: 'absolute',

@@ -6,6 +6,7 @@
 --   * match_activate_en_ruta() la rehace la 0042
 --   * match_get_profile_en_ruta() la rehace la 0042
 --   * match_ventana_cana() la rehace la 0042
+--   * match_grid() la rehace la 0051
 -- (Ademas, esta rehace funciones de la 0005, 0009, 0010, 0011, 0024, 0028 y
 -- 0037, que tampoco se pueden volver a pegar despues.)
 --
