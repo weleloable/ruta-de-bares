@@ -56,6 +56,17 @@ describe('se informa donde se recogen los datos', () => {
     assert.match(entrada, /Política de privacidad/);
   });
 
+  it('la entrada tiene tambien "Contacto", con el MISMO correo que la politica', () => {
+    // Se ve sin sesion: quien no puede entrar es justo quien necesita escribir,
+    // y "Escribir a la organizacion" exige sesion. El correo sale de
+    // responsable.ts, no escrito a mano: si cambia, cambia en los dos sitios.
+    const entrada = sinComentarios(leer('app/(auth)/login.tsx'));
+    assert.match(entrada, />\s*Contacto\s*</);
+    assert.match(entrada, /mailto:\$\{CORREO_PRIVACIDAD\}/);
+    assert.match(entrada, /\{CORREO_PRIVACIDAD\}/);
+    assert.doesNotMatch(entrada, /@gmail\.com/, 'el correo esta escrito a mano en la pantalla');
+  });
+
   it('en el registro', () => {
     const registro = sinComentarios(leer('app/(auth)/registro.tsx')).replace(/["`]/g, "'");
     assert.match(registro, /router\.push\('\/privacidad'\)/);

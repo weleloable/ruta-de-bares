@@ -557,9 +557,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **`/privacidad` es publica en AuthGate**, como `/invitacion`: el art. 13 del
   RGPD obliga a informar ANTES de recoger los datos y el registro se hace sin
   sesion, asi que exigirla mandaba el enlace al login (paso, y el primer test no
-  lo cazo por mirar solo que AuthGate existiera). El responsable y el correo son
-  provisionales, viven en `src/features/legal/responsable.ts` con un flag
-  `PENDIENTE`, y mientras siga a true la pantalla avisa de que es un borrador.
+  lo cazo por mirar solo que AuthGate existiera). El responsable y el correo viven en
+  `src/features/legal/responsable.ts` (cerrados el 2026-10-11); el flag
+  `PENDIENTE` sigue ahi por si vuelve a quedar un hueco: a true, la politica
+  avisa de que es un borrador. La pantalla de entrada tiene ademas un enlace
+  **"Contacto"** junto al de la politica, que despliega ese mismo correo: se
+  ve sin sesion porque quien no puede entrar es justo quien necesita escribir,
+  y "Escribir a la organizacion" exige sesion.
 - **Borrar una ruta ES la purga, y no hay cron** (`0027`): el esquema ya
   cascadea desde la 0001 (bares -> sellos con su GPS, pertenencia, invitaciones,
   conexiones y chats, votos, denuncias, veto de ruta con su HMAC), y la 0027
@@ -676,8 +680,8 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   se comparte, como se protege, cuanto dura, los usos prohibidos de Uso
   Limitado, avisar si cambia) y se enlaza tambien desde la pantalla de entrada,
   que es la portada y donde se crea la cuenta al entrar con Google la primera
-  vez. Lo unico que falta para pasar la verificacion es el responsable y el
-  correo (`PENDIENTE` en `legal/responsable.ts`): Google no acepta borradores.
+  vez. El responsable y el correo ya estan puestos (`legal/responsable.ts`,
+  `PENDIENTE` a false): Google no acepta borradores, y ya no lo es.
 - **La descarga de datos trae lo del sistema de acceso** (`0031`): con Google,
   Supabase guarda correo, nombre, foto e identificador de la cuenta de Google
   en `auth.identities` y `raw_user_meta_data`, la politica lo dice, y

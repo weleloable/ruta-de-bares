@@ -205,9 +205,11 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    dice que no puede leer las cifras.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
-privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;
-mientras `PENDIENTE` sea `true`, la pantalla de Privacidad avisa de que es un
-borrador. Antes de abrir esto a gente de verdad hay que cerrarlo.
+privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos
+(2026-10-11). Si cambian, se cambian ahi y en ningun otro sitio: de ahi los
+leen la politica de la app, la pagina estatica de la web y el enlace
+"Contacto" de la pantalla de entrada. Si alguna vez vuelve a quedar un hueco,
+`PENDIENTE` a `true` hace que la politica avise de que es un borrador.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
@@ -564,10 +566,10 @@ poco segun el idioma.
    `https://weleloable.github.io/ruta-de-bares/privacidad/` (con la barra final:
    es la pagina HTML estatica que genera `scripts/generar-privacidad.mjs` al
    publicar y responde 200; sin barra, Pages redirige a esa). Dominios autorizados:
-   anade `weleloable.github.io` y `supabase.co`. **Guardar**. Ojo: la
-   politica aun es un borrador (`src/features/legal/responsable.ts`, `PENDIENTE`),
-   y Google no acepta plantillas ni borradores: hay que cerrarla antes de pedir
-   la verificacion de la marca.
+   anade `weleloable.github.io` y `supabase.co`. **Guardar**. La
+   politica ya no es un borrador (`src/features/legal/responsable.ts` tiene el
+   responsable y el correo), que es lo que Google exige para verificar la marca:
+   no acepta plantillas ni borradores.
    Para que Google de por bueno el dominio hay que verificarlo en **Google Search
    Console** (<https://search.google.com/search-console>) con la misma cuenta del
    proyecto. `github.io` es un sufijo publico, asi que `weleloable.github.io` cuenta
