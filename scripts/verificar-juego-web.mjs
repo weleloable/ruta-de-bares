@@ -17,7 +17,10 @@
  *   2. el boton del paso queda entero y por encima de "Siguiente", no tapado;
  *   3. en el lupulo, un toque a tiempo echa la bolsita y la olla acaba con ella dentro;
  *   4. en la siembra se mantiene el grifo, avisa de soltar (inercia), se siembra
- *      y la tarjeta final ensena la fermentacion.
+ *      y la tarjeta final ensena la fermentacion;
+ *   5. La Cana Perfecta con tactil y acelerometro emulados: el sensor inclina el
+ *      vaso, se sirve con un dedo mientras otro mueve el deslizador, salirse del
+ *      boton no suelta y levantar el dedo si (ver `recorrerCana`).
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
  * lento en headless). Es del carril periodico, no del gate de cada commit:
@@ -156,11 +159,47 @@ async function abrirChrome(chrome, perfil, url, { ancho, alto }) {
 
   const api = {
     ev,
-    async navegar() {
+    async navegar({ movil = false } = {}) {
       await cdp('Page.enable');
-      await cdp('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false });
+      await cdp('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: movil });
+      if (movil) {
+        await cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+        // El acelerometro, como el panel "Sensors" de DevTools.
+        for (const type of ['accelerometer', 'linear-acceleration', 'gravity', 'gyroscope']) {
+          await cdp('Emulation.setSensorOverrideEnabled', { enabled: true, type });
+        }
+        await api.inclinarMovil(0);
+      }
       await cdp('Page.navigate', { url });
     },
+    /** El movil girado `grados` de lado (como un volante), en vertical. */
+    async inclinarMovil(grados) {
+      const rad = (grados * Math.PI) / 180;
+      const xyz = { x: 9.81 * Math.sin(rad), y: 9.81 * Math.cos(rad), z: 0 };
+      await cdp('Emulation.setSensorOverrideReadings', { type: 'accelerometer', reading: { xyz } });
+      await cdp('Emulation.setSensorOverrideReadings', { type: 'gravity', reading: { xyz } });
+      await cdp('Emulation.setSensorOverrideReadings', { type: 'linear-acceleration', reading: { xyz: { x: 0, y: 0, z: 0 } } });
+      await cdp('Emulation.setSensorOverrideReadings', { type: 'gyroscope', reading: { xyz: { x: 0, y: 0, z: 0 } } });
+    },
+    /** Rectangulo de lo que lleva ese aria-label (o texto): [izq, arriba, ancho, alto]. */
+    rect: (txt) =>
+      ev(`(() => {
+        const q = ${JSON.stringify(txt)};
+        const e = [...document.querySelectorAll('[aria-label], [role="button"]')].find((x) => (x.getAttribute('aria-label') || x.innerText || '').includes(q));
+        if (!e) return null;
+        const c = e.getBoundingClientRect();
+        return [c.left, c.top, c.width, c.height];
+      })()`),
+    /** Toques con varios dedos a la vez: `puntos` = [{ x, y, id }]. Vacio = levantar todos. */
+    async dedos(tipo, puntos) {
+      await cdp('Input.dispatchTouchEvent', { type: tipo, touchPoints: puntos });
+    },
+    /** El giro con el que se dibuja el vaso (grados), o null. */
+    giroVaso: () =>
+      ev(`(() => {
+        const v = [...document.querySelectorAll('div')].find((d) => /rotate\\(/.test(d.style.transform || ''));
+        return v ? parseFloat(v.style.transform.replace('rotate(', '')) : null;
+      })()`),
     /** Un clic de raton completo (movimiento, pulsar, soltar): RN Web ignora un clic sintetico a medias. */
     async clic(txt, reintentos = 40) {
       for (let i = 0; i < reintentos; i++) {
@@ -304,6 +343,70 @@ async function recorrer(chrome, perfil, url, tamano) {
   }
 }
 
+/**
+ * La Cana Perfecta en un movil emulado (tactil y acelerometro):
+ *  - inclinar el movil a 30 grados inclina el vaso 30 grados (sensor web);
+ *  - con el deslizador, un dedo mantiene "servir" y OTRO mueve el deslizador a
+ *    la vez: sigue sirviendo y el vaso se inclina (con Pressable, no se podia);
+ *  - el dedo que se sale del boton sin levantarse sigue sirviendo;
+ *  - levantar el dedo deja de servir.
+ */
+async function recorrerCana(chrome, perfil, url, tamano) {
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  try {
+    await c.navegar({ movil: true });
+    await c.clic('La Caña Perfecta', 80);
+    await c.clic('Empezar');
+    await esperar(800);
+    await c.inclinarMovil(30);
+    await esperar(1200);
+    const giroCon30 = await c.giroVaso();
+    const enSensor = /Usar deslizador/.test(await c.texto());
+
+    await c.clic('Usar deslizador');
+    await esperar(600);
+    const b = await c.rect('servir');
+    const d = await c.rect('Inclinación del vaso');
+    const dedo1 = { x: b[0] + b[2] / 2, y: b[1] + b[3] / 2, id: 1 };
+    await c.dedos('touchStart', [dedo1]);
+    await esperar(500);
+    const sirveConUnDedo = /Sirviendo/.test(await c.texto());
+    // Segundo dedo: arrastra el deslizador mientras el primero sigue sirviendo.
+    const dedo2 = { x: d[0] + 30, y: d[1] + d[3] / 2, id: 2 };
+    await c.dedos('touchStart', [dedo1, dedo2]);
+    for (let i = 1; i <= 8; i++) {
+      await c.dedos('touchMove', [dedo1, { ...dedo2, x: dedo2.x + i * 20 }]);
+      await esperar(50);
+    }
+    await esperar(300);
+    const textoDosDedos = await c.texto();
+    const sirveConDosDedos = /Sirviendo/.test(textoDosDedos);
+    const inclinacionManual = Number((/Inclinación: (\d+)°/.exec(textoDosDedos) ?? [])[1] ?? 0);
+    // El primer dedo se va 150 px hacia arriba, fuera del boton, sin levantarse. (El segundo
+    // sigue puesto: en el protocolo de DevTools, `touchEnd` levanta TODOS los dedos a la vez.)
+    await c.dedos('touchMove', [{ ...dedo1, y: dedo1.y - 150 }, { ...dedo2, x: dedo2.x + 160 }]);
+    await esperar(400);
+    const sirveFuera = /Sirviendo/.test(await c.texto());
+    await c.dedos('touchEnd', []);
+    await esperar(400);
+    // Tras mantener mas de un segundo: el `click` que manda el navegador al levantar no puede reabrir.
+    const paraAlLevantar = !/Sirviendo/.test(await c.texto());
+    // Lector de pantalla: su doble toque es un `click` sin dedo detras. Alterna: abre y cierra.
+    await esperar(900);
+    const clicLector = `[...document.querySelectorAll('[aria-label]')].find((x) => /servir/.test(x.getAttribute('aria-label'))).click()`;
+    await c.ev(clicLector);
+    await esperar(300);
+    const lectorAbre = /Sirviendo/.test(await c.texto());
+    await c.ev(clicLector);
+    await esperar(300);
+    const lectorCierra = !/Sirviendo/.test(await c.texto());
+    return { giroCon30, enSensor, sirveConUnDedo, sirveConDosDedos, inclinacionManual, sirveFuera, paraAlLevantar, lectorAbre, lectorCierra };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
 async function main() {
   const chrome = buscarChrome();
   if (!chrome) {
@@ -369,6 +472,30 @@ async function main() {
       console.log(JSON.stringify({ maceracion: r.maceracion, lupulo: r.lupulo, siembra: r.siembra }));
       console.log(`siembra: echada a ${r.tempAlEchar} °C -> "${r.resultadoSiembra}"`);
       for (const [nombre, ok] of comprobaciones) {
+        console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+        if (!ok) fallos += 1;
+      }
+
+      console.log(`${tamano.nombre}: La Caña Perfecta con tactil y sensor emulados...`);
+      let k;
+      try {
+        k = await recorrerCana(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
+      } catch (e) {
+        console.log(`FALLA  no se pudo jugar a la cana: ${e.message}`);
+        fallos += 1;
+        continue;
+      }
+      console.log(JSON.stringify(k));
+      for (const [nombre, ok] of [
+        ['cana: el movil a 30 grados inclina el vaso ~30 grados (sensor web)', k.enSensor && Math.abs((k.giroCon30 ?? -99) - 30) < 2],
+        ['cana: mantener "servir" sirve', k.sirveConUnDedo],
+        ['cana: con otro dedo en el deslizador sigue sirviendo', k.sirveConDosDedos],
+        ['cana: ... y el deslizador si se mueve a la vez', k.inclinacionManual > 0],
+        ['cana: el dedo que se sale del boton sin levantarse sigue sirviendo', k.sirveFuera],
+        ['cana: levantar el dedo deja de servir (y el clic de despues no reabre)', k.paraAlLevantar],
+        ['cana: con lector de pantalla, un toque abre el grifo...', k.lectorAbre],
+        ['cana: ... y otro lo cierra', k.lectorCierra],
+      ]) {
         console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
         if (!ok) fallos += 1;
       }

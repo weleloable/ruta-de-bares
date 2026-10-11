@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../../../../components/ui';
 import { colors, radius, space, typography } from '../../../../lib/theme';
+import { BotonMantener } from '../../BotonMantener';
 import { feedback } from '../../feedback';
 import { pasoDeTiempo } from '../../reloj';
 import type { PropsJuego } from '../../tipos';
+import { textoMotivo } from './inclinacion';
 import { SelectorAngulo } from './SelectorAngulo';
 import { useTecladoCana } from './teclado';
 import { useInclinacion } from './useInclinacion';
@@ -22,6 +24,8 @@ import {
 } from './modelo';
 
 const ALTO_VASO = 260;
+/** Alto de la franja del deslizador / boton "Usar deslizador" (ver `control`). */
+const ALTO_CONTROL = 96;
 /** Del pico del grifo a la boca del vaso, en px (ver `grifo` y `escenario` en los estilos). */
 const CAIDA_A_LA_BOCA = 22;
 /** Un fotograma largo (pestana en segundo plano) no debe llenar el vaso de golpe. */
@@ -31,7 +35,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   const [estado, setEstado] = useState<Estado>(ESTADO_VACIO);
   const [sirviendo, setSirviendo] = useState(false);
   const [inclinado, setInclinado] = useState(0);
-  const { modo, angulo, empezar, usarManual, fijar } = useInclinacion();
+  const { modo, motivo, angulo, empezar, usarManual, fijar } = useInclinacion();
 
   // Refs para el bucle: leer el estado de React dentro de rAF leeria uno viejo.
   const estadoRef = useRef<Estado>(ESTADO_VACIO);
@@ -151,20 +155,35 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
         </View>
       ) : (
         <>
-          {modo === 'manual' ? (
-            <SelectorAngulo valor={inclinado} onChange={fijar} />
-          ) : (
-            <Button title="Usar deslizador" variant="ghost" onPress={usarManual} />
-          )}
-          <Pressable
-            accessibilityRole="button"
+          {/* Alto FIJO: el juego pasa del sensor al deslizador solo (si el sensor no da
+              lecturas) y, si esta franja cambiase de alto, el boton de servir se moveria
+              bajo el dedo y se soltaria. */}
+          <View style={styles.control}>
+            {modo === 'manual' ? (
+              <>
+                <SelectorAngulo valor={inclinado} onChange={fijar} />
+                {/* Por que no va el sensor: sin decirlo, parece un fallo del juego. */}
+                {textoMotivo(motivo) ? (
+                  <Text style={styles.motivo} numberOfLines={1}>
+                    {textoMotivo(motivo)}
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              // Funcion y no `onPress={usarManual}`: si no, el evento del toque llegaria como el motivo.
+              <Button title="Usar deslizador" variant="ghost" onPress={() => usarManual()} />
+            )}
+          </View>
+          {/* No es un Pressable: ver BotonMantener (dos dedos, gestos del navegador). */}
+          <BotonMantener
             accessibilityLabel="Mantén pulsado para servir cerveza"
-            onPressIn={abrir}
-            onPressOut={cerrar}
-            style={({ pressed }) => [styles.servir, pressed && styles.servirPulsado]}
+            onApretar={abrir}
+            onSoltar={cerrar}
+            style={styles.servir}
+            estiloPulsado={styles.servirPulsado}
           >
             <Text style={styles.servirTexto}>{sirviendo ? 'Sirviendo…' : 'Mantén para servir'}</Text>
-          </Pressable>
+          </BotonMantener>
           <Button
             title="Entregar"
             variant="secondary"
@@ -179,6 +198,9 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
 
 const styles = StyleSheet.create({
   inicio: { gap: space.md },
+  // Lo que mide el deslizador (texto + zona de toque de 52 + el motivo): con el boton "Usar deslizador" se reserva igual.
+  control: { height: ALTO_CONTROL, justifyContent: 'center' },
+  motivo: { fontSize: 12, color: colors.inkSoft, textAlign: 'center' },
   raiz: { flex: 1, gap: space.md, justifyContent: 'flex-end' },
   escenario: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: space.sm },
   // Columna propia y de tamano fijo: el chorro se coloca en absoluto dentro de ella.

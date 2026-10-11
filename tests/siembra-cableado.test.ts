@@ -15,7 +15,8 @@ const juego = leer('src/features/minijuegos/juegos/maestro/MaestroCervecero.tsx'
 
 describe('paso 4: enfriar y sembrar', () => {
   it('el grifo es MANTENER pulsado: abre al apretar y cierra al soltar', () => {
-    assert.match(paso, /onPressIn=\{abrirGrifo\}\s*onPressOut=\{cerrarGrifo\}/);
+    // Con BotonMantener, no con Pressable: ver tests/cana-mantener-y-sensor.test.ts.
+    assert.match(paso, /<BotonMantener[\s\S]*?onApretar=\{abrirGrifo\}\s*onSoltar=\{cerrarGrifo\}/);
   });
 
   it('echar la levadura es un solo disparo, y antes de empezar a enfriar no se puede', () => {

@@ -774,3 +774,32 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   del cliente). Se deja para no romper la app en cache; cuando ya no quede
   nadie con la version vieja, una migracion le quita el `grant`.
 
+- **Los botones de MANTENER pulsado no son un Pressable en web**
+  (`src/features/minijuegos/BotonMantener.web.tsx`; nativo, `BotonMantener.tsx`
+  con `cancelable={false}`). React Native tiene UN solo "dueno" del toque: en La
+  Cana Perfecta, mantener "servir" con un dedo y mover el deslizador con otro no
+  funcionaba (o el deslizador no se movia, o le quitaba el toque al boton y este
+  "se despulsaba" a los 2-3 s, justo al ir a enderezar el vaso). En web el boton
+  escucha el dedo del navegador (Pointer Events + captura) y solo se suelta al
+  levantar ESE dedo; ademas `touch-action: none`, sin seleccion ni menu de
+  pulsacion larga (el navegador cancelaba el toque si el dedo se deslizaba).
+  Lo usan servir la cana y el grifo de la siembra. La franja del deslizador
+  tiene alto fijo: al pasar solo de sensor a deslizador, el boton no se mueve.
+  Al no ser Pressable hay que dar a mano lo que este daba: Espacio / Enter con
+  el foco, y un `click` sin dedo detras (doble toque de TalkBack / VoiceOver)
+  ALTERNA abrir y cerrar. Ojo: el navegador manda un `click` despues de
+  levantar el dedo; por eso `terminar` apunta la hora, o tras mantener mas de
+  0,7 s ese clic volveria a abrir. Limite conocido: en la cana, Espacio tambien
+  lo escucha `useTecladoCana` (para PC); dedo y tecla a la vez se pisan.
+- **El sensor de inclinacion en web NO usa expo-sensors**
+  (`useInclinacion.web.ts`; en nativo sigue `useInclinacion.ts` con el
+  acelerometro). En web, su "acelerometro" emite los ANGULOS de
+  `deviceorientation` en radianes (no la gravedad), espera un evento antes de
+  pedir el permiso (en iPhone no llega ninguno sin permiso) y lo pide tras un
+  `await`, fuera del toque. Aqui se lee `accelerationIncludingGravity` de
+  `devicemotion` con la MISMA formula que en nativo y el permiso se pide lo
+  primero. **Solo funciona con https**: en `http://<IP>` (probar el movil contra
+  el ordenador) Chrome ni expone el evento; la pantalla lo dice. Para probarlo
+  en Android por http: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+  con la URL; en iPhone, solo en la web publicada. `npm run verificar:juego`
+  emula el acelerometro (30 grados de movil = 30 de vaso) y los dos dedos.

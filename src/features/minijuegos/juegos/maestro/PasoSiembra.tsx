@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { colors, radius, space } from '../../../../lib/theme';
+import { BotonMantener } from '../../BotonMantener';
 import { feedback } from '../../feedback';
 import { pasoDeTiempo } from '../../reloj';
 import { LEVADURAS, type LevaduraId } from './datos';
@@ -207,17 +208,17 @@ export function PasoSiembra({
       </View>
 
       <View style={styles.botones}>
-        <Pressable
-          accessibilityRole="button"
+        {/* No es un Pressable: ver BotonMantener (gestos del navegador, dedo que se sale). */}
+        <BotonMantener
           accessibilityLabel="Enfriar"
           accessibilityHint="Mantén pulsado para que corra el agua fría"
           disabled={!levadura || fin}
-          onPressIn={abrirGrifo}
-          onPressOut={cerrarGrifo}
+          onApretar={abrirGrifo}
+          onSoltar={cerrarGrifo}
           style={[styles.boton, styles.botonFrio, grifo && styles.botonFrioPulsado, (!levadura || fin) && styles.botonApagado]}
         >
           <Text style={styles.botonTexto}>{grifo ? 'Enfriando…' : 'Mantén para enfriar'}</Text>
-        </Pressable>
+        </BotonMantener>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Echar levadura"

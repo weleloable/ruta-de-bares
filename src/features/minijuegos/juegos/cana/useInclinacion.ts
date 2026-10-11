@@ -1,12 +1,16 @@
 import { Accelerometer } from 'expo-sensors';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { anguloDesdeAcelerometro, limitarAngulo, suavizar } from './inclinacion';
+import {
+  anguloDesdeAcelerometro,
+  limitarAngulo,
+  suavizar,
+  type ModoInclinacion,
+  type MotivoManual,
+} from './inclinacion';
 
 /** Cuanto se espera a la primera lectura antes de dar el sensor por muerto. */
 const ESPERA_SENSOR_MS = 1500;
-
-export type ModoInclinacion = 'inicio' | 'sensor' | 'manual';
 
 /**
  * De donde sale el angulo del vaso: del acelerometro o, si no lo hay, de un
@@ -15,9 +19,14 @@ export type ModoInclinacion = 'inicio' | 'sensor' | 'manual';
  *
  * `empezar` hay que llamarlo desde un toque: iOS solo pide el permiso de
  * movimiento tras un gesto del usuario.
+ *
+ * Esta es la version NATIVA (acelerometro de expo-sensors, que en nativo si da
+ * la gravedad en g). En web se usa useInclinacion.web.ts: alli expo-sensors da
+ * otra cosa (ver ese fichero).
  */
 export function useInclinacion() {
   const [modo, setModo] = useState<ModoInclinacion>('inicio');
+  const [motivo, setMotivo] = useState<MotivoManual | null>(null);
   const angulo = useRef(0);
   const suscripcion = useRef<ReturnType<typeof Accelerometer.addListener> | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,17 +38,21 @@ export function useInclinacion() {
     temporizador.current = null;
   }, []);
 
-  const usarManual = useCallback(() => {
-    parar();
-    angulo.current = 0;
-    setModo('manual');
-  }, [parar]);
+  const usarManual = useCallback(
+    (porque: MotivoManual = 'elegido') => {
+      parar();
+      angulo.current = 0;
+      setMotivo(porque);
+      setModo('manual');
+    },
+    [parar],
+  );
 
   const empezar = useCallback(async () => {
     try {
-      if (!(await Accelerometer.isAvailableAsync())) return usarManual();
+      if (!(await Accelerometer.isAvailableAsync())) return usarManual('sin-sensor');
       const permiso = await Accelerometer.requestPermissionsAsync();
-      if (permiso.status !== 'granted') return usarManual();
+      if (permiso.status !== 'granted') return usarManual('permiso');
 
       Accelerometer.setUpdateInterval(50);
       let recibido = false;
@@ -47,16 +60,18 @@ export function useInclinacion() {
         const medido = anguloDesdeAcelerometro(x, y, z);
         if (medido === null) return;
         recibido = true;
-        angulo.current = suavizar(angulo.current, medido);
+        // Mismo tope que el deslizador: el movil apaisado daria 90 grados.
+        angulo.current = limitarAngulo(suavizar(angulo.current, medido));
       });
+      setMotivo(null);
       setModo('sensor');
       // En escritorio el navegador dice "disponible" pero no manda lecturas
       // reales: sin ninguna a tiempo, se pasa al deslizador.
       temporizador.current = setTimeout(() => {
-        if (!recibido) usarManual();
+        if (!recibido) usarManual('sin-sensor');
       }, ESPERA_SENSOR_MS);
     } catch {
-      usarManual();
+      usarManual('sin-sensor');
     }
   }, [usarManual]);
 
@@ -66,5 +81,5 @@ export function useInclinacion() {
 
   useEffect(() => parar, [parar]);
 
-  return { modo, angulo, empezar, usarManual, fijar };
+  return { modo, motivo, angulo, empezar, usarManual, fijar };
 }
