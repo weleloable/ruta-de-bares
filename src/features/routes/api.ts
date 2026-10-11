@@ -86,7 +86,9 @@ export async function createRoute(input: NewRoute): Promise<RouteRow> {
 
 export async function updateRoute(
   routeId: string,
-  patch: Partial<Pick<RouteRow, 'name' | 'description' | 'event_date' | 'is_published' | 'finished_at'>>,
+  patch: Partial<
+    Pick<RouteRow, 'name' | 'description' | 'event_date' | 'is_published' | 'finished_at' | 'cana_horas_antes' | 'cana_radio_km'>
+  >,
 ): Promise<RouteRow> {
   const { data, error } = await supabase
     .from('routes')

@@ -12,6 +12,7 @@ import {
   persistOrder,
   updateRoute,
 } from '../../../src/features/routes/api';
+import { AjustesCana } from '../../../src/features/routes/AjustesCana';
 import { BarLogo } from '../../../src/features/routes/BarLogo';
 import { direccionVisible } from '../../../src/features/routes/catalogo';
 import {
@@ -36,6 +37,7 @@ export default function EditorDeRuta() {
   const [guardandoOrden, setGuardandoOrden] = useState(false);
   const [borrando, setBorrando] = useState<RouteBarRow | null>(null);
   const [borrandoEnCurso, setBorrandoEnCurso] = useState(false);
+  const [guardandoCana, setGuardandoCana] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!routeId) return;
@@ -134,6 +136,23 @@ export default function EditorDeRuta() {
     }
   }
 
+  async function onAjustarCana(cambio: Partial<Pick<RouteRow, 'cana_horas_antes' | 'cana_radio_km'>>) {
+    if (!ruta) return;
+    const previa = ruta;
+    // Optimista: el numero cambia al tocar y se deshace si el servidor dice que no.
+    setRuta({ ...ruta, ...cambio });
+    setGuardandoCana(true);
+    setError(null);
+    try {
+      setRuta(await updateRoute(ruta.id, cambio));
+    } catch (e) {
+      setRuta(previa);
+      setError(e instanceof Error ? e.message : 'No se pudo guardar el ajuste de La Caña.');
+    } finally {
+      setGuardandoCana(false);
+    }
+  }
+
   if (cargando && !ruta) return <Loading label="Cargando la ruta..." />;
 
   if (!ruta) {
@@ -173,6 +192,8 @@ export default function EditorDeRuta() {
             </Text>
           ) : null}
         </Card>
+
+        <AjustesCana ruta={ruta} ocupado={guardandoCana} onCambiar={onAjustarCana} />
 
         {avisos.map((aviso) => (
           <Banner key={`${aviso.kind}-${aviso.firstId}-${aviso.secondId}`} tone="info">

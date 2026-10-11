@@ -107,7 +107,7 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
         {vista === 'ranking' && rutaId ? (
           <ScrollView contentContainerStyle={styles.lista}>
             {nombreRuta ? <Text style={typography.muted}>Ruta: {nombreRuta}</Text> : null}
-            <Ranking rutaId={rutaId} juego={activo.id} />
+            {activo.RankingPropio ? <activo.RankingPropio rutaId={rutaId} /> : <Ranking rutaId={rutaId} juego={activo.id} />}
           </ScrollView>
         ) : vista === 'cervezas' && rutaId ? (
           <ScrollView contentContainerStyle={styles.lista}>
@@ -171,12 +171,12 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
                 <Ionicons name="chevron-forward" size={22} color={colors.inkFaint} />
               </Card>
             </Pressable>
-            {rutaId && (juego.ranking || juego.cervezas) ? (
+            {rutaId && (juego.ranking || juego.RankingPropio || juego.cervezas) ? (
               <Button
-                title={juego.ranking ? 'Ranking de la ruta' : 'Cervezas de la ruta'}
+                title={juego.ranking || juego.RankingPropio ? 'Ranking de la ruta' : 'Cervezas de la ruta'}
                 variant="ghost"
-                icon={juego.ranking ? 'trophy' : 'list'}
-                onPress={() => abrir(juego, juego.ranking ? 'ranking' : 'cervezas')}
+                icon={juego.ranking || juego.RankingPropio ? 'trophy' : 'list'}
+                onPress={() => abrir(juego, juego.ranking || juego.RankingPropio ? 'ranking' : 'cervezas')}
               />
             ) : null}
           </View>

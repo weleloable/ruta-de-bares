@@ -1,9 +1,13 @@
 -- Ruta de Bares - 0040: La Cana se activa POR RUTA, y solo el dia de la ruta y cerca de ella.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0039.
--- Idempotente: se puede re-ejecutar sin romper nada (la tabla y su relleno
--- inicial solo se hacen si la tabla no existia; funciones y disparadores van
--- con `or replace`). Ojo al reves: rehace funciones de la 0005, 0009, 0010,
--- 0011, 0024, 0028 y 0037, que ya no se pueden volver a pegar despues.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * match_activate_en_ruta() la rehace la 0042
+--   * match_get_profile_en_ruta() la rehace la 0042
+--   * match_ventana_cana() la rehace la 0042
+-- (Ademas, esta rehace funciones de la 0005, 0009, 0010, 0011, 0024, 0028 y
+-- 0037, que tampoco se pueden volver a pegar despues.)
 --
 -- Que cambia.
 --

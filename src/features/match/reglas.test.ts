@@ -10,7 +10,10 @@ import {
   ETIQUETAS_MAX,
   FILTROS,
   PREGUNTA_ESPERA_MS,
-  RADIO_CANA_KM,
+  ajustarHoras,
+  ajustarRadio,
+  cuentaAtras,
+  textoRadio,
   SOLAPE_SONDEO_MS,
   TEXTOS_POR_PERSONA,
   TEXTO_MAX,
@@ -432,10 +435,46 @@ describe('ventanaCana (0040)', () => {
       assert.ok(!texto.includes(codigo), `${codigo} se ve en crudo`);
     }
     assert.match(describirErrorCana(`TOO_FAR`), /TOO_FAR/, 'un trozo de codigo no se confunde con otro');
-    assert.match(describirErrorCana('CANA_TOO_FAR'), new RegExp(`${RADIO_CANA_KM} km`));
+    assert.match(describirErrorCana('CANA_TOO_FAR'), /lejos/);
     assert.match(
       describirErrorCana('Could not find the function public.match_activate_en_ruta in the schema cache'),
       /0040/,
     );
+  });
+});
+
+describe('ajustes de La Caña por ruta (0042)', () => {
+  it('las horas van de 0 a 24', () => {
+    assert.equal(ajustarHoras(6, 1), 7);
+    assert.equal(ajustarHoras(0, -1), 0);
+    assert.equal(ajustarHoras(24, 1), 24);
+  });
+
+  it('el radio va de 0,5 a 20 km de medio en medio', () => {
+    assert.equal(ajustarRadio(3, 0.5), 3.5);
+    assert.equal(ajustarRadio(0.5, -0.5), 0.5);
+    assert.equal(ajustarRadio(20, 0.5), 20);
+    assert.equal(ajustarRadio(2.3, 0), 2.5);
+  });
+
+  it('el radio se lee en castellano, y sin limite se dice', () => {
+    assert.equal(textoRadio(2.5), '2,5 km');
+    assert.equal(textoRadio(3), '3 km');
+    assert.equal(textoRadio(null), 'Sin límite');
+  });
+});
+
+describe('cuentaAtras', () => {
+  it('dias, horas, minutos y segundos, siempre con segundos', () => {
+    const s = 1000;
+    assert.equal(cuentaAtras(((2 * 24 + 3) * 3600 + 14 * 60 + 5) * s), '2 d 03 h 14 min 05 s');
+    assert.equal(cuentaAtras((3 * 3600 + 5 * 60 + 9) * s), '3 h 05 min 09 s');
+    assert.equal(cuentaAtras((4 * 60 + 7) * s), '4 min 07 s');
+    assert.equal(cuentaAtras(9 * s), '9 s');
+  });
+
+  it('redondea hacia arriba (no dice 0 s quedando medio segundo) y no baja de 0', () => {
+    assert.equal(cuentaAtras(500), '1 s');
+    assert.equal(cuentaAtras(-5000), '0 s');
   });
 });

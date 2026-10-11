@@ -60,8 +60,48 @@ export function estadoPestana(
 
 // --- Cuando se puede activar (0040) -----------------------------------------
 
-/** Distancia maxima al primer bar para activar La Caña, en km (espejo de la 0040). */
-export const RADIO_CANA_KM = 3;
+/**
+ * Lo que se puede ajustar en cada ruta (0042) y sus limites, espejo de las
+ * restricciones de la tabla `routes`. Radio null = sin limite de distancia.
+ */
+export const AJUSTES_CANA = {
+  horas: { min: 0, max: 24, porDefecto: 6 },
+  radioKm: { min: 0.5, max: 20, paso: 0.5, porDefecto: 3 },
+} as const;
+
+/** Suma o resta horas, sin salirse de los limites. */
+export function ajustarHoras(horas: number, delta: number): number {
+  return Math.min(AJUSTES_CANA.horas.max, Math.max(AJUSTES_CANA.horas.min, Math.round(horas + delta)));
+}
+
+/** Suma o resta medio km, sin salirse de los limites (y redondeado a medio km). */
+export function ajustarRadio(km: number, delta: number): number {
+  const { min, max, paso } = AJUSTES_CANA.radioKm;
+  return Math.min(max, Math.max(min, Math.round((km + delta) / paso) * paso));
+}
+
+/** "3 km", "2,5 km" o "Sin límite". */
+export function textoRadio(km: number | null | undefined): string {
+  if (km === null || km === undefined) return 'Sin límite';
+  return `${String(km).replace('.', ',')} km`;
+}
+
+/**
+ * Cuenta atras hasta que se abra: "2 d 03 h 14 min 05 s", "3 h 05 min 09 s",
+ * "4 min 07 s"... Siempre con segundos, para que se vea que corre.
+ */
+export function cuentaAtras(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const dos = (n: number) => String(n).padStart(2, '0');
+  if (d > 0) return `${d} d ${dos(h)} h ${dos(m)} min ${dos(s)} s`;
+  if (h > 0) return `${h} h ${dos(m)} min ${dos(s)} s`;
+  if (m > 0) return `${m} min ${dos(s)} s`;
+  return `${s} s`;
+}
 
 /**
  * Si se puede activar La Caña en una ruta ahora mismo, segun lo que manda el
@@ -410,10 +450,10 @@ const MENSAJES: Record<string, string> = {
   INVALID_ANSWER: 'Esa respuesta no es válida.',
   // Activar por ruta (0040).
   CANA_ROUTE_WITHOUT_BARS: 'Esta ruta aún no tiene bares: La Caña se abre cuando los tenga.',
-  CANA_NOT_OPEN_YET: 'La Caña de esta ruta aún no está abierta: se abre 6 horas antes del primer bar.',
+  CANA_NOT_OPEN_YET: 'La Caña de esta ruta aún no está abierta. Mira la cuenta atrás.',
   CANA_CLOSED: 'La ruta ya ha terminado: La Caña ya no se puede activar.',
   LOCATION_REQUIRED: 'Necesitamos tu ubicación para activar La Caña.',
-  CANA_TOO_FAR: `Tienes que estar a menos de ${RADIO_CANA_KM} km del primer bar de la ruta para activar La Caña.`,
+  CANA_TOO_FAR: 'Estás demasiado lejos del primer bar de la ruta para activar La Caña.',
   APP_UPDATE_REQUIRED: 'Hay una versión nueva de la app. Recarga la página o actualízala para activar La Caña.',
 };
 

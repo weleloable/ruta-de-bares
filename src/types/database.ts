@@ -37,6 +37,10 @@ export type RouteRow = {
    * routes/estado.ts).
    */
   finished_at: string | null;
+  /** Horas antes de que abra el primer bar en que se puede activar La Caña (0042). */
+  cana_horas_antes: number;
+  /** Distancia maxima al primer bar para activarla, en km; null = sin limite (0042). */
+  cana_radio_km: number | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -145,6 +149,8 @@ export type MatchProfileState = {
   cana_cierra?: string | null;
   /** Admin: la activa cuando y donde quiera, sin horario ni distancia (0040). */
   sin_reglas?: boolean;
+  /** Distancia maxima al primer bar, km; null = sin limite y no se pide ubicacion (0042). */
+  cana_radio_km?: number | null;
 };
 
 export type MatchGridRow = {
@@ -460,7 +466,15 @@ export type Database = {
         Row: RouteRow;
         Insert: Insert<
           RouteRow,
-          'id' | 'description' | 'event_date' | 'is_published' | 'finished_at' | 'created_at' | 'updated_at'
+          | 'id'
+          | 'description'
+          | 'event_date'
+          | 'is_published'
+          | 'finished_at'
+          | 'cana_horas_antes'
+          | 'cana_radio_km'
+          | 'created_at'
+          | 'updated_at'
         >;
         Update: Partial<RouteRow>;
         Relationships: [];

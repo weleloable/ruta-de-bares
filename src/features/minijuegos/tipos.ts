@@ -62,6 +62,11 @@ export type JuegoDef = {
   enviar?: (rutaId: string, resultado: ResultadoJuego) => Promise<void>;
   /** Tiene ranking por ruta. */
   ranking?: boolean;
+  /**
+   * Su propio ranking para ver desde el menu, cuando no es el de una nota por
+   * juego (p. ej. por nivel). Sustituye al Ranking comun.
+   */
+  RankingPropio?: ComponentType<{ rutaId: string }>;
   /** Tiene lista de cervezas de la ruta. */
   cervezas?: boolean;
 };

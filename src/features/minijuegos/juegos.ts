@@ -1,6 +1,7 @@
 import { enviarCerveza, enviarNota } from './api';
 import { CanaPerfecta } from './juegos/cana/CanaPerfecta';
 import { ConducesTu } from './juegos/conduces/ConducesTu';
+import { RankingConduces } from './juegos/conduces/RankingConduces';
 import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
@@ -56,7 +57,9 @@ export const JUEGOS: readonly JuegoDef[] = [
     icono: 'car',
     Componente: ConducesTu,
     pantallaCompleta: true,
-    // Su ranking es por NIVEL de cañas (0041): lo guarda y lo ensena el propio juego.
+    // Su ranking es por NIVEL de cañas (0041): lo guarda y lo ensena el propio juego,
+    // y desde el menu se ve con su propio componente.
     resultadoPropio: true,
+    RankingPropio: RankingConduces,
   },
 ];

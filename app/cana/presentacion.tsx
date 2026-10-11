@@ -41,6 +41,8 @@ export default function PresentacionCana() {
   const [bio, setBio] = useState('');
   const [seleccion, setSeleccion] = useState<string[]>([]);
   const [cargando, setCargando] = useState(true);
+  // Del perfil en esta ruta: si hace falta la ubicacion para activar (radio null = no).
+  const [sinDistancia, setSinDistancia] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [intentado, setIntentado] = useState(false);
@@ -53,13 +55,11 @@ export default function PresentacionCana() {
     let activo = true;
     (async () => {
       try {
-        const [etiquetas, perfil] = await Promise.all([
-          listMatchTags(),
-          alta || !rutaId ? null : getMatchProfile(rutaId),
-        ]);
+        const [etiquetas, perfil] = await Promise.all([listMatchTags(), rutaId ? getMatchProfile(rutaId) : null]);
         if (!activo) return;
         setCatalogo(etiquetas);
-        if (perfil) {
+        setSinDistancia(perfil?.cana_radio_km === null);
+        if (perfil && !alta) {
           setBio(perfil.bio);
           setSeleccion(perfil.tag_ids);
         }
@@ -86,7 +86,7 @@ export default function PresentacionCana() {
     try {
       if (alta) {
         if (!rutaId) throw new Error('Entra en una ruta para activar La Caña.');
-        const donde = isAdmin ? null : await ubicacionParaActivar();
+        const donde = isAdmin || sinDistancia ? null : await ubicacionParaActivar();
         await activateMatch(rutaId, donde, { mayorDeEdad: adulto === '1', bio: bio.trim(), etiquetas: seleccion });
       } else {
         await updateMatchProfile(bio.trim(), seleccion);

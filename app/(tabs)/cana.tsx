@@ -19,13 +19,14 @@ import { ListaChats } from '../../src/features/match/ListaChats';
 import { Casilla } from '../../src/features/match/piezas';
 import {
   FILTROS,
-  RADIO_CANA_KM,
   chatsPendientes,
+  cuentaAtras,
   contarPorFiltro,
   estadoPestana,
   estadoTarjeta,
   pasaFiltro,
   sePuedeActivar,
+  textoRadio,
   ventanaCana,
   type Filtro,
   type VentanaCana,
@@ -89,8 +90,6 @@ export default function CanaScreen() {
   const { session } = useAuth();
   const yo = session?.user.id ?? '';
   const { activeRoute, loading: cargandoRuta } = useActiveRoute();
-  // Para que "se abre a las 14:00" pase a "Activar" solo, sin recargar.
-  const ahora = useNow();
 
   const [perfil, setPerfil] = useState<MatchProfileState | null>(null);
   const [tarjetas, setTarjetas] = useState<MatchGridRow[]>([]);
@@ -143,6 +142,9 @@ export default function CanaScreen() {
   );
 
   const estado = estadoPestana(activeRoute !== null, perfil);
+  // La cuenta atras corre de segundo en segundo mientras no se puede activar;
+  // al llegar a cero, el boton se enciende solo, sin recargar.
+  const ahora = useNow(estado.tipo === 'desactivado' ? 1000 : 30_000);
   const ventana = ventanaCana(perfil, ahora);
 
   // En segundo plano y sin spinner: alguien nuevo, una conexion, un mensaje.
@@ -175,8 +177,8 @@ export default function CanaScreen() {
     setCambiando(true);
     setError(null);
     try {
-      // La ubicacion solo se pide a quien tiene la regla de la distancia.
-      const donde = perfil?.sin_reglas ? null : await ubicacionParaActivar();
+      // La ubicacion solo se pide a quien tiene la regla de la distancia (no admins, y con radio).
+      const donde = perfil?.sin_reglas || perfil?.cana_radio_km === null ? null : await ubicacionParaActivar();
       await activateMatch(rutaId, donde);
       await cargar();
     } catch (e) {
@@ -255,7 +257,7 @@ export default function CanaScreen() {
               </Pressable>
             </Card>
 
-            <AvisoVentana ventana={ventana} />
+            <AvisoVentana ventana={ventana} ahora={ahora} radioKm={perfil?.cana_radio_km} />
 
             {estado.pideMayoriaDeEdad ? (
               <Casilla marcada={mayorDeEdad} onCambiar={setMayorDeEdad} texto="Soy mayor de edad" />
@@ -440,21 +442,37 @@ function VistaPerfiles({
  * Cuando se puede activar en esta ruta. Fuera de horario el boton se apaga, y
  * esto dice por que y cuando vuelve; dentro, avisa de que se pedira la ubicacion.
  */
-function AvisoVentana({ ventana }: { ventana: VentanaCana }) {
+function AvisoVentana({
+  ventana,
+  ahora,
+  radioKm,
+}: {
+  ventana: VentanaCana;
+  ahora: Date;
+  radioKm: number | null | undefined;
+}) {
   switch (ventana.tipo) {
     case 'libre':
       return <Banner tone="info">Como administrador puedes activarla cuando quieras.</Banner>;
     case 'abierta':
       return (
         <Banner tone="info">
-          {`Abierta hasta las ${hora(ventana.cierra)}. Para activarla tienes que estar a menos de ${RADIO_CANA_KM} km del primer bar: usaremos tu ubicación solo para comprobarlo.`}
+          {radioKm === null
+            ? `Abierta hasta las ${hora(ventana.cierra)}.`
+            : `Abierta hasta las ${hora(ventana.cierra)}. Para activarla tienes que estar a menos de ${textoRadio(radioKm ?? 3)} del primer bar: usaremos tu ubicación solo para comprobarlo.`}
         </Banner>
       );
     case 'aun-no':
       return (
-        <Banner tone="info">
-          {`La Caña de esta ruta se abre el ${diaLargo(ventana.abre)} a las ${hora(ventana.abre)}, 6 horas antes del primer bar.`}
-        </Banner>
+        <Card style={styles.cuentaAtras}>
+          <Text style={typography.overline}>La Caña se abre en</Text>
+          <Text style={styles.cuentaAtrasNumero} accessibilityLiveRegion="polite">
+            {cuentaAtras(ventana.abre.getTime() - ahora.getTime())}
+          </Text>
+          <Text style={[typography.muted, styles.centrado]}>
+            {`El ${diaLargo(ventana.abre)} a las ${hora(ventana.abre)}.`}
+          </Text>
+        </Card>
       );
     case 'cerrada':
       return <Banner tone="info">La ruta ya ha terminado: La Caña ya no se puede activar en ella.</Banner>;
@@ -489,6 +507,8 @@ const styles = StyleSheet.create({
     marginVertical: space.sm,
   },
   selloTexto: { fontSize: 19, fontWeight: '800', color: colors.stamp, letterSpacing: 1 },
+  cuentaAtras: { alignItems: 'center', gap: space.xs },
+  cuentaAtrasNumero: { fontSize: 30, fontWeight: '800', color: colors.beerDark, fontVariant: ['tabular-nums'] },
   fila: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   // El mismo enlace de texto que en la presentacion (cana/presentacion.tsx).
   enlace: { fontSize: 14, fontWeight: '700', color: colors.beerDark },

@@ -238,6 +238,13 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    esas distancias, asi que despues de esta la 0038 ya **no se vuelve a pegar**.
    Si la app llega antes, el juego guarda el record en el movil y avisa de que
    falta la migracion. Se puede pegar dos veces.
+42. [`supabase/migrations/0042_cana_ajustes_por_ruta.sql`](../supabase/migrations/0042_cana_ajustes_por_ruta.sql)
+   y **Run**, despues de la 0041 y **ANTES de desplegar la app**. Las dos reglas
+   para activar La Caña pasan a ser de cada ruta y se tocan en el editor:
+   `routes.cana_horas_antes` (0 a 24, por defecto 6) y `routes.cana_radio_km`
+   (0,5 a 20, por defecto 3; vacio = sin limite y sin pedir ubicacion). Las
+   rutas que ya existen se quedan con 6 h y 3 km. Rehace funciones de la 0040,
+   que ya **no se vuelve a pegar**. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

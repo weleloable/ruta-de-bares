@@ -122,6 +122,7 @@ supabase/
   migrations/0039_*.sql     La Conga Cervecera en el ranking por ruta (tope de nota POR JUEGO)
   migrations/0040_*.sql     La Caña se activa POR RUTA, solo el dia de la ruta y a 3 km del primer bar (admins sin reglas)
   migrations/0041_*.sql     ranking de "¿Conduces tú?" por ruta Y por nivel de cañas (`conduces_scores`)
+  migrations/0042_*.sql     horas antes y distancia para activar La Caña, por ruta (`routes.cana_horas_antes`, `cana_radio_km`)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -256,8 +257,10 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   de moderacion (vetar, suspender, borrar tus datos) NO se reescribieron: siguen
   poniendo `is_active = false` y un disparador (`match_profiles_desactivada`)
   borra entonces la activacion de todas sus rutas. Otro (`route_members_salida_cana`)
-  la quita de una ruta al salir de ella. Las reglas de activar (horario y 3 km del
-  primer bar; admins sin reglas) se miran SOLO al activar, nunca despues. La vieja
+  la quita de una ruta al salir de ella. Las reglas de activar (desde N horas antes
+  del primer bar hasta el cierre del ultimo, y a X km del primer bar; las dos de
+  cada ruta desde la 0042, 6 h y 3 km por defecto; admins sin reglas) se miran
+  SOLO al activar, nunca despues. La vieja
   `match_activate()` lanza `APP_UPDATE_REQUIRED` para que la app en cache no se las salte.
 - **Minijuegos (`src/features/minijuegos/`, pestana Juegos)**: solo son visibles
   dentro de una ruta (el boton depende de `activeRoute`) y el ranking y las
