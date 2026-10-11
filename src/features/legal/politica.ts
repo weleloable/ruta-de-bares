@@ -78,6 +78,9 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
               'A qué rutas perteneces y qué bares has sellado: lo ve quien organiza esa ruta.',
               'Tu casa (Mahou, Cruzcampo, Estrella Galicia o Alhambra): se te asigna al entrar en tu primera ruta ' +
                 'y la ve el resto de la gente, porque es con quien compites.',
+              'Los puntos que consigues para tu casa (por sellar, completar la ruta o quedar en el podio de un ' +
+                'minijuego) se apuntan con su origen. La gente de la ruta ve solo el total de cada casa; quien ' +
+                'organiza la ruta puede ver el detalle para corregir errores.',
               'No se vende ni se cede a terceros. Los únicos que tocan los datos por encargo nuestro son Supabase ' +
                 '(base de datos, almacenamiento y el sistema de acceso, también lo que nos da Google) y GitHub ' +
                 'Pages (la web).',

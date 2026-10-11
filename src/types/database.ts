@@ -637,6 +637,11 @@ export type Database = {
         Returns: MinigameRankingRow[];
       };
       /** "¿Conduces tú?" (0041): ranking por ruta y nivel de cañas. */
+      /** Puntos de las cuatro casas en una ruta (0044). */
+      casas_ranking: {
+        Args: { p_route_id: string };
+        Returns: { house: 'mahou' | 'cruzcampo' | 'estrella' | 'alhambra'; puntos: number; miembros: number }[];
+      };
       /** Ya vi la animacion de mi casa (0043). */
       casa_marcar_vista: {
         Args: Record<string, never>;

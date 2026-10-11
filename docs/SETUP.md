@@ -253,6 +253,15 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    Estrella Galicia, por encima del equilibrio). Al pegarla, quien ya estaba en
    alguna ruta recibe su casa y vera la animacion al abrir la app. Se puede
    pegar dos veces (no reparte de nuevo).
+44. [`supabase/migrations/0044_puntos_casas.sql`](../supabase/migrations/0044_puntos_casas.sql)
+   y **Run**, despues de la 0043 y **ANTES de desplegar la app**. Puntos de las
+   casas y ranking de la ruta en directo: `point_rules` (cuanto vale cada
+   accion), `point_movements` (el historial, con una clave unica que impide
+   puntuar dos veces) y `casas_marcador` (lo que escucha la app con Realtime:
+   la migracion la anade a la publicacion `supabase_realtime`). Puntuan los
+   sellos y completar la ruta; los podios de minijuegos se calculan en vivo.
+   Los sellos que ya habia se puntuan al pegarla. Rehace `export_my_data()`, asi
+   que la 0041 ya **no se vuelve a pegar**. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

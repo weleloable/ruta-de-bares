@@ -138,16 +138,18 @@ describe('0043: las casas', () => {
     const db = await crearBase(ANTES);
     try {
       await db.exec(BASE);
+      // Pablo entra el primero: si entrase despues, el sorteo podria haber dado ya
+      // Cruzcampo a otro y el iria igual (la excepcion manda sobre el equilibrio).
       await db.exec(usuarios([
-        [1, 'Ana'],
-        [2, 'Luis'],
-        [3, 'Pablo'],
+        [1, 'Pablo'],
+        [2, 'Ana'],
+        [3, 'Luis'],
         [4, 'Marta'],
         [5, 'SinRuta'],
       ]));
       for (const n of [1, 2, 3, 4]) await entrar(db, RUTA, n);
       await db.exec(LA_0043);
-      assert.equal(await casaDe(db, 3), 'cruzcampo');
+      assert.equal(await casaDe(db, 1), 'cruzcampo');
       const { rows } = await db.query<{ n: number }>('select count(distinct house)::int as n from public.user_houses');
       assert.equal(rows[0]?.n, 4, 'cuatro personas en una ruta: una por casa');
       assert.equal(await casaDe(db, 5), null);

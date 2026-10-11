@@ -1,8 +1,11 @@
 -- Ruta de Bares - 0041: ranking por ruta Y POR NIVEL de "¿Conduces tú?".
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0040.
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists` y
--- funciones con `or replace`). Ojo al reves: rehace export_my_data() a partir
--- de la 0038, asi que la 0038 ya no se puede volver a pegar despues.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * export_my_data() la rehace la 0044
+-- (Ademas, esta rehace export_my_data() a partir de la 0038, asi que la 0038
+-- tampoco se puede volver a pegar despues.)
 --
 -- Que hace. En "¿Conduces tú?" eliges cuantas cañas llevas (nivel 1..N, con N
 -- el numero de bares de la ruta) y la puntuacion es la distancia en metros.

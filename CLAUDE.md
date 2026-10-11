@@ -125,6 +125,7 @@ supabase/
   migrations/0041_*.sql     ranking de "¿Conduces tú?" por ruta Y por nivel de cañas (`conduces_scores`)
   migrations/0042_*.sql     horas antes y distancia para activar La Caña, por ruta (`routes.cana_horas_antes`, `cana_radio_km`)
   migrations/0043_*.sql     las cuatro casas (`user_houses`): se asigna al entrar en la primera ruta, equilibrando en ella
+  migrations/0044_*.sql     puntos de las casas (`point_rules`, `point_movements`) y ranking en directo (`casas_marcador` + Realtime)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -132,7 +133,7 @@ tests/                    tests que no encajan en un feature (p.ej. migration.te
 
 Tablas: `profiles`, `routes`, `route_bars`, `catalog_bars`, `stamps`, `route_invites`,
 `route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
-`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`, `conduces_scores`, `user_houses`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`, `conduces_scores`, `user_houses`, `point_rules`, `point_movements`, `casas_marcador`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -251,6 +252,15 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **Puntos de las casas (0044)**: todo punto es una fila de `point_movements` con
+  una `ref` UNICA por ruta ("sello:<id>", "ruta_completa:<persona>"...): es lo que
+  impide duplicar, se reintente lo que se reintente. Se ANULAN (con motivo), no se
+  borran. Los podios de minijuegos NO se guardan: `casas_podios` los calcula en
+  vivo del ranking, asi que un record nuevo reordena sin nada que deshacer. El
+  ranking en directo no lee el historial (no es legible por nadie): la app escucha
+  con Realtime `casas_marcador`, una fila por ruta que tocan los disparadores, y
+  entonces llama a `casas_ranking`; ademas sondea cada 30 s por si Realtime falla.
 
 - **La Caña se activa por ruta (0040), pero `match_profiles.is_active` sigue
   ahi**: ahora significa "activada en ALGUNA ruta" y lo mantienen al dia

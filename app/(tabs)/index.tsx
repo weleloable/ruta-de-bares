@@ -15,6 +15,7 @@ import { Medalla } from '../../src/components/Medalla';
 import { StampSeal } from '../../src/components/StampSeal';
 import { Banner, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
+import { RankingCasas } from '../../src/features/casas/RankingCasas';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { credencialCompleta } from '../../src/features/stamps/progreso';
@@ -130,6 +131,9 @@ export default function SellosScreen() {
               </View>
             </Card>
           ) : null}
+
+          {/* Las casas, en directo (0044): dentro de la cabecera porque es opaca. */}
+          {activeRoute ? <RankingCasas rutaId={activeRoute.id} /> : null}
         </View>
 
         {!activeRoute ? (
