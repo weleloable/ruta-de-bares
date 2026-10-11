@@ -8,6 +8,8 @@ import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
 import { DetalleOcupado } from './juegos/ocupado/DetalleOcupado';
 import { Ocupado } from './juegos/ocupado/Ocupado';
+import { DetalleQuiz, QuienQuiereSerCervecero } from '../quiz/QuienQuiereSerCervecero';
+import { ID_JUEGO as ID_QUIZ } from '../quiz/config';
 import type { JuegoDef } from './tipos';
 
 /**
@@ -75,5 +77,16 @@ export const JUEGOS: readonly JuegoDef[] = [
     icono: 'key',
     Componente: Ocupado,
     Detalle: DetalleOcupado,
+  },
+  {
+    // Preguntas de cerveza al estilo concurso (logica pura en features/quiz/). Solo record
+    // local: un ranking por ruta pediria una migracion (minigame_scores solo acepta los
+    // juegos que lista).
+    id: ID_QUIZ,
+    titulo: '¿Quién quiere ser cervecero?',
+    descripcion: 'Cinco preguntas de cerveza, cada una más difícil. Con comodines.',
+    icono: 'help-circle',
+    Componente: QuienQuiereSerCervecero,
+    Detalle: DetalleQuiz,
   },
 ];

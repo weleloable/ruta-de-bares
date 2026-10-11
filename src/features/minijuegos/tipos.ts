@@ -35,7 +35,7 @@ export type JuegoDef = {
   titulo: string;
   /** Una linea: se lee de pasada en un bar. */
   descripcion: string;
-  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'key';
+  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'key' | 'help-circle';
   Componente: ComponentType<PropsJuego>;
   /**
    * Se juega a pantalla completa, sin la cabecera del menu ni las pestanas
