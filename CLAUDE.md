@@ -49,6 +49,8 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 - react-native-maps con Google Maps (modulo nativo → no funciona en Expo Go,
   hace falta development build via EAS).
 - Minijuego "¿Conduces tú?": three.js (3D en WebGL), solo web; el resto de la app no lo usa.
+- Minijuego "Ocupado": juego de Godot 4 con su PROPIO repo y web
+  (github.com/weleloable/ocupado, Pages); la app lo carga en un iframe.
 - En web: Leaflet + react-leaflet con teselas de OpenStreetMap (sin clave), y
   PWA con `public/manifest.json` y `public/sw.js`. Se publica en GitHub Pages
   en cada push a `master` (`.github/workflows/deploy-web.yml`).
@@ -919,3 +921,36 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   encuentra la jarra por `testID="vaso-cana"` (la palanca y el "mundo" tambien
   giran) y comprueba con `elementsFromPoint` que la punta del chorro cae dentro
   del interior; comprobado que falla con la formula vieja.
+- **Ocupado (escape room del baño) NO vive en este repo** (`juegos/ocupado/`):
+  es un juego de Godot 4 en `weleloable/ocupado`, que se exporta a web y se
+  publica en su propio GitHub Pages (`https://weleloable.github.io/ocupado/`;
+  se cambia con `EXPO_PUBLIC_OCUPADO_URL`). Meterlo aqui eran ~40 MB de wasm en
+  cada despliegue de la app y mezclar dos ciclos de vida. La app solo lo carga
+  en un iframe y escucha UN aviso: `postMessage({tipo:'ocupado:fin', version:1,
+  final, segundos, temperatura, pistas})`, que manda `app_bridge.gd` al ganar.
+  `mensaje.ts` lo valida y solo acepta el del ORIGEN del juego, y la pantalla
+  exige ademas que lo mande SU iframe (`e.source`): publicados, la app y el
+  juego comparten origen (`weleloable.github.io`) y el origen solo no los
+  distingue. Por lo mismo el iframe NO lleva `sandbox`: el juego es del mismo
+  dueno y mismo origen, y con `sandbox` sin `allow-same-origin` su origen pasa
+  a ser `null` y el aviso no se podria validar. Decision consciente: el juego
+  podria leer la sesion de la app; se acepta porque los dos repos son nuestros.
+  Puntos = cerveza fria: `100 - (temperatura - 2) * 4`. **Solo record local, sin
+  ranking**: `minigame_scores` tiene un check con la lista de juegos y la nota
+  la manda el cliente sin forma de comprobarla (el juego corre en el navegador);
+  un ranking pide migracion y aceptar eso a sabiendas. Se juega en una capa
+  `position: fixed` en un PORTAL a `<body>` (dentro de la pantalla, en un movil
+  en horizontal, al iframe le quedaban ~120 px; y un `transform` de la
+  navegacion encerraria el `fixed`), y no con `pantallaCompleta`: la pantalla
+  completa de verdad solo se concede DENTRO del toque en Jugar, y el Modal
+  monta el juego despues. El iframe se monta al pulsar Jugar, no al abrir la
+  ficha. Ganar y salir con la X (o irse de la pantalla) ENTREGA el resultado: antes el
+  aviso se quedaba colgado y su temporizador cortaba la partida siguiente. En nativo se abre en el navegador del sistema (`expo-web-browser`, sin
+  WebView ni build nuevo) y el record NO se guarda: el navegador no habla con la
+  app. Los controles tactiles son del juego (`touch_controls.gd`), no de la app.
+  `npm run verificar:juego` lo prueba con un Ocupado de mentira servido en el
+  MISMO origen que la app, como en produccion. Ese script exporta con `--clear`: la cache de Metro guarda los
+  ficheros por contenido, NO por el valor de los `EXPO_PUBLIC_*` que llevan
+  incrustados, y sin borrarla el iframe apuntaba a la URL de un export anterior.
+  **Orden al publicar**: primero el juego (su PR en `weleloable/ocupado`, que
+  publica Pages) y despues la app, o el boton Jugar abre un 404.

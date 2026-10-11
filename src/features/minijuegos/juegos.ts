@@ -6,6 +6,8 @@ import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
+import { DetalleOcupado } from './juegos/ocupado/DetalleOcupado';
+import { Ocupado } from './juegos/ocupado/Ocupado';
 import type { JuegoDef } from './tipos';
 
 /**
@@ -61,5 +63,17 @@ export const JUEGOS: readonly JuegoDef[] = [
     // y desde el menu se ve con su propio componente.
     resultadoPropio: true,
     RankingPropio: RankingConduces,
+  },
+  {
+    // Juego de Godot con su propio repo y su propia web (github.com/weleloable/ocupado):
+    // la app lo carga en un iframe (web) o lo abre en el navegador (nativo). Ver juegos/ocupado/.
+    // Solo record local: un ranking por ruta pediria una migracion (minigame_scores solo acepta
+    // los juegos que lista).
+    id: 'ocupado',
+    titulo: 'Ocupado',
+    descripcion: 'Escápate del baño del bar antes de que se caliente tu cerveza.',
+    icono: 'key',
+    Componente: Ocupado,
+    Detalle: DetalleOcupado,
   },
 ];
