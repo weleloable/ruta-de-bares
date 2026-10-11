@@ -7,6 +7,14 @@
     <title>%WEB_TITLE%</title>
     <meta name="description" content="Tu compostelana de bares: un sello por cada parada de la ruta." />
     <!--
+      Google Search Console: demuestra que esta web es nuestra. Google lo exige
+      para verificar la MARCA del login con Google (la pantalla "to continue to"
+      enseña el nombre y el logo en vez del dominio de Supabase). NO quitarla:
+      sin ella Search Console deja de verificar la propiedad y la marca se cae.
+      La vigila tests/search-console.test.ts.
+    -->
+    <meta name="google-site-verification" content="H64QUQa2AU1MrfUDJjEOmQ0Gm949Ng0Uw3ozZ0bscJM" />
+    <!--
       App instalable (PWA). Aqui solo va lo que no depende de la ruta.
       El manifest y el icono de iOS los enlaza la app al arrancar
       (src/lib/pwa.web.ts): Expo no reescribe este fichero con el
