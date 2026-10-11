@@ -2,12 +2,12 @@ import { Accelerometer } from 'expo-sensors';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  anguloDesdeAcelerometro,
+  inclinacionConSigno,
   limitarAngulo,
-  suavizar,
   type ModoInclinacion,
   type MotivoManual,
 } from './inclinacion';
+import { useGiro } from './useGiro';
 
 /** Cuanto se espera a la primera lectura antes de dar el sensor por muerto. */
 const ESPERA_SENSOR_MS = 1500;
@@ -27,7 +27,7 @@ const ESPERA_SENSOR_MS = 1500;
 export function useInclinacion() {
   const [modo, setModo] = useState<ModoInclinacion>('inicio');
   const [motivo, setMotivo] = useState<MotivoManual | null>(null);
-  const angulo = useRef(0);
+  const { objetivo, giro, avanzarGiro, apuntar, reiniciar } = useGiro();
   const suscripcion = useRef<ReturnType<typeof Accelerometer.addListener> | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,11 +41,11 @@ export function useInclinacion() {
   const usarManual = useCallback(
     (porque: MotivoManual = 'elegido') => {
       parar();
-      angulo.current = 0;
+      reiniciar();
       setMotivo(porque);
       setModo('manual');
     },
-    [parar],
+    [parar, reiniciar],
   );
 
   const empezar = useCallback(async () => {
@@ -57,11 +57,11 @@ export function useInclinacion() {
       Accelerometer.setUpdateInterval(50);
       let recibido = false;
       suscripcion.current = Accelerometer.addListener(({ x, y, z }) => {
-        const medido = anguloDesdeAcelerometro(x, y, z);
+        const medido = inclinacionConSigno(x, y, z);
         if (medido === null) return;
         recibido = true;
-        // Mismo tope que el deslizador: el movil apaisado daria 90 grados.
-        angulo.current = limitarAngulo(suavizar(angulo.current, medido));
+        // Solo se apunta: el suavizado lo hace `avanzarGiro` en cada fotograma.
+        apuntar(medido);
       });
       setMotivo(null);
       setModo('sensor');
@@ -75,11 +75,13 @@ export function useInclinacion() {
     }
   }, [usarManual]);
 
-  const fijar = useCallback((grados: number) => {
-    angulo.current = limitarAngulo(grados);
-  }, []);
+  /** Del deslizador o el teclado: siempre hacia un lado (positivo). */
+  const fijar = useCallback(
+    (grados: number) => apuntar(limitarAngulo(grados)),
+    [apuntar],
+  );
 
   useEffect(() => parar, [parar]);
 
-  return { modo, motivo, angulo, empezar, usarManual, fijar };
+  return { modo, motivo, objetivo, giro, avanzarGiro, empezar, usarManual, fijar };
 }

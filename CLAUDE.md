@@ -824,3 +824,20 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   en Android por http: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
   con la URL; en iPhone, solo en la web publicada. `npm run verificar:juego`
   emula el acelerometro (30 grados de movil = 30 de vaso) y los dos dedos.
+- **El vaso de La Caña Perfecta gira hacia el lado en que inclinas el movil, y
+  filtrado en el TIEMPO** (`inclinacion.ts`: `inclinacionConSigno`,
+  `suavizarEnTiempo`; `useGiro.ts`). Antes siempre giraba a la izquierda (se
+  usaba el valor absoluto "porque el signo no es fiable entre plataformas") y a
+  trompicones (el filtro se aplicaba en cada LECTURA del sensor, ~20 por segundo,
+  y dependia de ese ritmo). El signo se saca del producto `x * y`: iOS y Android
+  invierten `x` e `y` A LA VEZ, asi que `x * y < 0` es "inclinado a la derecha"
+  en las dos (solo vale con el movil en vertical, que es como se juega). El
+  sensor solo APUNTA (`objetivo`) y el giro que se dibuja se acerca a el en cada
+  fotograma segun el tiempo que paso (`TAU_GIRO` = 0,12 s; el mismo movimiento
+  con un sensor a 20 o 60 Hz). El modelo de la espuma solo mira CUANTO:
+  `Math.abs(giro)`. El deslizador y el teclado siempre inclinan hacia el mismo
+  lado (positivo): no hay lado que elegir. `npm run verificar:juego` mueve el
+  acelerometro emulado a los dos lados y mide el giro fotograma a fotograma.
+  Sin probar con un movil de verdad: el sentido (movil a la derecha, vaso a la
+  derecha, giran igual) es una eleccion, y si parece al reves se cambia el signo
+  en `inclinacionConSigno`.
