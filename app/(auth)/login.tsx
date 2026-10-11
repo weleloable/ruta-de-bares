@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
+import { CORREO_PRIVACIDAD } from '../../src/features/legal/responsable';
 import { colors, space, typography } from '../../src/lib/theme';
 
 export default function LoginScreen() {
@@ -14,6 +15,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [verContacto, setVerContacto] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
   const puedeEnviar = email.trim().length > 0 && password.length > 0 && !enviando;
@@ -94,13 +96,39 @@ export default function LoginScreen() {
             {/* Esta es la portada de la app y aqui se crea la cuenta la primera
                 vez que se entra con Google, asi que la politica se enlaza aqui
                 tambien (art. 13 RGPD; Google lo exige para verificar el acceso). */}
-            <Text
-              style={[typography.muted, styles.centrado, styles.enlace]}
-              accessibilityRole="link"
-              onPress={() => router.push('/privacidad')}
-            >
-              Política de privacidad
-            </Text>
+            <View style={styles.enlaces}>
+              <Text
+                style={[typography.muted, styles.enlace]}
+                accessibilityRole="link"
+                onPress={() => router.push('/privacidad')}
+              >
+                Política de privacidad
+              </Text>
+              <Text
+                style={[typography.muted, styles.enlace]}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: verContacto }}
+                onPress={() => setVerContacto((v) => !v)}
+              >
+                Contacto
+              </Text>
+            </View>
+            {/* Se despliega aqui y no en otra pantalla: quien no puede entrar es
+                justo quien necesita escribir, y la pantalla de contacto de
+                dentro (Escribir a la organizacion) exige sesion. */}
+            {verContacto ? (
+              <Text style={[typography.muted, styles.centrado]}>
+                Para contactar con la organización, escribe a{' '}
+                <Text
+                  style={styles.enlace}
+                  accessibilityRole="link"
+                  onPress={() => void Linking.openURL(`mailto:${CORREO_PRIVACIDAD}`)}
+                >
+                  {CORREO_PRIVACIDAD}
+                </Text>
+                .
+              </Text>
+            ) : null}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -114,5 +142,6 @@ const styles = StyleSheet.create({
   centrado: { textAlign: 'center' },
   formulario: { gap: space.lg },
   pie: { gap: space.xs, marginTop: space.md },
+  enlaces: { flexDirection: 'row', justifyContent: 'center', gap: space.lg },
   enlace: { fontWeight: '700', color: colors.beerDark, textDecorationLine: 'underline' },
 });
