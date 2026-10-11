@@ -261,6 +261,26 @@ export async function titiritero(cfg, rutaId, ids) {
       const id = await this.conexionCon(de, a);
       ok(await (await como(de)).rpc('match_ask_beer', { p_connection_id: id }), 'preguntar cerveza');
     },
+    /**
+     * La organizacion aprueba la foto que `nombre` acaba de mandar a revision,
+     * por la misma funcion que el boton de Alertas de administracion.
+     */
+    async aprobarFoto(nombre) {
+      const [pendiente] = ok(
+        await servicio.from('avatar_requests').select('*').eq('user_id', ids[nombre]).eq('status', 'pendiente')
+          .order('created_at', { ascending: false }).limit(1),
+        'leer foto pendiente',
+      );
+      if (!pendiente) throw new Error(`${nombre} no tiene ninguna foto en revision`);
+      const publica = (r) => `${cfg.url}/storage/v1/object/public/avatars/${r}`;
+      ok(
+        await (await como(ADMIN.nombre)).rpc('avatar_admin_decide', {
+          p_request_id: pendiente.id, p_approve: true,
+          p_foto_url: publica(pendiente.foto_path), p_thumb_url: publica(pendiente.thumb_path),
+        }),
+        `aprobar foto de ${nombre}`,
+      );
+    },
     /** respuesta: 'yes' | 'no' | 'later' (match_answer_beer). */
     async responderCerveza(de, a, respuesta) {
       const id = await this.conexionCon(de, a);

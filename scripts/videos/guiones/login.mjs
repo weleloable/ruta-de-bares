@@ -27,7 +27,7 @@ export default {
     await d.foco('Continuar con Google', 2600);
     await d.paso('Si no, pulsa <b>Entrar</b>.', { pausa: 900 });
     await d.tocar('Entrar', { despues: 2200 });
-    await d.paso('¡Dentro! La app te lleva a tu <b>credencial de sellos</b>.', { pausa: 3200 });
+    await d.paso('¡Dentro! La app te lleva a tus <b>sellos</b>.', { pausa: 3200 });
     await d.paso('Para salir: toca <b>tu foto</b> y, abajo del todo, <b>Cerrar sesión</b>.', { pausa: 900 });
     await d.tocar(d.app.getByLabel('Mi perfil', { exact: true }), { despues: 1800 });
     await d.deslizar(1600);

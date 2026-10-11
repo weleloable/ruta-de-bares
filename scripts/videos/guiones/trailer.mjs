@@ -24,10 +24,10 @@ export default {
     // Frases grandes y centradas en vez de pasos (escenario: body.trailer).
     await d.pagina.evaluate(() => document.body.classList.add('trailer'));
     await d.tarjeta({ clase: 'oscura grande', sobre: 'Ruta de Bares', titulo: '¿Te vienes de ruta?' }, 2800);
-    await d.tarjeta({ logo: false, clase: 'grande', titulo: 'Ocho bares.<br>Una credencial.', texto: 'Y una medalla para quien llegue al final.' }, 2800);
+    await d.tarjeta({ logo: false, clase: 'grande', titulo: 'Múltiples bares.<br>Una ruta.', texto: 'Y una medalla para quien llegue al final.' }, 2800);
     await d.quitarTarjeta(500);
 
-    await d.titular('Tu credencial de bares, <b>en el móvil</b>.', 2200);
+    await d.titular('Tus sellos de la ruta, <b>en el móvil</b>.', 2200);
     await d.tocar(d.app.getByText(bar.name, { exact: true }), { despues: 1400 });
     await d.titular('Llegas al bar. <b>Sellas.</b>', 600);
     await d.tocar('Sellar este bar', { despues: 2600 });

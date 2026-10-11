@@ -115,7 +115,7 @@
     inclinar(grados) {
       const m = $('movil');
       m.style.transition = 'transform .45s cubic-bezier(.4,0,.2,1)';
-      m.style.transform = grados ? `translateX(-50%) rotate(${grados}deg) scale(.6)` : 'translateX(-50%)';
+      m.style.transform = grados ? `translateX(-50%) translateY(40px) rotate(${grados}deg) scale(.6)` : 'translateX(-50%)';
     },
     sinDedo() { $('dedo').classList.remove('visible'); },
     foco(c) {

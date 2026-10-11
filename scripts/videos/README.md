@@ -8,10 +8,10 @@ subtítulos por paso y un dedo que marca cada toque. Sale en vertical
 | Fichero | Qué enseña |
 | --- | --- |
 | `00-trailer.mp4` | Tráiler: sellar, mapa, La Caña, un juego y el diploma, a ritmo de anuncio |
-| `01-crear-cuenta.mp4` | Abrir el enlace de invitación, crear la cuenta, entrar en la ruta e instalar la app |
+| `01-crear-cuenta-y-unirse.mp4` | Las dos formas de crear la cuenta (correo o Google), unirse a una ruta con el enlace de invitación e instalar la app |
 | `02-iniciar-sesion.mp4` | Entrar con correo y contraseña (y dónde está Google) |
-| `03-mi-perfil.mp4` | Cambiar foto (va a revisión) y nombre, privacidad, escribir a la organización, cerrar sesión y borrar cuenta |
-| `04-ruta-y-sellos.mp4` | Mapa, credencial, sellar un bar (lejos / en la puerta), bares que aún no abren, medalla y diploma |
+| `03-mi-perfil.mp4` | Cambiar la foto (revisión y aprobación) y el nombre, avisos, privacidad y descargar tus datos, escribir a la organización, cerrar sesión y borrar cuenta |
+| `04-ruta-y-sellos.mp4` | Mapa, tus sellos, sellar un bar (lejos / en la puerta), bares que aún no abren, medalla y diploma |
 | `05-la-cana.mp4` | Activarla, presentarse, Me gusta, conexión, la pregunta de la cerveza, el mensaje único, bloquear y desactivar |
 | `06-juegos.mp4` | La Caña Perfecta (inclinando el móvil), ranking, Maestro Cervecero en sus cuatro pasos y las cervezas de la ruta |
 

@@ -50,7 +50,7 @@ export default {
   async grabar(d) {
     await empezar(d, {
       seccion: 'Juegos',
-      pasos: 16,
+      pasos: 17,
       tarjeta: portada('Juegos', 'Para el rato entre bar y bar', 'Dos juegos, con ranking solo entre la gente de tu ruta.', [
         'La Caña Perfecta',
         'Maestro Cervecero',
@@ -84,7 +84,9 @@ export default {
     await d.tocar('Maestro Cervecero', { despues: 1800 });
     await d.paso('<b>1. La malta</b>: elige una. Cuanto más tostada, más oscura la cerveza.', { pausa: 900 });
     await d.tocar('Tostada', { despues: 900 });
-    await d.tocar('Siguiente', { despues: 1500 });
+    await d.tocar('Siguiente', { despues: 1200 });
+    // Sin esto, la pantalla del dato curioso salia con el subtitulo de la malta.
+    await d.paso('Entre paso y paso sale un <b>dato curioso</b> sobre la cerveza. Pulsa <b>Seguir</b>.', { pausa: 2400 });
     await d.tocar('Seguir', { despues: 1400 });
 
     await d.paso('<b>2. Maceración</b>: toca <b>Calentar</b> para mantener la olla en la zona buena (63-68 °C).', { pausa: 600 });

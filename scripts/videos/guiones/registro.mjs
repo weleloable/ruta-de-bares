@@ -2,60 +2,76 @@ import { CLAVE_DEMO, NUEVA } from '../reparto.mjs';
 import { abrir, cierre, empezar, portada, terminar } from './comun.mjs';
 
 /**
- * Crear cuenta como pasa de verdad: llega el enlace de invitacion por el
- * grupo, se abre sin cuenta, se crea y la app te mete en la ruta sola.
- * Pablo no existe antes de grabar; el alta es real contra el Supabase local.
+ * Dos partes, en el orden en que le pasan a alguien nuevo:
+ *  1. Crear la cuenta, con las dos formas que hay (correo o Google).
+ *  2. Unirse a una ruta con el enlace de invitacion, ya con sesion.
+ * Pablo no existe antes de grabar; el alta y el canje son reales contra el
+ * Supabase local.
  */
 export default {
   id: 'registro',
-  fichero: '01-crear-cuenta',
-  titulo: 'Crear cuenta',
-  // Sin preparar: el movil empieza en blanco (papel) y la app se abre con el
-  // enlace, detras de la tarjeta. Cargar antes el login hacia que se viera un
-  // instante una pantalla que en este video no pinta nada.
+  fichero: '01-crear-cuenta-y-unirse',
+  titulo: 'Crear cuenta y unirse a una ruta',
+  async preparar(d, ctx) {
+    await abrir(d, ctx, '/login', 'Entrar');
+  },
   async grabar(d, ctx) {
     await empezar(d, {
-      seccion: 'Crear cuenta',
-      pasos: 9,
-      tarjeta: portada('Crear cuenta', 'Entra en tu primera ruta', 'Solo se entra con invitación. Te la pasa quien organiza.', [
-        'Abrir el enlace de invitación',
-        'Crear tu cuenta',
+      seccion: 'Cuenta y ruta',
+      pasos: 12,
+      tarjeta: portada('Crear cuenta', 'Crea tu cuenta y únete a una ruta', 'Dos pasos: primero la cuenta, después la invitación.', [
+        'Crear la cuenta: con correo o con Google',
+        'Unirte a una ruta con tu invitación',
         'Instalar la app en el móvil',
       ]),
     });
-    await d.tarjeta({
-      logo: false,
-      sobre: 'Paso 1',
-      titulo: 'Te llega un enlace',
-      texto: 'Por WhatsApp o Telegram:<br><b style="color:#9A5A11">weleloable.github.io/ruta-de-bares/invitacion?token=…</b><br>Tócalo y se abre la app en el navegador.',
-    }, 4600);
-    await abrir(d, ctx, `/invitacion?token=${ctx.token}`, 'Te han invitado a una ruta');
-    await d.quitarTarjeta(700);
-    await d.paso('El enlace te lleva aquí. Si es tu primera vez, pulsa <b>Crear cuenta</b>.', { pausa: 1200 });
-    await d.tocar('Crear cuenta', { despues: 1800 });
 
-    await d.paso('Pon el <b>nombre</b> con el que te verá la gente de la ruta.', { pausa: 900 });
+    // Parte 1: crear la cuenta.
+    await d.tarjeta({ logo: false, sobre: 'Parte 1', titulo: 'Crear la cuenta', texto: 'Hay dos formas: con tu correo o con tu cuenta de Google.' }, 3400);
+    await d.quitarTarjeta(700);
+    await d.paso('Abre la app. En la portada, pulsa <b>Crear cuenta</b>.', { pausa: 1300 });
+    await d.tocar(d.app.getByText('Crear cuenta', { exact: true }), { despues: 1800 });
+
+    await d.paso('<b>Forma 1, con tu correo.</b> Pon el nombre con el que te verá la gente de la ruta.', { pausa: 1100 });
     await d.escribir(d.app.getByPlaceholder('Tu nombre'), NUEVA.nombre, { retraso: 110 });
     await d.paso('Tu <b>correo</b>…', { pausa: 700 });
     await d.escribir(d.app.getByPlaceholder('tu@correo.com'), NUEVA.correo);
     await d.paso('…y una <b>contraseña</b> de al menos 8 caracteres, dos veces.', { pausa: 900 });
     const claves = d.app.locator('input[type="password"]');
-    await d.escribir(claves.nth(0), CLAVE_DEMO, { retraso: 55 });
-    await d.escribir(claves.nth(1), CLAVE_DEMO, { retraso: 55 });
-    await d.paso('¿Prefieres no recordar otra contraseña? <b>Continuar con Google</b> también vale.', { pausa: 600 });
-    await d.foco('Continuar con Google', 2400);
-    await d.paso('Pulsa <b>Crear cuenta</b>.', { pausa: 900 });
-    await d.tocar(d.app.getByText('Crear cuenta', { exact: true }).last(), { despues: 1000 });
+    await d.escribir({ loc: claves, n: 0 }, CLAVE_DEMO, { retraso: 55 });
+    await d.escribir({ loc: claves, n: 1 }, CLAVE_DEMO, { retraso: 55 });
 
-    await d.buscar('Enlace reconocido. Confirma para entrar en la ruta.', 30000);
-    await d.esperar(600);
-    await d.paso('La app recuerda tu invitación. Confirma con <b>Entrar en la ruta</b>.', { pausa: 1500 });
+    await d.paso('<b>Forma 2, con Google.</b> Un toque aquí y entras con tu cuenta de Google, sin otra contraseña.', { pausa: 700 });
+    await d.foco('Continuar con Google', 3200);
+
+    await d.paso('Seguimos con el correo: pulsa <b>Crear cuenta</b>.', { pausa: 1000 });
+    await d.tocar(d.app.getByText('Crear cuenta', { exact: true }).last(), { despues: 1200 });
+    await d.buscar('Todavia no hay ruta', 30000);
+    await d.esperar(800);
+    await d.paso('¡Cuenta creada! Pero todavía no ves ninguna ruta: para eso hace falta una <b>invitación</b>.', { pausa: 900 });
+    await d.foco(d.app.getByText('Todavia no hay ruta', { exact: true }).locator('xpath=..'), 3600);
+
+    // Parte 2: unirse con el enlace.
+    await d.tarjeta({
+      logo: false,
+      sobre: 'Parte 2',
+      titulo: 'Unirse a una ruta',
+      texto: 'Quien organiza te pasa un enlace por WhatsApp o Telegram:<br><b style="color:#9A5A11">weleloable.github.io/ruta-de-bares/invitacion?token=…</b>',
+    });
+    await d.esperar(2500);
+    await abrir(d, ctx, `/invitacion?token=${ctx.token}`, 'Enlace reconocido. Confirma para entrar en la ruta.');
+    await d.esperar(2000);
+    await d.quitarTarjeta(700);
+    await d.paso('Toca el enlace y se abre la app con la invitación ya puesta.', { pausa: 2800 });
+    await d.paso('¿Te han pasado solo el código? Pégalo en esta misma casilla.', { pausa: 700 });
+    await d.foco(d.app.locator('input'), 2800);
+    await d.paso('Pulsa <b>Entrar en la ruta</b>.', { pausa: 1000 });
     await d.tocar(d.app.getByText('Entrar en la ruta', { exact: true }).last(), { despues: 1000 });
     await d.buscar('Ya estas dentro', 30000);
     await d.esperar(600);
-    await d.paso('¡Ya estás dentro de la ruta!', { pausa: 2400 });
-    if (await d.seVe('Ver mis sellos')) await d.tocar('Ver mis sellos', { despues: 2000 });
-    await d.paso('Esta es tu credencial: un hueco por bar, lista para sellar.', { pausa: 3000 });
+    await d.paso('¡Ya estás dentro de la ruta!', { pausa: 2000 });
+    await d.tocar('Ver mis sellos', { despues: 2000 });
+    await d.paso('Estos son tus sellos: una chapa por bar, lista para sellar cuando llegues.', { pausa: 3400 });
 
     await d.sinDedo();
     await d.tarjeta({
@@ -68,6 +84,6 @@ export default {
         '<b>iPhone</b> (Safari): Compartir → <b>Añadir a pantalla de inicio</b>',
       ],
     }, 6500);
-    await terminar(d, cierre('Si ya tenías cuenta, en la invitación pulsa «Ya tengo cuenta».', 'Iniciar sesión'));
+    await terminar(d, cierre('Si ya tenías cuenta, en la invitación pulsa «Ya tengo cuenta» y entra.', 'Iniciar sesión'));
   },
 };

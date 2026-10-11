@@ -178,6 +178,9 @@ export class Director {
    * el primer "La Oveja Negra" del DOM era la tarjeta del mapa escondido.
    */
   async buscar(objetivo, limite = 20000) {
+    // { loc, n }: el n-esimo de los que se VEN (dos campos de contrasena iguales, con otro oculto detras).
+    const enesimo = objetivo && objetivo.loc ? objetivo.n : 0;
+    if (objetivo && objetivo.loc) objetivo = objetivo.loc;
     const loc =
       typeof objetivo === 'string' ? this.app.getByText(objetivo, { exact: true })
       : objetivo instanceof RegExp ? this.app.getByText(objetivo)
@@ -185,6 +188,7 @@ export class Director {
     const fin = Date.now() + limite;
     for (;;) {
       const n = await loc.count();
+      let vistos = 0;
       for (let i = 0; i < n; i++) {
         const ok = await loc
           .nth(i)
@@ -195,7 +199,7 @@ export class Director {
             return r.width > 0 && r.height > 0 && s.visibility === 'visible' && r.right > 0 && r.left < innerWidth;
           })
           .catch(() => false);
-        if (ok) return loc.nth(i);
+        if (ok && vistos++ === enesimo) return loc.nth(i);
       }
       if (Date.now() > fin) throw new Error(`No veo en la app: ${objetivo}`);
       await esperar(200);

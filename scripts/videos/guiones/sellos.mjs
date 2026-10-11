@@ -21,7 +21,7 @@ export default {
     await empezar(d, {
       seccion: 'Ruta y sellos',
       pasos: 13,
-      tarjeta: portada('Ruta y sellos', 'Tu credencial de bares', 'Un sello por cada bar de la ruta. Así se consigue.', [
+      tarjeta: portada('Ruta y sellos', 'Tus sellos de la ruta', 'Un sello por cada bar de la ruta. Así se consiguen.', [
         'Ver la ruta en el mapa',
         'Sellar un bar al llegar',
         'Completarla y ganar la medalla',
@@ -36,7 +36,7 @@ export default {
 
     await d.paso('Para sellar, ve a la pestaña <b>Sellos</b>.', { pausa: 900 });
     await d.tocar(d.app.getByText('Sellos', { exact: true }), { despues: 1500 });
-    await d.paso('Esta es tu <b>credencial</b>: cada chapa es un bar. Llevas 3 de 8.', { pausa: 900 });
+    await d.paso('Estos son tus <b>sellos</b>: cada chapa es un bar de la ruta. Aquí llevas 3 de 8.', { pausa: 900 });
     await d.foco(d.app.getByText('Credencial de', { exact: true }), 2800);
 
     await d.paso(`Cuando llegues al bar, toca su chapa. Ahora toca <b>${bar.name}</b>.`, { pausa: 1200 });
@@ -63,7 +63,7 @@ export default {
     await d.recargar('Credencial de');
     await d.esperar(2600);
     await d.quitarTarjeta(900);
-    await d.paso('¡Credencial completa! Aparece la <b>medalla</b>. Tócala.', { pausa: 1500 });
+    await d.paso('¡Ruta completa! Aparece la <b>medalla</b>. Tócala.', { pausa: 1500 });
     await d.tocar(d.app.getByLabel('Medalla: ruta completa. Toca para ver tu diploma'), { despues: 2500 });
     await d.paso('Tu <b>diploma</b>, con el recorrido. Puedes guardarlo o compartirlo.', { pausa: 4200 });
     await terminar(d, cierre('Recuerda: la ubicación solo se pide al sellar, nunca para el mapa.', 'La Caña'));
