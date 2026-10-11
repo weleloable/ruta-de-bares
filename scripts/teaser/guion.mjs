@@ -66,7 +66,9 @@ export const ESCENAS = [
   { id: 'cierre', tipo: 'cierre', inicio: 10.0, fin: 15.0,
     lema: ['La ruta de siempre,', 'ahora en tu móvil.'],
     titular: ['PRÓXIMAMENTE', 'DISPONIBLE'],
-    usuario: '@rutadebaresoficial' },
+    usuario: '@rutadebaresoficial',
+    // el dia de la ruta, como un sello que cae sobre el logo (en el golpe de 12 s)
+    fecha: { iso: '2026-10-17', lineas: ['SÁBADO', '17', 'OCTUBRE'], t: 12.0 } },
 ];
 
 /** Donde empieza y acaba el tramo con bombo (lo usa la musica). */
@@ -116,6 +118,7 @@ export function golpesSonoros() {
     if (e.tipo === 'rafaga') e.palabras.forEach((_, i) =>
       g.push({ t: e.inicio + (i * (e.fin - e.inicio)) / e.palabras.length, tipo: 'palabra' }));
     if (e.tipo === 'cierre') g.push({ t: e.inicio, tipo: 'impacto' });
+    if (e.fecha) g.push({ t: e.fecha.t, tipo: 'sello' });
   }
   return g.sort((a, b) => a.t - b.t);
 }

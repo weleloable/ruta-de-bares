@@ -40,6 +40,17 @@ describe('guion', () => {
     assert.ok(G.DURACION - cierre.inicio >= 4, 'el cartel final se tiene que poder leer');
   });
 
+  it('la fecha del sello es la de la ruta y el dia de la semana cuadra', () => {
+    const { fecha } = G.ESCENAS.at(-1);
+    assert.equal(fecha.iso, '2026-10-17');
+    const d = new Date(`${fecha.iso}T12:00:00Z`);
+    const dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    assert.deepEqual(fecha.lineas, [dias[d.getUTCDay()], String(d.getUTCDate()), meses[d.getUTCMonth()]]);
+    assert.ok(G.golpesSonoros().some((g) => g.tipo === 'sello' && g.t === fecha.t), 'el sello de la fecha suena');
+    assert.ok(Math.abs(fecha.t / G.GOLPE - Math.round(fecha.t / G.GOLPE)) < 1e-9, 'y cae en golpe');
+  });
+
   it('cada escena de movil tiene plano, y el plano no se congela antes de tiempo', () => {
     for (const e of G.ESCENAS.filter((e) => e.tipo === 'movil')) {
       const p = G.PLANOS[e.plano];

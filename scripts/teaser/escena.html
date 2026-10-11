@@ -84,6 +84,7 @@
   #isla { position: absolute; top: 40px; left: 50%; width: 170px; height: 44px; margin-left: -85px; border-radius: 22px; background: #0e0906; }
 
   #sellado { position: absolute; left: 600px; top: 760px; width: 380px; height: 380px; }
+  #fecha { position: absolute; left: 640px; top: 520px; width: 340px; height: 340px; }
 
   /* Cierre */
   #logo {
@@ -126,6 +127,7 @@
   <div class="capa" id="c-cierre">
     <div id="onda"></div>
     <div id="logo"><img id="logo-img" src="../../assets/marca/logo-10.png" alt=""></div>
+    <canvas id="fecha" width="340" height="340"></canvas>
     <div class="etiqueta" id="cierre-et" style="top:850px;">RUTA DE BARES</div>
     <div class="rotulo" id="cierre-t1" style="top:930px;font-size:150px;"></div>
     <div class="rotulo acento" id="cierre-t2" style="top:1080px;font-size:176px;color:var(--cerveza);"></div>
@@ -247,6 +249,27 @@ function pintarSellado() {
   g.restore();
   g.globalCompositeOperation = 'destination-out';
   for (let i = 0; i < 700; i++) { g.globalAlpha = r() * 0.7; g.beginPath(); g.arc(r() * 380, r() * 380, r() * 3, 0, 7); g.fill(); }
+}
+
+/** El dia de la ruta, entintado como un sello de la credencial. */
+function pintarFecha(fecha) {
+  const g = $('fecha').getContext('2d');
+  const r = azar(9);
+  g.save(); g.translate(170, 170); g.rotate(0.18);
+  // fondo de papel: sobre el logo y el fondo oscuro, la tinta roja sola no se leeria
+  g.fillStyle = '#F6EFE2'; g.beginPath(); g.arc(0, 0, 160, 0, 7); g.fill();
+  g.strokeStyle = g.fillStyle = '#b8322a';
+  g.lineWidth = 10; g.beginPath(); g.arc(0, 0, 148, 0, 7); g.stroke();
+  g.lineWidth = 4; g.beginPath(); g.arc(0, 0, 126, 0, 7); g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const [dia, num, mes] = fecha.lineas;
+  // medidas para que las tres lineas quepan dentro del aro de dentro (r = 126)
+  g.font = '32px Anton'; g.fillText(dia, 0, -80);
+  g.font = '128px Anton'; g.fillText(num, 0, 6);
+  g.font = '32px Anton'; g.fillText(mes, 0, 84);
+  g.restore();
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 500; i++) { g.globalAlpha = r() * 0.55; g.beginPath(); g.arc(r() * 340, r() * 340, r() * 2.6, 0, 7); g.fill(); }
 }
 
 // ---------------------------------------------------------------- fondo
@@ -477,6 +500,13 @@ window.pintar = async function pintar(t, f = Math.round(t * G.FPS)) {
     entra($('cierre-lema'), t, e.inicio + 1.4, 0.35, 40);
     setTexto($('cierre-user'), '<svg width="34" height="34" viewBox="0 0 24 24" style="vertical-align:-6px;margin-right:12px" fill="none" stroke="#FBF4E6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#FBF4E6"/></svg>' + e.usuario);
     entra($('cierre-user'), t, e.inicio + 1.8, 0.35, 30);
+    const fe = $('fecha');
+    if (e.fecha && t >= e.fecha.t - 0.06) {
+      const y = lin(t, e.fecha.t - 0.06, e.fecha.t);
+      fe.style.display = 'block';
+      fe.style.transform = `scale(${mezcla(2.6, 1, y) * (1 + Math.sin(t * 2.4 + 1) * 0.006)}) rotate(${mezcla(25, 0, y)}deg)`;
+      fe.style.filter = 'drop-shadow(0 18px 30px rgba(0,0,0,.55))';
+    } else fe.style.display = 'none';
     // el brillo que recorre PROXIMAMENTE DISPONIBLE una vez colocado
     const br = lin(t, e.inicio + 2.4, e.inicio + 3.2);
     for (const id of ['cierre-t1', 'cierre-t2']) $(id).style.filter = br > 0 && br < 1 ? `brightness(${1 + Math.sin(br * Math.PI) * 0.35})` : 'none';
@@ -504,6 +534,8 @@ window.listo = (async () => {
   const faltan = ['100px Anton', 'italic 600 40px "Playfair Display"'].filter((f) => !document.fonts.check(f));
   await prepararSellos();
   pintarSellado();
+  const fecha = ESCENAS.at(-1).fecha;
+  if (fecha) pintarFecha(fecha);
   await cargar($('logo-img').src);
   return { faltan };
 })();

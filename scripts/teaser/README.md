@@ -13,7 +13,7 @@ ruta: tras 10 ediciones en papel, la ruta pasa al móvil. Lo pidió el equipo
 | 3-4 s | **ESTE AÑO LA RUTA CAMBIA** |
 | 4-9 s | Destellos de un segundo de la app, una palabra cada uno: **SELLA. EXPLORA. CONOCE. BRINDA. JUEGA.** |
 | 9-10 s | **Y MUCHO MÁS...** |
-| 10-15 s | Logo, **PRÓXIMAMENTE DISPONIBLE**, "La ruta de siempre, ahora en tu móvil." y @rutadebaresoficial |
+| 10-15 s | Logo, **PRÓXIMAMENTE DISPONIBLE**, "La ruta de siempre, ahora en tu móvil." y @rutadebaresoficial; a los 12 s cae sobre el logo un sello rojo con el día de la ruta (**SÁBADO 17 OCTUBRE**) |
 
 La música está sintetizada en `musica.mjs` (120 BPM, cortes en el pulso): no
 hay pistas de terceros, así que Instagram o TikTok no silencian el video.
@@ -64,6 +64,10 @@ npm test --prefix scripts/teaser                     # tests (guion, música, es
   momentos y ajústalos. Los dos que tienen que caer justos: el sello que aparece
   en la app (con el SELLADO de `sellar`, a 4,75 s) y el "Os habéis dado Me gusta"
   (con la chispa de `match`, a 7,5 s).
-- **Cuando haya fecha**, se cambia `titular` de la escena `cierre` (p. ej.
-  `['DISPONIBLE', 'EL 14 DE NOV']`). El test que pide "Próximamente disponible"
-  se cambia con él: está para que no se pierda sin querer.
+- **Si cambia la fecha de la ruta**, se toca `fecha` de la escena `cierre`
+  (`iso` y `lineas`). El test calcula el día de la semana desde `iso` y falla
+  si `lineas` no cuadra: un "SÁBADO" con un 17 que cae en viernes no llega a
+  publicarse.
+- **Cuando la app esté publicada**, se cambia `titular` (p. ej.
+  `['YA', 'DISPONIBLE']`). El test que pide "Próximamente disponible" se cambia
+  con él: está para que no se pierda sin querer.
