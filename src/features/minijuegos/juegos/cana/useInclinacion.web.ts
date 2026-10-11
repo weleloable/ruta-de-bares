@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  anguloDesdeAcelerometro,
+  inclinacionConSigno,
   limitarAngulo,
-  suavizar,
   type ModoInclinacion,
   type MotivoManual,
 } from './inclinacion';
+import { useGiro } from './useGiro';
 
 /** Cuanto se espera a la primera lectura antes de dar el sensor por muerto. */
 const ESPERA_SENSOR_MS = 1500;
@@ -35,7 +35,7 @@ type ConPermiso = { requestPermission?: () => Promise<'granted' | 'denied' | 'de
 export function useInclinacion() {
   const [modo, setModo] = useState<ModoInclinacion>('inicio');
   const [motivo, setMotivo] = useState<MotivoManual | null>(null);
-  const angulo = useRef(0);
+  const { objetivo, giro, avanzarGiro, apuntar, reiniciar } = useGiro();
   const quitarEscucha = useRef<(() => void) | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Cada eleccion (empezar, pasar al deslizador, salir) invalida lo anterior. El
@@ -57,11 +57,11 @@ export function useInclinacion() {
       intento.current += 1;
       pidiendo.current = false;
       parar();
-      angulo.current = 0;
+      reiniciar();
       setMotivo(porque);
       setModo('manual');
     },
-    [parar],
+    [parar, reiniciar],
   );
 
   const escuchar = useCallback(() => {
@@ -71,11 +71,11 @@ export function useInclinacion() {
     const alMoverse = (e: DeviceMotionEvent) => {
       const g = e.accelerationIncludingGravity;
       if (!g) return;
-      const medido = anguloDesdeAcelerometro(g.x ?? Number.NaN, g.y ?? Number.NaN, g.z ?? Number.NaN);
+      const medido = inclinacionConSigno(g.x ?? Number.NaN, g.y ?? Number.NaN, g.z ?? Number.NaN);
       if (medido === null) return;
       recibido = true;
-      // Mismo tope que el deslizador: el movil apaisado daria 90 grados.
-      angulo.current = limitarAngulo(suavizar(angulo.current, medido));
+      // Solo se apunta: el suavizado lo hace `avanzarGiro` en cada fotograma.
+      apuntar(medido);
     };
     window.addEventListener('devicemotion', alMoverse);
     quitarEscucha.current = () => window.removeEventListener('devicemotion', alMoverse);
@@ -85,7 +85,7 @@ export function useInclinacion() {
     temporizador.current = setTimeout(() => {
       if (!recibido) usarManual('sin-sensor');
     }, ESPERA_SENSOR_MS);
-  }, [usarManual]);
+  }, [usarManual, apuntar, parar]);
 
   /** Llamarlo SIEMPRE desde un toque, y sin `await` antes: iOS solo da el permiso dentro del gesto. */
   const empezar = useCallback(() => {
@@ -114,9 +114,11 @@ export function useInclinacion() {
       });
   }, [escuchar, usarManual]);
 
-  const fijar = useCallback((grados: number) => {
-    angulo.current = limitarAngulo(grados);
-  }, []);
+  /** Del deslizador o el teclado: siempre hacia un lado (positivo). */
+  const fijar = useCallback(
+    (grados: number) => apuntar(limitarAngulo(grados)),
+    [apuntar],
+  );
 
   // Al salir: se para todo y se invalida un permiso que aun este por contestar.
   useEffect(
@@ -127,5 +129,5 @@ export function useInclinacion() {
     [parar],
   );
 
-  return { modo, motivo, angulo, empezar, usarManual, fijar };
+  return { modo, motivo, objetivo, giro, avanzarGiro, empezar, usarManual, fijar };
 }

@@ -19,7 +19,7 @@
  *   4. en la siembra se mantiene el grifo, avisa de soltar (inercia), se siembra
  *      y la tarjeta final ensena la fermentacion;
  *   5. La Cana Perfecta con tactil y acelerometro emulados: el sensor inclina el
- *      vaso, se sirve con un dedo mientras otro mueve el deslizador, salirse del
+ *      vaso hacia el lado en que se inclina el movil y de forma fluida, se sirve con un dedo mientras otro mueve el deslizador, salirse del
  *      boton no suelta y levantar el dedo si (ver `recorrerCana`).
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -172,10 +172,14 @@ async function abrirChrome(chrome, perfil, url, { ancho, alto }) {
       }
       await cdp('Page.navigate', { url });
     },
-    /** El movil girado `grados` de lado (como un volante), en vertical. */
+    /**
+     * El movil girado `grados` de lado (como un volante), en vertical: positivo = a la DERECHA.
+     * Con las lecturas de Android (en vertical y = +g y a la derecha x es NEGATIVA); iOS las da
+     * las dos al reves, y la formula del juego da lo mismo (ver `inclinacionConSigno`).
+     */
     async inclinarMovil(grados) {
       const rad = (grados * Math.PI) / 180;
-      const xyz = { x: 9.81 * Math.sin(rad), y: 9.81 * Math.cos(rad), z: 0 };
+      const xyz = { x: -9.81 * Math.sin(rad), y: 9.81 * Math.cos(rad), z: 0 };
       await cdp('Emulation.setSensorOverrideReadings', { type: 'accelerometer', reading: { xyz } });
       await cdp('Emulation.setSensorOverrideReadings', { type: 'gravity', reading: { xyz } });
       await cdp('Emulation.setSensorOverrideReadings', { type: 'linear-acceleration', reading: { xyz: { x: 0, y: 0, z: 0 } } });
@@ -363,6 +367,27 @@ async function recorrerCana(chrome, perfil, url, tamano) {
     const giroCon30 = await c.giroVaso();
     const enSensor = /Usar deslizador/.test(await c.texto());
 
+    // A la IZQUIERDA el vaso gira a la izquierda (signo negativo), y de forma fluida: un escalon de
+    // 0 a 30 grados se reparte en fotogramas. Se graba desde dentro de la pagina (con CDP iria a saltos).
+    await c.inclinarMovil(0);
+    await esperar(1500);
+    await c.ev(`window.__g = []; window.__grabando = true; (function f() {
+      const v = [...document.querySelectorAll('div')].find((d) => /rotate\\(/.test(d.style.transform || ''));
+      window.__g.push(v ? parseFloat(v.style.transform.replace('rotate(', '')) : 0);
+      if (window.__grabando) requestAnimationFrame(f);
+    })(); true`);
+    await esperar(200);
+    await c.inclinarMovil(-30);
+    await esperar(1200);
+    await c.ev('window.__grabando = false; true');
+    const serie = await c.ev('window.__g');
+    const giroIzquierda = serie.at(-1);
+    const saltos = serie.slice(1).map((v, i) => Math.abs(v - serie[i]));
+    const mayorSalto = Math.max(...saltos);
+    const intermedios = serie.filter((v) => v < -3 && v > -27).length;
+    await c.inclinarMovil(30);
+    await esperar(1200);
+
     await c.clic('Usar deslizador');
     await esperar(600);
     const b = await c.rect('servir');
@@ -400,7 +425,7 @@ async function recorrerCana(chrome, perfil, url, tamano) {
     await c.ev(clicLector);
     await esperar(300);
     const lectorCierra = !/Sirviendo/.test(await c.texto());
-    return { giroCon30, enSensor, sirveConUnDedo, sirveConDosDedos, inclinacionManual, sirveFuera, paraAlLevantar, lectorAbre, lectorCierra };
+    return { giroCon30, giroIzquierda, mayorSalto, intermedios, enSensor, sirveConUnDedo, sirveConDosDedos, inclinacionManual, sirveFuera, paraAlLevantar, lectorAbre, lectorCierra };
   } finally {
     c.cerrar();
     await esperar(1500);
@@ -487,7 +512,9 @@ async function main() {
       }
       console.log(JSON.stringify(k));
       for (const [nombre, ok] of [
-        ['cana: el movil a 30 grados inclina el vaso ~30 grados (sensor web)', k.enSensor && Math.abs((k.giroCon30 ?? -99) - 30) < 2],
+        ['cana: el movil a 30 grados a la derecha inclina el vaso ~30 grados a la derecha (sensor web)', k.enSensor && Math.abs((k.giroCon30 ?? -99) - 30) < 2],
+        ['cana: a la IZQUIERDA el vaso gira a la izquierda (no siempre al mismo lado)', Math.abs((k.giroIzquierda ?? 99) + 30) < 2],
+        ['cana: el giro es fluido (un escalon de 30 grados no salta de golpe)', k.mayorSalto < 8 && k.intermedios >= 8],
         ['cana: mantener "servir" sirve', k.sirveConUnDedo],
         ['cana: con otro dedo en el deslizador sigue sirviendo', k.sirveConDosDedos],
         ['cana: ... y el deslizador si se mueve a la vez', k.inclinacionManual > 0],

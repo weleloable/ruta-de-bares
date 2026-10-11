@@ -106,9 +106,32 @@ describe('sensor de inclinacion en web', () => {
     assert.match(escuchar, /parar\(\);/);
   });
 
-  it('el angulo del sensor tiene el mismo tope que el deslizador (web y nativo)', () => {
-    assert.match(sensorWeb, /limitarAngulo\(suavizar\(angulo\.current, medido\)\)/);
-    assert.match(leer('src/features/minijuegos/juegos/cana/useInclinacion.ts'), /limitarAngulo\(suavizar\(angulo\.current, medido\)\)/);
+  it('el giro del sensor tiene tope a cada lado (el movil apaisado daria 90 grados), lo ponga quien lo ponga', () => {
+    // Todo pasa por `apuntar`, que recorta con limitarGiro: web, nativo y deslizador.
+    assert.match(leer('src/features/minijuegos/juegos/cana/useGiro.ts'), /objetivo\.current = limitarGiro\(grados\);/);
+    assert.match(sensorWeb, /apuntar\(medido\)/);
+    assert.match(leer('src/features/minijuegos/juegos/cana/useInclinacion.ts'), /apuntar\(medido\)/);
+  });
+
+  it('el vaso gira hacia el lado en que se inclina el movil, con el signo, y el modelo solo mira cuanto', () => {
+    for (const f of ['useInclinacion.ts', 'useInclinacion.web.ts']) {
+      const hook = leer(`src/features/minijuegos/juegos/cana/${f}`);
+      assert.match(hook, /inclinacionConSigno\(/, f);
+      assert.doesNotMatch(hook, /anguloDesdeAcelerometro\(/, f);
+    }
+    assert.match(cana, /rotate: `\$\{inclinado\}deg`/);
+    assert.match(cana, /Math\.abs\(giro\.current\)/);
+    assert.match(cana, /<SelectorAngulo valor=\{Math\.abs\(inclinado\)\}/);
+  });
+
+  it('el giro se filtra en el TIEMPO, un paso por fotograma, y no en cada lectura del sensor (daba trompicones)', () => {
+    assert.match(cana, /avanzarGiro\(dt\);/);
+    assert.match(leer('src/features/minijuegos/juegos/cana/useGiro.ts'), /suavizarEnTiempo\(giro\.current, objetivo\.current, dt, TAU_GIRO\)/);
+    for (const f of ['useInclinacion.ts', 'useInclinacion.web.ts']) {
+      const hook = leer(`src/features/minijuegos/juegos/cana/${f}`);
+      assert.doesNotMatch(hook, /suavizar\(/, f);
+      assert.match(hook, /apuntar\(medido\)/, f);
+    }
   });
 
   it('la pantalla dice por que se esta con el deslizador', () => {

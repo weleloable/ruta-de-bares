@@ -35,7 +35,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   const [estado, setEstado] = useState<Estado>(ESTADO_VACIO);
   const [sirviendo, setSirviendo] = useState(false);
   const [inclinado, setInclinado] = useState(0);
-  const { modo, motivo, angulo, empezar, usarManual, fijar } = useInclinacion();
+  const { modo, motivo, objetivo, giro, avanzarGiro, empezar, usarManual, fijar } = useInclinacion();
 
   // Refs para el bucle: leer el estado de React dentro de rAF leeria uno viejo.
   const estadoRef = useRef<Estado>(ESTADO_VACIO);
@@ -77,9 +77,12 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
       const dt = pasoDeTiempo(ahora, ultimo, DT_MAX);
       ultimo = ahora;
       if (!acabadoRef.current) {
-        estadoRef.current = avanzar(estadoRef.current, dt, sirviendoRef.current, angulo.current);
+        // El giro se acerca al sensor segun el tiempo (filtrado); lo que se dibuja y lo
+        // que ve el modelo es ese valor ya suave. El modelo solo mira cuanto, no hacia donde.
+        avanzarGiro(dt);
+        estadoRef.current = avanzar(estadoRef.current, dt, sirviendoRef.current, Math.abs(giro.current));
         setEstado(estadoRef.current);
-        setInclinado(angulo.current);
+        setInclinado(giro.current);
         // Una sola vibracion al empezar a derramar, no una por fotograma.
         if (haDerramado(estadoRef.current) && !derramoRef.current) {
           derramoRef.current = true;
@@ -91,7 +94,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
     };
     raf = requestAnimationFrame(bucle);
     return () => cancelAnimationFrame(raf);
-  }, [terminar, angulo]);
+  }, [terminar, giro, avanzarGiro]);
 
   const abrir = useCallback(() => {
     if (acabadoRef.current) return;
@@ -107,7 +110,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
   }, []);
 
   useTecladoCana(
-    { abrir, cerrar, ajustar: (delta) => modo === 'manual' && fijar(angulo.current + delta) },
+    { abrir, cerrar, ajustar: (delta) => modo === 'manual' && fijar(Math.abs(objetivo.current) + delta) },
     modo !== 'inicio',
   );
 
@@ -132,7 +135,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
             <View style={styles.grifoPico} />
           </View>
 
-          {/* Gira sobre la boca, no sobre la base: asi sigue bajo el grifo al inclinarse. Siempre hacia el mismo lado: el signo del sensor no es fiable entre plataformas. */}
+          {/* Gira sobre la boca, no sobre la base: asi sigue bajo el grifo al inclinarse. Con el signo del sensor: inclinas el movil a la derecha y el vaso a la derecha. */}
           <View style={[styles.vaso, { transform: [{ rotate: `${inclinado}deg` }], transformOrigin: 'top' }]}>
             <View style={[styles.liquido, { height: alto(estado.liquido) }]} />
             <View style={[styles.espuma, { bottom: alto(estado.liquido), height: alto(estado.espuma) }]} />
@@ -161,7 +164,7 @@ export function CanaPerfecta({ onFinish }: PropsJuego) {
           <View style={styles.control}>
             {modo === 'manual' ? (
               <>
-                <SelectorAngulo valor={inclinado} onChange={fijar} />
+                <SelectorAngulo valor={Math.abs(inclinado)} onChange={fijar} />
                 {/* Por que no va el sensor: sin decirlo, parece un fallo del juego. */}
                 {textoMotivo(motivo) ? (
                   <Text style={styles.motivo} numberOfLines={1}>
