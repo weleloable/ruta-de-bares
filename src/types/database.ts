@@ -417,6 +417,15 @@ export type AvatarAdminRequestRow = {
 };
 
 /** Una fila del ranking de un minijuego en una ruta (0034). */
+/** La casa de cada persona (0043): la ve todo el mundo, la asigna el servidor. */
+export type UserHouseRow = {
+  user_id: string;
+  house: 'mahou' | 'cruzcampo' | 'estrella' | 'alhambra';
+  assigned_at: string;
+  assigned_route: string | null;
+  seen_at: string | null;
+};
+
 /** Una fila del ranking de "¿Conduces tú?" en un nivel (0041). */
 export type ConducesRankingRow = {
   pos: number;
@@ -456,6 +465,13 @@ export type MaestroBeerRow = {
 export type Database = {
   public: {
     Tables: {
+      /** Solo lectura desde la app: la escribe el servidor (0043). */
+      user_houses: {
+        Row: UserHouseRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       profiles: {
         Row: ProfileRow;
         Insert: Insert<ProfileRow, 'display_name' | 'avatar_url' | 'avatar_thumb_url' | 'role' | 'created_at' | 'updated_at'>;
@@ -621,6 +637,11 @@ export type Database = {
         Returns: MinigameRankingRow[];
       };
       /** "¿Conduces tú?" (0041): ranking por ruta y nivel de cañas. */
+      /** Ya vi la animacion de mi casa (0043). */
+      casa_marcar_vista: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
       conduces_submit_score: {
         Args: { p_route_id: string; p_level: number; p_distance: number };
         Returns: { best: number; is_record: boolean; position: number; total: number };

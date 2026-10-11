@@ -124,6 +124,7 @@ supabase/
   migrations/0040_*.sql     La Caña se activa POR RUTA, solo el dia de la ruta y a 3 km del primer bar (admins sin reglas)
   migrations/0041_*.sql     ranking de "¿Conduces tú?" por ruta Y por nivel de cañas (`conduces_scores`)
   migrations/0042_*.sql     horas antes y distancia para activar La Caña, por ruta (`routes.cana_horas_antes`, `cana_radio_km`)
+  migrations/0043_*.sql     las cuatro casas (`user_houses`): se asigna al entrar en la primera ruta, equilibrando en ella
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -131,7 +132,7 @@ tests/                    tests que no encajan en un feature (p.ej. migration.te
 
 Tablas: `profiles`, `routes`, `route_bars`, `catalog_bars`, `stamps`, `route_invites`,
 `route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
-`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`, `conduces_scores`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`, `conduces_scores`, `user_houses`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 

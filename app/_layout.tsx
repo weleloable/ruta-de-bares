@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
 import { leerInvitacionPendiente } from '../src/features/invites/pendiente';
 import { AvisosCanaProvider } from '../src/features/match/AvisosCana';
 import { NotificacionesProvider } from '../src/features/notificaciones/Notificaciones';
+import { MiCasaProvider } from '../src/features/casas/MiCasa';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
 import { iniciarPwa } from '../src/lib/pwa';
 import { iniciarInstalarApp } from '../src/lib/pwaInstalar';
@@ -125,8 +126,11 @@ export default function RootLayout() {
           {/* Idem para el punto rojo de Mi perfil: junta la cana, los avisos de
               moderacion y las alertas de admin (ver Notificaciones.tsx). */}
           <NotificacionesProvider>
-            <StatusBar style="dark" />
-            <AuthGate />
+            {/* Tu casa (0043): el perfil la ensena y, la primera vez, sale su animacion. */}
+            <MiCasaProvider>
+              <StatusBar style="dark" />
+              <AuthGate />
+            </MiCasaProvider>
           </NotificacionesProvider>
         </AvisosCanaProvider>
       </ActiveRouteProvider>

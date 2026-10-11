@@ -29,6 +29,7 @@ import {
 import { useInstalarApp } from '../../src/lib/pwaInstalar';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 import type { MyRestrictionsRow } from '../../src/types/database';
+import { TarjetaCasa } from '../../src/features/casas/TarjetaCasa';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
@@ -294,6 +295,8 @@ export default function PerfilScreen() {
             </Pressable>
           ) : null}
         </Card>
+
+        <TarjetaCasa />
 
         {error ? <Banner tone="error">{error}</Banner> : null}
         {exito ? <Banner tone="success">{exito}</Banner> : null}

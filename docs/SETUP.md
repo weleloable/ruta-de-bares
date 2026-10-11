@@ -245,6 +245,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    (0,5 a 20, por defecto 3; vacio = sin limite y sin pedir ubicacion). Las
    rutas que ya existen se quedan con 6 h y 3 km. Rehace funciones de la 0040,
    que ya **no se vuelve a pegar**. Se puede pegar dos veces.
+43. [`supabase/migrations/0043_casas.sql`](../supabase/migrations/0043_casas.sql)
+   y **Run**, despues de la 0042 y **ANTES de desplegar la app**. Las cuatro
+   casas (Mahou, Cruzcampo, Estrella Galicia, Alhambra): tabla `user_houses`,
+   que solo escribe el servidor. La casa se asigna al entrar por primera vez en
+   una ruta, equilibrando dentro de ella (Pablo... a Cruzcampo y Rodrigo... a
+   Estrella Galicia, por encima del equilibrio). Al pegarla, quien ya estaba en
+   alguna ruta recibe su casa y vera la animacion al abrir la app. Se puede
+   pegar dos veces (no reparte de nuevo).
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

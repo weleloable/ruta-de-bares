@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { BarraSuperior } from '../../src/components/BarraSuperior';
+import { DescubrimientoCasa } from '../../src/features/casas/DescubrimientoCasa';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors } from '../../src/lib/theme';
@@ -11,6 +12,9 @@ export default function TabsLayout() {
   const { activeRoute } = useActiveRoute();
 
   return (
+    <>
+    {/* Encima de las pestanas: sale una vez, cuando ya tienes casa y no la has visto. */}
+    <DescubrimientoCasa />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.stamp,
@@ -83,5 +87,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

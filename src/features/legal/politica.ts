@@ -76,6 +76,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
               'Dónde estabas al sellar un bar (coordenadas y hora): es lo que permite comprobar que estabas allí ' +
                 'de verdad. Sin eso, sellar no significa nada. Lo ven solo tú y quien organiza la ruta.',
               'A qué rutas perteneces y qué bares has sellado: lo ve quien organiza esa ruta.',
+              'Tu casa (Mahou, Cruzcampo, Estrella Galicia o Alhambra): se te asigna al entrar en tu primera ruta ' +
+                'y la ve el resto de la gente, porque es con quien compites.',
               'No se vende ni se cede a terceros. Los únicos que tocan los datos por encargo nuestro son Supabase ' +
                 '(base de datos, almacenamiento y el sistema de acceso, también lo que nos da Google) y GitHub ' +
                 'Pages (la web).',
