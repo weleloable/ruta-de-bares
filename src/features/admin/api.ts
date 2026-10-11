@@ -5,6 +5,7 @@ import { DIAS_CONSERVACION } from '../legal/responsable';
 import { borrarFotosSobrantes } from '../profile/fotosSobrantes';
 import { listRoutes } from '../routes/api';
 import { terminoEl } from '../routes/estado';
+import type { EstadisticasRuta } from './estadisticas';
 import { avisosDeRutasTerminadas, rutasSinVer, type AvisoRutaTerminada } from './rutasTerminadas';
 import type {
   AvatarAdminRequestRow,
@@ -42,7 +43,7 @@ function codigo(mensaje: string): string | null {
   const encontrado =
     // Incluye REASON_* aunque describirError ya los traducia: este patron no los
     // dejaba pasar y el mensaje llegaba a la pantalla como texto crudo.
-    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION|TARGET_IS_ADMIN|INVALID_TARGET|REASON_REQUIRED|REASON_TOO_LONG|REQUEST_NOT_FOUND|REQUEST_NOT_PENDING|INVALID_URL|FILE_MISSING|PHOTO_IN_USE|PHOTO_NOT_IN_REPORT)\b/.exec(
+    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REPORT_NOT_FOUND|INVALID_RESOLUTION|TARGET_IS_ADMIN|INVALID_TARGET|REASON_REQUIRED|REASON_TOO_LONG|REQUEST_NOT_FOUND|REQUEST_NOT_PENDING|INVALID_URL|FILE_MISSING|PHOTO_IN_USE|PHOTO_NOT_IN_REPORT|ROUTE_NOT_FOUND)\b/.exec(
       mensaje,
     );
   return encontrado ? encontrado[1] : null;
@@ -78,6 +79,8 @@ function describirError(mensaje: string): string {
       return 'Es la foto que tiene puesta ahora: para quitarla, usa «Retirar la foto».';
     case 'PHOTO_NOT_IN_REPORT':
       return 'Esa foto no es de esta denuncia.';
+    case 'ROUTE_NOT_FOUND':
+      return 'Esa ruta ya no existe: se ha borrado.';
     default:
       return mensaje;
   }
@@ -377,6 +380,13 @@ export async function decidirFoto(
   // Rechazada, la foto no la va a usar nadie; aprobada, la anterior tampoco.
   // Fuera ahora (0032). Lo que sea prueba de una denuncia se queda.
   await borrarFotosSobrantes('todas');
+}
+
+/** Las cifras de una ruta para Estadisticas (0037): solo totales. */
+export async function leerEstadisticasRuta(routeId: string): Promise<EstadisticasRuta> {
+  const { data, error } = await supabase.rpc('admin_estadisticas_ruta', { p_route_id: routeId });
+  if (error) fallo(error);
+  return data as EstadisticasRuta;
 }
 
 /** Las fotos guardadas como prueba de una denuncia (0032), para su ficha. */

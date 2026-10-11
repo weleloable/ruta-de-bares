@@ -61,7 +61,8 @@ app/                      pantallas (Expo Router)
   (tabs)/                 Ruta, Sellos y Cana (ese orden); Perfil sin boton abajo
   cana/                   presentacion, ficha, chat, bloqueados, condiciones
   admin/                  bandeja de alertas de administracion, ficha de una denuncia
-                          (alerta/) y decidir una foto de perfil (foto/)
+                          (alerta/), decidir una foto de perfil (foto/) y
+                          estadisticas de una ruta (estadisticas.tsx)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   contacto.tsx            escribir a la organizacion y reclamar una decision
   privacidad.tsx          que datos se recogen, quien los ve y descargarlos
@@ -116,7 +117,8 @@ supabase/
   migrations/0034_*.sql     minijuegos: ranking POR RUTA y cervezas guardadas (solo se ven dentro de la ruta)
   migrations/0035_*.sql     bares propios compartidos entre admins (`catalog_bars`) y `route_bars.logo`
   migrations/0036_*.sql     los 14 bares originales y sus logos pasan a `catalog_bars` (GENERADA, ver scripts/semilla-catalogo/)
-  migrations/0037_*.sql     Maestro Cervecero: la siembra (paso 4) entra en la nota; funciones `_v2`
+  migrations/0037_*.sql     estadisticas de una ruta para los admins (solo totales)
+  migrations/0038_*.sql     Maestro Cervecero: la siembra (paso 4) entra en la nota; funciones `_v2`
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -556,9 +558,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **`/privacidad` es publica en AuthGate**, como `/invitacion`: el art. 13 del
   RGPD obliga a informar ANTES de recoger los datos y el registro se hace sin
   sesion, asi que exigirla mandaba el enlace al login (paso, y el primer test no
-  lo cazo por mirar solo que AuthGate existiera). El responsable y el correo son
-  provisionales, viven en `src/features/legal/responsable.ts` con un flag
-  `PENDIENTE`, y mientras siga a true la pantalla avisa de que es un borrador.
+  lo cazo por mirar solo que AuthGate existiera). El responsable y el correo viven en
+  `src/features/legal/responsable.ts` (cerrados el 2026-10-11); el flag
+  `PENDIENTE` sigue ahi por si vuelve a quedar un hueco: a true, la politica
+  avisa de que es un borrador. La pantalla de entrada tiene ademas un enlace
+  **"Contacto"** junto al de la politica, que despliega ese mismo correo: se
+  ve sin sesion porque quien no puede entrar es justo quien necesita escribir,
+  y "Escribir a la organizacion" exige sesion.
 - **Borrar una ruta ES la purga, y no hay cron** (`0027`): el esquema ya
   cascadea desde la 0001 (bares -> sellos con su GPS, pertenencia, invitaciones,
   conexiones y chats, votos, denuncias, veto de ruta con su HMAC), y la 0027
@@ -675,8 +681,8 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   se comparte, como se protege, cuanto dura, los usos prohibidos de Uso
   Limitado, avisar si cambia) y se enlaza tambien desde la pantalla de entrada,
   que es la portada y donde se crea la cuenta al entrar con Google la primera
-  vez. Lo unico que falta para pasar la verificacion es el responsable y el
-  correo (`PENDIENTE` en `legal/responsable.ts`): Google no acepta borradores.
+  vez. El responsable y el correo ya estan puestos (`legal/responsable.ts`,
+  `PENDIENTE` a false): Google no acepta borradores, y ya no lo es.
 - **La descarga de datos trae lo del sistema de acceso** (`0031`): con Google,
   Supabase guarda correo, nombre, foto e identificador de la cuenta de Google
   en `auth.identities` y `raw_user_meta_data`, la politica lo dice, y
@@ -736,6 +742,21 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   punto rojo y la burbuja de Mi perfil se apagan a la vez. `rutasTerminadas.ts`
   no importa nada en tiempo de ejecucion (node --test no resuelve rutas sin
   extension): recibe `terminoEl` ya calculado y el formateador de fecha.
+- **Estadisticas de una ruta, en "Detras de la barra"** (`0037`,
+  `app/admin/estadisticas.tsx`, `admin/estadisticas.ts`): una sola funcion,
+  `admin_estadisticas_ruta(ruta)`, solo admins, que devuelve un JSON con
+  totales (personas, sellos, completaron, La Caña, top 5 de etiquetas,
+  denuncias y vetos). **Solo totales, nunca nada por persona**: la politica
+  promete que a quien das Me gusta no lo ve nadie, "ni quien organiza"; un
+  total de la ruta no dice nada de nadie, "quien recibe mas" si. El test
+  (`tests/migration-0037.test.ts`) falla si la respuesta lleva un solo id de
+  usuario. Son cifras de AHORA (quitar un Me gusta lo descuenta) y se van con
+  la ruta: no hay historico. Las etiquetas cuentan solo a gente de ESA ruta
+  con La Caña activada (el perfil de la cana es de la persona, no de la ruta).
+  Se probaron y se QUITARON dos tarjetas con barras dentro de La Caña: el
+  embudo (PERSONAS por paso) y "como acaba la pregunta" (por CONEXION). Una al
+  lado de la otra, 20 personas con un si y 13 sies (parejas) parecian
+  contradecirse. Si vuelven, que cuenten las dos lo mismo o lo digan muy claro.
 - **Los pasos de Maestro Cervecero con olla tienen que caber en la pantalla SIN
   scroll** (`PasoMaceracion.tsx`, `PasoLupulo.tsx`, `escalaOlla` en
   `maceracion.ts`): el paso comparte pantalla con la barra de arriba, las
@@ -752,7 +773,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   olla al minimo cabe y queda un poco de scroll. En el hervido el boton va
   DEBAJO de la olla y las bolsitas de lupulo cuelgan sobre la barra.
 - **Paso 4 de Maestro Cervecero: "enfriar y sembrar", y cuenta en la nota**
-  (`siembra.ts`, `PasoSiembra.tsx`, migracion `0037`). Se elige ale o lager,
+  (`siembra.ts`, `PasoSiembra.tsx`, migracion `0038`). Se elige ale o lager,
   se MANTIENE pulsado el grifo de agua fria (el mosto sale a 96 grados) y hay
   que echar la levadura en SU ventana (ale 18-22, lager 8-12). El truco es la
   inercia: al soltar sigue enfriando, asi que hay que soltar antes; la pista
@@ -762,7 +783,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   `maestro_calcular_cerveza_v2` y `maestro_submit_beer_v2` NUEVAS y no se tocan
   las de la 0034, que siguen sirviendo (con la nota vieja) a quien tenga la app
   en cache; sobrecargar el mismo nombre con un argumento por defecto daria
-  "function is not unique". `tests/migration-0037.test.ts` compara la v2 con
+  "function is not unique". `tests/migration-0038.test.ts` compara la v2 con
   `calcularCerveza` en ~117.000 combinaciones y `migration-0034` sigue
   vigilando la v1 con `calcularPuntuacionSinSiembra`. Cambiar la levadura
   borra la siembra (otra ventana). `Termometro.tsx` es el de la maceracion

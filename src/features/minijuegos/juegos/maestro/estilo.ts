@@ -81,7 +81,7 @@ export function calcularCuerpo(malta: MaltaId, maceracion: number): Cuerpo {
 
 /**
  * 30 % maceracion, 25 % amargor, 25 % aroma y 20 % siembra: lo que se hizo con
- * las manos. Espejo de `maestro_calcular_cerveza_v2` (migracion 0037).
+ * las manos. Espejo de `maestro_calcular_cerveza_v2` (migracion 0038).
  */
 export function calcularPuntuacion(r: RecetaCompleta): number {
   const suma =

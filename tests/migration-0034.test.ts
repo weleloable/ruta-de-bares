@@ -270,7 +270,7 @@ describe('0034: Maestro Cervecero, el servidor calcula la cerveza', () => {
 
       const distintos: string[] = [];
       for (const r of rows) {
-        // Desde la 0037 la app usa la nota con siembra (maestro_calcular_cerveza_v2); esta
+        // Desde la 0038 la app usa la nota con siembra (maestro_calcular_cerveza_v2); esta
         // funcion la siguen llamando las versiones viejas en cache, con la nota de antes.
         const ts = {
           ...calcularCerveza({

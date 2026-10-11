@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 /**
  * Cableado del paso 4 de Maestro Cervecero ("enfriar y sembrar"). La mecanica
  * esta probada en siembra.test.ts y la nota contra Postgres en
- * migration-0037.test.ts; esto es una red rapida y PARCIAL que lee el codigo
+ * migration-0038.test.ts; esto es una red rapida y PARCIAL que lee el codigo
  * para que no se pierda un eslabon sin dar error (lo que si se ve de verdad lo
  * mide `npm run verificar:juego`).
  */

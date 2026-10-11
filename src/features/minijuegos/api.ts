@@ -43,7 +43,7 @@ export type RecetaEnviada = {
 
 /** El servidor NO recibe la nota ni el estilo: los calcula el a partir de la receta. */
 export async function enviarCerveza(routeId: string, r: RecetaEnviada): Promise<void> {
-  // La v2 (0037) es la que lleva la siembra; la de 7 argumentos queda para la app vieja en cache.
+  // La v2 (0038) es la que lleva la siembra; la de 7 argumentos queda para la app vieja en cache.
   const { error } = await supabase.rpc('maestro_submit_beer_v2', {
     p_route_id: routeId,
     p_name: r.nombre,

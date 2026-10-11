@@ -578,7 +578,7 @@ export type Database = {
         };
         Returns: { id: string; name: string; estilo: string; abv: number; ibu: number; cuerpo: string; score: number };
       };
-      /** La de la 0037: con la siembra (paso 4) en la nota. La de arriba queda para la app vieja. */
+      /** La de la 0038: con la siembra (paso 4) en la nota. La de arriba queda para la app vieja. */
       maestro_submit_beer_v2: {
         Args: {
           p_route_id: string;
@@ -774,6 +774,11 @@ export type Database = {
       mis_fotos_retenidas: {
         Args: Record<string, never>;
         Returns: string[];
+      };
+      /** Totales de una ruta para "Detras de la barra" (0037). Nada por persona. */
+      admin_estadisticas_ruta: {
+        Args: { p_route_id: string };
+        Returns: unknown;
       };
       match_admin_fotos_denuncia: {
         Args: { p_report_id: string };

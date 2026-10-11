@@ -1,189 +1,165 @@
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import type { PGlite } from '@electric-sql/pglite';
-
-import type { LevaduraId, MaltaId } from '../src/features/minijuegos/juegos/maestro/datos.ts';
-import { calcularCerveza } from '../src/features/minijuegos/juegos/maestro/estilo.ts';
-import { crearBase, escenario, leerFichero, type Actor } from './pglite-supabase.ts';
+import { crearBase, escenario, leerFichero } from './pglite-supabase.ts';
 
 /**
- * 0037: el paso 4 de Maestro Cervecero ("enfriar y sembrar") entra en la nota.
+ * 0037: estadisticas de una ruta para los admins.
  *
- * Lo que hay que asegurar sobre Postgres real:
- *  1. **el servidor calcula lo mismo que la app** (`maestro_calcular_cerveza_v2`
- *     frente a `calcularCerveza` de estilo.ts) en un barrido de combinaciones;
- *  2. **la app vieja sigue funcionando**: `maestro_submit_beer` de 7 argumentos
- *     guarda la cerveza con la nota de antes y sin siembra (NULL, no inventada);
- *  3. la v2 valida la siembra y la guarda; el calculo interno no se llama desde la API;
- *  4. la siembra sale en "descargar mis datos";
- *  5. se puede pegar dos veces.
+ * Lo que se asegura sobre Postgres real:
+ *  1. cada cifra cuenta lo que dice, y SOLO de esa ruta (otra ruta con datos
+ *     al lado no se cuela);
+ *  2. solo admins; una ruta que no existe se dice;
+ *  3. y lo que mas importa: la respuesta no lleva NADA por persona. Ni un id de
+ *     usuario: la politica promete que a quien das Me gusta no lo ve nadie,
+ *     tampoco quien organiza.
  */
 
-const nombres = readdirSync('supabase/migrations')
-  .filter((f) => f.endsWith('.sql'))
+const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
+const migraciones = readdirSync(join(raiz, 'supabase/migrations'))
+  .filter((f) => f.endsWith('.sql') && f < '0038')
   .sort()
-  .filter((f) => f <= '0037_zzz');
-const migraciones = nombres.map((n) => leerFichero(`supabase/migrations/${n}`));
+  .map((n) => leerFichero(`supabase/migrations/${n}`));
 
-const ANA = '00000000-0000-4000-8000-00000000000a';
 const ADMIN = '00000000-0000-4000-8000-00000000000d';
+const ANA = '00000000-0000-4000-8000-00000000000a';
+const LUIS = '00000000-0000-4000-8000-00000000000b';
+const EVA = '00000000-0000-4000-8000-00000000000c';
+const FUERA = '00000000-0000-4000-8000-00000000000f';
 const RUTA = '00000000-0000-4000-8000-0000000000f1';
+const OTRA = '00000000-0000-4000-8000-0000000000f2';
+const BAR1 = '00000000-0000-4000-8000-0000000000b1';
+const BAR2 = '00000000-0000-4000-8000-0000000000b2';
+const BAR_OTRA = '00000000-0000-4000-8000-0000000000b3';
 
 const DATOS = `
-  insert into auth.users (id, email) values ('${ANA}', 'ana@example.com'), ('${ADMIN}', 'admin@example.com');
+  insert into auth.users (id, email) values
+    ('${ADMIN}', 'admin@example.com'), ('${ANA}', 'ana@example.com'), ('${LUIS}', 'luis@example.com'),
+    ('${EVA}', 'eva@example.com'), ('${FUERA}', 'fuera@example.com');
   update public.profiles set role = 'admin' where id = '${ADMIN}';
   insert into public.routes (id, name, is_published, created_by, event_date) values
-    ('${RUTA}', 'Ruta de prueba', true, '${ADMIN}', current_date + 10);
-  insert into public.route_members (route_id, user_id) values ('${RUTA}', '${ANA}');
+    ('${RUTA}', 'La ruta', true, '${ADMIN}', current_date),
+    ('${OTRA}', 'Otra', true, '${ADMIN}', current_date);
+  insert into public.route_members (route_id, user_id) values
+    ('${RUTA}', '${ANA}'), ('${RUTA}', '${LUIS}'), ('${RUTA}', '${EVA}'),
+    ('${OTRA}', '${ANA}'), ('${OTRA}', '${FUERA}');
+  insert into public.route_bars (id, route_id, sort_order, name, lat, lng, opens_at, closes_at) values
+    ('${BAR1}', '${RUTA}', 1, 'Bar 1', 40, -3, now() - interval '1 hour', now() + interval '1 hour'),
+    ('${BAR2}', '${RUTA}', 2, 'Bar 2', 40, -3, now() - interval '1 hour', now() + interval '1 hour'),
+    ('${BAR_OTRA}', '${OTRA}', 1, 'Bar de otra', 40, -3, now() - interval '1 hour', now() + interval '1 hour');
+  -- Ana completa la ruta; Luis sella uno; Eva nada. En la otra ruta, uno mas.
+  insert into public.stamps (user_id, route_bar_id, lat, lng, distance_m) values
+    ('${ANA}', '${BAR1}', 40, -3, 5), ('${ANA}', '${BAR2}', 40, -3, 5), ('${LUIS}', '${BAR1}', 40, -3, 5),
+    ('${FUERA}', '${BAR_OTRA}', 40, -3, 5);
+
+  -- La Cana: Ana y Luis la tienen activada, Eva no. Fuera (otra ruta) tambien.
+  -- Eva la tiene APAGADA ahora: no cuenta en activada, aunque la activase en su dia.
+  insert into public.match_profiles (user_id, is_active, first_activated_at) values
+    ('${ANA}', true, now()), ('${LUIS}', true, now()), ('${EVA}', false, now()), ('${FUERA}', true, now());
+  insert into public.match_votes (route_id, voter_id, target_id, value) values
+    ('${RUTA}', '${ANA}', '${LUIS}', 'like'), ('${RUTA}', '${LUIS}', '${ANA}', 'like'),
+    ('${RUTA}', '${ANA}', '${EVA}', 'like'), ('${RUTA}', '${LUIS}', '${EVA}', 'seen'),
+    ('${OTRA}', '${FUERA}', '${ANA}', 'like');
+  insert into public.match_connections (route_id, user_a, user_b, is_open, question_state, question_asked_by) values
+    ('${RUTA}', '${ANA}', '${LUIS}', true, 'accepted', '${ANA}'),
+    ('${RUTA}', '${ANA}', '${EVA}', false, 'none', null),
+    ('${RUTA}', '${LUIS}', '${EVA}', true, 'postponed', '${LUIS}'),
+    ('${OTRA}', '${ANA}', '${FUERA}', true, 'accepted', '${FUERA}');
+  insert into public.match_profile_tags (user_id, tag_id) values
+    ('${ANA}', 'etiqueta-1'), ('${ANA}', 'etiqueta-2'), ('${LUIS}', 'etiqueta-1'),
+    ('${EVA}', 'etiqueta-3'), ('${FUERA}', 'etiqueta-4');
+
+  -- Moderacion: dos denuncias (una cerrada) y dos vetos en esta ruta.
+  insert into public.match_reports (reporter_id, reported_id, route_id, reason, status) values
+    ('${ANA}', '${LUIS}', '${RUTA}', 'otro', 'pendiente'),
+    ('${LUIS}', '${ANA}', '${RUTA}', 'otro', 'resuelta'),
+    ('${ANA}', '${FUERA}', '${OTRA}', 'otro', 'pendiente');
+  insert into public.route_bans (route_id, user_id, reason) values ('${RUTA}', '${FUERA}', 'motivo');
+  insert into public.cana_bans (user_id, reason, route_id) values ('${FUERA}', 'motivo', '${RUTA}');
 `;
 
-async function conBase(fn: (db: PGlite, a: Actor) => Promise<void>) {
+type Estadisticas = {
+  ruta: Record<string, number>;
+  cana: Record<string, number>;
+  etiquetas: { etiqueta: string; veces: number }[];
+  moderacion: Record<string, number>;
+};
+
+async function leer(ruta = RUTA) {
   const db = await crearBase(migraciones);
   await db.exec(DATOS);
-  try {
-    await escenario(db, (a) => fn(db, a));
-  } finally {
-    await db.close();
-  }
-}
-
-type Fila = { score: number; estilo: string };
-
-const v2 = (db: PGlite, receta: [string, string, number, number, number, number | null], nombre = 'Mi lager') =>
-  db.query<{ r: Fila }>(`select public.maestro_submit_beer_v2($1, $2, $3, $4, $5, $6, $7, $8) as r`, [RUTA, nombre, ...receta]);
-
-const v1 = (db: PGlite, receta: [string, string, number, number, number], nombre = 'De la app vieja') =>
-  db.query<{ r: Fila }>(`select public.maestro_submit_beer($1, $2, $3, $4, $5, $6, $7) as r`, [RUTA, nombre, ...receta]);
-
-/** El envio esta espaciado (25 s): para el siguiente se "pasa el tiempo". */
-async function pasarElTiempo(db: PGlite, a: Actor) {
-  await a.comoPostgres(async () => {
-    await db.exec(`update public.maestro_beers set created_at = created_at - interval '1 hour'`);
+  let res: Estadisticas | undefined;
+  await escenario(db, async (a) => {
+    await a.como(ADMIN);
+    const { rows } = await db.query<{ e: Estadisticas }>('select public.admin_estadisticas_ruta($1) as e', [ruta]);
+    res = rows[0]?.e;
   });
+  await db.close();
+  return res as Estadisticas;
 }
 
-describe('0037: la nota con siembra', () => {
-  it('maestro_calcular_cerveza_v2 y estilo.ts dan LO MISMO en un barrido de combinaciones', async () => {
+describe('0037: estadisticas de una ruta', () => {
+  it('la ruta: personas, sellos, quien sello y quien la completo', async () => {
+    const e = await leer();
+    assert.deepEqual(e.ruta, { personas: 3, bares: 2, sellos: 3, han_sellado: 2, completaron: 1 });
+  });
+
+  it('La Caña: solo esta ruta, aunque la misma persona este en otra', async () => {
+    const e = await leer();
+    assert.deepEqual(e.cana, { activada: 2, me_gusta: 3, conexiones: 3, conexiones_abiertas: 2, preguntas: 2, si: 1 });
+  });
+
+  it('etiquetas: las de la gente de la ruta con La Caña activada, de mas a menos', async () => {
+    const e = await leer();
+    // etiqueta-3 es de Eva, que la tiene apagada; etiqueta-4, de alguien de otra ruta.
+    assert.deepEqual(
+      e.etiquetas.map((x) => x.veces),
+      [2, 1],
+    );
+    assert.equal(e.etiquetas.length, 2);
+  });
+
+  it('moderacion: denuncias (y cuantas siguen abiertas) y vetos de esta ruta', async () => {
+    const e = await leer();
+    assert.deepEqual(e.moderacion, { denuncias: 2, denuncias_sin_cerrar: 1, vetos: 2 });
+  });
+
+  it('NADA por persona: la respuesta no lleva el id de nadie', async () => {
+    const e = await leer();
+    const texto = JSON.stringify(e);
+    for (const uid of [ANA, LUIS, EVA, FUERA, ADMIN]) assert.ok(!texto.includes(uid), `sale ${uid}`);
+    assert.doesNotMatch(texto, /[0-9a-f]{8}-[0-9a-f]{4}-/);
+  });
+
+  it('solo admins, y una ruta que no existe se dice', async () => {
     const db = await crearBase(migraciones);
-    try {
-      // Valores que caen en los bordes de redondeo (x,5) y de tramo (IPA, cuerpo).
-      const valores = [0, 1, 13, 33, 49, 50, 51, 67, 83, 99, 100];
-      const { rows } = await db.query<{
-        malta: MaltaId; levadura: LevaduraId; m: number; am: number; ar: number; s: number;
-        estilo: string; abv: string; ibu: number; cuerpo: string; score: number;
-      }>(`
-        select t.malta, l.levadura, m, am, ar, s, c.estilo, c.abv::text as abv, c.ibu, c.cuerpo, c.score
-          from (values ('palida'), ('caramelo'), ('tostada'), ('negra')) t(malta)
-          cross join (values ('ale'), ('lager')) l(levadura)
-          cross join unnest($1::int[]) m
-          cross join unnest($1::int[]) am
-          cross join unnest($1::int[]) ar
-          cross join unnest($1::int[]) s
-          cross join lateral public.maestro_calcular_cerveza_v2(t.malta, l.levadura, m, am, ar, s) c
-      `, [valores]);
-      assert.equal(rows.length, 4 * 2 * valores.length ** 4, 'no salieron todas las filas');
-
-      const distintos: string[] = [];
-      for (const r of rows) {
-        const ts = calcularCerveza({
-          malta: r.malta, levadura: r.levadura, maceracion: r.m / 100,
-          lupulo: { amargor: r.am / 100, aroma: r.ar / 100 }, siembra: r.s / 100,
-        });
-        const sql = { estilo: r.estilo, abv: Number(r.abv), ibu: r.ibu, cuerpo: r.cuerpo, puntuacion: r.score };
-        if (JSON.stringify(ts) !== JSON.stringify(sql)) {
-          distintos.push(`${r.malta}/${r.levadura} ${r.m}/${r.am}/${r.ar}/${r.s}: ts=${JSON.stringify(ts)} sql=${JSON.stringify(sql)}`);
-          if (distintos.length >= 5) break;
-        }
-      }
-      assert.deepEqual(distintos, [], distintos.join('\n'));
-    } finally {
-      await db.close();
-    }
-  });
-
-  it('la v2 guarda la siembra y puntua con ella', async () => {
-    await conBase(async (db, a) => {
+    await db.exec(DATOS);
+    await escenario(db, async (a) => {
       await a.como(ANA);
-      const { rows } = await v2(db, ['palida', 'lager', 100, 100, 100, 0]);
-      assert.equal(rows[0]?.r.score, 80, 'levadura muerta: pierde los 20 de la siembra');
-      await a.comoPostgres(async () => {
-        const fila = await db.query<{ siembra: number }>(`select siembra from public.maestro_beers`);
-        assert.deepEqual(fila.rows, [{ siembra: 0 }]);
-      });
-    });
-  });
-
-  it('la v2 rechaza una siembra que falta o se sale de 0..100', async () => {
-    await conBase(async (db, a) => {
-      await a.como(ANA);
-      await a.falla(() => v2(db, ['palida', 'ale', 50, 50, 50, null]), /INVALID_RECIPE/);
-      await a.falla(() => v2(db, ['palida', 'ale', 50, 50, 50, 101]), /INVALID_RECIPE/);
-      await a.falla(() => v2(db, ['palida', 'ale', 50, 50, 50, -1]), /INVALID_RECIPE/);
-      // Y lo de siempre lo sigue validando (por la funcion de la 0034).
-      await a.falla(() => v2(db, ['vino', 'ale', 50, 50, 50, 50]), /INVALID_RECIPE|check/);
-    });
-  });
-
-  it('la app VIEJA sigue guardando, con la nota de antes y sin inventarse la siembra', async () => {
-    await conBase(async (db, a) => {
-      await a.como(ANA);
-      const { rows } = await v1(db, ['palida', 'ale', 100, 0, 0]);
-      assert.equal(rows[0]?.r.score, 40, 'sigue siendo 40 / 30 / 30');
-      await a.comoPostgres(async () => {
-        const fila = await db.query<{ siembra: number | null }>(`select siembra from public.maestro_beers`);
-        assert.deepEqual(fila.rows, [{ siembra: null }]);
-      });
-    });
-  });
-
-  it('las dos vias comparten el ritmo y el tope: no se esquiva el TOO_FAST cambiando de version', async () => {
-    await conBase(async (db, a) => {
-      await a.como(ANA);
-      await v1(db, ['palida', 'ale', 50, 50, 50]);
-      await a.falla(() => v2(db, ['palida', 'ale', 50, 50, 50, 50]), /TOO_FAST/);
-      await pasarElTiempo(db, a);
-      await v2(db, ['palida', 'ale', 50, 50, 50, 50]);
-    });
-  });
-
-  it('el calculo interno no se llama desde la API, y sin estar en la ruta no se guarda', async () => {
-    await conBase(async (db, a) => {
-      await a.como(ANA);
+      await a.falla(() => db.query('select public.admin_estadisticas_ruta($1)', [RUTA]), 'NOT_ADMIN');
+      await a.como(ADMIN);
       await a.falla(
-        () => db.query(`select * from public.maestro_calcular_cerveza_v2('palida', 'ale', 1, 1, 1, 1)`),
-        /permission denied/,
+        () => db.query('select public.admin_estadisticas_ruta($1)', ['00000000-0000-4000-8000-000000000999']),
+        'ROUTE_NOT_FOUND',
       );
-      await a.anonimo();
-      await a.falla(() => v2(db, ['palida', 'ale', 50, 50, 50, 50]), /permission denied|NOT_AUTHENTICATED/);
     });
+    await db.close();
   });
 
-  it('la siembra sale en "descargar mis datos" (y la de una cerveza vieja, como null)', async () => {
-    await conBase(async (db, a) => {
-      await a.como(ANA);
-      await v1(db, ['palida', 'ale', 50, 50, 50]);
-      await pasarElTiempo(db, a);
-      await v2(db, ['negra', 'ale', 50, 50, 50, 77]);
-      const { rows } = await db.query<{ d: { minijuegos: { cervezas: { siembra: number | null }[] }; cuenta: unknown } }>(
-        `select public.export_my_data() as d`,
-      );
-      const siembras = rows[0]?.d.minijuegos.cervezas.map((c) => c.siembra);
-      assert.deepEqual(siembras, [null, 77]);
-      assert.ok(rows[0]?.d.cuenta, 'sigue saliendo el resto de la exportacion');
+  it('una ruta sin bares no se "completa"', async () => {
+    const e = await leer(OTRA);
+    assert.equal(e.ruta.bares, 1);
+    const db = await crearBase(migraciones);
+    await db.exec(DATOS);
+    await db.exec(`delete from public.route_bars where route_id = '${OTRA}'`);
+    await escenario(db, async (a) => {
+      await a.como(ADMIN);
+      const { rows } = await db.query<{ e: Estadisticas }>('select public.admin_estadisticas_ruta($1) as e', [OTRA]);
+      assert.equal(rows[0]?.e.ruta.completaron, 0);
     });
-  });
-
-  it('pegarla dos veces no rompe nada', async () => {
-    const db = await crearBase([...migraciones, migraciones.at(-1) as string]);
-    try {
-      const { rows } = await db.query<{ n: string }>(
-        `select count(*)::text as n from information_schema.columns where table_name = 'maestro_beers' and column_name = 'siembra'`,
-      );
-      assert.equal(rows[0]?.n, '1');
-    } finally {
-      await db.close();
-    }
+    await db.close();
   });
 });

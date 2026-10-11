@@ -199,8 +199,12 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    si un admin sube despues un bar propio (los que tenia en su dispositivo),
    pega solo el `update public.route_bars ...` del fichero para que sus paradas
    reciban el logo.
-37. [`supabase/migrations/0037_siembra.sql`](../supabase/migrations/0037_siembra.sql)
-   y **Run**, despues de la 0036 y **ANTES de desplegar la app**. El paso 4 de
+37. [`supabase/migrations/0037_estadisticas_de_ruta.sql`](../supabase/migrations/0037_estadisticas_de_ruta.sql)
+   y **Run**. La pantalla de Estadisticas de "Detras de la barra" (solo admins):
+   totales de una ruta, nunca nada por persona. Sin ella, la pantalla abre y
+   dice que no puede leer las cifras.
+38. [`supabase/migrations/0038_siembra.sql`](../supabase/migrations/0038_siembra.sql)
+   y **Run**, despues de la 0037 y **ANTES de desplegar la app**. El paso 4 de
    Maestro Cervecero pasa a ser "enfriar y sembrar" y entra en la nota (30
    maceracion, 25 amargor, 25 aroma, 20 siembra). Anade `maestro_beers.siembra`
    y las funciones `maestro_calcular_cerveza_v2` y `maestro_submit_beer_v2`; las
@@ -210,9 +214,11 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    la 0034 ya **no se vuelve a pegar**.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
-privacidad** estan sin decidir. Viven en `src/features/legal/responsable.ts`;
-mientras `PENDIENTE` sea `true`, la pantalla de Privacidad avisa de que es un
-borrador. Antes de abrir esto a gente de verdad hay que cerrarlo.
+privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos
+(2026-10-11). Si cambian, se cambian ahi y en ningun otro sitio: de ahi los
+leen la politica de la app, la pagina estatica de la web y el enlace
+"Contacto" de la pantalla de entrada. Si alguna vez vuelve a quedar un hueco,
+`PENDIENTE` a `true` hace que la politica avise de que es un borrador.
 
 La 0001 crea las cinco tablas (`profiles`, `routes`, `route_bars`, `stamps`,
 `invites`), las politicas de RLS, la funcion `claim_stamp` y el bucket
@@ -569,10 +575,10 @@ poco segun el idioma.
    `https://weleloable.github.io/ruta-de-bares/privacidad/` (con la barra final:
    es la pagina HTML estatica que genera `scripts/generar-privacidad.mjs` al
    publicar y responde 200; sin barra, Pages redirige a esa). Dominios autorizados:
-   anade `weleloable.github.io` y `supabase.co`. **Guardar**. Ojo: la
-   politica aun es un borrador (`src/features/legal/responsable.ts`, `PENDIENTE`),
-   y Google no acepta plantillas ni borradores: hay que cerrarla antes de pedir
-   la verificacion de la marca.
+   anade `weleloable.github.io` y `supabase.co`. **Guardar**. La
+   politica ya no es un borrador (`src/features/legal/responsable.ts` tiene el
+   responsable y el correo), que es lo que Google exige para verificar la marca:
+   no acepta plantillas ni borradores.
    Para que Google de por bueno el dominio hay que verificarlo en **Google Search
    Console** (<https://search.google.com/search-console>) con la misma cuenta del
    proyecto. `github.io` es un sufijo publico, asi que `weleloable.github.io` cuenta

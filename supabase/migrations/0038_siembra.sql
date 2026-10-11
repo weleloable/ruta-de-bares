@@ -1,5 +1,5 @@
--- Ruta de Bares - 0037: Maestro Cervecero, paso 4 "enfriar y sembrar".
--- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0036.
+-- Ruta de Bares - 0038: Maestro Cervecero, paso 4 "enfriar y sembrar".
+-- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0037.
 -- Idempotente: se puede re-ejecutar sin romper nada (`add column if not exists`,
 -- funciones con `or replace`). Ojo al reves: rehace export_my_data() a partir
 -- de la 0034, asi que la 0034 ya no se puede volver a pegar despues.

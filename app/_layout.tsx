@@ -105,6 +105,7 @@ function AuthGate() {
       <Stack.Screen name="admin/foto/[requestId]" options={{ title: 'Foto de perfil' }} />
       <Stack.Screen name="admin/mensaje/[messageId]" options={{ title: 'Mensaje' }} />
       <Stack.Screen name="admin/moderacion" options={{ title: 'Moderación' }} />
+      <Stack.Screen name="admin/estadisticas" options={{ title: 'Estadísticas' }} />
       <Stack.Screen name="cana/presentacion" options={{ title: 'Preséntate' }} />
       <Stack.Screen name="cana/persona/[userId]" options={{ title: 'La Caña' }} />
       <Stack.Screen name="cana/chat/[connectionId]" options={{ title: 'Chat' }} />
