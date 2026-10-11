@@ -48,6 +48,7 @@ y [docs/SETUP.md](docs/SETUP.md) — esto es el resumen para arrancar rapido.
 - Supabase: Postgres + RLS, Auth, Storage, Edge Functions (Deno).
 - react-native-maps con Google Maps (modulo nativo → no funciona en Expo Go,
   hace falta development build via EAS).
+- Minijuego "¿Conduces tú?": three.js (3D en WebGL), solo web; el resto de la app no lo usa.
 - En web: Leaflet + react-leaflet con teselas de OpenStreetMap (sin clave), y
   PWA con `public/manifest.json` y `public/sw.js`. Se publica en GitHub Pages
   en cada push a `master` (`.github/workflows/deploy-web.yml`).

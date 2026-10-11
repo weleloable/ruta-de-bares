@@ -9,7 +9,7 @@ import type { PropsJuego } from '../../tipos';
 import { avanzarBorrachera, intensidad, mandosBorrachos, nuevaBorrachera, visuales, type EstadoBorrachera } from './borrachera';
 import { Ciudad, COLORES_COCHE } from './ciudad';
 import { nivelPorDefecto, useDatosRuta } from './compostelana';
-import { Lienzo, vistaPara, type CocheDibujo } from './dibujo';
+import { Escena3D, hayWebGL, vistaPara, type CocheDibujo } from './escena3d';
 import { avanzarParticulas, bocanada, chispas, Derrapes, type Particula } from './efectos';
 import { comoVas, MENSAJE_SEGURIDAD, mensajeFinal, metrosTexto, nombreNivel } from './mensajes';
 import {
@@ -45,6 +45,9 @@ import { avanzarTrafico, cajaDe, situar, type CocheTrafico } from './trafico';
  *
  * Todo es DOM y canvas a proposito, sin componentes de React Native: hace falta
  * girar Y acelerar a la vez, y el sistema de toques de RN solo da un dedo.
+ *
+ * Se pinta en 3D con three.js (escena3d.ts), con la camara inclinada detras del
+ * coche. La fisica y todo lo demas sigue en 2D, sobre el suelo.
  */
 
 const RADIO_JOY = 56;
@@ -115,6 +118,11 @@ function nuevaPartida(): Partida {
 export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
   const datos = useDatosRuta();
   const lienzo = useRef<HTMLCanvasElement>(null);
+  // Una escena 3D para todas las partidas (crear un WebGL por partida gasta y a veces falla).
+  const escena = useRef<Escena3D | null>(null);
+  const joyBase = useRef<HTMLDivElement>(null);
+  const joyBola = useRef<HTMLDivElement>(null);
+  const [webgl] = useState(hayWebGL);
   const [fase, setFase] = useState<Fase>('nivel');
   const [nivel, setNivel] = useState(() => nivelPorDefecto(datos));
   const [nivelRanking, setNivelRanking] = useState(nivel);
@@ -165,11 +173,13 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
     };
   }, []);
 
-  // Al salir del juego: sin sonido y la pantalla como estaba.
+  // Al salir del juego: sin sonido, sin la escena 3D y la pantalla como estaba.
   useEffect(() => {
     const s = sonido.current;
     return () => {
       s.apagar();
+      escena.current?.liberar();
+      escena.current = null;
       salirDePantallaCompleta();
     };
   }, []);
@@ -218,7 +228,8 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
     if (fase !== 'jugando') return;
     const canvas = lienzo.current;
     if (!canvas) return;
-    const pintor = new Lienzo(canvas);
+    escena.current ??= new Escena3D(canvas);
+    const pintor = escena.current;
     const p = nuevaPartida();
     const I = intensidad(nivel, datos.numeroBares);
     let ultimo = performance.now();
@@ -319,6 +330,7 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
       // Dibujar.
       const parpadeo = p.t < p.choques.invulnerableHasta && Math.floor(p.t * 8) % 2 === 0;
       const jugador: CocheDibujo = {
+        id: 0,
         x: p.coche.x,
         y: p.coche.y,
         ang: p.coche.ang,
@@ -328,6 +340,7 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
         alfa: parpadeo ? 0.4 : 1,
       };
       const trafico: CocheDibujo[] = p.trafico.map((c) => ({
+        id: c.id,
         ...situar(c, p.ciudad),
         color: c.color,
         frenando: c.frenando,
@@ -347,9 +360,7 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
         vistaPara(ancho, alto, densidad),
         efectos,
       );
-      const j = joy.current;
-      const ctx = canvas.getContext('2d');
-      if (j && ctx) dibujarJoystick(ctx, j, densidad);
+      ponerJoystick(joy.current, joyBase.current, joyBola.current);
 
       if (ahora - ultimoHud > 100) {
         ultimoHud = ahora;
@@ -449,6 +460,10 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
             onPointerUp={joySoltar}
             onPointerCancel={joySoltar}
           />
+          {/* El joystick se dibuja con DOM: el canvas es WebGL. Lo coloca el bucle (ponerJoystick). */}
+          <div ref={joyBase} style={e.joyBase}>
+            <div ref={joyBola} style={e.joyBola} />
+          </div>
           <div style={e.pedales}>
             <div
               role="button"
@@ -516,8 +531,9 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
               ? `Llevas ${datos.sellos} ${datos.sellos === 1 ? 'sello' : 'sellos'} en la Compostelana · máximo ${datos.numeroBares}`
               : 'Modo prueba: sin ruta, los récords se quedan en este móvil'}
           </div>
+          {!webgl ? <div style={e.nota}>Este navegador no puede pintar en 3D: prueba con Chrome o Safari actualizados.</div> : null}
           <div style={e.fila}>
-            <button type="button" style={e.boton} onClick={arrancar}>
+            <button type="button" style={{ ...e.boton, ...(webgl ? null : e.apagado) }} disabled={!webgl} onClick={arrancar}>
               Arrancar
             </button>
             <button
@@ -719,20 +735,17 @@ function Rankings({
   );
 }
 
-function dibujarJoystick(ctx: CanvasRenderingContext2D, j: Joystick, d: number) {
-  const bola = bolaDelJoystick(j.x - j.ox, j.y - j.oy, RADIO_JOY);
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = 'rgba(255, 253, 248, 0.08)';
-  ctx.strokeStyle = 'rgba(255, 253, 248, 0.35)';
-  ctx.lineWidth = 3 * d;
-  ctx.beginPath();
-  ctx.arc(j.ox * d, j.oy * d, RADIO_JOY * d, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(232, 163, 44, 0.85)';
-  ctx.beginPath();
-  ctx.arc((j.ox + bola.x) * d, (j.oy + bola.y) * d, RADIO_JOY * 0.42 * d, 0, Math.PI * 2);
-  ctx.fill();
+/** Coloca el aro y la bola del joystick donde esta el dedo (o los esconde). */
+function ponerJoystick(j: Joystick | null, base: HTMLDivElement | null, bola: HTMLDivElement | null) {
+  if (!base || !bola) return;
+  if (!j) {
+    base.style.display = 'none';
+    return;
+  }
+  const b = bolaDelJoystick(j.x - j.ox, j.y - j.oy, RADIO_JOY);
+  base.style.display = 'block';
+  base.style.transform = `translate(${j.ox - RADIO_JOY}px, ${j.oy - RADIO_JOY}px)`;
+  bola.style.transform = `translate(${RADIO_JOY - RADIO_JOY * 0.42 + b.x}px, ${RADIO_JOY - RADIO_JOY * 0.42 + b.y}px)`;
 }
 
 async function pantallaCompletaHorizontal() {
@@ -770,6 +783,30 @@ const e: Record<string, CSSProperties> = {
   raiz: { ...sinGestos, position: 'fixed', inset: 0, background: '#0b0a09', overflow: 'hidden', fontFamily: 'system-ui, sans-serif', zIndex: 10 },
   lienzo: { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' },
   zonaJoystick: { ...sinGestos, position: 'absolute', left: 0, top: 0, bottom: 0, width: '50%' },
+  joyBase: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: RADIO_JOY * 2,
+    height: RADIO_JOY * 2,
+    borderRadius: '50%',
+    background: 'rgba(255, 253, 248, 0.08)',
+    border: '3px solid rgba(255, 253, 248, 0.35)',
+    boxSizing: 'border-box',
+    pointerEvents: 'none',
+    display: 'none',
+  },
+  joyBola: {
+    position: 'absolute',
+    left: -3,
+    top: -3,
+    width: RADIO_JOY * 0.84,
+    height: RADIO_JOY * 0.84,
+    borderRadius: '50%',
+    background: 'rgba(232, 163, 44, 0.85)',
+    pointerEvents: 'none',
+  },
+  apagado: { opacity: 0.4 },
   pedales: { position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: 18, display: 'flex', alignItems: 'flex-end', gap: 16 },
   pedal: {
     ...sinGestos,
