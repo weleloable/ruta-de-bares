@@ -748,10 +748,7 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   usuario. Son cifras de AHORA (quitar un Me gusta lo descuenta) y se van con
   la ruta: no hay historico. Las etiquetas cuentan solo a gente de ESA ruta
   con La Caña activada (el perfil de la cana es de la persona, no de la ruta).
-  Dentro de La Caña hay dos tarjetas con barras: el **embudo** (PERSONAS por
-  paso: en la ruta -> la activaron -> hicieron conexion -> preguntaron ->
-  tuvieron un si) y **como acaba la pregunta de la cerveza** (si, mas tarde, no,
-  sin contestar, por conexion). En el embudo "la activaron" es ALGUNA VEZ
-  (`first_activated_at`) y no "activada ahora": si no, quien conecto y luego la
-  apago haria que un paso fuese mayor que el anterior. Solo cuenta a quien
-  sigue en la ruta.
+  Se probaron y se QUITARON dos tarjetas con barras dentro de La Caña: el
+  embudo (PERSONAS por paso) y "como acaba la pregunta" (por CONEXION). Una al
+  lado de la otra, 20 personas con un si y 13 sies (parejas) parecian
+  contradecirse. Si vuelven, que cuenten las dos lo mismo o lo digan muy claro.

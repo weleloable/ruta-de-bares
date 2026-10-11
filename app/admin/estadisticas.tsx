@@ -5,14 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
 import { leerEstadisticasRuta } from '../../src/features/admin/api';
-import {
-  embudoCana,
-  resultadoPregunta,
-  seccionesEstadisticas,
-  type Baldosa,
-  type EstadisticasRuta,
-  type FilaBarra,
-} from '../../src/features/admin/estadisticas';
+import { seccionesEstadisticas, type Baldosa, type EstadisticasRuta } from '../../src/features/admin/estadisticas';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { listRoutes } from '../../src/features/routes/api';
 import { estadoDeRuta, etiquetaEstado } from '../../src/features/routes/estado';
@@ -132,22 +125,8 @@ export default function EstadisticasAdmin() {
                     <Tile key={b.titulo} baldosa={b} />
                   ))}
                 </View>
-                {/* El embudo, la pregunta y las etiquetas van con La Caña, que es de donde salen. */}
-                {i === 1 ? (
-                  <>
-                    <Barras
-                      titulo="La Caña, de principio a fin"
-                      filas={embudoCana(datos)}
-                      pie="Personas que llegan a cada paso."
-                    />
-                    <Barras
-                      titulo="Cómo acaba la pregunta de la caña"
-                      filas={resultadoPregunta(datos).map((f) => ({ ...f, sufijo: `${f.porcentaje} %` }))}
-                      pie="De las conexiones en las que alguien preguntó."
-                    />
-                    <Etiquetas etiquetas={datos.etiquetas} />
-                  </>
-                ) : null}
+                {/* Las etiquetas van justo despues de La Caña, que es de donde salen. */}
+                {i === 1 ? <Etiquetas etiquetas={datos.etiquetas} /> : null}
               </View>
             ))
           : null}
@@ -168,39 +147,6 @@ function Tile({ baldosa }: { baldosa: Baldosa }) {
       <Text style={styles.valor}>{baldosa.valor}</Text>
       <Text style={styles.baldosaTitulo}>{baldosa.titulo}</Text>
       <Text style={styles.baldosaDetalle}>{baldosa.detalle}</Text>
-    </View>
-  );
-}
-
-/**
- * Filas con barra: el embudo y el reparto de respuestas. Sin filas (una base
- * que aun no trae estos datos) no pinta nada.
- */
-function Barras({ titulo, filas, pie }: { titulo: string; filas: (FilaBarra & { sufijo?: string })[]; pie: string }) {
-  if (filas.length === 0) return null;
-  return (
-    <View style={styles.seccion}>
-      <Text style={[typography.overline, styles.subtitulo]}>{titulo}</Text>
-      <View style={styles.tarjeta}>
-        {filas.map((f) => (
-          <View
-            key={f.titulo}
-            style={styles.barraFila}
-            accessible
-            accessibilityLabel={`${f.titulo}: ${f.valor}${f.sufijo ? `, ${f.sufijo}` : ''}`}
-          >
-            <Text style={styles.barraTitulo}>{f.titulo}</Text>
-            <View style={styles.pista}>
-              <View
-                style={[styles.relleno, f.destacada && styles.rellenoDestacado, { width: `${Math.round(f.proporcion * 100)}%` }]}
-              />
-            </View>
-            <Text style={styles.barraValor}>{f.valor}</Text>
-            {f.sufijo ? <Text style={styles.barraSufijo}>{f.sufijo}</Text> : null}
-          </View>
-        ))}
-        <Text style={styles.baldosaDetalle}>{pie}</Text>
-      </View>
     </View>
   );
 }
@@ -268,13 +214,6 @@ const styles = StyleSheet.create({
     padding: space.md,
     gap: space.sm,
   },
-  barraFila: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  barraTitulo: { width: 118, fontSize: 13, fontWeight: '600', color: colors.inkSoft },
-  pista: { flex: 1, height: 20, borderRadius: 6, backgroundColor: colors.paperDeep, overflow: 'hidden' },
-  relleno: { height: '100%', backgroundColor: colors.beer },
-  rellenoDestacado: { backgroundColor: colors.green },
-  barraValor: { width: 30, textAlign: 'right', fontWeight: '700', color: colors.ink, fontVariant: ['tabular-nums'] },
-  barraSufijo: { width: 40, textAlign: 'right', fontSize: 12, color: colors.inkFaint, fontVariant: ['tabular-nums'] },
   fila: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   puesto: { width: 18, fontWeight: '800', color: colors.beerDark },
   etiqueta: { flex: 1, fontSize: 15, color: colors.ink },

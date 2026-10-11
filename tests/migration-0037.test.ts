@@ -56,7 +56,7 @@ const DATOS = `
     ('${FUERA}', '${BAR_OTRA}', 40, -3, 5);
 
   -- La Cana: Ana y Luis la tienen activada, Eva no. Fuera (otra ruta) tambien.
-  -- Eva la tiene APAGADA ahora, pero la activo en su dia: cuenta en el embudo.
+  -- Eva la tiene APAGADA ahora: no cuenta en activada, aunque la activase en su dia.
   insert into public.match_profiles (user_id, is_active, first_activated_at) values
     ('${ANA}', true, now()), ('${LUIS}', true, now()), ('${EVA}', false, now()), ('${FUERA}', true, now());
   insert into public.match_votes (route_id, voter_id, target_id, value) values
@@ -84,8 +84,6 @@ const DATOS = `
 type Estadisticas = {
   ruta: Record<string, number>;
   cana: Record<string, number>;
-  embudo: Record<string, number>;
-  pregunta: Record<string, number>;
   etiquetas: { etiqueta: string; veces: number }[];
   moderacion: Record<string, number>;
 };
@@ -112,31 +110,6 @@ describe('0037: estadisticas de una ruta', () => {
   it('La Caña: solo esta ruta, aunque la misma persona este en otra', async () => {
     const e = await leer();
     assert.deepEqual(e.cana, { activada: 2, me_gusta: 3, conexiones: 3, conexiones_abiertas: 2, preguntas: 2, si: 1 });
-  });
-
-  it('el embudo cuenta PERSONAS por paso, y "la activaron" es alguna vez', async () => {
-    const e = await leer();
-    // Eva la tiene apagada (no sale en `activada`) pero la activo: cuenta aqui.
-    // Fuera pregunto en OTRA ruta: no cuenta en esta.
-    assert.deepEqual(e.embudo, { en_la_ruta: 3, la_activaron: 3, con_conexion: 3, preguntaron: 2, con_un_si: 2 });
-  });
-
-  it('como acaba la pregunta: por conexion, sin las que nadie pregunto', async () => {
-    const e = await leer();
-    assert.deepEqual(e.pregunta, { si: 1, mas_tarde: 1, no: 0, sin_contestar: 0 });
-  });
-
-  it('el embudo no cuenta a quien ya no esta en la ruta', async () => {
-    const db = await crearBase(migraciones);
-    await db.exec(DATOS);
-    await db.exec(`delete from public.route_members where route_id = '${RUTA}' and user_id = '${LUIS}'`);
-    await escenario(db, async (a) => {
-      await a.como(ADMIN);
-      const { rows } = await db.query<{ e: Estadisticas }>('select public.admin_estadisticas_ruta($1) as e', [RUTA]);
-      const x = rows[0]?.e.embudo;
-      assert.deepEqual(x, { en_la_ruta: 2, la_activaron: 2, con_conexion: 2, preguntaron: 1, con_un_si: 1 });
-    });
-    await db.close();
   });
 
   it('etiquetas: las de la gente de la ruta con La Caña activada, de mas a menos', async () => {

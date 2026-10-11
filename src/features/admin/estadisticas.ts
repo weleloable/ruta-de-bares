@@ -18,16 +18,9 @@ export type EstadisticasRuta = {
     preguntas: number;
     si: number;
   };
-  /** PERSONAS en cada paso de La Caña. Opcional: una base sin esta version no lo trae. */
-  embudo?: { en_la_ruta: number; la_activaron: number; con_conexion: number; preguntaron: number; con_un_si: number };
-  /** Como acabo la pregunta de la cerveza, por conexion. */
-  pregunta?: { si: number; mas_tarde: number; no: number; sin_contestar: number };
   etiquetas: { etiqueta: string; veces: number }[];
   moderacion: { denuncias: number; denuncias_sin_cerrar: number; vetos: number };
 };
-
-/** Una fila con barra: cuanto, y que parte del total (0 a 1) ocupa la barra. */
-export type FilaBarra = { titulo: string; valor: number; proporcion: number; destacada?: boolean };
 
 export type Baldosa = { valor: number; titulo: string; detalle: string };
 export type SeccionEstadisticas = { titulo: string; baldosas: Baldosa[] };
@@ -101,50 +94,5 @@ export function seccionesEstadisticas(e: EstadisticasRuta): SeccionEstadisticas[
         },
       ],
     },
-  ];
-}
-
-/** 0..1 para el ancho de una barra; 0 si no hay base, nunca mas de 1. */
-function proporcion(parte: number, total: number): number {
-  return total > 0 ? Math.min(1, Math.max(0, parte / total)) : 0;
-}
-
-/**
- * El embudo de La Caña: cuanta gente llega a cada paso. La barra de cada paso
- * es respecto a la gente de la ruta, asi se ve de un vistazo donde se para.
- */
-export function embudoCana(e: EstadisticasRuta): FilaBarra[] {
-  const x = e.embudo;
-  if (!x) return [];
-  const total = x.en_la_ruta;
-  return [
-    { titulo: 'En la ruta', valor: x.en_la_ruta, proporcion: proporcion(x.en_la_ruta, total) },
-    { titulo: 'La activaron', valor: x.la_activaron, proporcion: proporcion(x.la_activaron, total) },
-    { titulo: 'Hicieron conexión', valor: x.con_conexion, proporcion: proporcion(x.con_conexion, total) },
-    { titulo: 'Preguntaron', valor: x.preguntaron, proporcion: proporcion(x.preguntaron, total) },
-    { titulo: 'Tuvieron un sí', valor: x.con_un_si, proporcion: proporcion(x.con_un_si, total), destacada: true },
-  ];
-}
-
-/**
- * Como acaba la pregunta de la cerveza. La barra es respecto a las preguntas
- * hechas; `porcentaje` es lo que se lee al lado.
- */
-export function resultadoPregunta(e: EstadisticasRuta): (FilaBarra & { porcentaje: number })[] {
-  const x = e.pregunta;
-  if (!x) return [];
-  const total = x.si + x.mas_tarde + x.no + x.sin_contestar;
-  const fila = (titulo: string, valor: number, destacada = false) => ({
-    titulo,
-    valor,
-    proporcion: proporcion(valor, total),
-    porcentaje: porcentaje(valor, total),
-    destacada,
-  });
-  return [
-    fila('Sí', x.si, true),
-    fila('Más tarde', x.mas_tarde),
-    fila('No', x.no),
-    fila('Sin contestar', x.sin_contestar),
   ];
 }
