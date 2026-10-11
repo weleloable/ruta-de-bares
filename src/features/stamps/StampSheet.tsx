@@ -5,8 +5,9 @@ import { Banner, Button } from '../../components/ui';
 import { diaLargo, ventana } from '../../lib/fechas';
 import { colors, radius, space, typography } from '../../lib/theme';
 import { useNow } from '../../lib/useNow';
+import { Consumiciones } from '../casas/Consumiciones';
 import { direccionVisible } from '../routes/catalogo';
-import type { RouteBarRow, StampRow } from '../../types/database';
+import type { RouteBarRow, RouteRow, StampRow } from '../../types/database';
 import { LocationDeniedError, claimStamp, getCurrentPosition } from './api';
 import { debeCerrarAlSoltar } from './arrastre';
 import { describeVerdict, evaluateStamp, type LatLng } from './rules';
@@ -24,6 +25,8 @@ export function StampSheet({
   visible,
   onClose,
   onStamped,
+  ruta = null,
+  esUltimoSellado = false,
 }: {
   bar: RouteBarRow | null;
   index: number;
@@ -31,6 +34,9 @@ export function StampSheet({
   visible: boolean;
   onClose: () => void;
   onStamped: (stamp: StampRow) => void;
+  /** La ruta y si este es tu ultimo bar sellado: para las consumiciones (0045). */
+  ruta?: RouteRow | null;
+  esUltimoSellado?: boolean;
 }) {
   const now = useNow(15_000);
   const [posicion, setPosicion] = useState<LatLng | null>(null);
@@ -178,6 +184,8 @@ export function StampSheet({
           )}
 
           {error ? <Banner tone="error">{error}</Banner> : null}
+
+          {stamp && ruta ? <Consumiciones barId={bar.id} ruta={ruta} esUltimo={esUltimoSellado} /> : null}
 
           {!stamp ? (
             <View style={styles.acciones}>

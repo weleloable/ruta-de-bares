@@ -41,6 +41,14 @@ export type RouteRow = {
   cana_horas_antes: number;
   /** Distancia maxima al primer bar para activarla, en km; null = sin limite (0042). */
   cana_radio_km: number | null;
+  /** Consumiciones (0045): minutos entre registros y cuantas puntuan por bar y por ruta. */
+  consumo_minutos: number;
+  consumo_por_bar: number;
+  consumo_por_ruta: number;
+  /** Veces que puntua la variedad (categoria nueva) por ruta (0045). */
+  variedad_max: number;
+  /** La racha de casa puede puntuar mas de una vez por bar (0045). */
+  racha_repetible: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -465,6 +473,21 @@ export type MaestroBeerRow = {
 export type Database = {
   public: {
     Tables: {
+      /** Tus consumiciones (0045): solo lectura, las apunta `registrar_consumicion`. */
+      consumiciones: {
+        Row: {
+          id: string;
+          route_id: string;
+          route_bar_id: string;
+          user_id: string;
+          categoria: string;
+          puntua: boolean;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       /** Solo lectura desde la app: la escribe el servidor (0043). */
       user_houses: {
         Row: UserHouseRow;
@@ -489,6 +512,11 @@ export type Database = {
           | 'finished_at'
           | 'cana_horas_antes'
           | 'cana_radio_km'
+          | 'consumo_minutos'
+          | 'consumo_por_bar'
+          | 'consumo_por_ruta'
+          | 'variedad_max'
+          | 'racha_repetible'
           | 'created_at'
           | 'updated_at'
         >;
@@ -637,6 +665,11 @@ export type Database = {
         Returns: MinigameRankingRow[];
       };
       /** "¿Conduces tú?" (0041): ranking por ruta y nivel de cañas. */
+      /** Apunta una consumicion en tu ultimo bar sellado (0045). */
+      registrar_consumicion: {
+        Args: { p_route_bar_id: string; p_categoria: string };
+        Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
+      };
       /** Puntos de las cuatro casas en una ruta (0044). */
       casas_ranking: {
         Args: { p_route_id: string };

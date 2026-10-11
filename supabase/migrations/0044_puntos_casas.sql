@@ -1,8 +1,11 @@
 -- Ruta de Bares - 0044: puntos de las casas y ranking de la ruta en directo.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0043.
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists`, `on
--- conflict do nothing` y funciones con `or replace`). Ojo al reves: rehace
--- export_my_data() a partir de la 0041, que ya no se puede volver a pegar despues.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * puntos_por_sello() la rehace la 0045
+-- (Ademas, esta rehace export_my_data() a partir de la 0041, asi que la 0041
+-- tampoco se puede volver a pegar despues.)
 --
 -- Que hace. Lo que consigue cada persona suma para su casa en la ruta. Los
 -- puntos de una ruta no se mezclan con los de otra.

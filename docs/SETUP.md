@@ -262,6 +262,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    sellos y completar la ruta; los podios de minijuegos se calculan en vivo.
    Los sellos que ya habia se puntuan al pegarla. Rehace `export_my_data()`, asi
    que la 0041 ya **no se vuelve a pegar**. Se puede pegar dos veces.
+45. [`supabase/migrations/0045_consumiciones_racha.sql`](../supabase/migrations/0045_consumiciones_racha.sql)
+   y **Run**, despues de la 0044 y **ANTES de desplegar la app**. Consumiciones
+   en el ultimo bar sellado (`consumiciones`, `registrar_consumicion`), con
+   espera entre registros, tope por bar y por ruta y bonus de variedad ("sin
+   alcohol" cuenta igual); los limites son columnas de `routes`. Ademas, la
+   racha: tres sellos seguidos de la misma casa en un bar dan bonus a la casa.
+   Rehace `puntos_por_sello()`, asi que la 0044 ya **no se vuelve a pegar**. Se
+   puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

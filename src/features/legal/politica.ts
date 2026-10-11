@@ -81,6 +81,9 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
               'Los puntos que consigues para tu casa (por sellar, completar la ruta o quedar en el podio de un ' +
                 'minijuego) se apuntan con su origen. La gente de la ruta ve solo el total de cada casa; quien ' +
                 'organiza la ruta puede ver el detalle para corregir errores.',
+              'Las consumiciones que apuntas en un bar (qué categoría y a qué hora): sirven para dar puntos a tu ' +
+                'casa con un tope y una espera entre una y otra. La lista solo la ves tú; quien organiza la ruta ve los ' +
+                'puntos que dieron (y la categoría cuando fue nueva). Apuntarlas es opcional.',
               'No se vende ni se cede a terceros. Los únicos que tocan los datos por encargo nuestro son Supabase ' +
                 '(base de datos, almacenamiento y el sistema de acceso, también lo que nos da Google) y GitHub ' +
                 'Pages (la web).',

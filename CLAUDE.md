@@ -126,6 +126,7 @@ supabase/
   migrations/0042_*.sql     horas antes y distancia para activar La Caña, por ruta (`routes.cana_horas_antes`, `cana_radio_km`)
   migrations/0043_*.sql     las cuatro casas (`user_houses`): se asigna al entrar en la primera ruta, equilibrando en ella
   migrations/0044_*.sql     puntos de las casas (`point_rules`, `point_movements`) y ranking en directo (`casas_marcador` + Realtime)
+  migrations/0045_*.sql     consumiciones (`consumiciones`, `registrar_consumicion`, limites en `routes`) y racha de casa
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -261,6 +262,8 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   ranking en directo no lee el historial (no es legible por nadie): la app escucha
   con Realtime `casas_marcador`, una fila por ruta que tocan los disparadores, y
   entonces llama a `casas_ranking`; ademas sondea cada 30 s por si Realtime falla.
+  Los puntos que dependen de companeros (racha, QR) guardan en `detail.usuarios`
+  quienes participaron: al cambiar a alguien de casa se anulan esos (0045).
 
 - **La Caña se activa por ruta (0040), pero `match_profiles.is_active` sigue
   ahi**: ahora significa "activada en ALGUNA ruta" y lo mantienen al dia

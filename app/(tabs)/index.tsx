@@ -15,6 +15,7 @@ import { Medalla } from '../../src/components/Medalla';
 import { StampSeal } from '../../src/components/StampSeal';
 import { Banner, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
+import { ultimoBarSellado } from '../../src/features/casas/reglasConsumo';
 import { RankingCasas } from '../../src/features/casas/RankingCasas';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
@@ -172,6 +173,8 @@ export default function SellosScreen() {
         onStamped={(sello) => {
           addStamp(sello);
         }}
+        ruta={activeRoute}
+        esUltimoSellado={barAbierto !== null && barAbierto.id === ultimoBarSellado(stamps, new Set(bars.map((b) => b.id)))}
       />
 
       {/* Solo existe con la credencial completa: es lo que abre la medalla. */}
