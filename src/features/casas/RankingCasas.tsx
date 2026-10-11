@@ -5,6 +5,8 @@ import { Animated, Platform, Pressable, StyleSheet, Text, Vibration, View } from
 
 import { Card } from '../../components/ui';
 import { colors, radius, space, typography } from '../../lib/theme';
+import { useAuth } from '../auth/AuthProvider';
+import { AportesCasa } from './AportesCasa';
 import { CASAS, type IdCasa } from './casas';
 import { Escudo } from './Escudo';
 import { useMiCasa } from './MiCasa';
@@ -22,7 +24,14 @@ export function RankingCasas({ rutaId }: { rutaId: string }) {
   const { filas } = useRankingCasas(rutaId);
   const { casa: miCasa } = useMiCasa();
   const router = useRouter();
-  return <TablaCasas filas={filas} miCasa={miCasa} onHistorico={() => router.push('/casas/historico')} />;
+  const { session } = useAuth();
+  const [abierta, setAbierta] = useState<IdCasa | null>(null);
+  return (
+    <>
+      <TablaCasas filas={filas} miCasa={miCasa} onHistorico={() => router.push('/casas/historico')} onCasa={setAbierta} />
+      <AportesCasa rutaId={rutaId} casa={abierta} miId={session?.user.id ?? null} onCerrar={() => setAbierta(null)} />
+    </>
+  );
 }
 
 /** La tabla en si, a partir de las filas del servidor (se puede ensenar sola). */
@@ -30,10 +39,13 @@ export function TablaCasas({
   filas,
   miCasa,
   onHistorico,
+  onCasa,
 }: {
   filas: FilaServidor[] | null;
   miCasa: IdCasa | null;
   onHistorico?: () => void;
+  /** Al tocar una casa (abre la lista de quien pone sus puntos). */
+  onCasa?: (casa: IdCasa) => void;
 }) {
   const anteriores = useRef<FilaServidor[] | null>(null);
   const [ganado, setGanado] = useState<Partial<Record<IdCasa, number>>>({});
@@ -83,7 +95,14 @@ export function TablaCasas({
       {nuevoLider ? <AvisoLider casa={nuevoLider} onFin={() => setNuevoLider(null)} /> : null}
 
       {ordenadas.map((f) => (
-        <Fila key={f.house} fila={f} mia={f.house === miCasa} ganado={ganado[f.house]} onVisto={() => setGanado((g) => ({ ...g, [f.house]: undefined }))} />
+        <Fila
+          key={f.house}
+          fila={f}
+          mia={f.house === miCasa}
+          ganado={ganado[f.house]}
+          onVisto={() => setGanado((g) => ({ ...g, [f.house]: undefined }))}
+          onPress={onCasa ? () => onCasa(f.house) : undefined}
+        />
       ))}
 
       {!hayPuntos ? (
@@ -93,7 +112,19 @@ export function TablaCasas({
   );
 }
 
-function Fila({ fila, mia, ganado, onVisto }: { fila: FilaRanking; mia: boolean; ganado?: number; onVisto: () => void }) {
+function Fila({
+  fila,
+  mia,
+  ganado,
+  onVisto,
+  onPress,
+}: {
+  fila: FilaRanking;
+  mia: boolean;
+  ganado?: number;
+  onVisto: () => void;
+  onPress?: () => void;
+}) {
   const c = CASAS[fila.house];
   const barra = useRef(new Animated.Value(fila.progreso)).current;
   const globo = useRef(new Animated.Value(0)).current;
@@ -109,7 +140,13 @@ function Fila({ fila, mia, ganado, onVisto }: { fila: FilaRanking; mia: boolean;
   }, [ganado, globo, onVisto]);
 
   return (
-    <View style={[styles.fila, mia && { borderColor: c.color, backgroundColor: `${c.color}12` }]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${c.nombre}, ${fila.puntos} puntos. Ver quién los pone`}
+      disabled={!onPress}
+      onPress={onPress}
+      style={({ pressed }) => [styles.fila, mia && { borderColor: c.color, backgroundColor: `${c.color}12` }, pressed && styles.filaPulsada]}
+    >
       <Text style={[styles.puesto, fila.puesto === 1 && fila.puntos > 0 && { color: c.color }]}>{fila.puesto}</Text>
       <Escudo casa={fila.house} tamano={34} />
       <View style={styles.centro}>
@@ -156,7 +193,7 @@ function Fila({ fila, mia, ganado, onVisto }: { fila: FilaRanking; mia: boolean;
           </Animated.Text>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -201,6 +238,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
+  filaPulsada: { opacity: 0.7 },
   puesto: { width: 18, fontSize: 18, fontWeight: '900', color: colors.inkSoft, textAlign: 'center' },
   centro: { flex: 1, gap: 3 },
   nombreFila: { flexDirection: 'row', alignItems: 'center', gap: 4 },

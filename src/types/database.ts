@@ -745,6 +745,11 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** Cuanto pone cada persona a los puntos de su casa en la ruta (0052). */
+      casas_aportes: {
+        Args: { p_route_id: string; p_house: string };
+        Returns: { user_id: string | null; nombre: string | null; puntos: number }[];
+      };
       /** Cierre de rutas e historico (0049). */
       casas_cerrar_ruta: { Args: { p_route_id: string }; Returns: unknown };
       casas_reabrir_ruta: { Args: { p_route_id: string }; Returns: undefined };

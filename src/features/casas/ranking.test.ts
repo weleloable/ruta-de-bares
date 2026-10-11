@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { lider, ordenarRanking, subidas, type FilaServidor } from './ranking.ts';
+import { formatearPuntos, lider, ordenarAportes, ordenarRanking, subidas, type FilaServidor } from './ranking.ts';
 
 const f = (house: FilaServidor['house'], puntos: number): FilaServidor => ({ house, puntos, miembros: 2 });
 
@@ -35,5 +35,24 @@ describe('ranking de casas', () => {
     const ahora = [f('mahou', 20), f('cruzcampo', 15)];
     assert.deepEqual(subidas(antes, ahora), { mahou: 10 });
     assert.deepEqual(subidas([], ahora), {}, 'la primera lectura no cuenta como subida');
+  });
+});
+
+describe('aportes de una casa', () => {
+  it('puntos con coma y sin ceros de mas', () => {
+    assert.equal(formatearPuntos(2.5), '2,5');
+    assert.equal(formatearPuntos(12), '12');
+    assert.equal(formatearPuntos(14.25), '14,25');
+    assert.equal(formatearPuntos(0.1 + 0.2), '0,3');
+  });
+
+  it('de mayor a menor, por nombre si empatan, y "sin persona" al final', () => {
+    const r = ordenarAportes([
+      { user_id: null, nombre: null, puntos: 50 },
+      { user_id: 'b', nombre: 'Bea', puntos: 10 },
+      { user_id: 'a', nombre: 'Ana', puntos: 10 },
+      { user_id: 'c', nombre: 'Carla', puntos: 12.5 },
+    ]);
+    assert.deepEqual(r.map((x) => x.nombre), ['Carla', 'Ana', 'Bea', null]);
   });
 });

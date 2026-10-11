@@ -55,3 +55,20 @@ export function subidas(antes: readonly FilaServidor[], ahora: readonly FilaServ
   }
   return r;
 }
+
+/** Puntos para mostrar: coma decimal y sin ceros de mas (2,5 · 12 · 14,25). */
+export function formatearPuntos(n: number): string {
+  const redondeado = Math.round(n * 100) / 100;
+  return String(redondeado).replace('.', ',');
+}
+
+/** Un aporte de la lista de una casa: persona (nula = sin persona) y puntos. */
+export type Aporte = { user_id: string | null; nombre: string | null; puntos: number };
+
+/** Los aportes de mayor a menor (empate: por nombre), con la fila "sin persona" al final. */
+export function ordenarAportes<T extends Aporte>(filas: readonly T[]): T[] {
+  return [...filas].sort((a, b) => {
+    if ((a.user_id === null) !== (b.user_id === null)) return a.user_id === null ? 1 : -1;
+    return b.puntos - a.puntos || (a.nombre ?? '').localeCompare(b.nombre ?? '', 'es');
+  });
+}

@@ -308,6 +308,11 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    La Cana y la ficha ensenan quien administra: una estrella junto al nombre y
    la etiqueta "Moderador". Rehace `match_grid()`, asi que la 0040 ya **no se
    vuelve a pegar**. Se puede pegar dos veces.
+52. [`supabase/migrations/0052_aportes_casa.sql`](../supabase/migrations/0052_aportes_casa.sql)
+   y **Run**, despues de la 0051 y **ANTES de desplegar la app**. Al tocar una
+   casa en la tabla de Sellos sale cuanto pone cada persona de esa casa
+   (`casas_aportes`): los encuentros QR se reparten a medias y la racha a
+   partes iguales. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos
