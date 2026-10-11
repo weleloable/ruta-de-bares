@@ -1,15 +1,14 @@
 import type { Obstaculo } from './mapas';
 
 /**
- * Pixel art de La Conga Cervecera. Cada sprite son 8x8 caracteres y una paleta
- * (`.` es transparente). Sin libreria de imagenes ni SVG instalados, se pintan
- * como rectangulos: `rectangulos` fusiona los pixeles iguales contiguos para
- * que un edificio sean unas pocas cajas y no 64.
+ * Pixel art de La Conga Cervecera. Cada sprite es un cuadrado de caracteres
+ * (8x8 los personajes y objetos, 16x16 los obstaculos, que necesitan detalle
+ * para reconocerse) y una paleta; `.` es transparente. Sin libreria de imagenes
+ * ni SVG instalados, se pintan como rectangulos: `rectangulos` fusiona los
+ * pixeles iguales contiguos para que una fachada sean unas decenas de cajas y no 256.
  */
 export type SpriteDef = { filas: readonly string[]; paleta: Readonly<Record<string, string>> };
 export type Rect = { x: number; y: number; w: number; h: number; color: string };
-
-export const LADO = 8;
 
 const JARRA = [
   '..wwww..',
@@ -43,8 +42,11 @@ const ASPECTOS: readonly { h: string; s: string; k: string }[] = [
   { h: '#6B3410', s: '#D9608A', k: '#8D5524' },
 ];
 
-const PIEDRA = '#C9B48F';
-const AGUA = '#4C8DB8';
+/** Sombra en el suelo, bajo arboles y columnas. */
+const SOMBRA = '#CDB894';
+const MADERA = '#6B4A2B';
+const MADERA_CLARA = '#8A6238';
+const HIERRO = '#2E2A26';
 
 export const SPRITES = {
   jugador: {
@@ -63,34 +65,159 @@ export const SPRITES = {
     filas: ['........', '..oooo..', '.occcco.', '.oclcco.', '.occcco.', '..oooo..', 'wwwwwwww', '.gggggg.'],
     paleta: { o: '#C9964A', c: '#B5382C', l: '#E9A79C', w: '#FFFDF8', g: '#B8A183' },
   },
+
   // Obstaculos: el id es el caracter del mapa.
+
+  /** Casa del casco: tejado de teja, fachada ocre, ventana con contraventanas y balcon de forja. */
   E: {
-    filas: ['BBBBBBBB', 'bbbbbbbb', 'bffbbffb', 'bvvbbvvb', 'bvvbbvvb', 'bffbbffb', 'bbbbbbbb', 'BBBBBBBB'],
-    paleta: { B: '#7A3B26', b: '#A5523A', f: '#F3E1C6', v: '#6FA6C9' },
+    filas: [
+      'RRRRRRRRRRRRRRRR',
+      'rrrrrrrrrrrrrrrr',
+      'RRRRRRRRRRRRRRRR',
+      'KKKKKKKKKKKKKKKK',
+      'WWWWWWWWWWWWWWWW',
+      'WWWwwwwwwwwwwWWW',
+      'WWWGGVVVVVVGGWWW',
+      'WWWGGVLVVVVGGWWW',
+      'WWWGGVVVVVVGGWWW',
+      'WWWGGVVVVVVGGWWW',
+      'WWNNNNNNNNNNNNWW',
+      'WWNwwwNwwNwwwNWW',
+      'WWMMMMMMMMMMMMWW',
+      'WWWwwwwwwwwwwWWW',
+      'WWWWWWWWWWWWWWWW',
+      'wwwwwwwwwwwwwwww',
+    ],
+    paleta: {
+      R: '#B4532A',
+      r: '#8E3B1C',
+      K: '#5C2A14',
+      W: '#EDCF93',
+      w: '#D4AE6A',
+      G: '#3E6B3A',
+      V: '#5E87A6',
+      L: '#A9C8DD',
+      N: HIERRO,
+      M: MADERA,
+    },
   },
+  /** Soportal de la Calle Mayor: viga y zapata de madera sobre columna de piedra. */
   S: {
-    filas: ['ssssssss', 'ssaaaass', 'saaaaaas', 'saaaaaas', 'saaaaaas', 'saaaaaas', 'saaaaaas', 'ssssssss'],
-    paleta: { s: PIEDRA, a: '#4A3A2A' },
+    filas: [
+      'MMMMMMMMMMMMMMMM',
+      'mmmmmmmmmmmmmmmm',
+      '....MMMMMMMM....',
+      '.....mmmmmm.....',
+      '.....pppqqq.....',
+      '......ppqq......',
+      '......ppqq......',
+      '......ppqq......',
+      '......ppqq......',
+      '......ppqq......',
+      '......ppqq......',
+      '......ppqq......',
+      '......ppqq......',
+      '.....pppqqq.....',
+      '....pppppqqq....',
+      '....oooooooo....',
+    ],
+    paleta: { M: MADERA, m: MADERA_CLARA, p: '#D9CDB4', q: '#ADA088', o: SOMBRA },
   },
+  /** La Universidad: piedra dorada plateresca, cresteria, escudo y portada en arco. */
   U: {
-    filas: ['nnjnnjnn', 'njnnnnjn', 'nnnrrnnn', 'nnnrrnnn', 'nnaaaann', 'njaaaajn', 'nnaaaann', 'nnaaaann'],
-    paleta: { n: '#E8D9B0', j: '#C9A227', r: '#A82C24', a: '#3A2A1C' },
+    filas: [
+      'j..j..j..j..j..j',
+      'nnnnnnnnnnnnnnnn',
+      'sjsjsjsjsjsjsjsj',
+      'nnnnnnnnnnnnnnnn',
+      'snnnnnnjjnnnnnns',
+      'snnnnnjrrjnnnnns',
+      'snnnnnjrrjnnnnns',
+      'snnnnnnjjnnnnnns',
+      'snnnnnnnnnnnnnns',
+      'snnnnnaaaannnnns',
+      'snnnnaaaaaannnns',
+      'snnnnaaaaaannnns',
+      'snnnnaaaaaannnns',
+      'snnnnaaaaaannnns',
+      'snnnnaaaaaannnns',
+      'ssssssssssssssss',
+    ],
+    paleta: { n: '#E3CF9E', s: '#C9AE73', j: '#B8902A', r: '#A82C24', a: '#3A2A1C' },
   },
+  /** Fuente (hoy no esta en el mapa; queda para otros niveles). */
   F: {
     filas: ['...ww...', '..w..w..', '...ss...', '..sbbs..', '.sbbbbs.', 'sbbbbbbs', 'sbwbbwbs', '.ssssss.'],
-    paleta: { s: PIEDRA, b: AGUA, w: '#DFF1FA' },
+    paleta: { s: '#C9B48F', b: '#4C8DB8', w: '#DFF1FA' },
   },
+  /** Banco de parque: respaldo de listones, asiento y patas de forja. */
   B: {
-    filas: ['........', 'oooooooo', 'OOOOOOOO', 'oooooooo', '........', 'oooooooo', '.o....o.', '.o....o.'],
-    paleta: { o: '#9A5A11', O: '#6E3F0C' },
+    filas: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '.NMMMMMMMMMMMMN.',
+      '.NmmmmmmmmmmmmN.',
+      '.N............N.',
+      '.NMMMMMMMMMMMMN.',
+      '.NmmmmmmmmmmmmN.',
+      '.N............N.',
+      'MMMMMMMMMMMMMMMM',
+      'mmmmmmmmmmmmmmmm',
+      '.NN..........NN.',
+      '.N............N.',
+      '.N............N.',
+      'NN............NN',
+    ],
+    paleta: { N: HIERRO, M: MADERA, m: MADERA_CLARA },
   },
+  /** Arbol: copa redonda con luces y sombras, tronco y sombra en el suelo. */
   A: {
-    filas: ['..gggg..', '.gGgggg.', 'gggGgggg', 'gggggGgg', '.gggggg.', '...tt...', '...tt...', '..tttt..'],
-    paleta: { g: '#4C9A5E', G: '#2F6B4F', t: '#6B4A2B' },
+    filas: [
+      '.....gggggg.....',
+      '...gggGgggggg...',
+      '..ggggggGgggggg.',
+      '.gggGgggggggGgg.',
+      '.gLLggggggGgggg.',
+      'ggLggggGggggggGg',
+      'gggggggggggGgggg',
+      'gGggggLggggggggg',
+      '.gggGggggggggGg.',
+      '.GggggggggggggG.',
+      '..GGgggggggggGG.',
+      '....GGGtTGGG....',
+      '.......tT.......',
+      '.......tT.......',
+      '......ttTT......',
+      '.....oooooo.....',
+    ],
+    paleta: { g: '#5E9E4F', G: '#3F7A3A', L: '#8CC46A', t: MADERA, T: '#4E3420', o: SOMBRA },
   },
+  /**
+   * Cervantes en la plaza: figura de bronce con la pluma en alto, golilla y
+   * libro, sobre pedestal de granito con placa. Ocupa 2x2 casillas (mapas.ts).
+   */
   C: {
-    filas: ['...nn...', '..nnnn..', '...nn...', '..nnnn..', '.nnnnnn.', '..pppp..', '.pppppp.', 'pppppppp'],
-    paleta: { n: '#6E8F6A', p: PIEDRA },
+    filas: [
+      '........hh......',
+      '.......hbbd.....',
+      '.......bbbd.....',
+      '..h....dbbd.....',
+      '..h...hhhhhd....',
+      '..hb.hbbbbbdd...',
+      '...bbbbbbbbdd...',
+      '......bbbbbddd..',
+      '......bbbbbdhh..',
+      '......bbbbbdhh..',
+      '......bb..bdd...',
+      '......bb..bdd...',
+      '.....bbbb.bddd..',
+      '...ppppppppppqq.',
+      '....pppjjjjpqq..',
+      '...ppppppppppqqq',
+    ],
+    paleta: { b: '#4F6E4A', h: '#9DBB97', d: '#2F4430', p: '#BDB6A8', q: '#8E887C', j: '#C9A227' },
   },
 } as const satisfies Record<Obstaculo | 'jugador' | 'jarra' | 'dorada' | 'tapa', SpriteDef>;
 
@@ -116,11 +243,11 @@ export const NUM_ASPECTOS = ASPECTOS.length;
  * pixeles iguales (primero a lo ancho, luego a lo alto) y los bordes se
  * redondean con la MISMA cuenta en los dos lados de cada union: asi dos
  * rectangulos vecinos comparten borde exacto, sin rendijas ni solapes aunque
- * `celda` no sea multiplo de 8.
+ * `celda` no sea multiplo del lado del sprite.
  */
 export function rectangulos(def: SpriteDef, celda: number): Rect[] {
   const usado = def.filas.map((f) => [...f].map(() => false));
-  const px = celda / LADO;
+  const px = celda / def.filas.length;
   const borde = (n: number) => Math.round(n * px);
   const rects: Rect[] = [];
   for (let y = 0; y < def.filas.length; y++) {

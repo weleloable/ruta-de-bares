@@ -101,7 +101,7 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
           {
             subtitulo: 'Además, si juegas a los minijuegos',
             puntos: [
-              'Tu mejor nota en La Caña Perfecta y las cervezas que hagas en Maestro Cervecero (con el nombre ' +
+              'Tu mejor nota en La Caña Perfecta y en La Conga Cervecera, y las cervezas que hagas en Maestro Cervecero (con el nombre ' +
                 'que les pongas) las ve la gente de esa misma ruta, con tu nombre visible. No cruzan de una ruta ' +
                 'a otra.',
               'Del ranking se guarda solo tu mejor nota, no cada partida. Puedes borrar tus cervezas cuando ' +

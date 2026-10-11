@@ -119,6 +119,7 @@ supabase/
   migrations/0036_*.sql     los 14 bares originales y sus logos pasan a `catalog_bars` (GENERADA, ver scripts/semilla-catalogo/)
   migrations/0037_*.sql     estadisticas de una ruta para los admins (solo totales)
   migrations/0038_*.sql     Maestro Cervecero: la siembra (paso 4) entra en la nota; funciones `_v2`
+  migrations/0039_*.sql     La Conga Cervecera en el ranking por ruta (tope de nota POR JUEGO)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)

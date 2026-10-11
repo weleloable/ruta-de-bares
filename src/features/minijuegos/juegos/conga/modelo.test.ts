@@ -18,6 +18,7 @@ import {
   multiplicador,
   pasarTiempo,
   PUNTOS_JARRA,
+  PUNTUACION_MAXIMA,
   PUNTOS_TAPA,
   VARIANTES_AMIGO,
   type Estado,
@@ -241,6 +242,16 @@ test('la velocidad sube con cada jarra pero tiene un suelo', () => {
   assert.ok(intervalo(5) < intervalo(0));
   assert.equal(intervalo(500), INTERVALO_MINIMO);
   assert.equal(intervalo(-3), INTERVALO_INICIAL);
+});
+
+test('ningun mapa permite pasarse del tope del ranking (0039)', () => {
+  for (const m of MAPAS) {
+    const libres = m.filas.join('').split('').filter((c) => c === '.' || c === 'P').length;
+    // Cada jarra deja un amigo en una casilla: como mucho (libres - 1) jarras. En el peor
+    // caso cada una con el doble y seguida de una tapa doble (las tapas solo salen tras una jarra).
+    const maximo = (libres - 1) * (PUNTOS_JARRA * 2 + PUNTOS_TAPA * 2);
+    assert.ok(maximo <= PUNTUACION_MAXIMA, `${m.id}: hasta ${maximo} puntos y el servidor acepta ${PUNTUACION_MAXIMA}`);
+  }
 });
 
 test('mensaje final con singular, plural y tramos', () => {

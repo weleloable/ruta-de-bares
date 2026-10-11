@@ -27,6 +27,7 @@ import {
   type Estado,
   type Mapa,
 } from './modelo';
+import { BotonToque } from './BotonToque';
 import { Sprite } from './Sprite';
 import { spriteDeAmigo } from './sprites';
 import { useTecladoConga } from './teclado';
@@ -283,7 +284,7 @@ const Escenario = memo(function Escenario({ mapa, celda }: { mapa: Mapa; celda: 
       renderToHardwareTextureAndroid
     >
       {obstaculos(mapa).map((o) => (
-        <Casilla key={`${o.x}-${o.y}`} id={o.id} x={o.x} y={o.y} celda={celda} />
+        <Casilla key={`${o.x}-${o.y}`} id={o.id} x={o.x} y={o.y} celda={celda} tam={o.tam} />
       ))}
     </View>
   );
@@ -293,17 +294,20 @@ const Casilla = memo(function Casilla({
   x,
   y,
   celda,
+  tam = 1,
   opacidad = 1,
 }: {
   id: string;
   x: number;
   y: number;
   celda: number;
+  /** Casillas que ocupa de lado (la estatua, 2). */
+  tam?: number;
   opacidad?: number;
 }) {
   return (
     <View style={{ position: 'absolute', left: x * celda, top: y * celda, opacity: opacidad }}>
-      <Sprite id={id} celda={celda} />
+      <Sprite id={id} celda={celda * tam} />
     </View>
   );
 });
@@ -375,15 +379,15 @@ const FLECHAS: Record<Dir, { icono: 'chevron-up' | 'chevron-down' | 'chevron-bac
 
 function Cruceta({ onGirar }: { onGirar: (d: Dir) => void }) {
   const flecha = (dir: Dir) => (
-    // onPressIn y no onPress: el giro cuenta al tocar, no al levantar el dedo.
-    <Pressable
-      accessibilityRole="button"
+    // Gira en cuanto el dedo toca, no al levantarlo: ver BotonToque.
+    <BotonToque
       accessibilityLabel={FLECHAS[dir].etiqueta}
-      onPressIn={() => onGirar(dir)}
-      style={({ pressed }) => [styles.flecha, pressed && styles.flechaPulsada]}
+      onToque={() => onGirar(dir)}
+      style={styles.flecha}
+      estiloPulsado={styles.flechaPulsada}
     >
       <Ionicons name={FLECHAS[dir].icono} size={34} color={colors.white} />
-    </Pressable>
+    </BotonToque>
   );
   return (
     <View style={styles.cruceta}>

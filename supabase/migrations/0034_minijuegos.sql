@@ -1,9 +1,10 @@
 -- Ruta de Bares - 0034: minijuegos. Ranking POR RUTA y cervezas guardadas.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0033.
 -- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
--- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
--- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+-- Define funciones que migraciones POSTERIORES rehicieron: volver a pegarla
+-- las devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
 --   * export_my_data() la rehace la 0038
+--   * minigame_submit_score() la rehace la 0039
 -- (Ademas, esta rehace export_my_data() a partir de la 0031, asi que la 0031
 -- tampoco se puede volver a pegar despues.)
 --

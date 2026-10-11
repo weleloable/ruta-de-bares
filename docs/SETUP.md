@@ -212,6 +212,15 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    llega antes, la cerveza se juega igual pero al guardarla en la ruta avisa de
    que falta una migracion. Rehace `export_my_data()`, asi que despues de esta
    la 0034 ya **no se vuelve a pegar**.
+39. [`supabase/migrations/0039_ranking_conga.sql`](../supabase/migrations/0039_ranking_conga.sql)
+   y **Run**, despues de la 0038 y **ANTES de desplegar la app**. Mete La Conga
+   Cervecera en el ranking por ruta: `minigame_scores` admite el juego
+   `conga-cervecera` con notas de 0 a 15000 (la cana sigue en 0 a 100) y
+   `minigame_submit_score` valida el tope de cada juego. Si la app nueva llega
+   antes, la conga se juega igual y guarda el record en el movil, pero al
+   guardar en la ruta avisa de que falta la 0039. Rehace
+   `minigame_submit_score()`, asi que despues de esta la 0034 ya **no se vuelve a
+   pegar**. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

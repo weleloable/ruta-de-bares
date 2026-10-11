@@ -87,10 +87,19 @@ export const MAX_COLA = 2;
 /** Cuantos aspectos de amigo hay dibujados (ver sprites.ts). */
 export const VARIANTES_AMIGO = 6;
 
-/** Segundos entre pasos. Baja un 5 % por jarra hasta un minimo: partidas de 1-2 minutos. */
-export const INTERVALO_INICIAL = 0.2;
-export const INTERVALO_MINIMO = 0.08;
+/**
+ * Segundos entre pasos. Empieza tranquilo (0,4 s por casilla) y baja un 5 % por
+ * jarra hasta el minimo, al que se llega hacia la jarra 29: partidas de 1-2 minutos.
+ */
+export const INTERVALO_INICIAL = 0.4;
+export const INTERVALO_MINIMO = 0.09;
 export const FACTOR_VELOCIDAD = 0.95;
+
+/**
+ * Lo maximo que acepta el ranking de la ruta (0039). Espejo del tope del
+ * servidor: un test comprueba que ningun mapa permite pasarse de aqui.
+ */
+export const PUNTUACION_MAXIMA = 15000;
 
 export function intervalo(jarras: number): number {
   return Math.max(INTERVALO_MINIMO, INTERVALO_INICIAL * FACTOR_VELOCIDAD ** Math.max(jarras, 0));

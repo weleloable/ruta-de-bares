@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { leerControl } from './controlReglas.ts';
-import { MAPAS, OBSTACULOS, obstaculos } from './mapas.ts';
+import { MAPAS, OBSTACULOS, obstaculos, TAMANO } from './mapas.ts';
 import { VARIANTES_AMIGO } from './modelo.ts';
-import { definicion, LADO, NUM_ASPECTOS, rectangulos, spriteDeAmigo, SPRITES } from './sprites.ts';
+import { definicion, NUM_ASPECTOS, rectangulos, spriteDeAmigo, SPRITES } from './sprites.ts';
 
 const todos = [...Object.keys(SPRITES), ...Array.from({ length: VARIANTES_AMIGO }, (_, i) => spriteDeAmigo(i))];
 
@@ -19,19 +19,38 @@ test('todo obstaculo de un mapa tiene su sprite', () => {
   for (const m of MAPAS) for (const o of obstaculos(m)) assert.ok(definicion(o.id));
 });
 
-test('cada sprite es de 8x8 y solo usa colores de su paleta', () => {
+test('los obstaculos de varias casillas forman bloques completos y se dibujan una vez', () => {
+  for (const m of MAPAS) {
+    const dibujados = obstaculos(m);
+    for (const [id, tam] of Object.entries(TAMANO)) {
+      const celdas = m.filas.join('').split('').filter((c) => c === id).length;
+      const bloques = dibujados.filter((o) => o.id === id);
+      assert.equal(celdas, bloques.length * tam * tam, `${m.id}: bloque de ${id} incompleto`);
+      for (const b of bloques) {
+        assert.equal(b.tam, tam);
+        for (let dy = 0; dy < tam; dy++) for (let dx = 0; dx < tam; dx++) assert.equal(m.filas[b.y + dy][b.x + dx], id);
+      }
+    }
+  }
+  // Dos bloques pegados salen como dos.
+  const doble = { id: 'd', nombre: 'd', filas: ['CCCC', 'CCCC', '..P.'] };
+  assert.deepEqual(obstaculos(doble).map((o) => [o.x, o.y]), [[0, 0], [2, 0]]);
+});
+
+test('cada sprite es un cuadrado de 8 o 16 y solo usa colores de su paleta', () => {
   for (const id of todos) {
     const def = definicion(id);
-    assert.equal(def.filas.length, LADO, id);
+    const lado = def.filas.length;
+    assert.ok(lado === 8 || lado === 16, `${id}: ${lado} filas`);
     for (const fila of def.filas) {
-      assert.equal(fila.length, LADO, `${id}: fila "${fila}"`);
+      assert.equal(fila.length, lado, `${id}: fila "${fila}"`);
       for (const c of fila) if (c !== '.') assert.ok(def.paleta[c], `${id}: falta el color "${c}"`);
     }
   }
 });
 
-test('los rectangulos no se solapan y, en celdas multiplo de 8, cubren justo los pixeles del sprite', () => {
-  for (const celda of [8, 16, 21, 24, 27, 33]) {
+test('los rectangulos no se solapan y, en celdas multiplo del lado, cubren justo los pixeles del sprite', () => {
+  for (const celda of [8, 16, 21, 24, 27, 32, 33, 48]) {
     for (const id of todos) {
       const def = definicion(id);
       const lienzo = Array.from({ length: celda }, () => Array<string | null>(celda).fill(null));
@@ -43,10 +62,11 @@ test('los rectangulos no se solapan y, en celdas multiplo de 8, cubren justo los
           }
         }
       }
-      if (celda % LADO !== 0) continue;
+      const lado = def.filas.length;
+      if (celda % lado !== 0) continue;
       for (let y = 0; y < celda; y++) {
         for (let x = 0; x < celda; x++) {
-          const c = def.filas[Math.floor((y / celda) * LADO)][Math.floor((x / celda) * LADO)];
+          const c = def.filas[Math.floor((y / celda) * lado)][Math.floor((x / celda) * lado)];
           assert.equal(lienzo[y][x], c === '.' ? null : def.paleta[c], `${id}@${celda} en ${x},${y}`);
         }
       }
@@ -54,8 +74,12 @@ test('los rectangulos no se solapan y, en celdas multiplo de 8, cubren justo los
   }
 });
 
-test('fusionar pixeles reduce las cajas', () => {
-  assert.ok(rectangulos(definicion('E'), 24).length < 30);
+test('fusionar pixeles reduce las cajas: una fachada de 16x16 no son 256 vistas', () => {
+  for (const id of Object.keys(SPRITES)) {
+    const def = definicion(id);
+    const n = rectangulos(def, 24).length;
+    assert.ok(n <= 60, `${id}: ${n} cajas`);
+  }
 });
 
 test('el control guardado se lee sin fiarse', () => {

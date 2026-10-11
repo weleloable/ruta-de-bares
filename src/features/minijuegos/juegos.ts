@@ -42,6 +42,10 @@ export const JUEGOS: readonly JuegoDef[] = [
     icono: 'musical-notes',
     Componente: CongaCervecera,
     Detalle: DetalleConga,
-    // Solo record en este dispositivo: el ranking por ruta (0034) admite 'cana-perfecta' y notas 0-100.
+    // Ranking por ruta desde la 0039 (tope de 15000 puntos, ver PUNTUACION_MAXIMA).
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
   },
 ];

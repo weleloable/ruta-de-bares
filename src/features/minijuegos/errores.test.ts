@@ -20,6 +20,10 @@ test('la funcion que no existe avisa de que falta la migracion', () => {
   );
 });
 
+test('un juego que el servidor no conoce avisa de la migracion que lo trae', () => {
+  assert.match(traducirErrorMinijuegos('error: INVALID_GAME'), /0039/);
+});
+
 test('lo desconocido pasa tal cual, y vacio no deja el mensaje en blanco', () => {
   assert.equal(traducirErrorMinijuegos('algo raro'), 'algo raro');
   assert.ok(traducirErrorMinijuegos('').length > 0);
