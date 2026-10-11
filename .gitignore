@@ -46,5 +46,8 @@ yarn-error.*
 # worktrees de sesiones de Claude Code
 .claude/worktrees/
 
+# videos grabados por scripts/videos/ (binarios: se reparten fuera del repo)
+/videos/
+
 # pantalla temporal de scripts/verificar-mapa-web.mjs (se borra sola)
 app/(auth)/verificar-mapa.tsx
