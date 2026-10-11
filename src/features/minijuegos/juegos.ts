@@ -1,5 +1,7 @@
 import { enviarCerveza, enviarNota } from './api';
 import { CanaPerfecta } from './juegos/cana/CanaPerfecta';
+import { CongaCervecera } from './juegos/conga/CongaCervecera';
+import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
 import type { JuegoDef } from './tipos';
@@ -32,5 +34,14 @@ export const JUEGOS: readonly JuegoDef[] = [
       if (!receta) throw new Error('No se pudo leer la receta de esta cerveza.');
       await enviarCerveza(rutaId, receta);
     },
+  },
+  {
+    id: 'conga-cervecera',
+    titulo: 'La Conga Cervecera',
+    descripcion: 'Guía la conga por Alcalá y recluta amigos con cada jarra.',
+    icono: 'musical-notes',
+    Componente: CongaCervecera,
+    Detalle: DetalleConga,
+    // Solo record en este dispositivo: el ranking por ruta (0034) admite 'cana-perfecta' y notas 0-100.
   },
 ];

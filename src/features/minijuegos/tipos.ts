@@ -19,6 +19,11 @@ export type PropsJuego = {
   onFinish: (resultado: ResultadoJuego) => void;
 };
 
+/** Props del bloque extra que un juego puede poner en la tarjeta de fin de partida. */
+export type PropsDetalle = {
+  resultado: ResultadoJuego;
+};
+
 /** Ficha de un juego en el menu. */
 export type JuegoDef = {
   id: string;
@@ -27,6 +32,12 @@ export type JuegoDef = {
   descripcion: string;
   icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer';
   Componente: ComponentType<PropsJuego>;
+  /**
+   * Opcional: lo que se ensena en la tarjeta de fin de partida, bajo la
+   * puntuacion (amigos reclutados, un mensaje...). El record y el aviso de
+   * "nuevo record" los pone el menu para todos los juegos por igual.
+   */
+  Detalle?: ComponentType<PropsDetalle>;
   /**
    * Como se guarda el resultado en la RUTA (0034). Sin esto el juego es solo
    * local. Lanza con un mensaje legible si falla: el record local ya esta

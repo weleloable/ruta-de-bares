@@ -108,6 +108,7 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
             <Card style={styles.resultado}>
               <Text style={typography.overline}>{ultimo.esRecord ? '¡Nuevo récord!' : 'Fin de la partida'}</Text>
               <Text style={styles.puntos}>{ultimo.resultado.puntuacion}</Text>
+              {activo.Detalle ? <activo.Detalle resultado={ultimo.resultado} /> : null}
               <Text style={typography.muted}>Tu récord: {records[activo.id] ?? 0}</Text>
               {guardado ? <Banner tone={guardado.tono}>{guardado.texto}</Banner> : null}
               <Button title="Otra vez" onPress={() => { setUltimo(null); setGuardado(null); }} />
