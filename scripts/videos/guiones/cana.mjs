@@ -14,14 +14,16 @@ export default {
   async grabar(d, ctx) {
     await empezar(d, {
       seccion: 'La Caña',
-      pasos: 18,
+      pasos: 19,
       tarjeta: portada('La Caña', 'Tómate una caña con alguien de la ruta', 'Conoce a la gente de tu ruta. Sin agobios: solo una pregunta.', [
         'Activarla y presentarte',
         'Dar Me gusta y hacer conexión',
         'Ofrecer (o aceptar) una caña',
       ]),
     });
-    await d.paso('La Caña viene <b>apagada</b>: nadie te ve hasta que la activas.', { pausa: 3200 });
+    await d.paso('La Caña viene <b>apagada</b>: nadie te ve hasta que la activas. Se activa en cada ruta por separado.', { pausa: 3400 });
+    await d.paso('Solo se puede activar <b>el día de la ruta</b> y estando a menos de <b>3 km del primer bar</b>.', { pausa: 900 });
+    await d.foco(d.app.getByText(/Para activarla tienes que estar/), 3200);
     await d.paso('Para activarla, confirma que eres <b>mayor de edad</b> y pulsa <b>Presentarme</b>.', { pausa: 1200 });
     await d.tocar('Soy mayor de edad', { despues: 700 });
     await d.tocar('Presentarme', { despues: 2000 });
@@ -74,6 +76,6 @@ export default {
     }
     await d.paso('Y puedes <b>desactivarla</b> cuando quieras: desapareces de la lista hasta que vuelvas.', { pausa: 900 });
     await d.foco('Desactivar', 2600);
-    await terminar(d, cierre('Si alguien dice que no, no pasa nada: la conexión se cierra y punto.', 'Juegos'));
+    await terminar(d, cierre('Si alguien dice que no, no pasa nada: la conexión se cierra y punto.', ''));
   },
 };

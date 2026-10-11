@@ -3,7 +3,7 @@
  *
  * Parte de una base recien reseteada (`supabase db reset`, todas las
  * migraciones aplicadas) y pasa por las MISMAS funciones que usa la app
- * siempre que puede (match_activate, avatar_request_submit,
+ * siempre que puede (match_activate_en_ruta, avatar_request_submit,
  * avatar_admin_decide, minigame_submit_score...): si una migracion cambia una
  * regla, la semilla falla aqui en vez de grabar una demo que miente. Solo lo
  * que la app no deja hacer a nadie desde fuera (crear el admin, sellos ya
@@ -38,6 +38,22 @@ export function comprobarLocal(url) {
 function ok({ data, error }, que) {
   if (error) throw new Error(`${que}: ${error.message}`);
   return data;
+}
+
+/**
+ * Argumentos de match_activate_en_ruta (0040): la primera activacion lleva el
+ * perfil entero, y la ubicacion junto al primer bar (tiene que estar a <= 3 km).
+ */
+export function argsActivar(rutaId, primerBar, persona) {
+  return {
+    p_route_id: rutaId,
+    p_lat: primerBar.lat + 0.0002,
+    p_lng: primerBar.lng,
+    p_adult_confirmed: true,
+    p_bio: persona.cana.bio,
+    p_tag_ids: persona.cana.tags,
+    p_consent_version: CONSENTIMIENTO_VERSION,
+  };
 }
 
 /** Cliente con sesion de una persona de la demo (sin guardar sesion en disco). */
@@ -163,18 +179,11 @@ export async function sembrar(cfg) {
     );
   }
 
-  // 6. La Caña: todos menos Marta la tienen activada (su video la activa).
+  // 6. La Caña: todos menos Marta la tienen activada EN ESTA RUTA (0040); su
+  // video la activa. Activar exige estar cerca del primer bar: se manda su sitio.
   for (const g of GENTE) {
     if (g.nombre === PROTA) continue;
-    ok(
-      await clientes[g.nombre].rpc('match_activate', {
-        p_adult_confirmed: true,
-        p_bio: g.cana.bio,
-        p_tag_ids: g.cana.tags,
-        p_consent_version: CONSENTIMIENTO_VERSION,
-      }),
-      `activar La Caña de ${g.nombre}`,
-    );
+    ok(await clientes[g.nombre].rpc('match_activate_en_ruta', argsActivar(ruta.id, bares[0], g)), `activar La Caña de ${g.nombre}`);
   }
   // Un poco de vida entre ellos, para que la grilla no sea un desierto.
   const gustos = [
@@ -184,28 +193,8 @@ export async function sembrar(cfg) {
     ok(await clientes[de].rpc('match_set_like', { p_route_id: ruta.id, p_target_id: ids[a], p_liked: true }), `${de} -> ${a}`);
   }
 
-  // 7. Minijuegos: ranking de La Caña Perfecta y algunas cervezas.
-  const notas = { Sergio: 97, Irene: 91, Dani: 86, Paula: 82, Nerea: 77, Carlos: 71, Alex: 64, Javi: 58, Lucia: 49 };
-  for (const [nombre, nota] of Object.entries(notas)) {
-    ok(await clientes[nombre].rpc('minigame_submit_score', { p_route_id: ruta.id, p_game: 'cana-perfecta', p_score: nota }), `nota de ${nombre}`);
-  }
-  const cervezas = [
-    ['Sergio', 'La Récord', 'tostada', 'ale', 92, 88, 81, 95],
-    ['Irene', 'Rubia Maratón', 'palida', 'lager', 84, 90, 76, 88],
-    ['Alex', 'Podcast Stout', 'negra', 'ale', 71, 64, 80, 69],
-    ['Paula', 'Clara de Paula', 'caramelo', 'ale', 66, 72, 58, 74],
-  ];
-  for (const [nombre, n, malta, levadura, mac, amar, aroma, siembra] of cervezas) {
-    ok(
-      await clientes[nombre].rpc('maestro_submit_beer_v2', {
-        p_route_id: ruta.id, p_name: n, p_malta: malta, p_levadura: levadura,
-        p_maceracion: mac, p_amargor: amar, p_aroma: aroma, p_siembra: siembra,
-      }),
-      `cerveza de ${nombre}`,
-    );
-  }
-
-  // 8. La invitacion que abre Pablo en el video de Crear cuenta.
+  // 7. La invitacion que abre Pablo en el video de Crear cuenta. (Los minijuegos
+  // no se siembran: solo salen en el trailer, y ahi juega Marta.)
   const invitacion = ok(
     await admin.rpc('create_route_invite', { p_route_id: ruta.id, p_max_uses: 20, p_expires_in_hours: 8 }),
     'crear invitacion',
@@ -225,12 +214,11 @@ export async function titiritero(cfg, rutaId, ids) {
     /** La Caña de alguien que aun no la tenia (para el trailer, que no ensena la activacion). */
     async activarCana(nombre) {
       const g = GENTE.find((x) => x.nombre === nombre);
-      ok(
-        await (await como(nombre)).rpc('match_activate', {
-          p_adult_confirmed: true, p_bio: g.cana.bio, p_tag_ids: g.cana.tags, p_consent_version: CONSENTIMIENTO_VERSION,
-        }),
-        `activar La Caña de ${nombre}`,
+      const [primero] = ok(
+        await servicio.from('route_bars').select('lat, lng').eq('route_id', rutaId).order('sort_order').limit(1),
+        'leer primer bar',
       );
+      ok(await (await como(nombre)).rpc('match_activate_en_ruta', argsActivar(rutaId, primero, g)), `activar La Caña de ${nombre}`);
     },
     /**
      * "Unas horas despues": los sellos que le faltan, con la clave de servicio

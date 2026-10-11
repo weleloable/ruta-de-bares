@@ -1,10 +1,32 @@
 import { PARADA_EN_VIVO, PROTA } from '../reparto.mjs';
 import { entrarDeprisa } from './comun.mjs';
-import { tirarCana } from './juegos.mjs';
+
+/**
+ * Tira la caña como se debe: vaso inclinado ~45 grados (poca espuma) y recto
+ * al final para la corona. Con el caudal de modelo.ts (0,22 por segundo) son
+ * ~3,7 s inclinado y ~0,75 s recto: ~20 % de espuma y el vaso al borde.
+ */
+async function tirarCana(d) {
+  await d.inclinar(45);
+  await d.esperar(700);
+  const soltar = await d.apretar(d.app.getByLabel('Mantén pulsado para servir cerveza'));
+  await d.esperar(3650);
+  for (const g of [30, 15, 0]) {
+    await d.inclinar(g);
+    await d.esperar(70);
+  }
+  await d.esperar(560);
+  await soltar();
+  await d.esperar(600);
+  await d.inclinar(0);
+  await d.esperar(700);
+}
 
 /**
  * El trailer: lo mismo que las demos pero a ritmo de anuncio. Frases en vez
  * de pasos numerados, y la app de verdad en cada plano (nada de maquetas).
+ * Los minijuegos solo salen aqui, como adelanto: no tienen demo a proposito,
+ * la idea es que cada cual los descubra jugando.
  */
 export default {
   id: 'trailer',
@@ -46,8 +68,8 @@ export default {
 
     // La ficha tapa la barra de pestanas: de vuelta a la lista.
     await d.tocar(d.app.getByLabel('Volver', { exact: true }), { despues: 900 });
-    await d.titular('Y entre bar y bar, <b>juegos</b>.', 500);
-    await d.tocar(d.app.getByText('Juegos', { exact: true }), { despues: 1300 });
+    await d.titular('Y entre bar y bar, <b>minijuegos</b>.', 500);
+    await d.tocar(d.app.getByText('Juegos', { exact: true }), { despues: 2600 });
     await d.tocar('La Caña Perfecta', { despues: 1000 });
     await d.tocar('Empezar', { despues: 600 });
     await d.titular('¿Tiras <b>la caña perfecta</b>?', 300);

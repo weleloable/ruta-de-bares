@@ -7,13 +7,14 @@ subtítulos por paso y un dedo que marca cada toque. Sale en vertical
 
 | Fichero | Qué enseña |
 | --- | --- |
-| `00-trailer.mp4` | Tráiler: sellar, mapa, La Caña, un juego y el diploma, a ritmo de anuncio |
+| `00-trailer.mp4` | Tráiler: sellar, mapa, La Caña, un adelanto de los minijuegos y el diploma, a ritmo de anuncio |
 | `01-crear-cuenta-y-unirse.mp4` | Las dos formas de crear la cuenta (correo o Google), unirse a una ruta con el enlace de invitación e instalar la app |
 | `02-iniciar-sesion.mp4` | Entrar con correo y contraseña (y dónde está Google) |
 | `03-mi-perfil.mp4` | Cambiar la foto (revisión y aprobación) y el nombre, avisos, privacidad y descargar tus datos, escribir a la organización, cerrar sesión y borrar cuenta |
 | `04-ruta-y-sellos.mp4` | Mapa, tus sellos, sellar un bar (lejos / en la puerta), bares que aún no abren, medalla y diploma |
-| `05-la-cana.mp4` | Activarla, presentarse, Me gusta, conexión, la pregunta de la cerveza, el mensaje único, bloquear y desactivar |
-| `06-juegos.mp4` | La Caña Perfecta (inclinando el móvil), ranking, Maestro Cervecero en sus cuatro pasos y las cervezas de la ruta |
+| `05-la-cana.mp4` | Activarla (el día de la ruta y cerca del primer bar), presentarse, Me gusta, conexión, la pregunta de la cerveza, el mensaje único, bloquear y desactivar |
+
+Los minijuegos no tienen demo a propósito: salen en el tráiler y cada cual los descubre jugando.
 
 Los videos van a `videos/` (en `.gitignore`: son binarios y no se commitean).
 
@@ -32,12 +33,12 @@ migraciones de `supabase/migrations/`. Cada video parte de una base
 **reseteada y sembrada** de cero, así que se pueden regrabar sueltos:
 
 ```bash
-node scripts/videos/grabar.mjs sellos cana      # solo esos (ids: trailer registro login perfil sellos cana juegos)
+node scripts/videos/grabar.mjs sellos cana      # solo esos (ids: trailer registro login perfil sellos cana)
 node scripts/videos/grabar.mjs --sin-export     # reutiliza la web ya exportada (si no tocaste la app)
 node scripts/videos/grabar.mjs --borrador cana  # sin video: una captura por paso en ~/.ruta-de-bares-videos/borrador/
 ```
 
-Unos 15 minutos para los siete. Las horas que salen en pantalla son las de
+Unos 15 minutos para los seis. Las horas que salen en pantalla son las de
 grabar: las ventanas de los bares se calculan desde ese momento.
 
 ## Cómo está hecho

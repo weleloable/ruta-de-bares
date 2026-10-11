@@ -123,6 +123,16 @@ test('los puntos de progreso de cada demo son tantos como sus pasos', () => {
   }
 });
 
+test('el "siguiente video" de cada demo es la que va detras, y la ultima no apunta a nada', () => {
+  // Al quitar la demo de Juegos, La Caña seguia anunciandola al final.
+  const demos = GUIONES.filter((x) => x.id !== 'trailer');
+  demos.forEach((g, i) => {
+    const codigo = readFileSync(join(RAIZ, 'scripts', 'videos', 'guiones', `${g.id}.mjs`), 'utf8');
+    const siguiente = /cierre\([^;]*?,\s*'([^']*)'\)\)/s.exec(codigo)?.[1];
+    assert.equal(siguiente, demos[i + 1]?.titulo ?? '', `${g.id}: anuncia "${siguiente}"`);
+  });
+});
+
 test('los guiones tienen id y fichero unicos, numerados en orden', () => {
   assert.equal(new Set(GUIONES.map((g) => g.id)).size, GUIONES.length);
   GUIONES.forEach((g, i) => {
