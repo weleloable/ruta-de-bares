@@ -10,7 +10,7 @@ import type { PropsDetalle, PropsJuego } from '../minijuegos/tipos';
 import { BANCO } from './banco';
 import { CONFIG, ID_JUEGO, NOMBRE_NIVEL } from './config';
 import { nuevaPartida, reducir } from './partida';
-import type { Accion, EstadoPartida } from './tipos';
+import type { Accion, BancoPreguntas, EstadoPartida } from './tipos';
 import { CLAVE_VISTAS, leerVistas } from './vistas';
 
 const LETRAS = ['A', 'B', 'C', 'D'] as const;
@@ -51,6 +51,9 @@ async function guardarVistas(vistas: readonly string[]): Promise<void> {
 export function QuienQuiereSerCervecero({ onFinish }: PropsJuego) {
   const [vistas, setVistas] = useState<readonly string[]>([]);
   const [record, setRecord] = useState<number | null>(null);
+  // Hasta leer las vistas no se deja jugar: si no, la primera partida guardaba su
+  // lista ENCIMA de la del almacen y se perdia el historial (volvian a salir preguntas).
+  const [listo, setListo] = useState(false);
   const [estado, setEstado] = useState<EstadoPartida | null>(null);
 
   useEffect(() => {
@@ -62,8 +65,13 @@ export function QuienQuiereSerCervecero({ onFinish }: PropsJuego) {
       } catch {
         // Sin almacen: empieza sin historial.
       }
-      const records = await cargarRecords();
-      if (vivo) setRecord(records[ID_JUEGO] ?? 0);
+      if (vivo) setListo(true);
+      try {
+        const records = await cargarRecords();
+        if (vivo) setRecord(records[ID_JUEGO] ?? 0);
+      } catch {
+        if (vivo) setRecord(0);
+      }
     })();
     return () => {
       vivo = false;
@@ -76,11 +84,11 @@ export function QuienQuiereSerCervecero({ onFinish }: PropsJuego) {
     setEstado(e);
   }, [vistas]);
 
-  if (!estado) return <Inicio record={record} onJugar={jugar} />;
+  if (!estado) return <Inicio record={record} listo={listo} onJugar={jugar} />;
   return <Partida estado={estado} setEstado={setEstado} onFinish={onFinish} />;
 }
 
-function Inicio({ record, onJugar }: { record: number | null; onJugar: () => void }) {
+function Inicio({ record, listo, onJugar }: { record: number | null; listo: boolean; onJugar: () => void }) {
   return (
     <ScrollView style={styles.fondo} contentContainerStyle={styles.centrado}>
       <Ionicons name="help-circle" size={64} color={colors.beer} />
@@ -91,30 +99,50 @@ function Inicio({ record, onJugar }: { record: number | null; onJugar: () => voi
         <Text style={styles.regla}>Tienes 3 comodines, uno de cada, y {CONFIG.segundos} segundos por pregunta.</Text>
       </View>
       <Text style={styles.record}>Tu mejor puntuación: {record ?? '…'}</Text>
-      <Pressable accessibilityRole="button" onPress={onJugar} style={({ pressed }) => [styles.jugar, pressed && styles.pulsado]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !listo }}
+        disabled={!listo}
+        onPress={onJugar}
+        style={({ pressed }) => [styles.jugar, !listo && styles.opcionEliminada, pressed && styles.pulsado]}
+      >
         <Text style={styles.jugarTexto}>Jugar</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-function Partida({
+/**
+ * La partida TIENE QUE CABER SIN SCROLL (como todos los juegos): a 740 px de
+ * ventana, con la barra de arriba, las pestanas y la cabecera, le quedan ~540.
+ * Por eso todo es compacto y la parte de abajo tiene un alto casi fijo: la
+ * confirmacion ("Si, definitiva") NO se anade debajo, sustituye a "Plantarme"
+ * en la misma fila (al lado, para poder plantarse tambien con la respuesta
+ * marcada), y al revelar, el resultado ocupa el sitio de comodines y botones.
+ * La respuesta buena ya sale en verde en su opcion: no se repite en texto.
+ * `npm run verificar:juego` lo mide con los textos MAS LARGOS del banco.
+ * El ScrollView se queda solo como red para pantallas aun mas bajas.
+ *
+ * Se exporta (con `banco`) para que el verificador la monte con esa pregunta.
+ */
+export function Partida({
   estado,
   setEstado,
   onFinish,
+  banco = BANCO,
 }: {
   estado: EstadoPartida;
   setEstado: (f: (e: EstadoPartida | null) => EstadoPartida | null) => void;
   onFinish: PropsJuego['onFinish'];
+  banco?: BancoPreguntas;
 }) {
   const [restante, setRestante] = useState(CONFIG.segundos);
   const [plantando, setPlantando] = useState(false);
   const terminado = useRef(false);
 
   const enviar = useCallback(
-    (accion: Accion) =>
-      setEstado((e) => (e ? reducir(e, accion, { banco: BANCO, azar: Math.random, config: CONFIG }) : e)),
-    [setEstado],
+    (accion: Accion) => setEstado((e) => (e ? reducir(e, accion, { banco, azar: Math.random, config: CONFIG }) : e)),
+    [setEstado, banco],
   );
 
   // Reloj: se arma con cada pregunta (tambien tras el cambio de ronda) y solo corre
@@ -164,6 +192,7 @@ function Partida({
   }, [estado, onFinish]);
 
   const acumulados = estado.indice === 0 ? 0 : CONFIG.premios[estado.indice - 1];
+  const textoAcumulados = `${acumulados} ${acumulados === 1 ? 'punto' : 'puntos'}`;
   const revelada = estado.fase === 'revelada';
   const bloqueada = estado.fase !== 'respondiendo';
   const ultima = estado.indice === CONFIG.premios.length - 1;
@@ -182,7 +211,7 @@ function Partida({
           accessibilityLabel={`Quedan ${restante} segundos`}
           style={[styles.reloj, restante <= 10 && estado.fase === 'respondiendo' && styles.relojUrgente]}
         >
-          <Ionicons name="timer" size={16} color={colors.paper} />
+          <Ionicons name="timer" size={14} color={colors.paper} />
           <Text style={styles.relojTexto}>{restante}</Text>
         </View>
       </View>
@@ -222,75 +251,89 @@ function Partida({
               </View>
               <Text style={[styles.opcionTexto, eliminada && styles.textoApagado]}>{eliminada ? '—' : o.texto}</Text>
               {voto !== undefined && estado.voto && !eliminada ? <Text style={styles.votoPct}>{voto}%</Text> : null}
-              {esCorrecta ? <Ionicons name="checkmark-circle" size={26} color={colors.paper} /> : null}
-              {esFallo ? <Ionicons name="close-circle" size={26} color={colors.paper} /> : null}
+              {esCorrecta ? <Ionicons name="checkmark-circle" size={22} color={colors.paper} /> : null}
+              {esFallo ? <Ionicons name="close-circle" size={22} color={colors.paper} /> : null}
             </Pressable>
           );
         })}
       </View>
 
-      {estado.fase === 'respondiendo' && estado.seleccion !== null ? (
-        <View style={styles.confirmar}>
-          <Text style={styles.confirmarTexto}>¿Respuesta definitiva? ({LETRAS[estado.seleccion]})</Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => enviar({ tipo: 'confirmar' })}
-            style={({ pressed }) => [styles.jugar, styles.botonAncho, pressed && styles.pulsado]}
-          >
-            <Text style={styles.jugarTexto}>Sí, definitiva</Text>
-          </Pressable>
-        </View>
+      {estado.fase === 'respondiendo' ? (
+        <>
+          <View style={styles.comodines}>
+            <BotonComodin icono="contrast" texto="50:50" usado={estado.usados.cincuenta} onPress={() => enviar({ tipo: 'comodin', comodin: 'cincuenta' })} />
+            <BotonComodin icono="people" texto="Voto del bar" usado={estado.usados.voto} onPress={() => enviar({ tipo: 'comodin', comodin: 'voto' })} />
+            <BotonComodin icono="swap-horizontal" texto="Cambio de ronda" usado={estado.usados.cambio} onPress={() => enviar({ tipo: 'comodin', comodin: 'cambio' })} />
+          </View>
+
+          {/* Una sola fila de alto fijo: lo que cambia es lo que hay dentro, nunca se anade otra. */}
+          <View style={styles.fila}>
+            {plantando ? (
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sí, plantarme con ${textoAcumulados}`}
+                  onPress={() => enviar({ tipo: 'plantarse' })}
+                  style={({ pressed }) => [styles.jugar, styles.flex, pressed && styles.pulsado]}
+                >
+                  <Text style={styles.jugarTextoFila} numberOfLines={1}>
+                    Sí, me planto ({acumulados})
+                  </Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={() => setPlantando(false)} style={[styles.secundario, styles.flex]}>
+                  <Text style={styles.secundarioTexto}>Seguir jugando</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Plantarme con ${textoAcumulados}`}
+                  onPress={() => setPlantando(true)}
+                  style={[styles.secundario, styles.flex]}
+                >
+                  <Text style={styles.secundarioTexto} numberOfLines={1}>
+                    {estado.seleccion === null ? `Plantarme con ${textoAcumulados}` : `Plantarme (${acumulados})`}
+                  </Text>
+                </Pressable>
+                {estado.seleccion !== null ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`¿Respuesta definitiva? Sí, la ${LETRAS[estado.seleccion]}`}
+                    onPress={() => enviar({ tipo: 'confirmar' })}
+                    style={({ pressed }) => [styles.jugar, styles.flexAncho, pressed && styles.pulsado]}
+                  >
+                    <Text style={styles.jugarTextoFila} numberOfLines={1}>
+                      Sí, definitiva ({LETRAS[estado.seleccion]})
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </>
+            )}
+          </View>
+        </>
       ) : null}
 
       {estado.fase === 'suspense' ? <Text style={styles.suspense}>Respuesta bloqueada… veamos…</Text> : null}
 
       {revelada ? (
         <View style={styles.resultado}>
-          <Text style={[styles.resultadoTitulo, !estado.acierto && styles.resultadoMal]}>
-            {estado.acierto ? '¡Correcto!' : estado.causaFallo === 'tiempo' ? 'Se acabó el tiempo' : 'Incorrecto'}
-          </Text>
-          {!estado.acierto ? <Text style={styles.explicacion}>La respuesta era: {estado.pregunta.correcta}.</Text> : null}
-          <Text style={styles.dato}>Dato curioso: {estado.pregunta.explicacion}</Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => enviar({ tipo: 'siguiente' })}
-            style={({ pressed }) => [styles.jugar, styles.botonAncho, pressed && styles.pulsado]}
-          >
-            <Text style={styles.jugarTexto}>{!estado.acierto || ultima ? 'Ver resultado' : 'Siguiente pregunta'}</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {estado.fase === 'respondiendo' ? (
-        <>
-          <View style={styles.comodines}>
-            <BotonComodin icono="contrast" texto="50:50" usado={estado.usados.cincuenta} onPress={() => enviar({ tipo: 'comodin', comodin: 'cincuenta' })} />
-            <BotonComodin icono="people" texto="El voto del bar" usado={estado.usados.voto} onPress={() => enviar({ tipo: 'comodin', comodin: 'voto' })} />
-            <BotonComodin icono="swap-horizontal" texto="Cambio de ronda" usado={estado.usados.cambio} onPress={() => enviar({ tipo: 'comodin', comodin: 'cambio' })} />
-          </View>
-
-          {plantando ? (
-            <View style={styles.confirmar}>
-              <Text style={styles.confirmarTexto}>
-                ¿Plantarte con {acumulados} {acumulados === 1 ? 'punto' : 'puntos'}?
-              </Text>
-              <View style={styles.fila}>
-                <Pressable accessibilityRole="button" onPress={() => enviar({ tipo: 'plantarse' })} style={[styles.secundario, styles.flex]}>
-                  <Text style={styles.secundarioTexto}>Sí, plantarme</Text>
-                </Pressable>
-                <Pressable accessibilityRole="button" onPress={() => setPlantando(false)} style={[styles.secundario, styles.flex]}>
-                  <Text style={styles.secundarioTexto}>Seguir jugando</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <Pressable accessibilityRole="button" onPress={() => setPlantando(true)} style={styles.secundario}>
-              <Text style={styles.secundarioTexto}>
-                Plantarme con {acumulados} {acumulados === 1 ? 'punto' : 'puntos'}
+          <View style={styles.filaResultado}>
+            <Text style={[styles.resultadoTitulo, !estado.acierto && styles.resultadoMal]} numberOfLines={1}>
+              {estado.acierto ? '¡Correcto!' : estado.causaFallo === 'tiempo' ? '¡Sin tiempo!' : 'Incorrecto'}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => enviar({ tipo: 'siguiente' })}
+              style={({ pressed }) => [styles.jugar, styles.botonResultado, pressed && styles.pulsado]}
+            >
+              <Text style={styles.jugarTextoFila} numberOfLines={1}>
+                {!estado.acierto || ultima ? 'Ver resultado' : 'Siguiente'}
               </Text>
             </Pressable>
-          )}
-        </>
+          </View>
+          <Text style={styles.dato}>{estado.pregunta.explicacion}</Text>
+        </View>
       ) : null}
     </ScrollView>
   );
@@ -305,9 +348,8 @@ function Escalera({ indice }: { indice: number }) {
         const segura = i === CONFIG.nivelSeguro - 1;
         return (
           <View key={i} style={[styles.peldano, actual && styles.peldanoActual, superada && styles.peldanoSuperado]}>
-            <Text style={[styles.peldanoNum, actual && styles.peldanoTextoActual]}>{i + 1}</Text>
             <Text style={[styles.peldanoPuntos, actual && styles.peldanoTextoActual]}>{premio}</Text>
-            {segura ? <Ionicons name="lock-closed" size={11} color={actual ? colors.ink : colors.beer} /> : <View style={styles.hueco} />}
+            {segura ? <Ionicons name="lock-closed" size={11} color={actual ? colors.ink : colors.beer} /> : null}
           </View>
         );
       })}
@@ -335,8 +377,10 @@ function BotonComodin({
       onPress={onPress}
       style={({ pressed }) => [styles.comodin, usado && styles.comodinUsado, pressed && styles.pulsado]}
     >
-      <Ionicons name={usado ? 'close' : icono} size={22} color={usado ? colors.inkFaint : colors.beer} />
-      <Text style={[styles.comodinTexto, usado && styles.textoApagado]}>{texto}</Text>
+      <Ionicons name={usado ? 'close' : icono} size={18} color={usado ? colors.inkFaint : colors.beer} />
+      <Text style={[styles.comodinTexto, usado && styles.textoApagado]} numberOfLines={1}>
+        {texto}
+      </Text>
     </Pressable>
   );
 }
@@ -348,7 +392,7 @@ const VELO_FUERTE = 'rgba(246, 239, 226, 0.16)';
 const styles = StyleSheet.create({
   fondo: { flex: 1, backgroundColor: colors.ink, borderRadius: radius.lg },
   centrado: { alignItems: 'center', justifyContent: 'center', padding: space.xl, gap: space.lg, flexGrow: 1 },
-  partida: { padding: space.md, gap: space.md, paddingBottom: space.xl },
+  partida: { padding: space.md, gap: space.sm },
   titulo: { fontSize: 26, color: colors.paper, fontWeight: '800', textAlign: 'center' },
   reglas: { gap: space.sm, alignSelf: 'stretch' },
   regla: { color: colors.paper, fontSize: 15, lineHeight: 21, textAlign: 'center' },
@@ -361,46 +405,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  botonAncho: { alignSelf: 'stretch' },
   jugarTexto: { color: colors.ink, fontWeight: '800', fontSize: 17 },
+  jugarTextoFila: { color: colors.ink, fontWeight: '800', fontSize: 15 },
   pulsado: { opacity: 0.85 },
   escalera: { flexDirection: 'row', gap: space.xs },
   peldano: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: space.xs,
+    justifyContent: 'center',
+    gap: 3,
+    height: 26,
     borderRadius: radius.sm,
     backgroundColor: VELO,
   },
   peldanoActual: { backgroundColor: colors.beer },
   peldanoSuperado: { backgroundColor: VELO_FUERTE },
-  peldanoNum: { color: colors.inkFaint, fontSize: 11, fontWeight: '700' },
-  peldanoPuntos: { color: colors.paper, fontSize: 16, fontWeight: '800' },
+  peldanoPuntos: { color: colors.paper, fontSize: 14, fontWeight: '800' },
   peldanoTextoActual: { color: colors.ink },
-  hueco: { height: 11 },
   cabeceraPregunta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  nivel: { color: colors.beer, fontWeight: '800', fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' },
+  nivel: { color: colors.beer, fontWeight: '800', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' },
   reloj: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
+    paddingHorizontal: space.sm,
+    paddingVertical: 2,
     borderRadius: radius.pill,
     backgroundColor: VELO_FUERTE,
-    minWidth: 64,
+    minWidth: 56,
     justifyContent: 'center',
   },
   relojUrgente: { backgroundColor: colors.stamp },
-  relojTexto: { color: colors.paper, fontWeight: '800', fontSize: 16 },
-  pregunta: { color: colors.paper, fontSize: 19, fontWeight: '700', lineHeight: 26 },
-  opciones: { gap: space.sm },
+  relojTexto: { color: colors.paper, fontWeight: '800', fontSize: 15 },
+  pregunta: { color: colors.paper, fontSize: 16, fontWeight: '700', lineHeight: 21 },
+  opciones: { gap: 6 },
   opcion: {
-    minHeight: 56,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.md,
-    paddingHorizontal: space.md,
+    gap: space.sm,
+    paddingHorizontal: space.sm,
+    paddingVertical: 4,
     borderRadius: radius.pill,
     borderWidth: 2,
     borderColor: colors.beerDark,
@@ -412,31 +458,30 @@ const styles = StyleSheet.create({
   opcionFallo: { backgroundColor: colors.stamp, borderColor: colors.stamp },
   opcionEliminada: { opacity: 0.35 },
   votoBarra: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(198, 122, 30, 0.35)' },
-  votoPct: { color: colors.paper, fontWeight: '800', fontSize: 14 },
+  votoPct: { color: colors.paper, fontWeight: '800', fontSize: 13 },
   letra: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.beerDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   letraMarcada: { backgroundColor: colors.beer },
-  letraTexto: { color: colors.paper, fontWeight: '800' },
-  opcionTexto: { flex: 1, color: colors.paper, fontSize: 16, fontWeight: '600' },
+  letraTexto: { color: colors.paper, fontWeight: '800', fontSize: 13 },
+  opcionTexto: { flex: 1, color: colors.paper, fontSize: 15, fontWeight: '600', lineHeight: 19 },
   textoApagado: { color: colors.inkFaint },
-  confirmar: { gap: space.sm, alignItems: 'center' },
-  confirmarTexto: { color: colors.paper, fontSize: 16, fontWeight: '700', textAlign: 'center' },
-  suspense: { color: colors.beer, fontSize: 16, fontWeight: '700', textAlign: 'center' },
-  resultado: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: VELO },
-  resultadoTitulo: { color: colors.paper, fontSize: 20, fontWeight: '800' },
+  suspense: { color: colors.beer, fontSize: 16, fontWeight: '700', textAlign: 'center', paddingVertical: space.md },
+  resultado: { gap: space.xs, padding: space.sm, borderRadius: radius.md, backgroundColor: VELO },
+  filaResultado: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  resultadoTitulo: { flex: 1, color: colors.paper, fontSize: 18, fontWeight: '800' },
   resultadoMal: { color: '#F0D6D2' },
-  explicacion: { color: colors.paper, fontSize: 15, fontWeight: '700' },
-  dato: { color: colors.paper, fontSize: 14, lineHeight: 20 },
+  botonResultado: { minHeight: 44, paddingHorizontal: space.lg },
+  dato: { color: colors.paper, fontSize: 13, lineHeight: 18 },
   comodines: { flexDirection: 'row', gap: space.sm },
   comodin: {
     flex: 1,
-    minHeight: 64,
+    minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -444,10 +489,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.beerDark,
     backgroundColor: VELO,
-    padding: space.xs,
+    paddingHorizontal: 2,
   },
   comodinUsado: { borderColor: VELO_FUERTE },
-  comodinTexto: { color: colors.paper, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  comodinTexto: { color: colors.paper, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   secundario: {
     minHeight: 48,
     alignItems: 'center',
@@ -455,12 +500,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.inkFaint,
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.md,
   },
   secundarioTexto: { color: colors.paper, fontWeight: '700', fontSize: 14 },
-  fila: { flexDirection: 'row', gap: space.sm, alignSelf: 'stretch' },
-  flex: { flex: 1 },
+  fila: { flexDirection: 'row', gap: space.sm, alignSelf: 'stretch', minHeight: 48 },
+  flex: { flex: 1, minHeight: 48, paddingHorizontal: space.sm },
+  flexAncho: { flex: 1.6, minHeight: 48, paddingHorizontal: space.sm },
   detalle: { alignItems: 'center', gap: space.xs },
   detalleTitulo: { fontSize: 18, fontWeight: '800', color: colors.beerDark, textAlign: 'center' },
 });
-

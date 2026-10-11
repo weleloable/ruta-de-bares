@@ -25,6 +25,21 @@ test('el acierto y el fallo llevan icono y texto, no solo color', () => {
   assert.match(pantalla, /Correcta/);
 });
 
+test('cabe sin scroll: "Sí, definitiva" va en la MISMA fila que Plantarme, no en un bloque nuevo debajo', () => {
+  // Antes salia debajo de las opciones y empujaba comodines y Plantarme fuera de la
+  // pantalla (90 px de mas a 808 de ventana). El que de verdad lo mide es
+  // `npm run verificar:juego`, con los textos mas largos del banco.
+  const fila = pantalla.slice(pantalla.indexOf('<View style={styles.fila}>'), pantalla.indexOf('{estado.fase === \'suspense\''));
+  assert.match(fila, /Sí, definitiva/);
+  assert.match(fila, /Plantarme/);
+  assert.doesNotMatch(pantalla, /styles\.confirmar\b/);
+});
+
+test('no se deja jugar hasta leer las preguntas vistas (si no, se pisaba el historial)', () => {
+  assert.match(pantalla, /disabled=\{!listo\}/);
+  assert.match(pantalla, /if \(vivo\) setListo\(true\);/);
+});
+
 test('no importa Leaflet ni nada web: tiene que funcionar igual en nativo', () => {
   assert.doesNotMatch(pantalla, /leaflet|react-dom|document\./i);
 });
