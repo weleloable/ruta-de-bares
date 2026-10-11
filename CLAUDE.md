@@ -128,6 +128,7 @@ supabase/
   migrations/0044_*.sql     puntos de las casas (`point_rules`, `point_movements`) y ranking en directo (`casas_marcador` + Realtime)
   migrations/0045_*.sql     consumiciones (`consumiciones`, `registrar_consumicion`, limites en `routes`) y racha de casa
   migrations/0046_*.sql     QR social: codigos temporales (`qr_codigos`) y `encuentros` (preparada para fotos de grupo)
+  migrations/0047_*.sql     retos por ruta (`retos`, `retos_evaluar` por disparadores, `retos_mios`)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -272,6 +273,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   se pinta como SVG. El escaner es `EscanerQr.web.tsx` (getUserMedia + jsQR);
   la variante nativa solo avisa. Quien ensena el QR se entera del encuentro
   porque `qr_mi_codigo` (que sondea cada 3 s) devuelve el ultimo reciente.
+
+- **Retos (0047)**: NO hay tabla de "retos conseguidos": un reto conseguido es
+  un movimiento `action = 'reto'` con ref 'reto:<reto>:<persona>' y
+  `detail.reto`; el limite de personas cuenta esos movimientos no anulados.
+  Los puntos salen del reto, no de `point_rules`. Se evaluan con disparadores
+  en stamps, consumiciones y encuentros (no se tocan las funciones de puntos)
+  y al llamar a `retos_mios`, por si el reto se creo despues.
 
 - **La Caña se activa por ruta (0040), pero `match_profiles.is_active` sigue
   ahi**: ahora significa "activada en ALGUNA ruta" y lo mantienen al dia

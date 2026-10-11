@@ -61,7 +61,7 @@ export function AjustesCana({
   );
 }
 
-function Paso({
+export function Paso({
   etiqueta,
   valor,
   puedeBajar,

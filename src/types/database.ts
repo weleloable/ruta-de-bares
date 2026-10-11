@@ -490,6 +490,51 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      /** Retos de cada ruta (0047): los escribe solo quien administra. */
+      retos: {
+        Row: {
+          id: string;
+          route_id: string;
+          nombre: string;
+          descripcion: string;
+          tipo: string;
+          objetivo: number;
+          categoria: string | null;
+          hora_limite: string | null;
+          puntos: number;
+          max_personas: number | null;
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          route_id: string;
+          nombre: string;
+          descripcion?: string;
+          tipo: string;
+          objetivo?: number;
+          categoria?: string | null;
+          hora_limite?: string | null;
+          puntos: number;
+          max_personas?: number | null;
+          activo?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          nombre?: string;
+          descripcion?: string;
+          tipo?: string;
+          objetivo?: number;
+          categoria?: string | null;
+          hora_limite?: string | null;
+          puntos?: number;
+          max_personas?: number | null;
+          activo?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       /** Tus encuentros (0046): solo lectura, los apunta `qr_escanear`. */
       encuentros: {
         Row: {
@@ -687,6 +732,26 @@ export type Database = {
       registrar_consumicion: {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
+      };
+      /** Los retos de una ruta con tu progreso (0047). */
+      retos_mios: {
+        Args: { p_route_id: string };
+        Returns: {
+          id: string;
+          nombre: string;
+          descripcion: string;
+          tipo: string;
+          objetivo: number;
+          categoria: string | null;
+          hora_limite: string | null;
+          puntos: number;
+          max_personas: number | null;
+          activo: boolean;
+          progreso: number;
+          meta: number;
+          conseguido: boolean;
+          conseguidos: number;
+        }[];
       };
       /** Tu QR temporal y tu ultimo encuentro reciente (0046). */
       qr_mi_codigo: {

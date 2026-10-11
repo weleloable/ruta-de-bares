@@ -277,6 +277,13 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    vez por pareja y ruta, con tope por persona (`routes.qr_max`, 5) y solo
    durante la ruta (quien administra puede probarlo cuando quiera). Se puede
    pegar dos veces.
+47. [`supabase/migrations/0047_retos.sql`](../supabase/migrations/0047_retos.sql)
+   y **Run**, despues de la 0046 y **ANTES de desplegar la app**. Retos de
+   cada ruta (`retos`), que se crean desde el editor de la ruta: condicion de
+   un catalogo (bares, categorias, consumiciones de una categoria, encuentros
+   QR, acabar antes de una hora), puntos y limite de personas. Se comprueban
+   solos al sellar, al apuntar una consumicion y al registrar un encuentro.
+   Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

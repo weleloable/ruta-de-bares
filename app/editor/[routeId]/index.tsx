@@ -12,6 +12,7 @@ import {
   persistOrder,
   updateRoute,
 } from '../../../src/features/routes/api';
+import { EditorRetos } from '../../../src/features/casas/EditorRetos';
 import { AjustesCana } from '../../../src/features/routes/AjustesCana';
 import { BarLogo } from '../../../src/features/routes/BarLogo';
 import { direccionVisible } from '../../../src/features/routes/catalogo';
@@ -194,6 +195,8 @@ export default function EditorDeRuta() {
         </Card>
 
         <AjustesCana ruta={ruta} ocupado={guardandoCana} onCambiar={onAjustarCana} />
+
+        <EditorRetos ruta={ruta} bares={bares} />
 
         {avisos.map((aviso) => (
           <Banner key={`${aviso.kind}-${aviso.firstId}-${aviso.secondId}`} tone="info">
