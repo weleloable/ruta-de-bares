@@ -130,6 +130,7 @@ supabase/
   migrations/0046_*.sql     QR social: codigos temporales (`qr_codigos`) y `encuentros` (preparada para fotos de grupo)
   migrations/0047_*.sql     retos por ruta (`retos`, `retos_evaluar` por disparadores, `retos_mios`)
   migrations/0048_*.sql     panel "Casas y puntuaciones" (`casas_admin_*`, `house_changes`); rehace export_my_data()
+  migrations/0049_*.sql     cierre de rutas (`casas_resultados`), temporadas, historico y pantalla de ganadora
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -287,6 +288,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   QR, que se ANULAN si su `detail.usuarios` la incluye. Los podios no se tocan:
   `casas_podios` ya usa la casa de hoy. Las correcciones a mano son
   movimientos `action = 'ajuste'` (pueden ser negativos), nunca ediciones.
+
+- **Historico de casas (0049)**: `casas_resultados` NO tiene clave hacia
+  `routes` a proposito: las rutas se borran a los pocos dias (0027) y con
+  ellas sus `point_movements`, pero el resultado (solo totales por casa) se
+  queda. Un disparador BEFORE DELETE en `routes` hace la foto si la ruta tenia
+  puntos y nadie la cerro. Cerrar no congela los puntos: lo que llegue despues
+  no cuenta hasta "Volver a cerrar".
 
 - **La Caña se activa por ruta (0040), pero `match_profiles.is_active` sigue
   ahi**: ahora significa "activada en ALGUNA ruta" y lo mantienen al dia

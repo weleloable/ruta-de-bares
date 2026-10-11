@@ -51,6 +51,8 @@ export type RouteRow = {
   racha_repetible: boolean;
   /** Encuentros por QR que puntuan por persona en la ruta (0046). */
   qr_max: number;
+  /** Temporada a la que pertenece (0049). */
+  temporada_id: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -490,6 +492,13 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      /** Temporadas (0049): grupos de rutas; las escribe quien administra. */
+      temporadas: {
+        Row: { id: string; nombre: string; created_at: string };
+        Insert: { id?: string; nombre: string };
+        Update: { nombre?: string };
+        Relationships: [];
+      };
       /** Retos de cada ruta (0047): los escribe solo quien administra. */
       retos: {
         Row: {
@@ -580,6 +589,7 @@ export type Database = {
           | 'variedad_max'
           | 'racha_repetible'
           | 'qr_max'
+          | 'temporada_id'
           | 'created_at'
           | 'updated_at'
         >;
@@ -732,6 +742,27 @@ export type Database = {
       registrar_consumicion: {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
+      };
+      /** Cierre de rutas e historico (0049). */
+      casas_cerrar_ruta: { Args: { p_route_id: string }; Returns: unknown };
+      casas_reabrir_ruta: { Args: { p_route_id: string }; Returns: undefined };
+      casas_admin_anular_ruta: { Args: { p_route_id: string; p_motivo: string }; Returns: number };
+      casas_resultado: { Args: { p_route_id: string }; Returns: unknown };
+      casas_resultado_visto: { Args: { p_route_id: string }; Returns: undefined };
+      casas_historico: {
+        Args: { p_temporada_id?: string | null };
+        Returns: { house: string; victorias: number; segundos: number; terceros: number; puntos: number; rutas: number }[];
+      };
+      casas_palmares: {
+        Args: { p_temporada_id?: string | null };
+        Returns: {
+          route_id: string;
+          ruta: string | null;
+          fecha: string | null;
+          temporada: string | null;
+          ganadoras: string[];
+          resultado: unknown;
+        }[];
       };
       /** Panel de casas (0048), solo admins. */
       casas_admin_movimientos: {

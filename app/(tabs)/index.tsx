@@ -17,6 +17,7 @@ import { Banner, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { ultimoBarSellado } from '../../src/features/casas/reglasConsumo';
 import { RankingCasas } from '../../src/features/casas/RankingCasas';
+import { GanadoraRuta } from '../../src/features/casas/GanadoraRuta';
 import { RetosRuta } from '../../src/features/casas/RetosRuta';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
@@ -135,6 +136,7 @@ export default function SellosScreen() {
           ) : null}
 
           {/* Las casas, en directo (0044): dentro de la cabecera porque es opaca. */}
+          {activeRoute ? <GanadoraRuta rutaId={activeRoute.id} /> : null}
           {activeRoute ? <RankingCasas rutaId={activeRoute.id} /> : null}
           {activeRoute ? <RetosRuta rutaId={activeRoute.id} sellos={stamps.length} /> : null}
         </View>

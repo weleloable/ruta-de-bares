@@ -102,6 +102,7 @@ export async function updateRoute(
       | 'variedad_max'
       | 'racha_repetible'
       | 'qr_max'
+      | 'temporada_id'
     >
   >,
 ): Promise<RouteRow> {

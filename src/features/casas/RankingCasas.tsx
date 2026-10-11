@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 
 import { Card } from '../../components/ui';
 import { colors, radius, space, typography } from '../../lib/theme';
@@ -20,11 +21,20 @@ const nativo = Platform.OS !== 'web';
 export function RankingCasas({ rutaId }: { rutaId: string }) {
   const { filas } = useRankingCasas(rutaId);
   const { casa: miCasa } = useMiCasa();
-  return <TablaCasas filas={filas} miCasa={miCasa} />;
+  const router = useRouter();
+  return <TablaCasas filas={filas} miCasa={miCasa} onHistorico={() => router.push('/casas/historico')} />;
 }
 
 /** La tabla en si, a partir de las filas del servidor (se puede ensenar sola). */
-export function TablaCasas({ filas, miCasa }: { filas: FilaServidor[] | null; miCasa: IdCasa | null }) {
+export function TablaCasas({
+  filas,
+  miCasa,
+  onHistorico,
+}: {
+  filas: FilaServidor[] | null;
+  miCasa: IdCasa | null;
+  onHistorico?: () => void;
+}) {
   const anteriores = useRef<FilaServidor[] | null>(null);
   const [ganado, setGanado] = useState<Partial<Record<IdCasa, number>>>({});
   const [nuevoLider, setNuevoLider] = useState<IdCasa | null>(null);
@@ -63,6 +73,11 @@ export function TablaCasas({ filas, miCasa }: { filas: FilaServidor[] | null; mi
           <View style={styles.punto} />
           <Text style={styles.directoTexto}>EN DIRECTO</Text>
         </View>
+        {onHistorico ? (
+          <Pressable accessibilityRole="link" onPress={onHistorico} hitSlop={8}>
+            <Text style={styles.historico}>Histórico ›</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {nuevoLider ? <AvisoLider casa={nuevoLider} onFin={() => setNuevoLider(null)} /> : null}
@@ -175,6 +190,7 @@ const styles = StyleSheet.create({
   directo: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   punto: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.stamp },
   directoTexto: { fontSize: 10, fontWeight: '800', color: colors.stamp, letterSpacing: 0.8 },
+  historico: { fontSize: 12, fontWeight: '700', color: colors.beerDark, marginLeft: space.sm },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',

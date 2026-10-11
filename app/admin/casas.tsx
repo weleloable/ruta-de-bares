@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner } from '../../src/components/ui';
+import { Cierre } from '../../src/features/casas/panel/Cierre';
 import { Movimientos } from '../../src/features/casas/panel/Movimientos';
 import { Personas } from '../../src/features/casas/panel/Personas';
 import { Chips } from '../../src/features/casas/panel/piezas';
@@ -13,12 +14,13 @@ import { listRoutes } from '../../src/features/routes/api';
 import { colors, space } from '../../src/lib/theme';
 import type { RouteRow } from '../../src/types/database';
 
-type Seccion = 'resumen' | 'movimientos' | 'reglas' | 'personas';
+type Seccion = 'resumen' | 'movimientos' | 'reglas' | 'personas' | 'cierre';
 const SECCIONES: { id: Seccion; texto: string }[] = [
   { id: 'resumen', texto: 'Resumen' },
   { id: 'movimientos', texto: 'Movimientos' },
   { id: 'reglas', texto: 'Reglas y retos' },
   { id: 'personas', texto: 'Personas' },
+  { id: 'cierre', texto: 'Cierre y temporadas' },
 ];
 const TODAS = '__todas';
 
@@ -62,6 +64,7 @@ export default function CasasAdmin() {
           {seccion === 'movimientos' ? <Movimientos rutaId={rutaId} /> : null}
           {seccion === 'reglas' ? <Reglas rutaId={rutaId} /> : null}
           {seccion === 'personas' ? <Personas /> : null}
+          {seccion === 'cierre' ? <Cierre rutaId={rutaId} /> : null}
         </View>
       </ScrollView>
     </SafeAreaView>

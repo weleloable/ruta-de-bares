@@ -291,6 +291,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    accion, cambiar de casa (`house_changes`) y estadisticas. Rehace
    `export_my_data()` (anade consumiciones, encuentros y cambios de casa), asi
    que la 0044 ya **no se vuelve a pegar**. Se puede pegar dos veces.
+49. [`supabase/migrations/0049_historico_casas.sql`](../supabase/migrations/0049_historico_casas.sql)
+   y **Run**, despues de la 0048 y **ANTES de desplegar la app**. Cerrar rutas
+   (Casas y puntuaciones > Cierre y temporadas): guarda el resultado de las
+   casas en `casas_resultados` (sin datos personales y sin depender de la
+   ruta, asi que sobrevive a su borrado) y ensena la pantalla de la casa
+   ganadora. Temporadas (`temporadas`, `routes.temporada_id`), reiniciar una
+   ruta y el ranking historico. Si se borra una ruta con puntos sin cerrar, se
+   cierra sola. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

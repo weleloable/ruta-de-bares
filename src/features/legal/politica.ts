@@ -90,6 +90,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'guarda ninguna imagen.',
               'Si quien organiza te cambia de casa, queda apuntado cuándo, de cuál a cuál y por qué. Lo ves en ' +
                 'la descarga de tus datos.',
+              'Al cerrar una ruta se guarda solo el resultado de las casas (sus puntos y su puesto), sin nada de ' +
+                'nadie. Eso se conserva para el ranking histórico aunque la ruta y tus datos de ella se borren.',
               'No se vende ni se cede a terceros. Los únicos que tocan los datos por encargo nuestro son Supabase ' +
                 '(base de datos, almacenamiento y el sistema de acceso, también lo que nos da Google) y GitHub ' +
                 'Pages (la web).',
