@@ -17,6 +17,11 @@ export type ResultadoJuego = {
 /** Props que recibe el componente de cualquier juego. */
 export type PropsJuego = {
   onFinish: (resultado: ResultadoJuego) => void;
+  /**
+   * Volver al menu sin terminar. Solo lo reciben los juegos a pantalla
+   * completa (`pantallaCompleta`), que no tienen la cabecera del menu.
+   */
+  onSalir?: () => void;
 };
 
 /** Props del bloque extra que un juego puede poner en la tarjeta de fin de partida. */
@@ -30,8 +35,19 @@ export type JuegoDef = {
   titulo: string;
   /** Una linea: se lee de pasada en un bar. */
   descripcion: string;
-  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer';
+  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car';
   Componente: ComponentType<PropsJuego>;
+  /**
+   * Se juega a pantalla completa, sin la cabecera del menu ni las pestanas
+   * (p. ej. en horizontal). El juego pone su propio boton de salir (`onSalir`).
+   */
+  pantallaCompleta?: boolean;
+  /**
+   * El juego ensena su propio resultado (y sus rankings) al terminar: el menu
+   * no lo desmonta ni pone su tarjeta, y no guarda record propio. `onFinish` se
+   * sigue llamando, para quien quiera colgarse de el (la Compostelana...).
+   */
+  resultadoPropio?: boolean;
   /**
    * Opcional: lo que se ensena en la tarjeta de fin de partida, bajo la
    * puntuacion (amigos reclutados, un mensaje...). El record y el aviso de

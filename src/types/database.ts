@@ -411,6 +411,16 @@ export type AvatarAdminRequestRow = {
 };
 
 /** Una fila del ranking de un minijuego en una ruta (0034). */
+/** Una fila del ranking de "¿Conduces tú?" en un nivel (0041). */
+export type ConducesRankingRow = {
+  pos: number;
+  user_id: string;
+  display_name: string;
+  distance: number;
+  achieved_at: string;
+  is_me: boolean;
+};
+
 export type MinigameRankingRow = {
   pos: number;
   user_id: string;
@@ -595,6 +605,15 @@ export type Database = {
       minigame_ranking: {
         Args: { p_route_id: string; p_game: string; p_limit?: number };
         Returns: MinigameRankingRow[];
+      };
+      /** "¿Conduces tú?" (0041): ranking por ruta y nivel de cañas. */
+      conduces_submit_score: {
+        Args: { p_route_id: string; p_level: number; p_distance: number };
+        Returns: { best: number; is_record: boolean; position: number; total: number };
+      };
+      conduces_ranking: {
+        Args: { p_route_id: string; p_level: number; p_limit?: number };
+        Returns: ConducesRankingRow[];
       };
       maestro_submit_beer: {
         Args: {

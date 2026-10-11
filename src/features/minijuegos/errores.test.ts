@@ -6,7 +6,7 @@ import { traducirErrorMinijuegos } from './errores.ts';
 test('cada codigo de la migracion tiene su texto', () => {
   for (const codigo of [
     'TOO_FAST', 'SUSPENDED', 'FORBIDDEN', 'NOT_AUTHENTICATED', 'LIMIT_REACHED',
-    'INVALID_NAME', 'INVALID_SCORE', 'INVALID_GAME', 'INVALID_RECIPE',
+    'INVALID_NAME', 'INVALID_SCORE', 'INVALID_GAME', 'INVALID_RECIPE', 'INVALID_LEVEL',
   ]) {
     const texto = traducirErrorMinijuegos(`error: ${codigo}`);
     assert.ok(!texto.includes(codigo), `${codigo} se ve en crudo: ${texto}`);

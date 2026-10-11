@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Banner, Button, Card, EmptyState, Screen } from '../../components/ui';
 import { colors, radius, space, typography } from '../../lib/theme';
@@ -44,6 +44,8 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
   const terminar = useCallback(
     async (resultado: ResultadoJuego) => {
       const juego = activo;
+      // Este se encarga el solo de su resultado: el menu no hace nada visible.
+      if (juego?.resultadoPropio) return;
       const esRecord = await registrarPuntuacion(resultado.juego, resultado.puntuacion);
       if (esRecord) feedback.record();
       setRecords(await cargarRecords());
@@ -77,6 +79,15 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
 
   if (activo) {
     const Juego = activo.Componente;
+    // Los de pantalla completa tapan todo (cabecera y pestanas) y traen su boton
+    // de salir. Al terminar se cierra y se ve la tarjeta de resultado de siempre.
+    if (activo.pantallaCompleta && vista === 'juego' && !ultimo) {
+      return (
+        <Modal visible animationType="none" onRequestClose={salir}>
+          <Juego onFinish={terminar} onSalir={salir} />
+        </Modal>
+      );
+    }
     const titulo = vista === 'ranking' ? `Ranking · ${activo.titulo}` : vista === 'cervezas' ? 'Cervezas de la ruta' : activo.titulo;
     return (
       <Screen>

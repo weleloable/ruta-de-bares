@@ -1,5 +1,6 @@
 import { enviarCerveza, enviarNota } from './api';
 import { CanaPerfecta } from './juegos/cana/CanaPerfecta';
+import { ConducesTu } from './juegos/conduces/ConducesTu';
 import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
@@ -47,5 +48,15 @@ export const JUEGOS: readonly JuegoDef[] = [
     enviar: async (rutaId, r) => {
       await enviarNota(rutaId, r.juego, r.puntuacion);
     },
+  },
+  {
+    id: 'conduces-tu',
+    titulo: '¿Conduces tú?',
+    descripcion: 'Elige cuántas cañas llevas e intenta llegar lejos. Spoiler: no.',
+    icono: 'car',
+    Componente: ConducesTu,
+    pantallaCompleta: true,
+    // Su ranking es por NIVEL de cañas (0041): lo guarda y lo ensena el propio juego.
+    resultadoPropio: true,
   },
 ];

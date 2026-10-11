@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import type { MaestroBeerRow, MinigameRankingRow } from '../../types/database';
+import type { ConducesRankingRow, MaestroBeerRow, MinigameRankingRow } from '../../types/database';
 import { traducirErrorMinijuegos } from './errores';
 
 /**
@@ -26,6 +26,26 @@ export async function cargarRanking(routeId: string, game: string, limite = 50):
     p_game: game,
     p_limit: limite,
   });
+  if (error) throw new Error(traducirErrorMinijuegos(error.message));
+  return data ?? [];
+}
+
+/** Lo que devuelve guardar una partida de "¿Conduces tú?": tu mejor en ese nivel y tu puesto. */
+export type ResultadoConduces = { best: number; isRecord: boolean; position: number; total: number };
+
+/** Guarda la distancia de una partida en el ranking de la ruta, en su nivel de cañas (0041). */
+export async function enviarDistancia(routeId: string, nivel: number, metros: number): Promise<ResultadoConduces> {
+  const { data, error } = await supabase.rpc('conduces_submit_score', {
+    p_route_id: routeId,
+    p_level: nivel,
+    p_distance: Math.round(metros),
+  });
+  if (error) throw new Error(traducirErrorMinijuegos(error.message));
+  return { best: data.best, isRecord: data.is_record, position: data.position, total: data.total };
+}
+
+export async function cargarRankingConduces(routeId: string, nivel: number, limite = 50): Promise<ConducesRankingRow[]> {
+  const { data, error } = await supabase.rpc('conduces_ranking', { p_route_id: routeId, p_level: nivel, p_limit: limite });
   if (error) throw new Error(traducirErrorMinijuegos(error.message));
   return data ?? [];
 }

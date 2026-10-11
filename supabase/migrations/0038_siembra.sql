@@ -1,8 +1,11 @@
 -- Ruta de Bares - 0038: Maestro Cervecero, paso 4 "enfriar y sembrar".
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0037.
--- Idempotente: se puede re-ejecutar sin romper nada (`add column if not exists`,
--- funciones con `or replace`). Ojo al reves: rehace export_my_data() a partir
--- de la 0034, asi que la 0034 ya no se puede volver a pegar despues.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * export_my_data() la rehace la 0041
+-- (Ademas, esta rehace export_my_data() a partir de la 0034, asi que la 0034
+-- tampoco se puede volver a pegar despues.)
 --
 -- Que hace. El paso de la levadura deja de ser "elige una": ahora hay que
 -- enfriar el mosto y echar la levadura a su temperatura (siembra.ts). Lo bien

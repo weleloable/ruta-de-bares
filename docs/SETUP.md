@@ -230,6 +230,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    las que estaba (solo la primera vez que se pega). Con la app vieja, activar
    pide actualizar. Rehace funciones de la 0005, 0009, 0010, 0011, 0024, 0028 y
    0037, que ya **no se vuelven a pegar**. Se puede pegar dos veces.
+41. [`supabase/migrations/0041_ranking_conduces.sql`](../supabase/migrations/0041_ranking_conduces.sql)
+   y **Run**, despues de la 0040 y **ANTES de desplegar la app**. Crea
+   `conduces_scores`: el ranking de "¿Conduces tú?" por ruta y POR NIVEL de
+   cañas (1 al numero de bares de la ruta), con la mejor distancia de cada
+   persona. Rehace `export_my_data()` para que "descargar mis datos" incluya
+   esas distancias, asi que despues de esta la 0038 ya **no se vuelve a pegar**.
+   Si la app llega antes, el juego guarda el record en el movil y avisa de que
+   falta la migracion. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

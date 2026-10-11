@@ -121,6 +121,7 @@ supabase/
   migrations/0038_*.sql     Maestro Cervecero: la siembra (paso 4) entra en la nota; funciones `_v2`
   migrations/0039_*.sql     La Conga Cervecera en el ranking por ruta (tope de nota POR JUEGO)
   migrations/0040_*.sql     La Caña se activa POR RUTA, solo el dia de la ruta y a 3 km del primer bar (admins sin reglas)
+  migrations/0041_*.sql     ranking de "¿Conduces tú?" por ruta Y por nivel de cañas (`conduces_scores`)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -128,7 +129,7 @@ tests/                    tests que no encajan en un feature (p.ej. migration.te
 
 Tablas: `profiles`, `routes`, `route_bars`, `catalog_bars`, `stamps`, `route_invites`,
 `route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
-`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`, `conduces_scores`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
