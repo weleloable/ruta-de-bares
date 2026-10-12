@@ -359,6 +359,11 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    (`minigame_scores.best_ms`), que VACIA el ranking del quiz al pegarla. Rehace
    funciones de la 0034, 0044, 0045, 0056 y 0060, que ya **no se vuelven a
    pegar**. Se puede pegar dos veces.
+60. [`supabase/migrations/0062_exportar_sorteos.sql`](../supabase/migrations/0062_exportar_sorteos.sql)
+   y **Run**, despues de la 0061. "Descargar mis datos" trae tambien los
+   sorteos en los que has salido y el tiempo del quiz. Rehace
+   `export_my_data()`, asi que la 0048 ya **no se vuelve a pegar**. Se puede
+   pegar dos veces.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

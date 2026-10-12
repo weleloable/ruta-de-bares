@@ -44,7 +44,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
   return {
     presentacion:
       `Esta es la política de privacidad de ${NOMBRE_APP}, la app para seguir una ruta de bares sellando ` +
-      'tu compostelana en cada parada y, si quieres, conocer a otra gente de la ruta con La Caña.',
+      'tu compostelana en cada parada, competir con tu casa, jugar a los minijuegos y, si quieres, conocer a ' +
+      'otra gente de la ruta con La Caña.',
 
     secciones: [
       {
@@ -78,8 +79,10 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
               'A qué rutas perteneces y qué bares has sellado: lo ve quien organiza esa ruta.',
               'Tu casa (Mahou, Cruzcampo, Estrella Galicia o Alhambra): se te asigna al entrar en tu primera ruta ' +
                 'y la ve el resto de la gente, porque es con quien compites.',
-              'Los puntos que consigues para tu casa (por sellar, completar la ruta o quedar en el podio de un ' +
-                'minijuego) se apuntan con su origen. La gente de la ruta ve el total de cada casa y cuántos ' +
+              'Los puntos que consigues para tu casa (por sellar, completar la ruta, apuntar consumiciones, ' +
+                'probar categorías nuevas, quedar en el podio de un minijuego, las rachas de tu casa, los ' +
+                'encuentros por QR y los retos) se apuntan con su origen. La gente de la ruta ve el total de cada ' +
+                'casa y cuántos ' +
                 'puntos pone cada persona de ella y, agrupado por tipo (cuántos sellos, retos, podios…), de ' +
                 'dónde salen; nunca horas ni lugares concretos. En la pestaña Casas se ven además datos sumados por ' +
                 'casa (sellos, consumiciones apuntadas, puntos por origen), nunca de una persona concreta. Quien ' +
@@ -94,8 +97,14 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'guarda ninguna imagen.',
               'Si quien organiza te cambia de casa, queda apuntado cuándo, de cuál a cuál y por qué. Lo ves en ' +
                 'la descarga de tus datos.',
-              'Si una ruta tiene sorteo y sellas todos sus bares, entras en él. El nombre de quien gana y de los ' +
-                'suplentes lo ve la gente de la ruta.',
+              'Si una ruta tiene sorteo, entras automáticamente al sellar todos sus bares: no hay que apuntarse ' +
+                'ni se guarda nada aparte (se deduce de tus sellos). El sorteo lo hace quien organiza, al azar, ' +
+                'y se guarda quién gana, quiénes quedan de suplentes, cuándo se hizo, quién lo hizo y, si se ' +
+                'repite, el motivo. El nombre visible de quien gana y de los suplentes lo ve la gente de la ruta. ' +
+                'Si no quieres participar, escríbenos antes del sorteo. Se borra con la ruta.',
+              'Quien organiza ve estadísticas de cada ruta (cuánta gente sella, apunta consumiciones, juega o ' +
+                'hace retos; sellos por bar y por hora; consumiciones por categoría) y puede descargarlas en un ' +
+                'fichero. Son siempre totales: nada de eso dice qué hizo una persona concreta.',
               'Al cerrar una ruta se guarda solo el resultado de las casas (sus puntos y su puesto), sin nada de ' +
                 'nadie. Eso se conserva para el ranking histórico aunque la ruta y tus datos de ella se borren.',
               'No se vende ni se cede a terceros. Los únicos que tocan los datos por encargo nuestro son Supabase ' +
@@ -108,6 +117,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
             puntos: [
               'Tu frase de presentación, tu foto y tus etiquetas las ve la gente de tu ruta que también tenga ' +
                 'La Caña activada.',
+              'Quien organiza la app aparece en La Caña con una estrella y la etiqueta «Moderador», para que ' +
+                'sepas quién modera. De nadie más se enseña ese dato.',
               'A quién le das Me gusta y de quién abres la ficha es privado: no lo ve nadie, ni la otra persona ' +
                 'ni quien organiza la ruta. Se guarda solo para que el emparejamiento funcione — si los dos os dais ' +
                 'Me gusta, ahí sí se abre la conexión.',
@@ -129,8 +140,9 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'cañas), y las cervezas que hagas en Maestro Cervecero (con el nombre ' +
                 'que les pongas) las ve la gente de esa misma ruta, con tu nombre visible. No cruzan de una ruta ' +
                 'a otra.',
-              'Del ranking se guarda solo tu mejor nota, no cada partida. Puedes borrar tus cervezas cuando ' +
-                'quieras, y se borran con tu cuenta y con la ruta.',
+              'Del ranking se guarda solo tu mejor nota, no cada partida. En ¿Quién quiere ser cervecero? se ' +
+                'guarda también el tiempo que tardaste en contestar, porque desempata, y sale junto a tu nota. ' +
+                'Puedes borrar tus cervezas cuando quieras, y se borran con tu cuenta y con la ruta.',
             ],
           },
         ],
@@ -198,8 +210,11 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
             puntos: [
               `Un máximo de ${diasConservacion} días tras la celebración del evento. (Aunque, idealmente, lo ` +
                 'borraremos todo a las 24h)',
-              'Eso es lo del evento: sellos, rutas, minijuegos y La Caña. Tu cuenta (tu correo, tu nombre visible, tu foto ' +
-                'y, si entraste con Google, lo que nos dio Google) se guarda mientras la tengas.',
+              'Eso es lo del evento: sellos, consumiciones, encuentros por QR, puntos, retos, sorteos, ' +
+                'minijuegos y La Caña. Tu cuenta (tu correo, tu nombre visible, tu foto, tu casa y, si entraste ' +
+                'con Google, lo que nos dio Google) se guarda mientras la tengas.',
+              'Lo único de una ruta que se queda después de borrarla es el resultado de las casas (sus puntos y ' +
+                'su puesto, sin datos de nadie), para el ranking histórico.',
               'Puedes borrar tu cuenta junto con todos tus datos en cualquier momento desde Mi perfil. Eso ' +
                 'incluye lo que nos dio Google.',
               'Las fotos que dejas de usar (porque subes otra o porque no se aprueban) se borran en el momento.',
@@ -263,8 +278,10 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
       parrafos: [
         'Todo: tu cuenta y tu correo, lo que nos dio Google si entraste con Google, las rutas en las que estás, ' +
           'tus sellos con la hora y el sitio, las fotos que enviaste a revisión, lo que se ha decidido sobre tu ' +
-          'cuenta y por qué, lo de los minijuegos (tu mejor nota y tus cervezas) y lo de La Caña (perfil, Me gusta ' +
-          'y Vistos, conexiones y los mensajes que escribiste tú).',
+          'cuenta y por qué, tu casa y tus puntos con su origen, tus consumiciones, tus encuentros por QR, si se ' +
+          'te cambió de casa, los sorteos en los que has salido, lo de los minijuegos (tu mejor nota, el tiempo ' +
+          'del quiz y tus cervezas) y lo de La Caña (perfil, Me gusta y Vistos, conexiones y los mensajes que ' +
+          'escribiste tú).',
         'No salen los mensajes de la otra persona, que son suyos, ni el texto de una denuncia sobre ti que siga ' +
           'sin resolver: eso llevaría el nombre de quien la puso. Lo que se decidió sí sale, y es lo que necesitas ' +
           'para reclamar.',
