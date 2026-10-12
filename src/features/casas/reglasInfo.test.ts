@@ -6,7 +6,7 @@ import { reglasInfo, type LimitesRuta } from './reglasInfo.ts';
 const PUNTOS = { sello: 10, consumicion: 2, categoria_nueva: 5, ruta_completa: 20, podio_1: 10, podio_2: 7, podio_3: 5, racha: 6, qr: 5 };
 const RUTA: LimitesRuta = { consumo_minutos: 30, consumo_por_bar: 1, consumo_por_ruta: 6, variedad_max: 3, qr_max: 5, racha_repetible: false };
 
-const por = (puntos = PUNTOS, ruta = RUTA) => Object.fromEntries(reglasInfo(puntos, ruta).map((r) => [r.titulo, r]));
+const por = (puntos: Readonly<Record<string, number>> = PUNTOS, ruta = RUTA) => Object.fromEntries(reglasInfo(puntos, ruta).map((r) => [r.titulo, r]));
 
 describe('reglas de puntos (boton i)', () => {
   it('cubre todas las formas de ganar puntos, con los valores reales', () => {

@@ -9,6 +9,7 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["src/**/*.test.ts", "tests/**/*.test.ts", "tests/**/*.d.ts"],
+  // src/types: las declaraciones de modulos sin tipos (qrcode) tambien las piden los tests.
+  "include": ["src/**/*.test.ts", "tests/**/*.test.ts", "tests/**/*.d.ts", "src/types/**/*.d.ts"],
   "exclude": ["node_modules"]
 }

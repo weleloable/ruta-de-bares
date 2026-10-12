@@ -324,6 +324,25 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    quien participa cuanto vale cada accion (`casas_puntos`), para el boton (i)
    de la tabla de casas con todas las formas de ganar puntos. Se puede pegar
    dos veces.
+55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
+   y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
+   ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite
+   el juego `quien-quiere-ser-cervecero` con notas de 0 a 25 (el premio de la
+   ultima pregunta) y `minigame_submit_score` valida el tope de cada juego. Si
+   la app nueva llega antes, el quiz se juega igual y guarda el record en el
+   movil, pero al guardar en la ruta avisa de que falta la 0055. Ojo: el quiz
+   pasa a puntuar en el podio de las casas, como los demas juegos. Rehace
+   `minigame_submit_score()`, asi que despues de esta la 0039 ya **no se vuelve
+   a pegar**. Se puede pegar dos veces, hasta aplicar la 0056.
+56. [`supabase/migrations/0056_ranking_tapon.sql`](../supabase/migrations/0056_ranking_tapon.sql)
+   y **Run**, despues de la 0055 y **ANTES de desplegar la app**. Mete Tapón al
+   Vuelo en el ranking por ruta: `minigame_scores` admite `tapon-al-vuelo` con
+   notas de 0 a 1250 (diez aciertos seguidos a la oreja con la racha a tope) y
+   los otros tres juegos conservan sus topes. Si la app nueva llega antes, el
+   juego funciona y guarda el record en el movil, pero al guardar en la ruta
+   avisa de que falta la migracion. Puntua en el podio de las casas como los
+   demas (10/7/5). Rehace `minigame_submit_score()`, asi que despues de esta la
+   0055 ya **no se vuelve a pegar**. Se puede pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

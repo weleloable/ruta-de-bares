@@ -2,17 +2,28 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
+import { CONFIG, ID_JUEGO } from './config.ts';
+
 // Red rapida y PARCIAL que lee el codigo: la logica esta en partida.test.ts y el
 // flujo de verdad se prueba en el navegador.
 const leer = (ruta: string) => readFileSync(ruta, 'utf8').replace(/\r\n/g, '\n');
 const juegos = leer('src/features/minijuegos/juegos.ts');
 const pantalla = leer('src/features/quiz/QuienQuiereSerCervecero.tsx');
 
-test('esta en el menu de minijuegos con su detalle y SIN ranking ni envio (pediria una migracion)', () => {
+test('esta en el menu de minijuegos con su detalle, ranking por ruta y envio de la nota', () => {
   const ficha = juegos.slice(juegos.indexOf('id: ID_QUIZ'));
-  assert.match(ficha, /Componente: QuienQuiereSerCervecero,/);
-  assert.match(ficha, /Detalle: DetalleQuiz,/);
-  assert.doesNotMatch(ficha.slice(0, ficha.indexOf('},')), /ranking|enviar/);
+  const cuerpo = ficha.slice(0, ficha.indexOf('\n  },'));
+  assert.match(cuerpo, /Componente: QuienQuiereSerCervecero,/);
+  assert.match(cuerpo, /Detalle: DetalleQuiz,/);
+  assert.match(cuerpo, /ranking: true,/);
+  assert.match(cuerpo, /enviarNota\(rutaId, r\.juego, r\.puntuacion\)/);
+});
+
+test('la nota maxima que acepta el servidor (0055) es el premio de la ultima pregunta', () => {
+  const sql = leer('supabase/migrations/0055_ranking_quiz.sql');
+  const tope = CONFIG.premios[CONFIG.premios.length - 1];
+  assert.ok(sql.includes(`when '${ID_JUEGO}' then ${tope}`), 'la funcion usa el tope de la app');
+  assert.ok(sql.includes(`game = '${ID_JUEGO}' and best_score between 0 and ${tope}`), 'la tabla usa el tope de la app');
 });
 
 test('el reloj usa una hora limite, no cuenta ticks (una pestana en segundo plano no gana tiempo)', () => {

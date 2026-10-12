@@ -10,8 +10,11 @@ export function traducirErrorMinijuegos(mensaje: string): string {
   if (/LIMIT_REACHED/.test(mensaje)) return 'Has llegado al máximo de cervezas en esta ruta. Borra alguna.';
   if (/INVALID_NAME/.test(mensaje)) return 'El nombre debe tener entre 1 y 30 caracteres.';
   if (/INVALID_LEVEL/.test(mensaje)) return 'Ese nivel de cañas no existe en esta ruta.';
-  // Un juego que el servidor no conoce: la app es mas nueva que la base (la conga llega con la 0039).
-  if (/INVALID_GAME/.test(mensaje)) return 'Este juego aún no tiene ranking en Supabase: falta aplicar la migración 0039.';
+  // Un juego que el servidor no conoce: la app es mas nueva que la base (la conga llega con
+  // la 0039, el quiz con la 0055 y Tapon al Vuelo con la 0056).
+  if (/INVALID_GAME/.test(mensaje)) {
+    return 'Este juego aún no tiene ranking en Supabase: falta aplicar una migración (la 0039, 0055 o 0056, ver docs/SETUP.md).';
+  }
   if (/INVALID_(SCORE|RECIPE)/.test(mensaje)) return 'No se pudo guardar esta partida.';
   // PostgREST cuando la funcion no existe: falta una migracion de los minijuegos.
   // Puede ser la 0034 (todo) o la 0038 (guardar cervezas con la siembra): se

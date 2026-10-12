@@ -1,7 +1,10 @@
 -- Ruta de Bares - 0039: ranking por ruta de La Conga Cervecera.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0038.
--- Idempotente: se puede re-ejecutar sin romper nada (las restricciones se
--- quitan con `if exists` antes de ponerlas y la funcion va con `or replace`).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar (y quita de la tabla el
+-- juego que entro despues). Aqui queda obsoleta:
+--   * minigame_submit_score() la rehace la 0055
 -- Ojo al reves: rehace minigame_submit_score() a partir de la 0034, asi que la
 -- 0034 ya no se puede volver a pegar despues.
 --
