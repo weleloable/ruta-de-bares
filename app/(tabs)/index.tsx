@@ -20,7 +20,7 @@ import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { credencialCompleta } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
-import { desdeFechaISO, diaLargo } from '../../src/lib/fechas';
+import { desdeFechaISO, diaCorto } from '../../src/lib/fechas';
 import { sellables } from '../../src/features/routes/tipoParada';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
@@ -106,15 +106,12 @@ export default function SellosScreen() {
           {activeRoute ? (
             <Card style={styles.credencial}>
               <Text style={typography.overline}>Credencial de</Text>
-              {/* Nombre, medalla (si la hay) y progreso en una sola fila, para ganar
-                  altura. El nombre de la ruta ya sale en los chips de arriba y en el
-                  editor; aqui sobraba. */}
+              {/* Tu nombre y, si la hay, la medalla (pequena, a la derecha). Se deduce de
+                  los sellos: si se borra uno, desaparece. */}
               <View style={styles.credencialFila}>
                 <Text style={[typography.screenTitle, styles.credencialNombre]} numberOfLines={1}>
                   {profile?.display_name || 'Peregrino'}
                 </Text>
-                {/* La medalla va pequena, en el hueco de la fila. Se deduce de los
-                    sellos: si se borra uno, desaparece. */}
                 {credencialCompleta(conseguidos, bares.length) ? (
                   <View style={styles.medallaHueco}>
                     <View style={styles.medallaEscala}>
@@ -122,24 +119,28 @@ export default function SellosScreen() {
                     </View>
                   </View>
                 ) : null}
-                <View style={styles.progresoFila}>
-                  <View style={styles.progresoPista}>
-                    <View
-                      style={[
-                        styles.progresoRelleno,
-                        { width: bares.length === 0 ? '0%' : `${(conseguidos / bares.length) * 100}%` },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.progresoTexto}>
-                    {conseguidos}/{bares.length}
-                  </Text>
-                </View>
               </View>
-              {/* Nombre de la ruta y fecha: la tarjeta ya no comparte pantalla con las
-                  casas, asi que hay sitio para decir de que ruta es. */}
-              <Text style={typography.body}>{activeRoute.name}</Text>
-              {fecha ? <Text style={typography.muted}>{diaLargo(fecha)}</Text> : null}
+              {/* La ruta, con su fecha a la derecha. */}
+              <View style={styles.rutaFila}>
+                <Text style={[typography.body, styles.rutaNombre]} numberOfLines={1}>
+                  {activeRoute.name}
+                </Text>
+                {fecha ? <Text style={[typography.muted, styles.rutaFecha]}>{diaCorto(fecha)}</Text> : null}
+              </View>
+              {/* Y debajo, cuantos sellos llevas. */}
+              <View style={styles.progresoFila}>
+                <View style={styles.progresoPista}>
+                  <View
+                    style={[
+                      styles.progresoRelleno,
+                      { width: bares.length === 0 ? '0%' : `${(conseguidos / bares.length) * 100}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.progresoTexto}>
+                  {conseguidos}/{bares.length}
+                </Text>
+              </View>
             </Card>
           ) : null}
 
@@ -228,12 +229,15 @@ const styles = StyleSheet.create({
   credencial: { gap: space.xs },
   // Textos a la izquierda y, si la ruta esta completa, la medalla a la derecha.
   credencialFila: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  credencialNombre: { flexShrink: 1 },
+  credencialNombre: { flex: 1 },
+  rutaFila: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.md },
+  rutaNombre: { flex: 1 },
+  rutaFecha: { flexShrink: 0 },
   // Medalla a 45%: su caja sigue siendo de 68x86 y se encoge con transform, asi
   // que se reserva el hueco ya reducido y se recoloca desde el centro.
   medallaHueco: { width: 31, height: 39 },
   medallaEscala: { width: 68, height: 86, marginLeft: -18.5, marginTop: -23.5, transform: [{ scale: 0.45 }] },
-  progresoFila: { flex: 1, minWidth: 90, flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  progresoFila: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xs },
   progresoPista: {
     flex: 1,
     height: 10,

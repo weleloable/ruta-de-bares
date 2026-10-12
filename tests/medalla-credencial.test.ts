@@ -29,8 +29,8 @@ describe('pantalla Sellos', () => {
     assert.doesNotMatch(codigo, /<Banner tone="success">/);
   });
 
-  it('la medalla va en la fila del nombre, entre el nombre y la barra de progreso', () => {
-    const fila = /<View style=\{styles\.credencialFila\}>([\s\S]*?)<View style=\{styles\.progresoFila\}>/.exec(codigo);
+  it('la medalla va en la fila del nombre, a su derecha, antes de la ruta y la barra', () => {
+    const fila = /<View style=\{styles\.credencialFila\}>([\s\S]*?)<View style=\{styles\.rutaFila\}>/.exec(codigo);
     assert.ok(fila, 'no encuentro la fila de la credencial');
     const iNombre = fila[1].indexOf('styles.credencialNombre');
     const iMedalla = fila[1].indexOf('<Medalla onPress=');
