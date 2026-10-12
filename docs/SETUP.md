@@ -847,7 +847,7 @@ volver a la app sola.
 
 ---
 
-## 10. Recuperar la contrasena (codigo de 6 digitos) y minimo de 4
+## 10. Recuperar la contrasena (codigo de 6 digitos) y minimo de 6
 
 Login > *He olvidado mi contrasena* (`app/(auth)/olvido.tsx`). La persona pone
 su correo, Supabase le manda un **codigo de 6 digitos** y lo escribe en la app
@@ -855,8 +855,8 @@ junto a la contrasena nueva. Sin enlace: el enlace de recuperacion con PKCE solo
 funciona en el mismo navegador donde se pidio, y falla pidiendolo en la app y
 abriendo el correo en Chrome.
 
-Sin migracion SQL. Hay **dos ajustes en el panel de Supabase**, que no se
-pueden hacer desde el codigo, y hasta hacerlos la funcion NO sirve:
+Sin migracion SQL. Hay **un ajuste en el panel de Supabase**, que no se puede
+hacer desde el codigo, y hasta hacerlo la funcion NO sirve:
 
 1. **Plantilla del correo.** *Authentication > Emails > Templates > Reset
    Password* (en versiones nuevas del panel: *Authentication > Email*).
@@ -871,12 +871,12 @@ pueden hacer desde el codigo, y hasta hacerlos la funcion NO sirve:
 
    Si la plantilla sigue siendo la de por defecto (`{{ .ConfirmationURL }}`),
    el correo llega con un enlace y sin codigo: no hay nada que escribir.
-2. **Minimo de contrasena.** *Authentication > Providers > Email > Minimum
-   password length*: ponlo en **4**. La app ya acepta 4 (`MIN_PASSWORD` en
-   `src/features/auth/password.ts`), pero Supabase impone el suyo y, con el de
-   antes, el alta y el cambio fallan con "contrasena demasiado corta" aunque la
-   pantalla la acepte. Si el panel no te deja bajar de 6, avisa: habria que
-   dejar el minimo de la app en ese numero.
+
+**Minimo de contrasena: 6**, tanto en la app (`MIN_PASSWORD` en
+`src/features/auth/password.ts`) como en Supabase (*Authentication > Providers >
+Email > Minimum password length*, que no deja bajar de 6). Antes eran 8 en la
+app. Son dos sitios: si algun dia se cambia uno, hay que cambiar el otro, o la
+pantalla aceptara contrasenas que el servidor rechaza.
 
 Cosas que conviene saber:
 

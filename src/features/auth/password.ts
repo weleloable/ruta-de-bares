@@ -4,13 +4,13 @@
  */
 
 /**
- * Minimo de caracteres. Bajado de 8 a 4 a peticion de la organizacion: es una
- * app de un evento entre amigos y 8 se olvidaba. OJO: Supabase impone SU minimo
- * por su lado (Authentication > Providers > Email > Minimum password length) y
- * hay que bajarlo tambien alli, o el alta falla con "demasiado corta" aunque la
- * pantalla la acepte (ver docs/SETUP.md, "Recuperar la contrasena").
+ * Minimo de caracteres. Bajado de 8 a 6 a peticion de la organizacion: es una
+ * app de un evento entre amigos y 8 se olvidaba. 6 es ademas el MINIMO del panel
+ * de Supabase (Authentication > Providers > Email > Minimum password length no
+ * deja bajar de ahi): por debajo de 6 la pantalla aceptaria algo que el servidor
+ * rechaza con "demasiado corta". Si se vuelve a cambiar, cambiarlo alli tambien.
  */
-export const MIN_PASSWORD = 4;
+export const MIN_PASSWORD = 6;
 
 export const passwordValida = (p: string) => p.length >= MIN_PASSWORD;
 

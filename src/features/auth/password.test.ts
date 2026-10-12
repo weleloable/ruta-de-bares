@@ -12,12 +12,13 @@ import {
 } from './password.ts';
 
 describe('contrasena', () => {
-  it('el minimo es 4: 3 no vale, 4 si', () => {
-    assert.equal(MIN_PASSWORD, 4);
+  it('el minimo es 6 (el de Supabase): 5 no vale, 6 si', () => {
+    assert.equal(MIN_PASSWORD, 6);
     assert.ok(!passwordValida(''));
-    assert.ok(!passwordValida('abc'));
-    assert.ok(passwordValida('abcd'));
-    assert.ok(passwordValida('1234'));
+    assert.ok(!passwordValida('abcd'));
+    assert.ok(!passwordValida('12345'));
+    assert.ok(passwordValida('123456'));
+    assert.ok(passwordValida('abcdef'));
     assert.ok(passwordValida('una frase larga con espacios'));
   });
 

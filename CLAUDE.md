@@ -280,9 +280,10 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   codigo abre sesion y AuthGate saca de `(auth)` al instante, asi que un
   formulario en dos pasos se desmontaria entre medias y dejaria entrar SIN
   cambiar la contrasena (si el cambio falla se cierra la sesion). **Minimo de
-  contrasena = 4** (`MIN_PASSWORD`), pero Supabase tiene el suyo en
-  Authentication > Providers > Email y hay que bajarlo tambien alli. La plantilla
-  del correo "Reset Password" tiene que llevar `{{ .Token }}`: ver SETUP.md, 10.
+  contrasena = 6** (`MIN_PASSWORD`, antes 8): es tambien el minimo que deja
+  poner el panel de Supabase, asi que no se puede bajar mas sin que el servidor
+  rechace lo que la pantalla acepta. La plantilla del correo "Reset Password"
+  tiene que llevar `{{ .Token }}`: ver SETUP.md, 10.
   Sin probar contra un Supabase real.
 
 - **Puntos de las casas (0044)**: todo punto es una fila de `point_movements` con
