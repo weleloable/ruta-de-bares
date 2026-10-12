@@ -768,6 +768,11 @@ export type Database = {
       sorteo_personas: { Args: { p_route_id: string }; Returns: unknown };
       sorteo_excluir: { Args: { p_route_id: string; p_user_id: string; p_motivo?: string | null }; Returns: undefined };
       sorteo_incluir: { Args: { p_route_id: string; p_user_id: string }; Returns: undefined };
+      /** Avisos en el movil (0064). */
+      push_guardar: { Args: { p_endpoint: string; p_p256dh: string; p_auth: string }; Returns: undefined };
+      push_borrar: { Args: { p_endpoint: string }; Returns: undefined };
+      push_preferencias_leer: { Args: Record<string, never>; Returns: unknown };
+      push_preferencias_guardar: { Args: { p_paradas: boolean; p_sorteo: boolean; p_cana: boolean }; Returns: undefined };
       /** Ya vi esta version de la politica (0063). */
       politica_marcar_vista: { Args: { p_version: string }; Returns: undefined };
       /** Auditoria de una ruta: anulados, ajustes y cambios de casa (0059). */

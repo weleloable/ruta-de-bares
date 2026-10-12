@@ -111,7 +111,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'nadie. Eso se conserva para el ranking histórico aunque la ruta y tus datos de ella se borren.',
               'No se vende ni se cede a terceros. Los únicos que tocan los datos por encargo nuestro son Supabase ' +
                 '(base de datos, almacenamiento y el sistema de acceso, también lo que nos da Google) y GitHub ' +
-                'Pages (la web).',
+                'Pages (la web). Si activas los avisos en el móvil, también el servicio de notificaciones de tu ' +
+                'navegador, que solo los entrega.',
             ],
           },
           {
@@ -145,6 +146,20 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
               'Del ranking se guarda solo tu mejor nota, no cada partida. En ¿Quién quiere ser cervecero? se ' +
                 'guarda también el tiempo que tardaste en contestar, porque desempata, y sale junto a tu nota. ' +
                 'Puedes borrar tus cervezas cuando quieras, y se borran con tu cuenta y con la ruta.',
+            ],
+          },
+          {
+            subtitulo: 'Además, si activas los avisos en el móvil',
+            puntos: [
+              'Solo te llegan si los activas tú. Te avisamos 10 minutos antes de cada parada, si te falta un ' +
+                'bar para entrar en el sorteo, de quién lo gana y de las conexiones y mensajes de La Caña. Cada ' +
+                'tipo se puede quitar en Mi perfil.',
+              'Para poder avisarte guardamos la dirección que nos da tu navegador para ese dispositivo (no es tu ' +
+                'número ni tu correo) y qué tipos de aviso quieres. Si quitas los avisos, se borra.',
+              'El aviso lo entrega el servicio de notificaciones de tu navegador (Google, Apple o Mozilla, según ' +
+                'el móvil) y va cifrado: ese servicio no puede leer lo que dice.',
+              'Los avisos de La Caña dicen quién te escribe, nunca lo que te ha escrito.',
+              'Guardamos cada aviso enviado una semana, para no repetirlo, y luego se borra solo.',
             ],
           },
         ],
@@ -282,7 +297,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
           'tus sellos con la hora y el sitio, las fotos que enviaste a revisión, lo que se ha decidido sobre tu ' +
           'cuenta y por qué, tu casa y tus puntos con su origen, tus consumiciones, tus encuentros por QR, si se ' +
           'te cambió de casa, los sorteos en los que has salido o de los que se te sacó, la versión de esta ' +
-          'política que viste, lo de los minijuegos (tu mejor nota, el tiempo ' +
+          'política que viste, tus avisos en el móvil (qué quieres recibir, en qué dispositivos y los de la ' +
+          'última semana), lo de los minijuegos (tu mejor nota, el tiempo ' +
           'del quiz y tus cervezas) y lo de La Caña (perfil, Me gusta y Vistos, conexiones y los mensajes que ' +
           'escribiste tú).',
         'No salen los mensajes de la otra persona, que son suyos, ni el texto de una denuncia sobre ti que siga ' +

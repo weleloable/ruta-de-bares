@@ -8,9 +8,13 @@
  * "sin conexion" para cuando abrir la app sin cobertura no deje una pantalla
  * de error del navegador, y el icono que esa pagina ensena.
  *
+ * Ademas ensena los avisos en el movil (0064): los manda la Edge Function
+ * `enviar-avisos` con {titulo, cuerpo, url, tag}, y al tocarlos se abre la app
+ * en esa pantalla.
+ *
  * Si se cambia este fichero, se sube VERSION: asi se borra la cache anterior.
  */
-const VERSION = 'rb-sw-2';
+const VERSION = 'rb-sw-3';
 const OFFLINE = 'offline.html';
 // URL absoluta y no relativa: la pagina sin conexion se sirve en CUALQUIER ruta
 // (/editor/123 tambien), y un src relativo apuntaria a otro sitio. Sale de
@@ -89,5 +93,42 @@ self.addEventListener('fetch', (evento) => {
             guardada ?? new Response(PAGINA_OFFLINE, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }),
         ),
     ),
+  );
+});
+
+// Un aviso que llega (0064). Si el contenido no se entiende, sale igual con el
+// nombre de la app: el navegador exige ensenar algo por cada push recibido.
+self.addEventListener('push', (evento) => {
+  let datos = {};
+  try {
+    datos = evento.data ? evento.data.json() : {};
+  } catch (_) {
+    datos = { cuerpo: evento.data ? evento.data.text() : '' };
+  }
+  evento.waitUntil(
+    self.registration.showNotification(datos.titulo || 'Ruta de Bares', {
+      body: datos.cuerpo || '',
+      icon: ICONO,
+      tag: datos.tag,
+      renotify: Boolean(datos.tag),
+      data: { url: datos.url || '/' },
+    }),
+  );
+});
+
+// Al tocarlo: si la app ya esta abierta, se trae delante y va a esa pantalla;
+// si no, se abre. La url ('/cana') es relativa a donde vive la app.
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  const ruta = String((evento.notification.data && evento.notification.data.url) || '/').replace(/^\//, '');
+  const destino = new URL(ruta, self.registration.scope).href;
+  evento.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
+      const abierta = ventanas.find((v) => v.url.startsWith(self.registration.scope));
+      if (abierta) {
+        return abierta.focus().then((v) => (v && 'navigate' in v ? v.navigate(destino) : v));
+      }
+      return self.clients.openWindow(destino);
+    }),
   );
 });

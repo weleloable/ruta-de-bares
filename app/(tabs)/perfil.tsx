@@ -31,6 +31,7 @@ import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 import type { MyRestrictionsRow } from '../../src/types/database';
 import { QrSocial } from '../../src/features/casas/QrSocial';
 import { TarjetaCasa } from '../../src/features/casas/TarjetaCasa';
+import { AjustesAvisos } from '../../src/features/push/AjustesAvisos';
 
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
@@ -323,6 +324,9 @@ export default function PerfilScreen() {
             loading={guardando}
           />
         </Card>
+
+        {/* Notificaciones push (0064). No sale donde el navegador no puede. */}
+        <AjustesAvisos estiloTitulo={styles.tituloTarjeta} />
 
         {/*
           Antes que las rutas: una decision sobre tu cuenta es lo primero que

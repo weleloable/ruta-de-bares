@@ -370,6 +370,26 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    sorteo a quien lo pida ("Quién participa" en el sorteo de la ruta). Rehace
    funciones de la 0061 y la 0062, que ya **no se vuelven a pegar**. Se puede
    pegar dos veces.
+62. **Avisos en el movil (0064).** Por orden:
+   1. **Database > Extensions**: activar `pg_cron` y `pg_net`.
+   2. **Edge Functions > Deploy a new function > Via Editor**: nombre
+      `enviar-avisos`, pegar entero
+      [`supabase/functions/enviar-avisos/index.ts`](../supabase/functions/enviar-avisos/index.ts)
+      y **Deploy**. Despues, en los ajustes de la funcion, **desactivar
+      "Verify JWT"** (la llama la base de datos con su propio secreto).
+   3. **Edge Functions > Secrets**: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+      `VAPID_SUBJECT` (`mailto:` y el correo de la organizacion) y
+      `AVISOS_SECRETO`. La publica tiene que ser la de
+      `CLAVE_PUBLICA_PUSH` en `src/features/push/estado.ts`.
+   4. [`supabase/migrations/0064_avisos_en_el_movil.sql`](../supabase/migrations/0064_avisos_en_el_movil.sql)
+      y **Run**, despues de la 0063. Rehace `export_my_data()`, asi que la
+      0063 ya **no se vuelve a pegar**. Se puede pegar dos veces.
+   5. En el SQL Editor, los dos secretos con los que la base de datos llama a
+      la funcion (la URL de **Settings > API**):
+      ```sql
+      select vault.create_secret('https://TU_REF.supabase.co/functions/v1/enviar-avisos', 'avisos_url');
+      select vault.create_secret('EL_MISMO_AVISOS_SECRETO', 'avisos_secreto');
+      ```
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

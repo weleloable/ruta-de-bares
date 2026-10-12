@@ -6,6 +6,7 @@ import { BotonSellos } from '../../src/components/BotonSellos';
 import { DescubrimientoCasa } from '../../src/features/casas/DescubrimientoCasa';
 import { AvisoPolitica } from '../../src/features/legal/AvisoPolitica';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
+import { InvitacionAvisos } from '../../src/features/push/InvitacionAvisos';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors } from '../../src/lib/theme';
 
@@ -19,6 +20,8 @@ export default function TabsLayout() {
     <DescubrimientoCasa />
     {/* Si cambia la politica, un aviso una vez (espera a que se cierre el de la casa). */}
     <AvisoPolitica />
+    {/* "¿Te avisamos?": una vez, ya en una ruta y sin los otros dos delante. */}
+    <InvitacionAvisos />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.stamp,
