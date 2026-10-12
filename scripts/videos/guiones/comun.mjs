@@ -8,9 +8,20 @@ export async function abrir(d, ctx, camino, texto) {
   if (texto) await d.buscar(texto, 30000);
 }
 
-/** Entra SIN grabar (antes de empezar o detras de una tarjeta). */
+/**
+ * Clave con la que la app recuerda que ya pregunto por los avisos en el movil
+ * (src/features/push/InvitacionAvisos.tsx, YA_PREGUNTADO). La vigila un test.
+ */
+export const CLAVE_AVISOS_PREGUNTADO = 'rb-avisos-preguntado';
+
+/**
+ * Entra SIN grabar (antes de empezar o detras de una tarjeta). Como alguien
+ * que ya usaba la app: la invitacion "¿Te avisamos?" ya la contesto, o sale
+ * en mitad del video.
+ */
 export async function entrarDeprisa(d, ctx, nombre) {
   await abrir(d, ctx, '/login', 'Entrar');
+  await d.app.evaluate((clave) => localStorage.setItem(clave, '1'), CLAVE_AVISOS_PREGUNTADO);
   await d.app.getByPlaceholder('tu@correo.com').fill(correo(nombre));
   await d.app.getByPlaceholder('********').fill(CLAVE_DEMO);
   await d.clic('Entrar');
@@ -53,14 +64,35 @@ export async function terminar(d, tarjeta, ms = 3800) {
 }
 
 /**
- * La presentacion "Tu casa es…" (0057) sale una vez al entrar en la primera
- * ruta, por encima de todo. Los videos que no hablan de casas la quitan antes
- * de grabar; el de Casas la ensena.
+ * Lo que la app ensena SOLO al entrar, por encima de todo, y que no es de lo
+ * que va el video: el aviso de politica nueva (0063), la invitacion a los
+ * avisos en el movil (0064) y la presentacion "Tu casa es…" (0057). Salen en
+ * cualquier orden y unas tras otras, asi que se van quitando hasta que pasan
+ * unos segundos sin que salga ninguna. El video de Casas deja la de la casa.
  */
-export async function quitarCasaNueva(d) {
-  const vamos = d.app.getByText('¡Vamos!', { exact: true });
-  if (await d.buscar(vamos, 6000).then(() => true, () => false)) {
-    await d.clic(vamos);
-    await d.esperar(800);
+export async function limpiarEntrada(d, { dejarCasa = false } = {}) {
+  const botones = [
+    ['Entendido', 'Hemos actualizado la política de privacidad'],
+    ['Ahora no', '¿Te avisamos?'],
+    ...(dejarCasa ? [] : [['¡Vamos!', 'Tu casa es…']]),
+  ];
+  for (let vuelta = 0; vuelta < 8; vuelta++) {
+    let quitado = false;
+    for (const [boton, titulo] of botones) {
+      if (await d.seVe(titulo)) {
+        await d.clic(d.app.getByText(boton, { exact: true }));
+        await d.esperar(900);
+        quitado = true;
+      }
+    }
+    if (!quitado) {
+      await d.esperar(1500);
+      if (!(await Promise.all(botones.map(([, t]) => d.seVe(t)))).some(Boolean)) return;
+    }
   }
+}
+
+/** Antes de grabar, sin dejar nada de la entrada (ni la casa). */
+export async function quitarCasaNueva(d) {
+  await limpiarEntrada(d);
 }

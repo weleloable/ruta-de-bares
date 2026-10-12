@@ -84,6 +84,19 @@ test('la web exportada se reconoce como local o como de produccion', async () =>
   assert.deepEqual(supabasesDeLaWeb('d="http://localhost:9999"'), [], 'el localhost por defecto de una libreria no cuenta');
 });
 
+test('la semilla lee la version de la politica de la app (si no, el aviso sale en los videos)', async () => {
+  const { versionPolitica } = await import('./semilla.mjs');
+  assert.match(versionPolitica(), /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(versionPolitica("export const VERSION_POLITICA = '2030-01-02';"), '2030-01-02');
+  assert.throws(() => versionPolitica('nada'), /VERSION_POLITICA/);
+});
+
+test('la clave de "ya pregunte por los avisos" es la que usa la app', async () => {
+  const { CLAVE_AVISOS_PREGUNTADO } = await import('./guiones/comun.mjs');
+  const codigo = readFileSync(join(RAIZ, 'src', 'features', 'push', 'InvitacionAvisos.tsx'), 'utf8');
+  assert.match(codigo, new RegExp(`YA_PREGUNTADO = '${CLAVE_AVISOS_PREGUNTADO}'`));
+});
+
 test('el reparto cumple las reglas del nombre visible (0003)', () => {
   const nombres = [ADMIN.nombre, NUEVA.nombre, ...GENTE.map((g) => g.nombre)];
   assert.equal(new Set(nombres.map((n) => n.toLowerCase())).size, nombres.length, 'sin repetir, sin distinguir mayusculas');

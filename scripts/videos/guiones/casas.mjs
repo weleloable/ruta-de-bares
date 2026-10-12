@@ -1,5 +1,5 @@
 import { PROTA } from '../reparto.mjs';
-import { cierre, empezar, entrarDeprisa, pestana, portada, terminar } from './comun.mjs';
+import { cierre, empezar, entrarDeprisa, limpiarEntrada, pestana, portada, terminar } from './comun.mjs';
 
 /**
  * Casas: cual te toca, la clasificacion en directo y TODAS las formas de
@@ -15,6 +15,7 @@ export default {
     // Se graba con la presentacion "Tu casa es…" en pantalla: es el arranque del video.
     await entrarDeprisa(d, ctx, PROTA);
     await d.buscar('¡Vamos!', 20000);
+    await limpiarEntrada(d, { dejarCasa: true });
     await d.esperar(1500);
   },
   async grabar(d, ctx) {

@@ -24,7 +24,7 @@ export default {
   async grabar(d, ctx) {
     await empezar(d, {
       seccion: 'Mi perfil',
-      pasos: 7,
+      pasos: 8,
       ms: 3200,
       tarjeta: portada('Mi perfil', 'Tu foto, tu casa y tu cuenta', 'Todo lo tuyo, en un solo sitio.', [
         'Foto y nombre',
@@ -64,6 +64,10 @@ export default {
     await d.pagina.keyboard.press('End');
     await d.pagina.keyboard.type('Cañera', { delay: 100 });
     await d.tocar('Guardar nombre', { despues: 1400 });
+
+    // Avisos en el movil (0064).
+    await d.paso('<b>Avisos en el móvil</b>: actívalos y te avisa antes de cada parada, del sorteo y de La Caña.', { pausa: 600 });
+    await d.foco(d.app.getByText('Avisos en el móvil', { exact: true }).locator('xpath=..'), 3000);
 
     // Cuenta.
     await d.paso('En <b>Tu cuenta</b>: tus avisos, la privacidad y tus datos, y escribir a la organización.', { pausa: 600 });

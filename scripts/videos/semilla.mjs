@@ -11,6 +11,8 @@
  *
  * Se niega a correr contra algo que no sea 127.0.0.1 / localhost.
  */
+import { readFileSync } from 'node:fs';
+
 import { createClient } from '@supabase/supabase-js';
 
 import { svgAvatar } from './avatares.mjs';
@@ -40,6 +42,13 @@ export function comprobarLocal(url) {
 function ok({ data, error }, que) {
   if (error) throw new Error(`${que}: ${error.message}`);
   return data;
+}
+
+/** La version de la politica que la app da por vigente (src/features/legal/responsable.ts). */
+export function versionPolitica(codigo = readFileSync(new URL('../../src/features/legal/responsable.ts', import.meta.url), 'utf8')) {
+  const m = /VERSION_POLITICA\s*=\s*'([^']+)'/.exec(codigo);
+  if (!m) throw new Error('No encuentro VERSION_POLITICA en src/features/legal/responsable.ts');
+  return m[1];
 }
 
 /**
@@ -219,6 +228,11 @@ export async function sembrar(cfg) {
   // formas, para que el video de Casas lo pueda ensenar. Los sellos ya puntuan
   // solos (disparador); lo demas, por las mismas funciones que la app.
   await sembrarCasas({ servicio, admin, clientes, ruta, sellos, ids });
+
+  // La politica vigente, vista por todo el reparto (0063): son gente que ya
+  // usaba la app, y si no el aviso de "politica nueva" sale en mitad de un video.
+  const version = versionPolitica();
+  for (const g of GENTE) ok(await clientes[g.nombre].rpc('politica_marcar_vista', { p_version: version }), `politica de ${g.nombre}`);
 
   // 8. La invitacion que abre Pablo en el video de Crear cuenta.
   const invitacion = ok(

@@ -59,7 +59,8 @@ try {
       locale: 'es-ES',
       timezoneId: 'Europe/Madrid',
       geolocation: guion.posicionInicial?.(datos) ?? { latitude: 40.4818, longitude: -3.3644 },
-      permissions: ['geolocation', 'accelerometer', 'gyroscope'],
+      // notifications: sin el, Chrome headless da los avisos por bloqueados (0064).
+      permissions: ['geolocation', 'accelerometer', 'gyroscope', 'notifications'],
     });
     const pagina = await contexto.newPage();
     pagina.on('pageerror', (e) => console.warn(`  [app] ${e.message}`));
