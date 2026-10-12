@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../../components/ui';
 import { colors, radius, space } from '../../lib/theme';
 import { useSondeo } from '../../lib/useSondeo';
 import { leerEstadoSorteo } from './api';
+import { IconoSorteo } from './IconoSorteo';
 import { textoBanner, type EstadoSorteo } from './sorteo';
 
 /**
@@ -47,7 +48,7 @@ export function AvisoSorteo({ estado }: { estado: EstadoSorteo }) {
         onPress={() => setAbierto(true)}
         style={({ pressed }) => [styles.linea, ganaste && styles.lineaGanaste, pressed && styles.pulsada]}
       >
-        <Text style={styles.lineaIcono}>{t.icono}</Text>
+        <IconoSorteo tamano={22} ganaste={ganaste} />
         <Text style={[styles.lineaTexto, ganaste && styles.textoBlanco]} numberOfLines={1}>
           {ganaste ? '¡Has ganado el sorteo!' : 'Información del sorteo'}
         </Text>
@@ -57,7 +58,9 @@ export function AvisoSorteo({ estado }: { estado: EstadoSorteo }) {
       <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>
         <Pressable style={styles.fondo} onPress={() => setAbierto(false)} accessibilityLabel="Cerrar">
           <Pressable style={styles.hoja} onPress={() => undefined}>
-            <Text style={styles.icono}>{t.icono}</Text>
+            <View style={styles.icono}>
+              <IconoSorteo tamano={64} ganaste={ganaste} />
+            </View>
             <Text style={styles.titulo}>{t.titulo}</Text>
             <Text style={styles.cuerpo}>{t.cuerpo}</Text>
             <Button title="Entendido" onPress={() => setAbierto(false)} />
@@ -82,7 +85,6 @@ const styles = StyleSheet.create({
   },
   lineaGanaste: { backgroundColor: colors.stamp, borderColor: colors.stamp },
   pulsada: { opacity: 0.75 },
-  lineaIcono: { fontSize: 16 },
   lineaTexto: { flex: 1, fontSize: 14, fontWeight: '800', color: colors.ink },
   textoBlanco: { color: colors.white },
   fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: space.lg },
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
     alignItems: 'stretch',
   },
-  icono: { fontSize: 40, textAlign: 'center' },
+  icono: { alignItems: 'center' },
   titulo: { fontSize: 20, fontWeight: '900', color: colors.ink, textAlign: 'center' },
   cuerpo: { fontSize: 15, lineHeight: 21, color: colors.inkSoft, textAlign: 'center' },
 });

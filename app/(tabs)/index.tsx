@@ -106,10 +106,11 @@ export default function SellosScreen() {
 
           {activeRoute ? (
             <Card style={styles.credencial}>
-              <Text style={typography.overline}>Credencial de</Text>
-              {/* Tu nombre y, si la hay, la medalla (pequena, a la derecha). Se deduce de
-                  los sellos: si se borra uno, desaparece. */}
+              {/* "Credencial de", tu nombre a su derecha (en la misma linea, para ahorrar
+                  scroll) y, si la hay, la medalla (pequena, al final). La medalla se deduce
+                  de los sellos: si se borra uno, desaparece. */}
               <View style={styles.credencialFila}>
+                <Text style={[typography.overline, styles.credencialDe]}>Credencial de</Text>
                 <Text style={[typography.screenTitle, styles.credencialNombre]} numberOfLines={1}>
                   {profile?.display_name || 'Peregrino'}
                 </Text>
@@ -231,8 +232,10 @@ const styles = StyleSheet.create({
   chipTexto: { color: colors.inkSoft, fontWeight: '600', fontSize: 13 },
   chipTextoActivo: { color: colors.white },
   credencial: { gap: space.xs },
-  // Textos a la izquierda y, si la ruta esta completa, la medalla a la derecha.
-  credencialFila: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  // "Credencial de" + nombre en una linea y, si la ruta esta completa, la medalla a la derecha.
+  credencialFila: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  // Pequeno y sin encogerse: lo que se recorta si no cabe es el nombre (con "...").
+  credencialDe: { flexShrink: 0 },
   credencialNombre: { flex: 1 },
   rutaFila: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.md },
   rutaNombre: { flex: 1 },

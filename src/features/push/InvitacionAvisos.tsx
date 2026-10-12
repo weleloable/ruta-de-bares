@@ -65,7 +65,7 @@ export function InvitacionAvisos() {
           <Text style={styles.cuerpo}>Solo de lo importante, aunque tengas la app cerrada:</Text>
           <View style={styles.lista}>
             <Text style={styles.punto}>🍺  10 minutos antes de cada parada</Text>
-            <Text style={styles.punto}>🎽  Si te falta un bar para el sorteo, y quién lo gana</Text>
+            <Text style={styles.punto}>🎁  Si te falta un bar para el sorteo, y quién lo gana</Text>
             <Text style={styles.punto}>🍻  Conexiones y mensajes de La Caña</Text>
           </View>
           <Text style={styles.nota}>Puedes cambiarlo cuando quieras en Mi perfil.</Text>
