@@ -335,6 +335,13 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    bares, actividad por horas, consumiciones, minijuegos, retos y QR, y el
    boton de descargar el resumen de la ruta en CSV (`admin_estadisticas_actividad`).
    Solo totales de la ruta. Se puede pegar dos veces.
+57. [`supabase/migrations/0059_estadisticas_auditoria_global.sql`](../supabase/migrations/0059_estadisticas_auditoria_global.sql)
+   y **Run**, despues de la 0058 y **ANTES de desplegar la app**. Completa
+   Estadisticas con la auditoria de una ruta (puntos anulados y sus motivos,
+   ajustes a mano, cambios de casa: `admin_estadisticas_auditoria`) y con la
+   vista de todas las rutas o de una temporada (`admin_estadisticas_global`).
+   El reparto de personas y puntos por casa usa la funcion de la 0048. Se puede
+   pegar dos veces.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

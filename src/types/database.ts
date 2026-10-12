@@ -745,6 +745,10 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** Auditoria de una ruta: anulados, ajustes y cambios de casa (0059). */
+      admin_estadisticas_auditoria: { Args: { p_route_id: string }; Returns: unknown };
+      /** Totales de todas las rutas o de una temporada (0059). */
+      admin_estadisticas_global: { Args: { p_temporada_id?: string | null }; Returns: unknown };
       /** Lo que se usa en una ruta: participacion, bares, horas, consumiciones, juegos, retos, QR (0058). */
       admin_estadisticas_actividad: {
         Args: { p_route_id: string };

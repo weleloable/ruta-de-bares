@@ -6,6 +6,7 @@ import { borrarFotosSobrantes } from '../profile/fotosSobrantes';
 import { listRoutes } from '../routes/api';
 import { terminoEl } from '../routes/estado';
 import type { ActividadRuta } from './actividad';
+import type { AuditoriaRuta, CasaDatos, GlobalRutas } from './actividadExtra';
 import type { EstadisticasRuta } from './estadisticas';
 import { avisosDeRutasTerminadas, rutasSinVer, type AvisoRutaTerminada } from './rutasTerminadas';
 import type {
@@ -395,6 +396,27 @@ export async function leerActividadRuta(routeId: string): Promise<ActividadRuta>
   const { data, error } = await supabase.rpc('admin_estadisticas_actividad', { p_route_id: routeId });
   if (error) fallo(error);
   return data as ActividadRuta;
+}
+
+/** Lo que se ha tocado a mano en una ruta (0059): anulados, ajustes y cambios de casa. */
+export async function leerAuditoriaRuta(routeId: string): Promise<AuditoriaRuta> {
+  const { data, error } = await supabase.rpc('admin_estadisticas_auditoria', { p_route_id: routeId });
+  if (error) fallo(error);
+  return data as AuditoriaRuta;
+}
+
+/** Totales de todas las rutas, o de una temporada (0059). */
+export async function leerGlobalRutas(temporadaId: string | null): Promise<GlobalRutas> {
+  const { data, error } = await supabase.rpc('admin_estadisticas_global', { p_temporada_id: temporadaId });
+  if (error) fallo(error);
+  return data as GlobalRutas;
+}
+
+/** Personas y puntos de cada casa en una ruta (la funcion del panel de Casas, 0048). */
+export async function leerCasasRuta(routeId: string): Promise<CasaDatos[]> {
+  const { data, error } = await supabase.rpc('casas_admin_estadisticas', { p_route_id: routeId });
+  if (error) fallo(error);
+  return (data ?? []).map((f) => ({ house: f.house, miembros: f.miembros, puntos: f.puntos }));
 }
 
 /** Las fotos guardadas como prueba de una denuncia (0032), para su ficha. */

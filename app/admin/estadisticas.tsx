@@ -6,12 +6,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, EmptyState, Loading } from '../../src/components/ui';
 import { nombreFicheroCsv, resumenCsv, type ActividadRuta } from '../../src/features/admin/actividad';
 import { SeccionesActividad, type SeccionActividad } from '../../src/features/admin/ActividadRuta';
-import { leerActividadRuta, leerEstadisticasRuta } from '../../src/features/admin/api';
+import { lineasCsvExtra, type AuditoriaRuta, type CasaDatos, type GlobalRutas } from '../../src/features/admin/actividadExtra';
+import { leerActividadRuta, leerAuditoriaRuta, leerCasasRuta, leerEstadisticasRuta, leerGlobalRutas } from '../../src/features/admin/api';
+import { VistaGlobal } from '../../src/features/admin/VistaGlobal';
 import { descargarCsv } from '../../src/features/admin/descargarCsv';
 import { seccionesEstadisticas, type Baldosa, type EstadisticasRuta } from '../../src/features/admin/estadisticas';
 import { Chips } from '../../src/features/casas/panel/piezas';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { listRoutes } from '../../src/features/routes/api';
+import { supabase } from '../../src/lib/supabase';
 import { estadoDeRuta, etiquetaEstado } from '../../src/features/routes/estado';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 import type { RouteRow } from '../../src/types/database';
@@ -23,7 +26,19 @@ const VISTAS: { id: Vista; texto: string }[] = [
   { id: 'bares', texto: 'Bares' },
   { id: 'actividad', texto: 'Actividad' },
   { id: 'juegos', texto: 'Juegos y retos' },
+  { id: 'casas', texto: 'Casas' },
+  { id: 'auditoria', texto: 'Auditoría' },
 ];
+const TODAS = '__todas';
+const SIN_ACTIVIDAD: ActividadRuta = {
+  participacion: { personas: 0, sellaron: 0, consumieron: 0, qr: 0, jugaron: 0, cana: 0, retos: 0, activos_30min: 0 },
+  bares: [],
+  horas: [],
+  consumiciones: { total: 0, puntuan: 0, personas: 0, por_categoria: {} },
+  juegos: [],
+  retos: [],
+  qr: { encuentros: 0, puntuan: 0 },
+};
 
 /**
  * Estadisticas de una ruta, solo admins (0037). Cifras de AHORA MISMO y solo
@@ -41,6 +56,13 @@ export default function EstadisticasAdmin() {
   const [actividad, setActividad] = useState<ActividadRuta | null>(null);
   const [errorActividad, setErrorActividad] = useState<string | null>(null);
   const [vista, setVista] = useState<Vista>('general');
+  const [casas, setCasas] = useState<CasaDatos[] | null>(null);
+  const [auditoria, setAuditoria] = useState<AuditoriaRuta | null>(null);
+  const [errorAuditoria, setErrorAuditoria] = useState<string | null>(null);
+  const [global, setGlobal] = useState<GlobalRutas | null>(null);
+  const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
+  const [temporadas, setTemporadas] = useState<{ id: string; nombre: string }[]>([]);
+  const [temporada, setTemporada] = useState<string | null>(null);
   const [descargando, setDescargando] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +90,20 @@ export default function EstadisticasAdmin() {
       setCargando(false);
       return;
     }
+    if (routeId === TODAS) {
+      setCargando(true);
+      try {
+        setGlobal(await leerGlobalRutas(temporada));
+        setErrorGlobal(null);
+      } catch (e) {
+        setGlobal(null);
+        const m = e instanceof Error ? e.message : '';
+        setErrorGlobal(/PGRST202|Could not find/i.test(m) ? 'Falta aplicar la migración 0059 en Supabase.' : m || 'No se pudo leer el total de rutas.');
+      } finally {
+        setCargando(false);
+      }
+      return;
+    }
     setCargando(true);
     try {
       setDatos(await leerEstadisticasRuta(routeId));
@@ -84,9 +120,31 @@ export default function EstadisticasAdmin() {
       setActividad(null);
       const m = e instanceof Error ? e.message : '';
       setErrorActividad(/PGRST202|Could not find/i.test(m) ? 'Falta aplicar la migración 0058 en Supabase.' : m || 'No se pudo leer la actividad.');
+    }
+    // Casas y auditoria, cada una por su lado: que una falle no tumba lo demas.
+    try {
+      setCasas(await leerCasasRuta(routeId));
+    } catch {
+      setCasas(null);
+    }
+    try {
+      setAuditoria(await leerAuditoriaRuta(routeId));
+      setErrorAuditoria(null);
+    } catch (e) {
+      setAuditoria(null);
+      const m = e instanceof Error ? e.message : '';
+      setErrorAuditoria(/PGRST202|Could not find/i.test(m) ? 'Falta aplicar la migración 0059 en Supabase.' : m || 'No se pudo leer la auditoría.');
     } finally {
       setCargando(false);
     }
+  }, [temporada]);
+
+  useEffect(() => {
+    void supabase
+      .from('temporadas')
+      .select('id, nombre')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setTemporadas(data ?? []));
   }, []);
 
   // Al volver a la pantalla, cifras nuevas: son de ahora mismo.
@@ -101,8 +159,9 @@ export default function EstadisticasAdmin() {
   }, [elegida, cargarDatos]);
 
   const ruta = rutas.find((r) => r.id === elegida) ?? null;
+  const verGlobal = elegida === TODAS;
 
-  if (cargando && !datos && !error) return <Loading label="Contando..." />;
+  if (cargando && !datos && !global && !error) return <Loading label="Contando..." />;
 
   if (rutas.length === 0 && !error) {
     return (
@@ -119,7 +178,8 @@ export default function EstadisticasAdmin() {
     setDescargando(true);
     try {
       const ahora = new Date();
-      await descargarCsv(nombreFicheroCsv(ruta.name, ahora), resumenCsv(ruta.name, datos, actividad, ahora));
+      const csv = [resumenCsv(ruta.name, datos, actividad, ahora), ...lineasCsvExtra(casas, auditoria)].join('\r\n');
+      await descargarCsv(nombreFicheroCsv(ruta.name, ahora), csv);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo descargar el resumen.');
     } finally {
@@ -134,6 +194,14 @@ export default function EstadisticasAdmin() {
         refreshControl={<RefreshControl refreshing={cargando} onRefresh={() => void cargarDatos(elegida)} tintColor={colors.beer} />}
       >
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: verGlobal }}
+            onPress={() => setElegida(TODAS)}
+            style={[styles.chip, verGlobal && styles.chipElegido]}
+          >
+            <Text style={[styles.chipTexto, verGlobal && styles.chipTextoElegido]}>Todas las rutas</Text>
+          </Pressable>
           {rutas.map((r) => {
             const on = r.id === elegida;
             return (
@@ -150,18 +218,37 @@ export default function EstadisticasAdmin() {
           })}
         </ScrollView>
 
-        {ruta ? (
+        {verGlobal ? (
+          <>
+            {errorGlobal ? <Banner tone="error">{errorGlobal}</Banner> : null}
+            <VistaGlobal
+              g={global}
+              temporadas={temporadas}
+              temporada={temporada}
+              onTemporada={(id) => {
+                setTemporada(id);
+              }}
+            />
+          </>
+        ) : null}
+
+        {!verGlobal && ruta ? (
           <Text style={styles.nota}>{etiquetaEstado(estadoDeRuta(ruta, new Date()))} · datos de ahora mismo</Text>
         ) : null}
 
-        <Chips<Vista> opciones={VISTAS} elegida={vista} onElegir={setVista} />
+        {!verGlobal ? <Chips<Vista> opciones={VISTAS} elegida={vista} onElegir={setVista} /> : null}
 
         {error ? <Banner tone="error">{error}</Banner> : null}
-        {vista !== 'general' && errorActividad ? <Banner tone="error">{errorActividad}</Banner> : null}
+        {!verGlobal && vista === 'auditoria' && errorAuditoria ? <Banner tone="error">{errorAuditoria}</Banner> : null}
+        {!verGlobal && vista !== 'general' && vista !== 'casas' && vista !== 'auditoria' && errorActividad ? (
+          <Banner tone="error">{errorActividad}</Banner>
+        ) : null}
 
-        {vista !== 'general' && actividad ? <SeccionesActividad a={actividad} seccion={vista} /> : null}
+        {!verGlobal && vista !== 'general' && (actividad || vista === 'casas' || vista === 'auditoria') ? (
+          <SeccionesActividad a={actividad ?? SIN_ACTIVIDAD} seccion={vista} casas={casas} auditoria={auditoria} />
+        ) : null}
 
-        {vista === 'general' && datos
+        {!verGlobal && vista === 'general' && datos
           ? secciones.map((seccion, i) => (
               <View key={seccion.titulo} style={styles.seccion}>
                 <Text style={typography.overline}>{seccion.titulo}</Text>
@@ -176,7 +263,7 @@ export default function EstadisticasAdmin() {
             ))
           : null}
 
-        {datos && actividad && ruta ? (
+        {!verGlobal && datos && actividad && ruta ? (
           <Button
             title="Descargar resumen de la ruta (CSV)"
             variant="secondary"
@@ -186,7 +273,7 @@ export default function EstadisticasAdmin() {
           />
         ) : null}
 
-        {datos ? (
+        {!verGlobal && datos ? (
           <Text style={styles.nota}>
             Solo totales de la ruta: nada de aquí dice quién hizo qué. Al borrar la ruta, sus cifras se van con ella.
           </Text>

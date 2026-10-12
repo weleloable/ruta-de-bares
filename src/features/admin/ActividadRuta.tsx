@@ -1,6 +1,8 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, radius, space, typography } from '../../lib/theme';
+import { CASAS, esCasa } from '../casas/casas';
+import { Escudo } from '../casas/Escudo';
 import {
   filasBares,
   filasHoras,
@@ -10,18 +12,103 @@ import {
   resumenConsumo,
   type ActividadRuta,
 } from './actividad';
+import { repartoCasas, resumenAuditoria, type AuditoriaRuta, type CasaDatos } from './actividadExtra';
 
-export type SeccionActividad = 'participacion' | 'bares' | 'actividad' | 'juegos';
+export type SeccionActividad = 'participacion' | 'bares' | 'actividad' | 'juegos' | 'casas' | 'auditoria';
 
 /**
  * Las secciones nuevas de Estadisticas (0058). Todo son totales de la ruta,
  * nunca nada por persona. Las barras son Views: sin librerias de graficos.
  */
-export function SeccionesActividad({ a, seccion }: { a: ActividadRuta; seccion: SeccionActividad }) {
+export function SeccionesActividad({
+  a,
+  seccion,
+  casas = null,
+  auditoria = null,
+}: {
+  a: ActividadRuta;
+  seccion: SeccionActividad;
+  casas?: CasaDatos[] | null;
+  auditoria?: AuditoriaRuta | null;
+}) {
+  if (seccion === 'casas') return <Casas casas={casas} />;
+  if (seccion === 'auditoria') return <Auditoria a={auditoria} />;
   if (seccion === 'participacion') return <Participacion a={a} />;
   if (seccion === 'bares') return <Bares a={a} />;
   if (seccion === 'actividad') return <Actividad a={a} />;
   return <Juegos a={a} />;
+}
+
+function Casas({ casas }: { casas: CasaDatos[] | null }) {
+  if (!casas) return <Text style={typography.muted}>No se pudo leer el reparto de las casas.</Text>;
+  const r = repartoCasas(casas);
+  return (
+    <View style={styles.seccion}>
+      <Text style={typography.overline}>Personas por casa</Text>
+      <View style={styles.tarjeta}>
+        {r.filas.map((f) => (
+          <View key={f.house} style={styles.casaFila}>
+            {esCasa(f.house) ? <Escudo casa={f.house} tamano={22} /> : null}
+            <View style={styles.casaCuerpo}>
+              <View style={styles.barraCabecera}>
+                <Text style={styles.barraEtiqueta}>{f.nombre}</Text>
+                <Text style={styles.barraValor}>{`${f.miembros} · ${f.pctGente} %`}</Text>
+              </View>
+              <View style={styles.barraPista}>
+                <View
+                  style={[
+                    styles.barraRelleno,
+                    { width: `${f.pctGente}%`, backgroundColor: esCasa(f.house) ? CASAS[f.house].color : colors.beer },
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+        ))}
+        <Text style={typography.muted}>{r.equilibrio}</Text>
+      </View>
+
+      <Text style={[typography.overline, styles.subtitulo]}>Puntos por casa</Text>
+      <View style={styles.tarjeta}>
+        {[...r.filas]
+          .sort((x, y) => y.puntos - x.puntos)
+          .map((f) => (
+            <Barra key={f.house} etiqueta={f.nombre} valor={`${f.puntos} · ${f.pctPuntos} %`} pct={f.pctPuntos} />
+          ))}
+        <Text style={typography.muted}>El detalle de cada casa está en Mi perfil → Casas y puntuaciones.</Text>
+      </View>
+    </View>
+  );
+}
+
+function Auditoria({ a }: { a: AuditoriaRuta | null }) {
+  if (!a) return <Text style={typography.muted}>No se pudo leer la auditoría de la ruta.</Text>;
+  const r = resumenAuditoria(a);
+  return (
+    <View style={styles.seccion}>
+      <Text style={typography.overline}>Lo que se ha tocado a mano</Text>
+      <View style={styles.tarjeta}>
+        <Text style={typography.body}>{r.anulados}</Text>
+        <Text style={typography.body}>{r.ajustes}</Text>
+        <Text style={typography.body}>{r.cambios}</Text>
+        {!r.hayAlgo ? <Text style={typography.muted}>Nada tocado a mano en esta ruta.</Text> : null}
+      </View>
+      {r.motivos.length > 0 ? (
+        <>
+          <Text style={[typography.overline, styles.subtitulo]}>Motivos de anulación más repetidos</Text>
+          <View style={styles.tarjeta}>
+            {r.motivos.map((m) => (
+              <View key={m.motivo} style={styles.reto}>
+                <Text style={styles.retoNombre}>{m.motivo}</Text>
+                <Text style={styles.retoTexto}>{`×${m.n}`}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
+      <Text style={styles.nota}>Los motivos son lo que escribió quien administra. El detalle movimiento a movimiento está en Casas y puntuaciones.</Text>
+    </View>
+  );
 }
 
 function Participacion({ a }: { a: ActividadRuta }) {
@@ -189,6 +276,9 @@ function Baldosa({ valor, titulo, detalle }: { valor: number | string; titulo: s
 
 const styles = StyleSheet.create({
   seccion: { gap: space.sm },
+  subtitulo: { marginTop: space.sm },
+  casaFila: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  casaCuerpo: { flex: 1, gap: 3 },
   tarjeta: {
     backgroundColor: colors.card,
     borderWidth: 1,
