@@ -18,6 +18,8 @@ describe('procedencia de los puntos', () => {
     assert.equal(nombreProcedencia(l('podio', { detalle: 'cana-perfecta', puesto: 1 })), '1.º en La Caña Perfecta');
     assert.equal(nombreProcedencia(l('podio', { detalle: 'otro-juego', puesto: 3 })), '3.º en otro-juego');
     assert.equal(nombreProcedencia(l('reto', { detalle: 'Peregrino' })), 'Reto «Peregrino»');
+    assert.equal(nombreProcedencia(l('podio', { detalle: 'tapon-al-vuelo', puesto: 2 })), '2.º en Tapón al Vuelo');
+    assert.equal(nombreProcedencia(l('podio', { detalle: 'quien-quiere-ser-cervecero', puesto: 1 })), '1.º en ¿Quién quiere ser cervecero?');
   });
 
   it('las veces solo salen si hay mas de una', () => {
