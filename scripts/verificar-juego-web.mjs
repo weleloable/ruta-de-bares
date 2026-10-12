@@ -22,8 +22,8 @@
  *      vaso hacia el lado en que se inclina el movil y de forma fluida, se sirve con un dedo mientras otro mueve el deslizador, salirse del
  *      boton no suelta y levantar el dedo si (ver `recorrerCana`). Y el chorro acaba
  *      DENTRO de la jarra, inclinada y recta (antes, inclinada, la atravesaba);
- *   6. ¿Quien quiere ser cervecero? cabe sin scroll con la pregunta, al elegir,
- *      al plantarse y al revelar, con los textos MAS LARGOS del banco (ver `recorrerQuiz`);
+ *   6. ¿Quien quiere ser cervecero? cabe sin scroll con la pregunta, al elegir
+ *      y al revelar, con los textos MAS LARGOS del banco (ver `recorrerQuiz`);
  *   7. Tapon al Vuelo con tactil emulado: cabe sin scroll, un toque no gasta el
  *      tiro y un arrastre de verdad lanza la chapa (ver `recorrerTapon`).
  *
@@ -573,7 +573,8 @@ const medirQuiz = (objetivo) => `(() => {
  *  1. se abre en el menu de verdad y se mide el HUECO que le deja la app;
  *  2. en ese mismo hueco se monta la partida con una pregunta hecha con los
  *     textos MAS LARGOS del banco (`bancoPeor`, en la pantalla de prueba) y se
- *     mide en cada momento: con la pregunta, al elegir, al plantarse y al revelar.
+ *     mide en cada momento: con la pregunta, al elegir y al revelar (desde la 0061
+ *     ya no hay "Plantarme": sin respuesta, la fila de abajo dice "Elige una respuesta").
  */
 async function recorrerQuiz(chrome, perfil, url, tamano) {
   const c = await abrirChrome(chrome, perfil, url, tamano);
@@ -581,31 +582,25 @@ async function recorrerQuiz(chrome, perfil, url, tamano) {
     await c.navegar({ movil: true });
     await c.clic('Jugar a ¿Quién', 80);
     // "Jugar" se activa al leer el almacen: se insiste hasta que sale la partida.
-    if (!(await c.hasta('Plantarme con', { tocar: 'Jugar', limite: 15000 }))) throw new Error('no empieza la partida');
-    const real = await c.ev(medirQuiz('Plantarme'));
+    if (!(await c.hasta('Elige una respuesta', { tocar: 'Jugar', limite: 15000 }))) throw new Error('no empieza la partida');
+    const real = await c.ev(medirQuiz('Elige una respuesta'));
     await c.foto('quiz-real');
 
     await c.ir(`${url}?quiz=peor&ancho=${real.hueco[0]}&alto=${real.hueco[1]}`);
-    if (!(await c.hasta('Plantarme con', { limite: 30000 }))) throw new Error('no carga la partida de prueba');
+    if (!(await c.hasta('Elige una respuesta', { limite: 30000 }))) throw new Error('no carga la partida de prueba');
     await esperar(500);
-    const pregunta = await c.ev(medirQuiz('Plantarme con'));
+    const pregunta = await c.ev(medirQuiz('Elige una respuesta'));
     await c.foto('quiz-peor-1-pregunta');
     await c.clic('Respuesta A');
     await esperar(300);
     const elegida = await c.ev(medirQuiz('¿Respuesta definitiva?'));
     await c.foto('quiz-peor-2-elegida');
-    await c.clic('Plantarme');
-    await esperar(300);
-    const plantando = await c.ev(medirQuiz('Sí, plantarme'));
-    await c.foto('quiz-peor-3-plantando');
-    await c.clic('Seguir jugando');
-    await esperar(300);
     await c.clic('¿Respuesta definitiva?');
     if (!(await c.hasta('Siguiente|Ver resultado', { limite: 8000 }))) throw new Error('no se revela la respuesta');
     await esperar(300);
     const revelada = await c.ev(medirQuiz((await c.texto()).includes('Siguiente') ? 'Siguiente' : 'Ver resultado'));
     await c.foto('quiz-peor-4-revelada');
-    return { real: real.scroll, hueco: real.hueco, pregunta, elegida, plantando, revelada };
+    return { real: real.scroll, hueco: real.hueco, pregunta, elegida, revelada };
   } finally {
     c.cerrar();
     await esperar(1500);
@@ -835,9 +830,8 @@ async function main() {
       console.log(JSON.stringify(q));
       for (const [nombre, ok] of [
         ['quiz: con una pregunta del banco, cabe sin scroll', q.real === 0],
-        ['quiz (peor caso): con la pregunta, sin scroll y "Plantarme" a la vista', q.pregunta.scroll === 0 && q.pregunta.visible],
+        ['quiz (peor caso): con la pregunta, sin scroll y "Elige una respuesta" a la vista', q.pregunta.scroll === 0 && q.pregunta.visible],
         ['quiz (peor caso): al elegir, sin scroll y "Sí, definitiva" a la vista', q.elegida.scroll === 0 && q.elegida.visible],
-        ['quiz (peor caso): al plantarse, sin scroll y la confirmacion a la vista', q.plantando.scroll === 0 && q.plantando.visible],
         ['quiz (peor caso): al revelar, sin scroll y el boton de seguir a la vista', q.revelada.scroll === 0 && q.revelada.visible],
       ]) {
         console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);

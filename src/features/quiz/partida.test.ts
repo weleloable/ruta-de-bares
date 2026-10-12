@@ -8,8 +8,7 @@ import {
   elegirPregunta,
   generarVoto,
   nuevaPartida,
-  puntosAcumulados,
-  puntosAlFallar,
+  PUNTOS_MAXIMOS,
   reducir,
 } from './partida.ts';
 import type { Accion, EstadoPartida, Nivel } from './tipos.ts';
@@ -54,7 +53,7 @@ describe('una pregunta por nivel, en orden', () => {
       assert.deepEqual(niveles, [1, 2, 3, 4, 5], `semilla ${semilla}`);
       assert.equal(e.fase, 'fin');
       assert.equal(e.desenlace, 'gano');
-      assert.equal(e.puntos, 25);
+      assert.equal(e.puntos, PUNTOS_MAXIMOS);
     }
   });
 
@@ -214,60 +213,56 @@ describe('cambio de ronda', () => {
   });
 });
 
-describe('puntuacion', () => {
-  it('con la escalera por defecto: 1, 2, 5, 10, 25; seguro en la 2', () => {
-    assert.deepEqual([...CONFIG.premios], [1, 2, 5, 10, 25]);
-    assert.deepEqual([0, 1, 2, 3, 4, 5].map((n) => puntosAcumulados(CONFIG, n)), [0, 1, 2, 5, 10, 25]);
-    assert.deepEqual([0, 1, 2, 3, 4].map((i) => puntosAlFallar(CONFIG, i)), [0, 0, 2, 2, 2]);
-  });
-
-  it('fallar antes del seguro (preguntas 1 y 2) da 0', () => {
-    for (const aciertos of [0, 1]) {
+describe('puntuacion: un punto por acierto (0061)', () => {
+  it('ganar da 5; fallar en la pregunta N da los N-1 aciertos que llevabas', () => {
+    assert.equal(PUNTOS_MAXIMOS, 5);
+    for (const aciertos of [0, 1, 2, 3, 4]) {
       const e = reducir(responder(llegarA(aciertos), false), { tipo: 'siguiente' }, ctx(1));
       assert.equal(e.fase, 'fin');
       assert.equal(e.desenlace, 'fallo');
-      assert.equal(e.puntos, 0, `fallo en la pregunta ${aciertos + 1}`);
+      assert.equal(e.puntos, aciertos, `fallo en la pregunta ${aciertos + 1}`);
     }
   });
 
-  it('fallar despues de asegurar la 2 (preguntas 3, 4 y 5) se lleva 2', () => {
-    for (const aciertos of [2, 3, 4]) {
-      const e = reducir(responder(llegarA(aciertos), false), { tipo: 'siguiente' }, ctx(1));
-      assert.equal(e.desenlace, 'fallo');
-      assert.equal(e.puntos, 2, `fallo en la pregunta ${aciertos + 1}`);
-    }
+  it('ya no se puede plantar: la accion no existe', () => {
+    const e = llegarA(2);
+    assert.equal(reducir(e, { tipo: 'plantarse' } as unknown as Accion, ctx(1)), e);
+  });
+});
+
+describe('tiempo que desempata', () => {
+  const ms = (e: EstadoPartida) => e.ms;
+
+  it('suma lo tardado en cada pregunta al confirmar, acotado al reloj', () => {
+    const c = ctx(4);
+    let e = nuevaPartida(BANCO, [], c.azar);
+    assert.equal(ms(e), 0);
+    e = jugar(e, [{ tipo: 'elegir', opcion: indiceCorrecta(e) }, { tipo: 'confirmar', ms: 4200 }, { tipo: 'revelar' }, { tipo: 'siguiente' }], 4);
+    e = jugar(e, [{ tipo: 'elegir', opcion: indiceCorrecta(e) }, { tipo: 'confirmar', ms: 99999 }, { tipo: 'revelar' }], 4);
+    assert.equal(ms(e), 4200 + CONFIG.segundos * 1000, 'nunca mas que el reloj de la pregunta');
+    e = reducir(e, { tipo: 'siguiente' }, c);
+    assert.equal(ms(e), 4200 + CONFIG.segundos * 1000, 'pasar de pregunta no lo pierde');
   });
 
-  it('plantarse da lo acumulado hasta ese momento: 0, 1, 2, 5, 10', () => {
-    const esperado = [0, 1, 2, 5, 10];
-    esperado.forEach((puntos, aciertos) => {
-      const e = reducir(llegarA(aciertos), { tipo: 'plantarse' }, ctx(1));
-      assert.equal(e.fase, 'fin');
-      assert.equal(e.desenlace, 'plantado');
-      assert.equal(e.puntos, puntos, `plantado tras ${aciertos} aciertos`);
-    });
+  it('sin contestar a tiempo cuenta la pregunta entera; el cambio de ronda no regala lo tardado', () => {
+    let e = reducir(llegarA(0), { tipo: 'tiempoAgotado' }, ctx(1));
+    assert.equal(ms(e), CONFIG.segundos * 1000);
+    e = reducir(llegarA(0), { tipo: 'comodin', comodin: 'cambio', ms: 7000 }, ctx(1));
+    assert.equal(ms(e), 7000);
+    e = jugar(e, [{ tipo: 'elegir', opcion: 0 }, { tipo: 'confirmar', ms: 3000 }]);
+    assert.equal(ms(e), 10000);
   });
 
-  it('no se puede plantar con la respuesta ya confirmada (suspense) ni ya revelada', () => {
-    let e = llegarA(2);
-    e = jugar(e, [{ tipo: 'elegir', opcion: indiceCorrecta(e) }, { tipo: 'confirmar' }]);
-    assert.equal(e.fase, 'suspense');
-    assert.equal(reducir(e, { tipo: 'plantarse' }, ctx(1)), e);
-    e = reducir(e, { tipo: 'revelar' }, ctx(1));
-    assert.equal(reducir(e, { tipo: 'plantarse' }, ctx(1)), e);
-  });
-
-  it('los premios salen de la config: cambiarlos cambia el resultado sin tocar la logica', () => {
-    const otra = { ...CONFIG, premios: [10, 20, 30, 40, 50], nivelSeguro: 3 };
-    assert.equal(puntosAlFallar(otra, 2), 0);
-    assert.equal(puntosAlFallar(otra, 3), 30);
-    assert.equal(puntosAcumulados(otra, 5), 50);
+  it('un tiempo raro (negativo, no numero) cuenta como 0', () => {
+    let e = llegarA(0);
+    e = jugar(e, [{ tipo: 'elegir', opcion: 0 }, { tipo: 'confirmar', ms: -500 }]);
+    assert.equal(ms(e), 0);
   });
 });
 
 describe('tiempo agotado', () => {
-  it('cuenta como fallo: revela sin respuesta y da lo asegurado', () => {
-    for (const [aciertos, puntos] of [[0, 0], [1, 0], [2, 2], [4, 2]] as const) {
+  it('cuenta como fallo: revela sin respuesta y da los aciertos que llevabas', () => {
+    for (const [aciertos, puntos] of [[0, 0], [1, 1], [2, 2], [4, 4]] as const) {
       let e = reducir(llegarA(aciertos), { tipo: 'tiempoAgotado' }, ctx(1));
       assert.equal(e.fase, 'revelada');
       assert.equal(e.acierto, false);
@@ -328,7 +323,7 @@ describe('confirmacion y fases', () => {
     for (const a of [{ tipo: 'revelar' }, { tipo: 'siguiente' }] as Accion[]) {
       assert.equal(reducir(e, a, ctx(1)), e);
     }
-    const fin = reducir(e, { tipo: 'plantarse' }, ctx(1));
+    const fin = reducir(responder(e, false), { tipo: 'siguiente' }, ctx(1));
     for (const a of [{ tipo: 'elegir', opcion: 0 }, { tipo: 'confirmar' }, { tipo: 'tiempoAgotado' }, { tipo: 'siguiente' }] as Accion[]) {
       assert.equal(reducir(fin, a, ctx(1)), fin);
     }

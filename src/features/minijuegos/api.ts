@@ -10,11 +10,13 @@ import { traducirErrorMinijuegos } from './errores';
 
 export type ResultadoNota = { best: number; isRecord: boolean };
 
-export async function enviarNota(routeId: string, game: string, score: number): Promise<ResultadoNota> {
+/** `ms`: el tiempo que desempata (solo el quiz, 0061). */
+export async function enviarNota(routeId: string, game: string, score: number, ms?: number): Promise<ResultadoNota> {
   const { data, error } = await supabase.rpc('minigame_submit_score', {
     p_route_id: routeId,
     p_game: game,
     p_score: Math.round(score),
+    ...(ms !== undefined ? { p_ms: Math.round(ms) } : {}),
   });
   if (error) throw new Error(traducirErrorMinijuegos(error.message));
   return { best: data.best, isRecord: data.is_record };

@@ -115,6 +115,7 @@ const CATEGORIAS: [string, string][] = [
   ['vino', 'Vino'],
   ['sidra', 'Sidra'],
   ['chupito', 'Chupito'],
+  ['copa', 'Copa'],
   ['sin_alcohol', 'Sin alcohol'],
 ];
 

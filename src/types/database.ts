@@ -53,6 +53,9 @@ export type RouteRow = {
   qr_max: number;
   /** Temporada a la que pertenece (0049). */
   temporada_id: string | null;
+  /** Sorteo entre quien sella todos los bares, y su premio (0061). */
+  sorteo_activo: boolean;
+  sorteo_premio: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -79,6 +82,8 @@ export type RouteBarRow = {
   logo: string | null;
   /** 'bar' (se sella), 'foto' u 'otra' (salen en el mapa, no se sellan) (0060). */
   tipo: 'bar' | 'foto' | 'otra';
+  /** Minutos que se puede sellar antes de abrir y despues de cerrar (0061). */
+  margen_min: number;
   created_at: string;
 };
 
@@ -457,6 +462,8 @@ export type MinigameRankingRow = {
   user_id: string;
   display_name: string;
   score: number;
+  /** Tiempo que desempata, en ms (solo el quiz, 0061); null en los demas juegos. */
+  ms: number | null;
   achieved_at: string;
   is_me: boolean;
 };
@@ -594,6 +601,8 @@ export type Database = {
           | 'racha_repetible'
           | 'qr_max'
           | 'temporada_id'
+          | 'sorteo_activo'
+          | 'sorteo_premio'
           | 'created_at'
           | 'updated_at'
         >;
@@ -734,7 +743,7 @@ export type Database = {
       };
       /** Minijuegos (0034): ranking por ruta y cervezas de Maestro Cervecero. */
       minigame_submit_score: {
-        Args: { p_route_id: string; p_game: string; p_score: number };
+        Args: { p_route_id: string; p_game: string; p_score: number; p_ms?: number };
         Returns: { best: number; is_record: boolean };
       };
       minigame_ranking: {
@@ -747,6 +756,9 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** Sorteo de la ruta (0061). */
+      sorteo_estado: { Args: { p_route_id: string }; Returns: unknown };
+      sorteo_realizar: { Args: { p_route_id: string; p_motivo?: string | null }; Returns: unknown };
       /** Auditoria de una ruta: anulados, ajustes y cambios de casa (0059). */
       admin_estadisticas_auditoria: { Args: { p_route_id: string }; Returns: unknown };
       /** Totales de todas las rutas o de una temporada (0059). */

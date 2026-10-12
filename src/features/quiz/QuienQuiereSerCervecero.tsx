@@ -9,7 +9,7 @@ import { cargarRecords } from '../minijuegos/records';
 import type { PropsDetalle, PropsJuego } from '../minijuegos/tipos';
 import { BANCO } from './banco';
 import { CONFIG, ID_JUEGO, NOMBRE_NIVEL } from './config';
-import { nuevaPartida, reducir } from './partida';
+import { NIVELES, nuevaPartida, PUNTOS_MAXIMOS, reducir } from './partida';
 import type { Accion, BancoPreguntas, EstadoPartida } from './tipos';
 import { CLAVE_VISTAS, leerVistas } from './vistas';
 
@@ -20,8 +20,12 @@ const TEXTO_FINAL = {
   gano: { titulo: '¡Maestro cervecero!', cuerpo: 'Has acertado las cinco. Invita a una ronda.' },
   fallo: { titulo: 'Fallaste', cuerpo: 'La próxima tiras mejor la caña.' },
   tiempo: { titulo: 'Se acabó el tiempo', cuerpo: 'La espuma no espera.' },
-  plantado: { titulo: 'Te plantaste a tiempo', cuerpo: 'Más vale caña en mano que barril volando.' },
 } as const;
+
+/** "41,3 s" */
+export function segundosTexto(ms: number): string {
+  return `${(Math.round(ms / 100) / 10).toString().replace('.', ',')} s`;
+}
 
 type Desenlace = keyof typeof TEXTO_FINAL;
 
@@ -30,11 +34,13 @@ export function DetalleQuiz({ resultado }: PropsDetalle) {
   const d = resultado.detalles ?? {};
   const desenlace = (typeof d.desenlace === 'string' && d.desenlace in TEXTO_FINAL ? d.desenlace : 'fallo') as Desenlace;
   const aciertos = Number(d.aciertos ?? 0);
+  const ms = typeof d.ms === 'number' ? d.ms : null;
   return (
     <View style={styles.detalle}>
       <Text style={styles.detalleTitulo}>{TEXTO_FINAL[desenlace].titulo}</Text>
       <Text style={typography.muted}>
-        {TEXTO_FINAL[desenlace].cuerpo} {aciertos === 1 ? '1 acierto' : `${aciertos} aciertos`} de 5.
+        {TEXTO_FINAL[desenlace].cuerpo} {aciertos === 1 ? '1 acierto' : `${aciertos} aciertos`} de {PUNTOS_MAXIMOS}
+        {ms !== null ? `, en ${segundosTexto(ms)}` : ''}.
       </Text>
     </View>
   );
@@ -95,7 +101,7 @@ function Inicio({ record, listo, onJugar }: { record: number | null; listo: bool
       <Text style={styles.titulo}>¿Quién quiere ser cervecero?</Text>
       <View style={styles.reglas}>
         <Text style={styles.regla}>5 preguntas, cada una más difícil. Si fallas, se acaba.</Text>
-        <Text style={styles.regla}>Te quedas con 2 puntos si pasas la segunda. Puedes plantarte antes de responder.</Text>
+        <Text style={styles.regla}>Un punto por cada acierto. Si empatas, gana quien haya contestado antes.</Text>
         <Text style={styles.regla}>Tienes 3 comodines, uno de cada, y {CONFIG.segundos} segundos por pregunta.</Text>
       </View>
       <Text style={styles.record}>Tu mejor puntuación: {record ?? '…'}</Text>
@@ -116,9 +122,9 @@ function Inicio({ record, listo, onJugar }: { record: number | null; listo: bool
  * La partida TIENE QUE CABER SIN SCROLL (como todos los juegos): a 740 px de
  * ventana, con la barra de arriba, las pestanas y la cabecera, le quedan ~540.
  * Por eso todo es compacto y la parte de abajo tiene un alto casi fijo: la
- * confirmacion ("Si, definitiva") NO se anade debajo, sustituye a "Plantarme"
- * en la misma fila (al lado, para poder plantarse tambien con la respuesta
- * marcada), y al revelar, el resultado ocupa el sitio de comodines y botones.
+ * confirmacion ("Si, definitiva") NO se anade debajo, ocupa la fila fija (sin
+ * respuesta marcada, esa fila solo dice "Elige una respuesta"), y al revelar, el
+ * resultado ocupa el sitio de comodines y botones.
  * La respuesta buena ya sale en verde en su opcion: no se repite en texto.
  * `npm run verificar:juego` lo mide con los textos MAS LARGOS del banco.
  * El ScrollView se queda solo como red para pantallas aun mas bajas.
@@ -137,8 +143,10 @@ export function Partida({
   banco?: BancoPreguntas;
 }) {
   const [restante, setRestante] = useState(CONFIG.segundos);
-  const [plantando, setPlantando] = useState(false);
+  // Cuando salio la pregunta que se esta contestando: de aqui sale el tiempo que desempata.
+  const inicio = useRef(Date.now());
   const terminado = useRef(false);
+  const tardado = () => Date.now() - inicio.current;
 
   const enviar = useCallback(
     (accion: Accion) => setEstado((e) => (e ? reducir(e, accion, { banco, azar: Math.random, config: CONFIG }) : e)),
@@ -151,6 +159,7 @@ export function Partida({
   useEffect(() => {
     if (estado.fase !== 'respondiendo') return;
     const limite = Date.now() + CONFIG.segundos * 1000;
+    inicio.current = Date.now();
     setRestante(CONFIG.segundos);
     const id = setInterval(() => {
       const quedan = Math.max(0, Math.ceil((limite - Date.now()) / 1000));
@@ -175,7 +184,6 @@ export function Partida({
   }, [estado.fase, estado.acierto]);
 
   useEffect(() => {
-    setPlantando(false);
     void guardarVistas(estado.vistas);
   }, [estado.pregunta.id, estado.vistas]);
 
@@ -183,19 +191,17 @@ export function Partida({
   useEffect(() => {
     if (estado.fase !== 'fin' || terminado.current) return;
     terminado.current = true;
-    const aciertos = estado.desenlace === 'gano' ? 5 : estado.indice;
     onFinish({
       juego: ID_JUEGO,
       puntuacion: estado.puntos,
-      detalles: { desenlace: estado.desenlace ?? 'fallo', aciertos },
+      // `ms` desempata en el ranking de la ruta (0061): menos es mejor.
+      detalles: { desenlace: estado.desenlace ?? 'fallo', aciertos: estado.puntos, ms: estado.ms },
     });
   }, [estado, onFinish]);
 
-  const acumulados = estado.indice === 0 ? 0 : CONFIG.premios[estado.indice - 1];
-  const textoAcumulados = `${acumulados} ${acumulados === 1 ? 'punto' : 'puntos'}`;
   const revelada = estado.fase === 'revelada';
   const bloqueada = estado.fase !== 'respondiendo';
-  const ultima = estado.indice === CONFIG.premios.length - 1;
+  const ultima = estado.indice === NIVELES.length - 1;
 
   return (
     <ScrollView style={styles.fondo} contentContainerStyle={styles.partida}>
@@ -203,7 +209,7 @@ export function Partida({
 
       <View style={styles.cabeceraPregunta}>
         <Text style={styles.nivel}>
-          {NOMBRE_NIVEL[estado.indice]} · {CONFIG.premios[estado.indice]} {CONFIG.premios[estado.indice] === 1 ? 'punto' : 'puntos'}
+          {NOMBRE_NIVEL[estado.indice]} · llevas {estado.indice} {estado.indice === 1 ? 'punto' : 'puntos'}
         </Text>
         <View
           accessible
@@ -263,52 +269,28 @@ export function Partida({
           <View style={styles.comodines}>
             <BotonComodin icono="contrast" texto="50:50" usado={estado.usados.cincuenta} onPress={() => enviar({ tipo: 'comodin', comodin: 'cincuenta' })} />
             <BotonComodin icono="people" texto="Voto del bar" usado={estado.usados.voto} onPress={() => enviar({ tipo: 'comodin', comodin: 'voto' })} />
-            <BotonComodin icono="swap-horizontal" texto="Cambio de ronda" usado={estado.usados.cambio} onPress={() => enviar({ tipo: 'comodin', comodin: 'cambio' })} />
+            <BotonComodin icono="swap-horizontal" texto="Cambio de ronda" usado={estado.usados.cambio} onPress={() => enviar({ tipo: 'comodin', comodin: 'cambio', ms: tardado() })} />
           </View>
 
           {/* Una sola fila de alto fijo: lo que cambia es lo que hay dentro, nunca se anade otra. */}
           <View style={styles.fila}>
-            {plantando ? (
-              <>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Sí, plantarme con ${textoAcumulados}`}
-                  onPress={() => enviar({ tipo: 'plantarse' })}
-                  style={({ pressed }) => [styles.jugar, styles.flex, pressed && styles.pulsado]}
-                >
-                  <Text style={styles.jugarTextoFila} numberOfLines={1}>
-                    Sí, me planto ({acumulados})
-                  </Text>
-                </Pressable>
-                <Pressable accessibilityRole="button" onPress={() => setPlantando(false)} style={[styles.secundario, styles.flex]}>
-                  <Text style={styles.secundarioTexto}>Seguir jugando</Text>
-                </Pressable>
-              </>
+            {estado.seleccion !== null ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`¿Respuesta definitiva? Sí, la ${LETRAS[estado.seleccion]}`}
+                onPress={() => enviar({ tipo: 'confirmar', ms: tardado() })}
+                style={({ pressed }) => [styles.jugar, styles.flexAncho, pressed && styles.pulsado]}
+              >
+                <Text style={styles.jugarTextoFila} numberOfLines={1}>
+                  Sí, definitiva ({LETRAS[estado.seleccion]})
+                </Text>
+              </Pressable>
             ) : (
-              <>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Plantarme con ${textoAcumulados}`}
-                  onPress={() => setPlantando(true)}
-                  style={[styles.secundario, styles.flex]}
-                >
-                  <Text style={styles.secundarioTexto} numberOfLines={1}>
-                    {estado.seleccion === null ? `Plantarme con ${textoAcumulados}` : `Plantarme (${acumulados})`}
-                  </Text>
-                </Pressable>
-                {estado.seleccion !== null ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`¿Respuesta definitiva? Sí, la ${LETRAS[estado.seleccion]}`}
-                    onPress={() => enviar({ tipo: 'confirmar' })}
-                    style={({ pressed }) => [styles.jugar, styles.flexAncho, pressed && styles.pulsado]}
-                  >
-                    <Text style={styles.jugarTextoFila} numberOfLines={1}>
-                      Sí, definitiva ({LETRAS[estado.seleccion]})
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </>
+              <View style={[styles.secundario, styles.flex]}>
+                <Text style={styles.secundarioTexto} numberOfLines={1}>
+                  Elige una respuesta
+                </Text>
+              </View>
             )}
           </View>
         </>
@@ -341,15 +323,14 @@ export function Partida({
 
 function Escalera({ indice }: { indice: number }) {
   return (
-    <View style={styles.escalera} accessibilityLabel={`Pregunta ${indice + 1} de ${CONFIG.premios.length}`}>
-      {CONFIG.premios.map((premio, i) => {
+    <View style={styles.escalera} accessibilityLabel={`Pregunta ${indice + 1} de ${NIVELES.length}`}>
+      {NIVELES.map((nivel, i) => {
         const actual = i === indice;
         const superada = i < indice;
-        const segura = i === CONFIG.nivelSeguro - 1;
+        // Cada peldano vale un punto: el numero es lo que llevas al acertarla.
         return (
-          <View key={i} style={[styles.peldano, actual && styles.peldanoActual, superada && styles.peldanoSuperado]}>
-            <Text style={[styles.peldanoPuntos, actual && styles.peldanoTextoActual]}>{premio}</Text>
-            {segura ? <Ionicons name="lock-closed" size={11} color={actual ? colors.ink : colors.beer} /> : null}
+          <View key={nivel} style={[styles.peldano, actual && styles.peldanoActual, superada && styles.peldanoSuperado]}>
+            <Text style={[styles.peldanoPuntos, actual && styles.peldanoTextoActual]}>{nivel}</Text>
           </View>
         );
       })}

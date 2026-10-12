@@ -1,9 +1,10 @@
 -- Ruta de Bares - 0045: consumiciones en cada bar y la racha de casa.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0044.
 -- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
--- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
--- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
 --   * puntos_por_sello() la rehace la 0060
+--   * registrar_consumicion() la rehace la 0061
 -- Ojo al reves: rehace puntos_por_sello() de la 0044, que ya no se puede volver
 -- a pegar despues.
 --

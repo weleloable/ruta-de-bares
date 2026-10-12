@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import type { PGlite } from '@electric-sql/pglite';
 
 import { PUNTUACION_MAXIMA } from '../src/features/minijuegos/juegos/conga/modelo.ts';
-import { CONFIG, ID_JUEGO } from '../src/features/quiz/config.ts';
+import { ID_JUEGO } from '../src/features/quiz/config.ts';
 import { crearBase, escenario, leerFichero, type Actor } from './pglite-supabase.ts';
 
 /**
@@ -104,7 +104,8 @@ describe('0055: el ranking de ¿Quien quiere ser cervecero?', () => {
   });
 
   it('cada juego conserva su tope, y el del quiz es el de la app', async () => {
-    const tope = CONFIG.premios[CONFIG.premios.length - 1];
+    // La escala de la 0055 (premios hasta 25). Desde la 0061 es un punto por acierto (ver migration-0061).
+    const tope = 25;
     assert.ok(LA_0055.includes(`between 0 and ${tope}`), 'la tabla usa el tope de la app');
     assert.ok(LA_0055.includes(`when '${ID_JUEGO}' then ${tope}`), 'la funcion usa el tope de la app');
     await conBase(async (db, a) => {

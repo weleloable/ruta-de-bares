@@ -23,6 +23,7 @@ const NOMBRE_CATEGORIA: Record<string, string> = {
   vino: 'vino',
   sidra: 'sidra',
   chupito: 'chupito',
+  copa: 'copa',
 };
 
 /** Objetivo minimo y maximo segun el tipo (y la categoria: con alcohol, como mucho 3). */

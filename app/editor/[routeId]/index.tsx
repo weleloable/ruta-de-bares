@@ -14,6 +14,7 @@ import {
 } from '../../../src/features/routes/api';
 import { EditorRetos } from '../../../src/features/casas/EditorRetos';
 import { AjustesCana } from '../../../src/features/routes/AjustesCana';
+import { AjustesSorteo } from '../../../src/features/sorteo/AjustesSorteo';
 import { BarLogo } from '../../../src/features/routes/BarLogo';
 import { infoTipo, numeroDeBar, tipoDe } from '../../../src/features/routes/tipoParada';
 import { direccionVisible } from '../../../src/features/routes/catalogo';
@@ -196,6 +197,8 @@ export default function EditorDeRuta() {
         </Card>
 
         <AjustesCana ruta={ruta} ocupado={guardandoCana} onCambiar={onAjustarCana} />
+
+        <AjustesSorteo ruta={ruta} />
 
         <EditorRetos ruta={ruta} bares={bares} />
 

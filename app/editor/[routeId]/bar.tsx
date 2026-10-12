@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Desplegable } from '../../../src/components/Desplegable';
 import { Banner, Button, Loading } from '../../../src/components/ui';
 import {
+  aplicarMargenATodas,
   getRouteWithBars,
   nextSortOrder,
   saveBar,
 } from '../../../src/features/routes/api';
+import { etiquetaMargen, OPCIONES_MARGEN } from '../../../src/features/stamps/margen';
 import { buscarPorNombre, idsYaEnRuta, type BarCatalogo } from '../../../src/features/routes/catalogo';
 import { consumirUltimoCreado, reintentarCatalogo, useCatalogo } from '../../../src/features/routes/catalogoStore';
 import { construirVentana, formatHora } from '../../../src/features/routes/horas';
@@ -65,6 +67,9 @@ export default function EditorDeBar() {
   const [elegido, setElegido] = useState<BarElegido | null>(null);
   const [radio, setRadio] = useState<number>(RADIO_INICIAL_M);
   const [tipo, setTipo] = useState<TipoParada>('bar');
+  const [margen, setMargen] = useState<number>(0);
+  const [aplicando, setAplicando] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   // Lo que era al abrir el editor: si era un bar y deja de serlo, se avisa de lo que se pierde.
   const [tipoOriginal, setTipoOriginal] = useState<TipoParada>('bar');
   const [abre, setAbre] = useState('19:00');
@@ -117,6 +122,7 @@ export default function EditorDeBar() {
           });
           setRadio(existente.radius_m);
           setTipo(tipoDe(existente));
+          setMargen(existente.margen_min ?? 0);
           setTipoOriginal(tipoDe(existente));
           setAbre(formatHora(new Date(existente.opens_at)));
           setCierra(formatHora(new Date(existente.closes_at)));
@@ -124,9 +130,10 @@ export default function EditorDeBar() {
         }
 
         // Bar nuevo: se encadena con el anterior. Hora de apertura = cierre del
-        // ultimo bar de la ruta.
+        // ultimo bar de la ruta, y el mismo margen de sellado.
         const ultimo = detalle.bars.at(-1);
         if (ultimo) {
+          setMargen(ultimo.margen_min ?? 0);
           const cierreAnterior = new Date(ultimo.closes_at);
           setAbre(formatHora(cierreAnterior));
           setCierra(formatHora(new Date(cierreAnterior.getTime() + 60 * 60 * 1000)));
@@ -188,6 +195,7 @@ export default function EditorDeBar() {
         routeId,
         sortOrder: existente ? existente.sort_order : nextSortOrder(bares),
         tipo,
+        margenMin: margen,
         ...borrador,
       });
       router.back();
@@ -266,6 +274,42 @@ export default function EditorDeBar() {
               onListo={() => setHoraActiva(null)}
             />
           ) : null}
+
+          <Desplegable
+            etiqueta="Margen extra de sellado"
+            opciones={OPCIONES_MARGEN.map((m) => ({ valor: m, etiqueta: etiquetaMargen(m) }))}
+            valor={margen}
+            onCambiar={(m) => {
+              setMargen(m);
+              setAviso(null);
+            }}
+          />
+          <Text style={typography.muted}>
+            {margen > 0 && resultadoVentana.ok
+              ? `Se podrá sellar de ${formatHora(new Date(resultadoVentana.ventana.opensAt.getTime() - margen * 60000))} a ${formatHora(new Date(resultadoVentana.ventana.closesAt.getTime() + margen * 60000))}. En el mapa sigue saliendo el horario oficial.`
+              : 'Minutos que se puede sellar antes de abrir y después de cerrar, por si los horarios se mueven.'}
+          </Text>
+          {routeId && bares.length > 0 ? (
+            <Button
+              title={`Aplicar ${etiquetaMargen(margen).toLowerCase()} a todas las paradas`}
+              variant="ghost"
+              loading={aplicando}
+              onPress={async () => {
+                setAplicando(true);
+                setError(null);
+                try {
+                  await aplicarMargenATodas(routeId, margen);
+                  setBares((bs) => bs.map((b) => ({ ...b, margen_min: margen })));
+                  setAviso(`Hecho: ${etiquetaMargen(margen).toLowerCase()} en todas las paradas de la ruta.`);
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : 'No se pudo aplicar el margen.');
+                } finally {
+                  setAplicando(false);
+                }
+              }}
+            />
+          ) : null}
+          {aviso ? <Banner tone="success">{aviso}</Banner> : null}
 
           {resultadoVentana.ok && resultadoVentana.cruzaMedianoche ? (
             <Banner tone="info">

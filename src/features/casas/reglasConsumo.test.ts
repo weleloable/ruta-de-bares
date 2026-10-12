@@ -4,8 +4,8 @@ import { describe, it } from 'node:test';
 import { CATEGORIAS, describirErrorConsumicion, mmss, siguientePermitida, ultimoBarSellado } from './reglasConsumo.ts';
 
 describe('consumiciones', () => {
-  it('las seis categorias, con "sin alcohol" la primera', () => {
-    assert.deepEqual(CATEGORIAS.map((c) => c.id), ['sin_alcohol', 'tercio', 'jarra', 'vino', 'sidra', 'chupito']);
+  it('las siete categorias, con "sin alcohol" la primera', () => {
+    assert.deepEqual(CATEGORIAS.map((c) => c.id), ['sin_alcohol', 'tercio', 'jarra', 'vino', 'sidra', 'chupito', 'copa']);
   });
 
   it('el ultimo bar sellado es el de la ruta con el sello mas reciente', () => {

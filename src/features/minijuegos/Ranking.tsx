@@ -50,7 +50,11 @@ export function Ranking({ rutaId, juego }: { rutaId: string; juego: string }) {
             {f.display_name}
             {f.is_me ? ' (tú)' : ''}
           </Text>
-          <Text style={styles.nota}>{f.score}</Text>
+          <View style={styles.notaCaja}>
+            <Text style={styles.nota}>{f.score}</Text>
+            {/* En el quiz, a igualdad de puntos gana quien tardo menos (0061). */}
+            {f.ms !== null && f.ms !== undefined ? <Text style={styles.tiempo}>{`${(Math.round(f.ms / 100) / 10).toString().replace('.', ',')} s`}</Text> : null}
+          </View>
         </Card>
       ))}
 
@@ -65,5 +69,7 @@ const styles = StyleSheet.create({
   yo: { borderColor: colors.beer, backgroundColor: colors.beerSoft, borderWidth: 2, borderRadius: radius.lg },
   pos: { width: 32, fontSize: 18, fontWeight: '800', color: colors.beerDark, textAlign: 'center' },
   nombre: { flex: 1 },
+  notaCaja: { alignItems: 'flex-end' },
   nota: { fontSize: 22, fontWeight: '800', color: colors.beerDark },
+  tiempo: { fontSize: 12, color: colors.inkSoft, fontVariant: ['tabular-nums'] },
 });

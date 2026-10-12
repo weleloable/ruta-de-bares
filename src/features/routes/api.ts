@@ -30,6 +30,8 @@ export type BarInput = {
   logo: string | null;
   /** Solo los bares se sellan (0060). */
   tipo: TipoParada;
+  /** Margen extra de sellado, en minutos, antes y despues (0061). */
+  margenMin: number;
 };
 
 /**
@@ -107,6 +109,8 @@ export async function updateRoute(
       | 'racha_repetible'
       | 'qr_max'
       | 'temporada_id'
+      | 'sorteo_activo'
+      | 'sorteo_premio'
     >
   >,
 ): Promise<RouteRow> {
@@ -142,6 +146,7 @@ export async function saveBar(input: BarInput): Promise<RouteBarRow> {
     notes: input.notes.trim(),
     logo: input.logo,
     tipo: input.tipo,
+    margen_min: input.margenMin,
   };
 
   const query = input.id
@@ -151,6 +156,12 @@ export async function saveBar(input: BarInput): Promise<RouteBarRow> {
   const { data, error } = await query.select('*').single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** El mismo margen extra de sellado para todas las paradas de la ruta (0061). */
+export async function aplicarMargenATodas(routeId: string, margenMin: number): Promise<void> {
+  const { error } = await supabase.from('route_bars').update({ margen_min: margenMin }).eq('route_id', routeId);
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteBar(barId: string): Promise<void> {

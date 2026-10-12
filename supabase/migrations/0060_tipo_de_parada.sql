@@ -1,7 +1,10 @@
 -- Ruta de Bares - 0060: tipo de parada (bar, foto u otra) y solo los bares se sellan.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0059.
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists`, disparador
--- quitado antes de ponerlo y funciones con `or replace`).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * claim_stamp() la rehace la 0061
+--   * admin_estadisticas_actividad() la rehace la 0061
 -- Ojo al reves: rehace funciones de la 0004, 0040, 0041, 0045, 0047, 0058 y
 -- 0059, que ya no se pueden volver a pegar despues (devolverian el recuento
 -- de paradas de antes, sin distinguir el tipo).

@@ -27,17 +27,14 @@ export type Comodin = 'cincuenta' | 'voto' | 'cambio';
 
 /** Valores que se pueden cambiar sin tocar la logica (ver config.ts). */
 export type ConfigQuiz = {
-  /** Premio por nivel: el indice 0 es el nivel 1. */
-  premios: readonly number[];
-  /** Nivel (1-5) cuyo premio queda asegurado al acertarlo. */
-  nivelSeguro: number;
+  /** Segundos por pregunta. Un punto por acierto (0061): no hay escalera de premios. */
   segundos: number;
   suspenseMs: number;
   /** Probabilidad de que el voto del bar ponga la correcta la primera, por nivel. */
   probVotoCorrecta: readonly number[];
 };
 
-export type Desenlace = 'gano' | 'fallo' | 'tiempo' | 'plantado';
+export type Desenlace = 'gano' | 'fallo' | 'tiempo';
 
 export type EstadoPartida = {
   /** respondiendo: se puede elegir y usar comodines. suspense: ya confirmada. revelada: se ve el resultado. fin: terminada. */
@@ -59,15 +56,22 @@ export type EstadoPartida = {
   /** Ids ya vistos por nivel en este dispositivo, incluidos los de esta partida. */
   vistas: readonly string[];
   desenlace: Desenlace | null;
-  /** Puntos de la partida: solo cuenta cuando `fase` es `fin`. */
+  /** Puntos de la partida (un punto por acierto): solo cuenta cuando `fase` es `fin`. */
   puntos: number;
+  /**
+   * Milisegundos contestando, sumados de todas las preguntas: desempata (menos
+   * es mejor). Cuenta desde que sale cada pregunta hasta que se confirma, no las
+   * pausas de suspense; sin contestar a tiempo, la pregunta entera.
+   */
+  ms: number;
 };
 
 export type Accion =
   | { tipo: 'elegir'; opcion: number }
-  | { tipo: 'confirmar' }
+  /** `ms`: lo que se ha tardado en esta pregunta (lo mide la pantalla). */
+  | { tipo: 'confirmar'; ms?: number }
   | { tipo: 'revelar' }
   | { tipo: 'tiempoAgotado' }
-  | { tipo: 'plantarse' }
-  | { tipo: 'comodin'; comodin: Comodin }
+  /** `ms`: en el cambio de ronda, lo tardado en la pregunta que se cambia (no se regala). */
+  | { tipo: 'comodin'; comodin: Comodin; ms?: number }
   | { tipo: 'siguiente' };

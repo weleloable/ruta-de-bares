@@ -6,7 +6,7 @@ import type { PGlite } from '@electric-sql/pglite';
 
 import { PUNTUACION_MAXIMA as MAX_CONGA } from '../src/features/minijuegos/juegos/conga/modelo.ts';
 import { PUNTUACION_MAXIMA as MAX_TAPON } from '../src/features/minijuegos/juegos/tapon/modelo.ts';
-import { CONFIG, ID_JUEGO as ID_QUIZ } from '../src/features/quiz/config.ts';
+import { ID_JUEGO as ID_QUIZ } from '../src/features/quiz/config.ts';
 import { crearBase, escenario, leerFichero, type Actor } from './pglite-supabase.ts';
 
 /**
@@ -22,7 +22,8 @@ import { crearBase, escenario, leerFichero, type Actor } from './pglite-supabase
  */
 
 const TAPON = 'tapon-al-vuelo';
-const MAX_QUIZ = CONFIG.premios[CONFIG.premios.length - 1] as number;
+// El tope del quiz en la 0056 (la escala vieja, hasta 25). Desde la 0061 es 5: ver migration-0061.
+const MAX_QUIZ = 25;
 
 const nombres = readdirSync('supabase/migrations')
   .filter((f) => f.endsWith('.sql'))

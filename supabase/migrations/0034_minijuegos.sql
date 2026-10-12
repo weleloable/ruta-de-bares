@@ -5,6 +5,7 @@
 -- las devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
 --   * export_my_data() la rehace la 0038
 --   * minigame_submit_score() la rehace la 0039
+--   * minigame_ranking() la rehace la 0061
 -- (Ademas, esta rehace export_my_data() a partir de la 0031, asi que la 0031
 -- tampoco se puede volver a pegar despues.)
 --

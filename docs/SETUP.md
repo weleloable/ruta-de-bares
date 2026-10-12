@@ -350,6 +350,15 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    parada en el editor. Rehace `claim_stamp` y las funciones que cuentan bares,
    asi que la 0004, 0040, 0041, 0045, 0047, 0058 y 0059 ya **no se vuelven a
    pegar**. Se puede pegar dos veces.
+59. [`supabase/migrations/0061_copa_margen_sorteo_quiz.sql`](../supabase/migrations/0061_copa_margen_sorteo_quiz.sql)
+   y **Run**, despues de la 0060 y **ANTES de desplegar la app**. Cuatro cosas:
+   la copa como consumicion; el margen extra de sellado de cada parada
+   (`route_bars.margen_min`); el sorteo de la ruta (`routes.sorteo_activo`,
+   `sorteo_premio`, tabla `sorteos`, `sorteo_realizar` y `sorteo_estado`); y
+   el quiz con un punto por acierto y desempate por tiempo
+   (`minigame_scores.best_ms`), que VACIA el ranking del quiz al pegarla. Rehace
+   funciones de la 0034, 0044, 0045, 0056 y 0060, que ya **no se vuelven a
+   pegar**. Se puede pegar dos veces.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

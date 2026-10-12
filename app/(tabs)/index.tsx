@@ -22,6 +22,7 @@ import { credencialCompleta } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
 import { desdeFechaISO, diaCorto } from '../../src/lib/fechas';
 import { sellables } from '../../src/features/routes/tipoParada';
+import { BannerSorteo } from '../../src/features/sorteo/BannerSorteo';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 /**
@@ -143,6 +144,9 @@ export default function SellosScreen() {
               </View>
             </Card>
           ) : null}
+
+          {/* El sorteo de la ruta (0061): solo sale si la ruta lo tiene. */}
+          {activeRoute ? <BannerSorteo rutaId={activeRoute.id} sellos={stamps.length} /> : null}
 
         </View>
 

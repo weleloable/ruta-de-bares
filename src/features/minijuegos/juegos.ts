@@ -68,7 +68,7 @@ export const JUEGOS: readonly JuegoDef[] = [
   },
   {
     // Preguntas de cerveza al estilo concurso (logica pura en features/quiz/). Ranking por
-    // ruta desde la 0055 (tope de 25 puntos, el premio de la ultima pregunta).
+    // ruta desde la 0055; desde la 0061, un punto por acierto (0 a 5) y desempata el tiempo.
     id: ID_QUIZ,
     titulo: '¿Quién quiere ser cervecero?',
     descripcion: 'Cinco preguntas de cerveza, cada una más difícil. Con comodines.',
@@ -77,7 +77,7 @@ export const JUEGOS: readonly JuegoDef[] = [
     Detalle: DetalleQuiz,
     ranking: true,
     enviar: async (rutaId, r) => {
-      await enviarNota(rutaId, r.juego, r.puntuacion);
+      await enviarNota(rutaId, r.juego, r.puntuacion, typeof r.detalles?.ms === 'number' ? r.detalles.ms : 0);
     },
   },
   {

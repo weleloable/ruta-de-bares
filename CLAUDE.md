@@ -140,6 +140,7 @@ supabase/
   migrations/0058_*.sql     `admin_estadisticas_actividad`: participacion, bares, horas, consumiciones, juegos, retos y QR (Estadisticas, admins)
   migrations/0059_*.sql     `admin_estadisticas_auditoria` y `admin_estadisticas_global` (auditoria de una ruta; todas las rutas / temporada)
   migrations/0060_*.sql     tipo de parada (`route_bars.tipo`: bar/foto/otra): solo los bares se sellan y cuentan
+  migrations/0061_*.sql     copa, margen de sellado (`route_bars.margen_min`), sorteo (`sorteos`) y quiz a 1 punto por acierto + tiempo
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
                             (NO hay Edge Functions: todo son funciones de Postgres)
@@ -293,6 +294,15 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   Los puntos salen del reto, no de `point_rules`. Se evaluan con disparadores
   en stamps, consumiciones y encuentros (no se tocan las funciones de puntos)
   y al llamar a `retos_mios`, por si el reto se creo despues.
+
+- **Sorteo (0061)**: el ganador lo elige `sorteo_realizar` en el servidor
+  (`order by random()`), entre quien ha sellado TODOS los bares (`tipo = 'bar'`),
+  admins incluidos; la ruleta de la app es teatro que se para en ese ganador.
+  Solo hay una tirada `vigente` por ruta; repetir exige motivo y deja la vieja.
+  Margen de sellado: `claim_stamp` acepta `opens_at - margen_min` a
+  `closes_at + margen_min`; la app ensena el horario oficial y
+  `stamps/margen.ts` replica la ventana en la ficha. Quiz: `best_ms` desempata
+  (menos es mejor) en `minigame_ranking` y en `casas_podios`.
 
 - **Tipo de parada (0060)**: `route_bars.tipo` es 'bar' (se sella), 'foto' u
   'otra'. Las dos ultimas salen en el mapa pero NO se sellan: `claim_stamp` las
@@ -945,8 +955,8 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   primera version anadia "¿Respuesta definitiva?" DEBAJO de las opciones y
   echaba fuera comodines y Plantarme (90 px de mas a 808 de ventana, con el
   reloj corriendo). Ahora la parte de abajo es una fila de alto fijo cuyo
-  contenido cambia (Plantarme / Plantarme + Si, definitiva / confirmar
-  plantarse) y al revelar el resultado ocupa ese sitio; la respuesta buena ya
+  contenido cambia ("Elige una respuesta" / "Si, definitiva"; desde la 0061
+  ya no hay plantarse) y al revelar el resultado ocupa ese sitio; la respuesta buena ya
   sale en verde, no se repite en texto. Con preguntas al azar no se demuestra
   nada (casi todas son cortas): `verificar:juego` mide el hueco que deja el
   menu y monta ahi la partida con los textos mas largos del banco (`bancoPeor`).

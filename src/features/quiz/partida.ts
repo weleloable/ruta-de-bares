@@ -65,6 +65,7 @@ function estadoDePregunta(
   vistas: readonly string[],
   usados: EstadoPartida['usados'],
   azar: Azar,
+  ms: number,
   excluir?: string,
 ): EstadoPartida {
   const elegida = elegirPregunta(banco, NIVELES[indice], vistas, azar, excluir);
@@ -82,22 +83,22 @@ function estadoDePregunta(
     vistas: elegida.vistas,
     desenlace: null,
     puntos: 0,
+    ms,
   };
 }
 
 /** Empieza una partida: una pregunta del nivel 1. `vistas` son los ids ya vistos en este dispositivo. */
 export function nuevaPartida(banco: BancoPreguntas, vistas: readonly string[], azar: Azar): EstadoPartida {
-  return estadoDePregunta(banco, 0, vistas, SIN_COMODINES, azar);
+  return estadoDePregunta(banco, 0, vistas, SIN_COMODINES, azar, 0);
 }
 
-/** Puntos de haber superado `superadas` preguntas (0 a 5): el premio de la ultima. */
-export function puntosAcumulados(config: ConfigQuiz, superadas: number): number {
-  return superadas <= 0 ? 0 : config.premios[Math.min(superadas, config.premios.length) - 1];
-}
+/** Lo maximo que se puede sacar: un punto por pregunta (0061). */
+export const PUNTOS_MAXIMOS = NIVELES.length;
 
-/** Lo que se lleva quien falla la pregunta `indice` (0 a 4): el seguro, si ya lo paso. */
-export function puntosAlFallar(config: ConfigQuiz, indice: number): number {
-  return indice >= config.nivelSeguro ? config.premios[config.nivelSeguro - 1] : 0;
+/** Lo tardado en una pregunta, acotado al reloj (ni negativo ni mas que el tiempo de la pregunta). */
+export function acotarMs(ms: number | undefined, config: ConfigQuiz): number {
+  const n = Math.round(ms ?? 0);
+  return Math.max(0, Math.min(config.segundos * 1000, Number.isFinite(n) ? n : 0));
 }
 
 function repartirEnteros(pesos: readonly number[], total: number): number[] {
@@ -180,7 +181,7 @@ export function reducir(
 
     case 'confirmar':
       if (e.fase !== 'respondiendo' || e.seleccion === null) return e;
-      return { ...e, fase: 'suspense' };
+      return { ...e, fase: 'suspense', ms: e.ms + acotarMs(accion.ms, config) };
 
     case 'revelar': {
       if (e.fase !== 'suspense' || e.seleccion === null) return e;
@@ -190,11 +191,8 @@ export function reducir(
     case 'tiempoAgotado':
       // En suspense la respuesta ya esta dada: el reloj no la tumba.
       if (e.fase !== 'respondiendo') return e;
-      return revelarEstado({ ...e, seleccion: null }, false, 'tiempo');
-
-    case 'plantarse':
-      if (e.fase !== 'respondiendo') return e;
-      return terminar(e, 'plantado', puntosAcumulados(config, e.indice));
+      // Sin contestar a tiempo cuenta la pregunta entera.
+      return revelarEstado({ ...e, seleccion: null, ms: e.ms + config.segundos * 1000 }, false, 'tiempo');
 
     case 'comodin': {
       if (e.fase !== 'respondiendo' || e.usados[accion.comodin]) return e;
@@ -214,16 +212,19 @@ export function reducir(
         return { ...e, usados, voto: generarVoto(e.opciones, e.eliminadas, NIVELES[e.indice], azar, config) };
       }
       // Cambio de ronda: otra pregunta del mismo nivel, desde cero.
-      return estadoDePregunta(banco, e.indice, e.vistas, usados, azar, e.pregunta.id);
+      return estadoDePregunta(banco, e.indice, e.vistas, usados, azar, e.ms + acotarMs(accion.ms, config), e.pregunta.id);
     }
 
     case 'siguiente': {
       if (e.fase !== 'revelada') return e;
-      if (!e.acierto) {
-        return terminar(e, e.causaFallo === 'tiempo' ? 'tiempo' : 'fallo', puntosAlFallar(config, e.indice));
-      }
-      if (e.indice >= NIVELES.length - 1) return terminar(e, 'gano', puntosAcumulados(config, NIVELES.length));
-      return estadoDePregunta(banco, e.indice + 1, e.vistas, e.usados, azar);
+      // Un punto por acierto: al fallar te quedas con los que llevabas.
+      if (!e.acierto) return terminar(e, e.causaFallo === 'tiempo' ? 'tiempo' : 'fallo', e.indice);
+      if (e.indice >= NIVELES.length - 1) return terminar(e, 'gano', NIVELES.length);
+      return estadoDePregunta(banco, e.indice + 1, e.vistas, e.usados, azar, e.ms);
     }
+
+    // Una accion que ya no existe (p. ej. 'plantarse', que se quito en la 0061) no hace nada.
+    default:
+      return e;
   }
 }

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Banner, Button } from '../../components/ui';
-import { diaLargo, ventana } from '../../lib/fechas';
+import { diaLargo, hora, ventana } from '../../lib/fechas';
 import { colors, radius, space, typography } from '../../lib/theme';
 import { useNow } from '../../lib/useNow';
 import { Consumiciones } from '../casas/Consumiciones';
+import { ventanaDeSellado } from './margen';
 import { direccionVisible } from '../routes/catalogo';
 import type { RouteBarRow, RouteRow, StampRow } from '../../types/database';
 import { LocationDeniedError, claimStamp, getCurrentPosition } from './api';
@@ -114,14 +115,16 @@ export function StampSheet({
 
   const abre = new Date(bar.opens_at);
   const cierra = new Date(bar.closes_at);
+  // Se puede sellar en el horario oficial mas el margen de la parada (0061).
+  const sellado = ventanaDeSellado(abre, cierra, bar.margen_min);
   const verdict = evaluateStamp({
     bar: {
       id: bar.id,
       lat: bar.lat,
       lng: bar.lng,
       radiusM: bar.radius_m,
-      opensAt: abre,
-      closesAt: cierra,
+      opensAt: sellado.desde,
+      closesAt: sellado.hasta,
     },
     position: posicion,
     now,
@@ -167,6 +170,9 @@ export function StampSheet({
             <Dato titulo="Ventana" valor={ventana(abre, cierra)} />
             <Dato titulo="Radio" valor={`${bar.radius_m} m`} />
           </View>
+          {sellado.margen > 0 ? (
+            <Text style={typography.muted}>{`Se puede sellar de ${hora(sellado.desde)} a ${hora(sellado.hasta)}.`}</Text>
+          ) : null}
 
           {bar.notes.length > 0 ? (
             <View style={styles.notas}>

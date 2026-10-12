@@ -55,7 +55,7 @@ export function reglasInfo(puntos: Readonly<Record<string, number>>, r: LimitesR
       titulo: 'Categoría nueva',
       puntos: mas(p('categoria_nueva')),
       texto:
-        `La primera vez que apuntas cada tipo de bebida (tercio, jarra, vino, sidra, chupito o sin alcohol), hasta ${n(r.variedad_max, 'vez', 'veces')} por ruta.`,
+        `La primera vez que apuntas cada tipo de bebida (tercio, jarra, vino, sidra, chupito, copa o sin alcohol), hasta ${n(r.variedad_max, 'vez', 'veces')} por ruta.`,
     },
     {
       icono: '🏆',

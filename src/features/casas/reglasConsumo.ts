@@ -6,7 +6,7 @@
  * Sin importaciones: los tests lo cargan tal cual.
  */
 
-export type IdCategoria = 'sin_alcohol' | 'tercio' | 'jarra' | 'vino' | 'sidra' | 'chupito';
+export type IdCategoria = 'sin_alcohol' | 'tercio' | 'jarra' | 'vino' | 'sidra' | 'chupito' | 'copa';
 
 /** "Sin alcohol" va la primera a proposito: puntua igual y es una categoria mas. */
 export const CATEGORIAS: readonly { id: IdCategoria; nombre: string; icono: string }[] = [
@@ -16,6 +16,7 @@ export const CATEGORIAS: readonly { id: IdCategoria; nombre: string; icono: stri
   { id: 'vino', nombre: 'Vino', icono: '🍷' },
   { id: 'sidra', nombre: 'Sidra', icono: '🍏' },
   { id: 'chupito', nombre: 'Chupito', icono: '🥃' },
+  { id: 'copa', nombre: 'Copa', icono: '🍸' },
 ];
 
 export function categoria(id: string) {
