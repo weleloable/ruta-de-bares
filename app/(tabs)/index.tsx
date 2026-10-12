@@ -16,13 +16,11 @@ import { StampSeal } from '../../src/components/StampSeal';
 import { Banner, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { ultimoBarSellado } from '../../src/features/casas/reglasConsumo';
-import { RankingCasas } from '../../src/features/casas/RankingCasas';
-import { GanadoraRuta } from '../../src/features/casas/GanadoraRuta';
-import { RetosRuta } from '../../src/features/casas/RetosRuta';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { credencialCompleta } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
+import { desdeFechaISO, diaLargo } from '../../src/lib/fechas';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 /**
@@ -54,6 +52,7 @@ export default function SellosScreen() {
     [stamps],
   );
 
+  const fecha = desdeFechaISO(activeRoute?.event_date ?? null);
   const conseguidos = bars.filter((bar) => sellosPorBar.has(bar.id)).length;
   const indiceAbierto = bars.findIndex((bar) => bar.id === abierto);
   const barAbierto = indiceAbierto >= 0 ? bars[indiceAbierto] : null;
@@ -134,13 +133,13 @@ export default function SellosScreen() {
                   </Text>
                 </View>
               </View>
+              {/* Nombre de la ruta y fecha: la tarjeta ya no comparte pantalla con las
+                  casas, asi que hay sitio para decir de que ruta es. */}
+              <Text style={typography.body}>{activeRoute.name}</Text>
+              {fecha ? <Text style={typography.muted}>{diaLargo(fecha)}</Text> : null}
             </Card>
           ) : null}
 
-          {/* Las casas, en directo (0044): dentro de la cabecera porque es opaca. */}
-          {activeRoute ? <GanadoraRuta rutaId={activeRoute.id} /> : null}
-          {activeRoute ? <RankingCasas rutaId={activeRoute.id} /> : null}
-          {activeRoute ? <RetosRuta rutaId={activeRoute.id} sellos={stamps.length} /> : null}
         </View>
 
         {!activeRoute ? (

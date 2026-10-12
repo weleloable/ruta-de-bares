@@ -324,6 +324,11 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    quien participa cuanto vale cada accion (`casas_puntos`), para el boton (i)
    de la tabla de casas con todas las formas de ganar puntos. Se puede pegar
    dos veces.
+55. [`supabase/migrations/0057_estadisticas_casas.sql`](../supabase/migrations/0057_estadisticas_casas.sql)
+   y **Run**, despues de la 0056 (la 0055 y la 0056 son de los minijuegos) y
+   **ANTES de desplegar la app**. Estadisticas por casa para la pestana Casas
+   (`casas_estadisticas`): de donde sacan los puntos y que casa destaca en
+   cada cosa, siempre en proporcion a su gente. Se puede pegar dos veces.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

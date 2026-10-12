@@ -745,6 +745,21 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** Estadisticas por casa: puntos por origen, sellos y consumiciones (0057). */
+      casas_estadisticas: {
+        Args: { p_route_id: string };
+        Returns: {
+          house: string;
+          miembros: number;
+          sellos: number;
+          consumiciones: number;
+          p_sellos: number;
+          p_consumo: number;
+          p_juegos: number;
+          p_social: number;
+          p_otros: number;
+        }[];
+      };
       /** Cuanto vale cada accion, visible para quien participa (0054). */
       casas_puntos: {
         Args: Record<string, never>;

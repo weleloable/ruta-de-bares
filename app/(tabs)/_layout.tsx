@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { BarraSuperior } from '../../src/components/BarraSuperior';
+import { BotonSellos } from '../../src/components/BotonSellos';
 import { DescubrimientoCasa } from '../../src/features/casas/DescubrimientoCasa';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
@@ -38,7 +39,7 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.paper },
       }}
     >
-      {/* El orden de la barra de abajo es el de estas pantallas: Ruta, Sellos, Caña. */}
+      {/* El orden de la barra de abajo es el de estas pantallas: Ruta, Casas, Sellos, Caña, Juegos. */}
       <Tabs.Screen
         name="ruta"
         options={{
@@ -47,12 +48,30 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="casas"
+        options={{
+          // La competicion entre casas: tabla en directo, retos y estadisticas.
+          title: 'Casas',
+          tabBarIcon: ({ color, size }) => <Ionicons name="shield" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
-          // La segunda de la barra. Sigue siendo a donde llevan '/' y el enlace de
-          // invitacion, como cuando estaba oculta.
+          // La tercera de la barra (el centro) y la importante: un disco del color de
+          // marca que sobresale (BotonSellos). Sigue siendo a donde llevan '/' y el
+          // enlace de invitacion.
           title: 'Sellos',
           tabBarIcon: ({ color, size }) => <Ionicons name="ribbon" color={color} size={size} />,
+          tabBarButton: (props) => (
+            <BotonSellos
+              onPress={props.onPress}
+              onLongPress={props.onLongPress}
+              seleccionada={props.accessibilityState?.selected === true}
+              etiqueta={props.accessibilityLabel}
+              testID={props.testID}
+            />
+          ),
         }}
       />
       <Tabs.Screen

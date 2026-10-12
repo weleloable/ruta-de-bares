@@ -136,6 +136,7 @@ supabase/
   migrations/0052_*.sql     `casas_aportes`: cuanto pone cada persona a los puntos de su casa
   migrations/0053_*.sql     `casas_aportes_detalle`: de donde salen los puntos de una persona (agrupado por tipo)
   migrations/0054_*.sql     `casas_puntos`: cuanto vale cada accion, visible para quien participa (boton (i))
+  migrations/0057_*.sql     `casas_estadisticas`: puntos por origen y datos por casa (pestana Casas)
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
                             (NO hay Edge Functions: todo son funciones de Postgres)
