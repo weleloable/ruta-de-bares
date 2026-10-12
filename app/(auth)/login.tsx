@@ -79,6 +79,14 @@ export default function LoginScreen() {
 
           {error ? <Banner tone="error">{error}</Banner> : null}
 
+          <Text
+            style={[typography.muted, styles.enlace, styles.olvido]}
+            accessibilityRole="link"
+            onPress={() => !enviando && router.push('/olvido')}
+          >
+            He olvidado mi contraseña
+          </Text>
+
           <Button title="Entrar" onPress={onSubmit} disabled={!puedeEnviar} loading={enviando} />
           <BotonGoogle deshabilitado={enviando} />
 
@@ -143,5 +151,6 @@ const styles = StyleSheet.create({
   formulario: { gap: space.lg },
   pie: { gap: space.xs, marginTop: space.md },
   enlaces: { flexDirection: 'row', justifyContent: 'center', gap: space.lg },
+  olvido: { alignSelf: 'flex-end', marginTop: -space.sm },
   enlace: { fontWeight: '700', color: colors.beerDark, textDecorationLine: 'underline' },
 });

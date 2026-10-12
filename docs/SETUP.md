@@ -847,6 +847,55 @@ volver a la app sola.
 
 ---
 
+## 10. Recuperar la contrasena (codigo de 6 digitos) y minimo de 4
+
+Login > *He olvidado mi contrasena* (`app/(auth)/olvido.tsx`). La persona pone
+su correo, Supabase le manda un **codigo de 6 digitos** y lo escribe en la app
+junto a la contrasena nueva. Sin enlace: el enlace de recuperacion con PKCE solo
+funciona en el mismo navegador donde se pidio, y falla pidiendolo en la app y
+abriendo el correo en Chrome.
+
+Sin migracion SQL. Hay **dos ajustes en el panel de Supabase**, que no se
+pueden hacer desde el codigo, y hasta hacerlos la funcion NO sirve:
+
+1. **Plantilla del correo.** *Authentication > Emails > Templates > Reset
+   Password* (en versiones nuevas del panel: *Authentication > Email*).
+   Sustituye el cuerpo por algo que lleve el codigo:
+
+   ```html
+   <h2>Recupera tu contraseña</h2>
+   <p>Tu código es: <strong>{{ .Token }}</strong></p>
+   <p>Escríbelo en la app, en "He olvidado mi contraseña". Caduca en una hora.
+   Si no lo has pedido tú, ignora este correo.</p>
+   ```
+
+   Si la plantilla sigue siendo la de por defecto (`{{ .ConfirmationURL }}`),
+   el correo llega con un enlace y sin codigo: no hay nada que escribir.
+2. **Minimo de contrasena.** *Authentication > Providers > Email > Minimum
+   password length*: ponlo en **4**. La app ya acepta 4 (`MIN_PASSWORD` en
+   `src/features/auth/password.ts`), pero Supabase impone el suyo y, con el de
+   antes, el alta y el cambio fallan con "contrasena demasiado corta" aunque la
+   pantalla la acepte. Si el panel no te deja bajar de 6, avisa: habria que
+   dejar el minimo de la app en ese numero.
+
+Cosas que conviene saber:
+
+- El correo por defecto de Supabase tiene un limite bajo de envios por hora en
+  todo el proyecto. Para gente real, configura un SMTP propio (*Authentication
+  > SMTP Settings*). La app espera 60 s entre reenvios y traduce el error de
+  "demasiados intentos".
+- Quien entro siempre con Google no tiene contrasena: el codigo le sirve para
+  ponerse una. El mensaje es el mismo exista o no el correo (Supabase no lo
+  revela).
+- El codigo caduca (1 hora por defecto) y vale una vez; uno nuevo anula el
+  anterior.
+- Al canjearlo se abre sesion y la app saca de la pantalla: por eso el codigo y
+  la contrasena nueva se mandan en el mismo paso. Si cambiar la contrasena falla
+  (p. ej. por el minimo de Supabase), se cierra la sesion y se avisa.
+- **Sin probar contra un Supabase real**: la pantalla y las reglas estan
+  probadas, el envio y el canje no. Comprobacion: pide el codigo con una cuenta
+  de prueba, mira que el correo trae 6 digitos, entra con la contrasena nueva.
+
 ## Lista de verificacion
 
 Hasta que estos ocho puntos pasen, el montaje no esta terminado.

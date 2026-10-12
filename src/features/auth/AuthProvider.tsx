@@ -13,6 +13,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
 import { signInWithGoogle } from './google';
+import { limpiarCodigo } from './password';
 import { olvidarFirmasDeAvatar } from '../profile/avatarFirmado';
 
 type AuthState = {
@@ -36,6 +37,18 @@ type AuthState = {
    * error. Con exito, AuthGate reacciona al cambio de sesion.
    */
   signInWithGoogle: () => Promise<boolean>;
+  /**
+   * "He olvidado mi contrasena", paso 1: Supabase manda un correo con un codigo
+   * de 6 digitos (la plantilla "Reset Password" tiene que llevar {{ .Token }}).
+   * No dice si el correo tiene cuenta: contesta igual.
+   */
+  requestPasswordReset: (email: string) => Promise<void>;
+  /**
+   * Paso 2: canjea el codigo y pone la contrasena nueva. Si el codigo es bueno
+   * deja la sesion abierta (AuthGate reacciona y saca de la pantalla), asi que
+   * las dos llamadas van juntas aqui y no en la pantalla, que se desmonta.
+   */
+  resetPasswordWithCode: (email: string, code: string, newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -58,7 +71,14 @@ export function translateAuthError(message: string): string {
   if (/password.*(6|8|at least|should be)/i.test(message)) {
     return 'La contrasena es demasiado corta.';
   }
-  if (/rate limit|too many requests/i.test(message)) {
+  // Recuperar la contrasena: codigo mal escrito, caducado o ya usado.
+  if (/otp.*(expired|invalid)|token has expired or is invalid|invalid.*(token|otp)/i.test(message)) {
+    return 'El código no es válido o ha caducado. Pide uno nuevo.';
+  }
+  if (/new password should be different|same.*password/i.test(message)) {
+    return 'La contraseña nueva tiene que ser distinta de la anterior.';
+  }
+  if (/rate limit|too many requests|only request this after/i.test(message)) {
     return 'Demasiados intentos. Prueba en unos minutos.';
   }
   if (/network|fetch/i.test(message)) return 'Sin conexion con el servidor.';
@@ -151,6 +171,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.session !== null;
   }, []);
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    if (error) throw new Error(translateAuthError(error.message));
+  }, []);
+
+  const resetPasswordWithCode = useCallback(async (email: string, code: string, newPassword: string) => {
+    const { error: errCodigo } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: limpiarCodigo(code),
+      type: 'recovery',
+    });
+    if (errCodigo) throw new Error(translateAuthError(errCodigo.message));
+    const { error: errClave } = await supabase.auth.updateUser({ password: newPassword });
+    if (errClave) {
+      // El codigo ya abrio sesion: sin cambiar la contrasena no se queda dentro.
+      await supabase.auth.signOut().catch(() => {});
+      throw new Error(translateAuthError(errClave.message));
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(translateAuthError(error.message));
@@ -170,10 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signInWithGoogle,
+      requestPasswordReset,
+      resetPasswordWithCode,
       signOut,
       refreshProfile,
     }),
-    [session, profile, loading, signIn, signUp, signOut, refreshProfile],
+    [session, profile, loading, signIn, signUp, requestPasswordReset, resetPasswordWithCode, signOut, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

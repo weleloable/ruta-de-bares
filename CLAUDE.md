@@ -272,6 +272,19 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
 
+- **"He olvidado mi contrasena" va con un CODIGO de 6 digitos, no con enlace**
+  (`app/(auth)/olvido.tsx`, `resetPasswordWithCode` en `AuthProvider.tsx`,
+  reglas en `auth/password.ts`). El enlace de recuperacion con PKCE solo vale en
+  el mismo navegador donde se pidio y falla pidiendolo en la app y abriendo el
+  correo en Chrome. El codigo y la contrasena nueva se mandan JUNTOS: canjear el
+  codigo abre sesion y AuthGate saca de `(auth)` al instante, asi que un
+  formulario en dos pasos se desmontaria entre medias y dejaria entrar SIN
+  cambiar la contrasena (si el cambio falla se cierra la sesion). **Minimo de
+  contrasena = 4** (`MIN_PASSWORD`), pero Supabase tiene el suyo en
+  Authentication > Providers > Email y hay que bajarlo tambien alli. La plantilla
+  del correo "Reset Password" tiene que llevar `{{ .Token }}`: ver SETUP.md, 10.
+  Sin probar contra un Supabase real.
+
 - **Puntos de las casas (0044)**: todo punto es una fila de `point_movements` con
   una `ref` UNICA por ruta ("sello:<id>", "ruta_completa:<persona>"...): es lo que
   impide duplicar, se reintente lo que se reintente. Se ANULAN (con motivo), no se

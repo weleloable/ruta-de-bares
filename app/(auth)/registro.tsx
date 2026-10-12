@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
+import { MIN_PASSWORD, passwordValida as esPasswordValida } from '../../src/features/auth/password';
 import { colors, space, typography } from '../../src/lib/theme';
 
 /**
@@ -27,7 +28,7 @@ export default function RegistroScreen() {
   const [revisaCorreo, setRevisaCorreo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  const passwordValida = password.length >= 8;
+  const passwordValida = esPasswordValida(password);
   const coinciden = password === repetir;
   const puedeEnviar = email.trim().length > 0 && passwordValida && coinciden && !enviando;
 
@@ -105,8 +106,8 @@ export default function RegistroScreen() {
             secureTextEntry
             autoComplete="new-password"
             editable={!enviando}
-            error={password.length > 0 && !passwordValida ? 'Minimo 8 caracteres.' : null}
-            hint="Minimo 8 caracteres."
+            error={password.length > 0 && !passwordValida ? `Minimo ${MIN_PASSWORD} caracteres.` : null}
+            hint={`Minimo ${MIN_PASSWORD} caracteres.`}
           />
           <Field
             label="Repite la contrasena"
