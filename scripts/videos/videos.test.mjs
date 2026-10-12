@@ -74,6 +74,16 @@ test('la semilla se niega a tocar un Supabase que no sea local', () => {
   assert.throws(() => comprobarLocal('https://abcd.supabase.co'), /solo corre contra un Supabase local/);
 });
 
+test('la web exportada se reconoce como local o como de produccion', async () => {
+  // Paso de verdad: Expo leyo el .env de produccion y la web salio apuntando al
+  // Supabase real. Grabar asi crea cuentas reales; el grabador se para.
+  const { supabasesDeLaWeb } = await import('./entorno.mjs');
+  assert.deepEqual(supabasesDeLaWeb('a="http://127.0.0.1:54321";b="http://127.0.0.1:54321/rest"'), ['http://127.0.0.1:54321']);
+  assert.deepEqual(supabasesDeLaWeb('u="https://gwxtcpakspqwhfmljxqb.supabase.co"'), ['https://gwxtcpakspqwhfmljxqb.supabase.co']);
+  assert.deepEqual(supabasesDeLaWeb('nada'), []);
+  assert.deepEqual(supabasesDeLaWeb('d="http://localhost:9999"'), [], 'el localhost por defecto de una libreria no cuenta');
+});
+
 test('el reparto cumple las reglas del nombre visible (0003)', () => {
   const nombres = [ADMIN.nombre, NUEVA.nombre, ...GENTE.map((g) => g.nombre)];
   assert.equal(new Set(nombres.map((n) => n.toLowerCase())).size, nombres.length, 'sin repetir, sin distinguir mayusculas');
@@ -128,7 +138,8 @@ test('el "siguiente video" de cada demo es la que va detras, y la ultima no apun
   const demos = GUIONES.filter((x) => x.id !== 'trailer');
   demos.forEach((g, i) => {
     const codigo = readFileSync(join(RAIZ, 'scripts', 'videos', 'guiones', `${g.id}.mjs`), 'utf8');
-    const siguiente = /cierre\([^;]*?,\s*'([^']*)'\)\)/s.exec(codigo)?.[1];
+    // cierre('texto', 'Siguiente') — con o sin duracion detras en terminar().
+    const siguiente = /cierre\([^;]*?,\s*'([^']*)'\)/s.exec(codigo)?.[1];
     assert.equal(siguiente, demos[i + 1]?.titulo ?? '', `${g.id}: anuncia "${siguiente}"`);
   });
 });

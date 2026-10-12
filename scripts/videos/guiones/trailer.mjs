@@ -1,5 +1,5 @@
 import { PARADA_EN_VIVO, PROTA } from '../reparto.mjs';
-import { entrarDeprisa } from './comun.mjs';
+import { entrarDeprisa, pestana } from './comun.mjs';
 
 /**
  * Tira la caña como se debe: vaso inclinado ~45 grados (poca espuma) y recto
@@ -78,7 +78,7 @@ export default {
 
     await d.tarjeta({ logo: false, clase: 'oscura', titulo: 'Y cuando completas la ruta…' });
     await ctx.mundo.sellarResto(PROTA);
-    await d.clic(d.app.getByText('Sellos', { exact: true }));
+    await d.clic(pestana(d, 'Sellos'));
     await d.recargar('Credencial de');
     await d.esperar(1800);
     await d.quitarTarjeta(600);

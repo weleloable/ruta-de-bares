@@ -86,12 +86,41 @@ export function buscarChrome() {
   return chrome;
 }
 
-/** Exporta la web apuntando al Supabase local (las EXPO_PUBLIC_ se hornean al exportar). */
+/**
+ * Exporta la web apuntando al Supabase local (las EXPO_PUBLIC_ se hornean al exportar).
+ *
+ * EXPO_NO_DOTENV: sin el, Expo leia el `.env` del repo (el de PRODUCCION) por
+ * encima de estas variables y la web salia apuntando al Supabase de verdad.
+ * Grabar asi daria de alta cuentas reales (el video de registro crea a Pablo).
+ */
 export function exportarWeb({ url, clavePublica }) {
-  execFileSync(NPX, ['expo', 'export', '-p', 'web', '--output-dir', WEB], {
+  execFileSync(NPX, ['expo', 'export', '-p', 'web', '--output-dir', WEB, '--clear'], {
     cwd: RAIZ,
     stdio: 'inherit',
     shell: process.platform === 'win32',
-    env: { ...process.env, EXPO_PUBLIC_SUPABASE_URL: url, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: clavePublica },
+    env: {
+      ...process.env,
+      EXPO_NO_DOTENV: '1',
+      EXPO_PUBLIC_SUPABASE_URL: url,
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: clavePublica,
+    },
   });
+  comprobarWebLocal(url);
+}
+
+/** Supabase a los que apunta la web exportada (las URL horneadas en el JS). */
+export function supabasesDeLaWeb(textoJs) {
+  // localhost:NNNN no cuenta: alguna libreria trae uno por defecto (:9999) que no es nuestro Supabase.
+  return [...new Set(textoJs.match(/https?:\/\/[a-z0-9-]+\.supabase\.co|http:\/\/127\.0\.0\.1:\d+/g) ?? [])];
+}
+
+/** Se niega a seguir si la web exportada habla con algo que no sea el Supabase local. */
+export function comprobarWebLocal(url) {
+  const js = join(WEB, '_expo', 'static', 'js', 'web');
+  const texto = readdirSync(js).filter((f) => f.endsWith('.js')).map((f) => readFileSync(join(js, f), 'utf8')).join('\n');
+  const vistos = supabasesDeLaWeb(texto);
+  const ajenos = vistos.filter((u) => u !== url);
+  if (!vistos.includes(url) || ajenos.length) {
+    throw new Error(`La web exportada no apunta (solo) al Supabase local ${url}: ${vistos.join(', ') || 'ninguno'}. No se graba.`);
+  }
 }

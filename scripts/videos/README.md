@@ -10,9 +10,10 @@ subtítulos por paso y un dedo que marca cada toque. Sale en vertical
 | `00-trailer.mp4` | Tráiler: sellar, mapa, La Caña, un adelanto de los minijuegos y el diploma, a ritmo de anuncio |
 | `01-crear-cuenta-y-unirse.mp4` | Las dos formas de crear la cuenta (correo o Google), unirse a una ruta con el enlace de invitación e instalar la app |
 | `02-iniciar-sesion.mp4` | Entrar con correo y contraseña (y dónde está Google) |
-| `03-mi-perfil.mp4` | Cambiar la foto (revisión y aprobación) y el nombre, avisos, privacidad y descargar tus datos, escribir a la organización, cerrar sesión y borrar cuenta |
-| `04-ruta-y-sellos.mp4` | Mapa, tus sellos, sellar un bar (lejos / en la puerta), bares que aún no abren, medalla y diploma |
-| `05-la-cana.mp4` | Activarla (el día de la ruta y cerca del primer bar), presentarse, Me gusta, conexión, la pregunta de la cerveza, el mensaje único, bloquear y desactivar |
+| `03-mi-perfil.mp4` | (~1 min) Cambiar la foto (revisión y aprobación), tu casa y tu QR, el nombre, tu cuenta, cerrar sesión y borrar cuenta |
+| `04-ruta-y-sellos.mp4` | (~1 min) El mapa con la parada de foto (no se sella), sellar un bar al llegar, el sorteo de la camiseta, la medalla y el diploma |
+| `05-casas.mp4` | (~1 min) Qué casa te toca, la clasificación, todas las formas de ganar puntos, los retos, apuntar una consumición y el QR |
+| `06-la-cana.mp4` | Activarla (el día de la ruta y cerca del primer bar), presentarse, Me gusta, conexión, la pregunta de la cerveza, el mensaje único, bloquear y desactivar |
 
 Los minijuegos no tienen demo a propósito: salen en el tráiler y cada cual los descubre jugando.
 
@@ -33,12 +34,12 @@ migraciones de `supabase/migrations/`. Cada video parte de una base
 **reseteada y sembrada** de cero, así que se pueden regrabar sueltos:
 
 ```bash
-node scripts/videos/grabar.mjs sellos cana      # solo esos (ids: trailer registro login perfil sellos cana)
+node scripts/videos/grabar.mjs sellos cana      # solo esos (ids: trailer registro login perfil sellos casas cana)
 node scripts/videos/grabar.mjs --sin-export     # reutiliza la web ya exportada (si no tocaste la app)
 node scripts/videos/grabar.mjs --borrador cana  # sin video: una captura por paso en ~/.ruta-de-bares-videos/borrador/
 ```
 
-Unos 15 minutos para los seis. Las horas que salen en pantalla son las de
+Unos 17 minutos para los siete. Las horas que salen en pantalla son las de
 grabar: las ventanas de los bares se calculan desde ese momento.
 
 ## Cómo está hecho

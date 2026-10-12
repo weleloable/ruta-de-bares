@@ -1,11 +1,15 @@
-import { PARADA_EN_VIVO, PARADAS, PROTA } from '../reparto.mjs';
-import { abrir, cierre, empezar, entrarDeprisa, portada, terminar } from './comun.mjs';
+import { PARADA_EN_VIVO, PARADA_FOTO, PARADAS, PROTA, SORTEO } from '../reparto.mjs';
+import { abrir, cierre, empezar, entrarDeprisa, pestana, portada, quitarCasaNueva, terminar } from './comun.mjs';
 
 /** A ~250 m al norte del bar: "te faltan X m". */
 const lejos = (bar) => ({ latitude: bar.lat + 0.0023, longitude: bar.lng + 0.0004 });
 /** En la puerta. */
 const cerca = (bar) => ({ latitude: bar.lat + 0.00008, longitude: bar.lng });
 
+/**
+ * Ruta y Sellos en un minuto: el mapa (con la parada de foto, que no se sella),
+ * sellar un bar al llegar, el sorteo de la camiseta y la medalla.
+ */
 export default {
   id: 'sellos',
   fichero: '04-ruta-y-sellos',
@@ -13,6 +17,7 @@ export default {
   posicionInicial: (datos) => lejos(datos.bares[PARADA_EN_VIVO]),
   async preparar(d, ctx) {
     await entrarDeprisa(d, ctx, PROTA);
+    await quitarCasaNueva(d);
     await abrir(d, ctx, '/ruta', 'Ver toda la ruta');
     await d.esperar(2500); // teselas del mapa
   },
@@ -20,52 +25,49 @@ export default {
     const bar = ctx.bares[PARADA_EN_VIVO];
     await empezar(d, {
       seccion: 'Ruta y sellos',
-      pasos: 13,
-      tarjeta: portada('Ruta y sellos', 'Tus sellos de la ruta', 'Un sello por cada bar de la ruta. Así se consiguen.', [
-        'Ver la ruta en el mapa',
+      pasos: 9,
+      ms: 3200,
+      tarjeta: portada('Ruta y sellos', 'Tus sellos de la ruta', 'Un sello por bar, y una camiseta en juego.', [
+        'La ruta en el mapa',
         'Sellar un bar al llegar',
-        'Completarla y ganar la medalla',
+        'El sorteo de la camiseta',
       ]),
     });
-    await d.paso('En <b>Ruta</b> tienes todos los bares en el mapa, numerados en orden.', { pausa: 3400 });
-    await d.paso('Abajo, las paradas con su horario. Toca una para verla en el mapa.', { pausa: 1500 });
-    await d.tocar(d.app.getByText('El Hidalgo', { exact: true }), { despues: 2200 });
-    await d.tocar('Ver toda la ruta', { despues: 2000 });
-    await d.paso('Arriba, el Instagram de la ruta y su grupo de Telegram (<b>Social</b>).', { pausa: 900 });
-    await d.foco(d.app.getByText('@rutadebaresoficial'), 2200);
+    await d.paso('En <b>Ruta</b> tienes todas las paradas en el mapa, en orden, con su horario.', { pausa: 2800 });
+    await d.paso(`Una es para la foto de grupo: el <b>${PARADA_FOTO.nombre}</b>. Sale en el mapa, pero no se sella.`, { pausa: 700 });
+    // Su marcador es una camara: tocarlo la centra y trae su tarjeta al carrusel.
+    await d.tocar(d.app.getByText('📷', { exact: true }), { despues: 1600 });
+    await d.foco(d.app.getByText(new RegExp(PARADA_FOTO.nombre)), 2000);
 
-    await d.paso('Para sellar, ve a la pestaña <b>Sellos</b>.', { pausa: 900 });
-    await d.tocar(d.app.getByText('Sellos', { exact: true }), { despues: 1500 });
-    await d.paso('Estos son tus <b>sellos</b>: cada chapa es un bar de la ruta. Aquí llevas 3 de 8.', { pausa: 900 });
-    await d.foco(d.app.getByText('Credencial de', { exact: true }), 2800);
+    await d.paso('Los sellos, en el botón del centro: <b>Sellos</b>. Cada chapa es un bar.', { pausa: 700 });
+    await d.tocar(pestana(d, 'Sellos'), { despues: 1800 });
 
-    await d.paso(`Cuando llegues al bar, toca su chapa. Ahora toca <b>${bar.name}</b>.`, { pausa: 1200 });
-    await d.tocar(d.app.getByText(bar.name, { exact: true }), { despues: 2500 });
-    await d.paso('Solo sella si estás <b>dentro del bar</b> y en su <b>horario</b>. Aquí aún estás lejos.', { pausa: 900 });
-    await d.foco(d.app.getByText(/Estas a \d+ m/), 3200);
+    await d.paso(`Al llegar al bar, toca su chapa: <b>${bar.name}</b>.`, { pausa: 700 });
+    await d.tocar(d.app.getByText(bar.name, { exact: true }), { despues: 1600 });
+    await d.paso('Solo sella si estás <b>dentro del bar</b> y en su <b>horario</b>. Aquí aún estás lejos.', { pausa: 600 });
+    await d.foco(d.app.getByText(/Estas a \d+ m/), 2200);
 
     await ctx.contexto.setGeolocation(cerca(bar));
-    await d.paso('Ya en la puerta, toca <b>Volver a medir mi posición</b>.', { pausa: 1200 });
-    await d.tocar('Volver a medir mi posicion', { despues: 2200 });
-    await d.paso('¡Estás dentro! Pulsa <b>Sellar este bar</b>.', { pausa: 1200 });
-    await d.tocar('Sellar este bar', { despues: 4200 });
-    await d.paso('¡Sellado! La chapa se queda con la hora en que llegaste.', { pausa: 3000 });
+    await d.paso('Ya en la puerta: <b>Volver a medir mi posición</b> y <b>Sellar este bar</b>.', { pausa: 600 });
+    await d.tocar('Volver a medir mi posicion', { despues: 1500 });
+    await d.tocar('Sellar este bar', { despues: 3200 });
     const cerrar = d.app.getByText('Cerrar', { exact: true });
-    if (await d.seVe(cerrar)) await d.tocar(cerrar, { despues: 1500 });
+    if (await d.seVe(cerrar)) await d.tocar(cerrar, { despues: 1000 });
 
-    await d.paso('Los bares que aún no han abierto te dicen <b>cuándo abren</b>.', { pausa: 1000 });
-    await d.tocar(d.app.getByText(PARADAS[PARADA_EN_VIVO + 1], { exact: true }), { despues: 1200 });
-    await d.foco(d.app.getByText(/Todavia no abre/), 2800);
-    await d.tocar(d.app.getByText('Cerrar', { exact: true }), { despues: 1000 });
+    await d.paso(`Si sellas todos los bares, entras en el <b>sorteo de una ${SORTEO.premio.toLowerCase()}</b>.`, { pausa: 600 });
+    await d.tocar('Información del sorteo', { despues: 2600 });
+    await d.tocar(d.app.getByText('Entendido', { exact: true }), { despues: 600 });
 
-    await d.tarjeta({ logo: false, sobre: 'Ruta y sellos', titulo: 'Unas horas y cuatro bares después…', clase: 'oscura' });
+    await d.tarjeta({ logo: false, sobre: 'Ruta y sellos', titulo: `Unas horas y ${PARADAS.length - PARADA_EN_VIVO - 1} bares después…`, clase: 'oscura' });
     await ctx.mundo.sellarResto(PROTA);
     await d.recargar('Credencial de');
-    await d.esperar(2600);
-    await d.quitarTarjeta(900);
-    await d.paso('¡Ruta completa! Aparece la <b>medalla</b>. Tócala.', { pausa: 1500 });
-    await d.tocar(d.app.getByLabel('Medalla: ruta completa. Toca para ver tu diploma'), { despues: 2500 });
-    await d.paso('Tu <b>diploma</b>, con el recorrido. Puedes guardarlo o compartirlo.', { pausa: 4200 });
-    await terminar(d, cierre('Recuerda: la ubicación solo se pide al sellar, nunca para el mapa.', 'La Caña'));
+    await d.esperar(2200);
+    await d.quitarTarjeta(800);
+    await d.paso('¡Ruta completa! Ya estás <b>dentro del sorteo</b>.', { pausa: 600 });
+    await d.tocar('Información del sorteo', { despues: 2600 });
+    await d.tocar(d.app.getByText('Entendido', { exact: true }), { despues: 600 });
+    await d.paso('Y te llevas la <b>medalla</b>: tócala para ver tu diploma.', { pausa: 600 });
+    await d.tocar(d.app.getByLabel('Medalla: ruta completa. Toca para ver tu diploma'), { despues: 3000 });
+    await terminar(d, cierre('La ubicación solo se pide al sellar, nunca para el mapa.', 'Casas'), 3000);
   },
 };

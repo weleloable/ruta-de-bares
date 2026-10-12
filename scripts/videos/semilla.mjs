@@ -18,10 +18,12 @@ import {
   ADMIN,
   CLAVE_DEMO,
   GENTE,
+  PARADA_FOTO,
   PARADAS,
   PROTA,
   RUTA,
   SELLADAS_POR_PROTA,
+  SORTEO,
   VENTANAS,
   correo,
 } from './reparto.mjs';
@@ -95,7 +97,10 @@ export async function sembrar(cfg) {
   const ruta = ok(
     await servicio
       .from('routes')
-      .insert({ name: RUTA.nombre, description: RUTA.descripcion, event_date: hoy, is_published: true, created_by: ids[ADMIN.nombre] })
+      .insert({
+        name: RUTA.nombre, description: RUTA.descripcion, event_date: hoy, is_published: true, created_by: ids[ADMIN.nombre],
+        sorteo_activo: true, sorteo_premio: SORTEO.premio,
+      })
       .select()
       .single(),
     'crear ruta',
@@ -107,18 +112,35 @@ export async function sembrar(cfg) {
     if (!c) throw new Error(`El catalogo no tiene "${nombre}"`);
     return {
       route_id: ruta.id,
-      sort_order: i,
+      // Hueco para la parada de foto detras del bar `despuesDelBar`.
+      sort_order: i > PARADA_FOTO.despuesDelBar ? i + 1 : i,
       name: c.name,
       address: c.address ?? '',
       lat: c.lat,
       lng: c.lng,
       logo: c.logo,
+      tipo: 'bar',
       radius_m: 60,
       opens_at: min(VENTANAS[i][0]),
       closes_at: min(VENTANAS[i][1]),
     };
   });
-  const bares = ok(await servicio.from('route_bars').insert(filas).select().order('sort_order'), 'crear paradas');
+  filas.push({
+    route_id: ruta.id,
+    sort_order: PARADA_FOTO.despuesDelBar + 1,
+    name: PARADA_FOTO.nombre,
+    address: '',
+    logo: null,
+    lat: PARADA_FOTO.lat,
+    lng: PARADA_FOTO.lng,
+    tipo: 'foto',
+    radius_m: 60,
+    opens_at: min(PARADA_FOTO.ventana[0]),
+    closes_at: min(PARADA_FOTO.ventana[1]),
+  });
+  const paradas = ok(await servicio.from('route_bars').insert(filas).select().order('sort_order'), 'crear paradas');
+  // Los guiones cuentan en BARES (los que se sellan), como la app.
+  const bares = paradas.filter((p) => p.tipo === 'bar');
 
   // 3. Todos dentro de la ruta (como si hubieran canjeado la invitacion).
   ok(
@@ -193,8 +215,12 @@ export async function sembrar(cfg) {
     ok(await clientes[de].rpc('match_set_like', { p_route_id: ruta.id, p_target_id: ids[a], p_liked: true }), `${de} -> ${a}`);
   }
 
-  // 7. La invitacion que abre Pablo en el video de Crear cuenta. (Los minijuegos
-  // no se siembran: solo salen en el trailer, y ahi juega Marta.)
+  // 7. Casas (0043-0061): que la clasificacion tenga puntos de TODAS las
+  // formas, para que el video de Casas lo pueda ensenar. Los sellos ya puntuan
+  // solos (disparador); lo demas, por las mismas funciones que la app.
+  await sembrarCasas({ servicio, admin, clientes, ruta, sellos, ids });
+
+  // 8. La invitacion que abre Pablo en el video de Crear cuenta.
   const invitacion = ok(
     await admin.rpc('create_route_invite', { p_route_id: ruta.id, p_max_uses: 20, p_expires_in_hours: 8 }),
     'crear invitacion',
@@ -203,6 +229,61 @@ export async function sembrar(cfg) {
   if (!token) throw new Error(`create_route_invite no devolvio token: ${JSON.stringify(invitacion)}`);
 
   return { ids, rutaId: ruta.id, bares, token };
+}
+
+/**
+ * Retos, consumiciones, encuentros por QR y notas de minijuegos (podios).
+ * Marta no hace nada aqui: lo suyo lo hace en los videos.
+ */
+async function sembrarCasas({ servicio, admin, clientes, ruta, sellos, ids }) {
+  // Retos de la ruta, creados por la organizacion (RLS: solo admins escriben).
+  ok(
+    await admin.from('retos').insert([
+      { route_id: ruta.id, nombre: 'Tres de tres', descripcion: 'Sella tres bares.', tipo: 'bares', objetivo: 3, puntos: 15 },
+      { route_id: ruta.id, nombre: 'Catador', descripcion: 'Apunta dos tipos de bebida distintos.', tipo: 'categorias', objetivo: 2, puntos: 10 },
+      { route_id: ruta.id, nombre: 'Rompehielos', descripcion: 'Conoce a alguien por QR.', tipo: 'encuentros_qr', objetivo: 1, puntos: 8, max_personas: 20 },
+    ]),
+    'crear retos',
+  );
+
+  // Una consumicion por persona, en el ULTIMO bar que sello (la regla de la 0045).
+  const categorias = ['jarra', 'tercio', 'sin_alcohol', 'vino', 'sidra', 'copa', 'tercio', 'jarra', 'sin_alcohol'];
+  const otros = GENTE.filter((g) => g.nombre !== PROTA);
+  for (const [i, g] of otros.entries()) {
+    const suyos = sellos.filter((s) => s.user_id === ids[g.nombre]);
+    const ultimo = suyos.sort((a, b) => a.stamped_at.localeCompare(b.stamped_at)).at(-1);
+    if (!ultimo) continue;
+    ok(
+      await clientes[g.nombre].rpc('registrar_consumicion', { p_route_bar_id: ultimo.route_bar_id, p_categoria: categorias[i % categorias.length] }),
+      `consumicion de ${g.nombre}`,
+    );
+  }
+
+  // Encuentros por QR: una ensena su codigo y la otra lo escanea. Solo entre
+  // gente de la MISMA casa (QR_OTHER_HOUSE), y la casa se reparte sola al
+  // entrar en la ruta: se empareja segun lo que haya tocado.
+  const casas = ok(await servicio.from('user_houses').select('user_id, house'), 'leer casas');
+  const casaDe = (nombre) => casas.find((c) => c.user_id === ids[nombre])?.house;
+  const parejas = [];
+  const libres = otros.map((g) => g.nombre);
+  while (libres.length && parejas.length < 3) {
+    const a = libres.shift();
+    const j = libres.findIndex((b) => casaDe(b) === casaDe(a));
+    if (j >= 0) parejas.push([a, libres.splice(j, 1)[0]]);
+  }
+  for (const [ensena, escanea] of parejas) {
+    const codigo = ok(await clientes[ensena].rpc('qr_mi_codigo'), `QR de ${ensena}`);
+    const valor = typeof codigo === 'string' ? codigo : (codigo?.codigo ?? codigo?.[0]?.codigo);
+    ok(await clientes[escanea].rpc('qr_escanear', { p_route_id: ruta.id, p_codigo: valor }), `${escanea} escanea a ${ensena}`);
+  }
+
+  // Notas de minijuegos: de ahi salen los podios (se calculan en vivo).
+  const notas = [['cana-perfecta', { Sergio: 97, Irene: 91, Dani: 86, Paula: 70 }], ['conga-cervecera', { Javi: 640, Dani: 515, Nerea: 430 }]];
+  for (const [juego, porPersona] of notas) {
+    for (const [nombre, nota] of Object.entries(porPersona)) {
+      ok(await clientes[nombre].rpc('minigame_submit_score', { p_route_id: ruta.id, p_game: juego, p_score: nota }), `${juego} de ${nombre}`);
+    }
+  }
 }
 
 /** Acciones de "el resto del mundo" que el grabador dispara EN MITAD de un video. */
@@ -226,7 +307,8 @@ export async function titiritero(cfg, rutaId, ids) {
      * Se usa detras de una tarjeta que lo dice: el video no finge que sea en directo.
      */
     async sellarResto(nombre) {
-      const bares = ok(await servicio.from('route_bars').select('*').eq('route_id', rutaId).order('sort_order'), 'leer paradas');
+      // Solo bares: una parada de foto no se sella (claim_stamp la rechaza, NOT_STAMPABLE).
+      const bares = ok(await servicio.from('route_bars').select('*').eq('route_id', rutaId).eq('tipo', 'bar').order('sort_order'), 'leer paradas');
       const hechos = ok(await servicio.from('stamps').select('route_bar_id').eq('user_id', ids[nombre]), 'leer sellos');
       const faltan = bares.filter((b) => !hechos.some((h) => h.route_bar_id === b.id));
       ok(

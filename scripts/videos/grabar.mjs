@@ -15,7 +15,7 @@ import { join } from 'node:path';
 
 import { chromium } from 'playwright-core';
 
-import { AQUI, RAIZ, SALIDA, TRABAJO, WEB, arrancarSupabase, buscarChrome, exportarWeb, resetearBase } from './entorno.mjs';
+import { AQUI, RAIZ, SALIDA, TRABAJO, WEB, arrancarSupabase, buscarChrome, comprobarWebLocal, exportarWeb, resetearBase } from './entorno.mjs';
 import { ALTO, ANCHO, Director, ESCALA, Grabacion } from './grabador.mjs';
 import { GUIONES } from './guiones/index.mjs';
 import { crearRasterizador } from './rasterizar.mjs';
@@ -29,7 +29,9 @@ const guiones = elegidos.length ? GUIONES.filter((g) => elegidos.includes(g.id))
 if (guiones.length === 0) throw new Error(`No hay guion con id ${elegidos.join(', ')}. Hay: ${GUIONES.map((g) => g.id).join(', ')}`);
 
 const cfg = arrancarSupabase();
-if (!args.includes('--sin-export')) exportarWeb(cfg);
+// Con o sin export: nunca se graba contra una web que hable con el Supabase de produccion.
+if (args.includes('--sin-export')) comprobarWebLocal(cfg.url);
+else exportarWeb(cfg);
 
 // 8091 y no 8090: el 8090 es el de `servidor.mjs` para mirar la app a mano a la vez.
 const PUERTO = Number(process.env.VIDEOS_PUERTO ?? 8091);

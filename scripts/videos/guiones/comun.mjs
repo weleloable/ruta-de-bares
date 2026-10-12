@@ -30,14 +30,37 @@ export function cierre(texto, siguiente) {
   };
 }
 
-/** Portada de unos segundos, y se retira para ver la app. */
-export async function empezar(d, { seccion, pasos, tarjeta }) {
+/**
+ * Un boton de la barra de pestanas. Por su rol y no por el texto: "Sellos" o
+ * "Casas" salen tambien en otras pantallas (la leyenda de Casas) y el primero
+ * visible no era la pestana.
+ */
+export function pestana(d, nombre) {
+  // El nombre accesible lleva delante el glifo del icono: se mira el final.
+  return d.app.getByRole('tab', { name: new RegExp(`${nombre}$`) });
+}
+
+/** Portada de unos segundos (`ms`), y se retira para ver la app. */
+export async function empezar(d, { seccion, pasos, tarjeta, ms = 4200 }) {
   await d.seccion(seccion, pasos);
-  await d.tarjeta(tarjeta, 4200);
+  await d.tarjeta(tarjeta, ms);
   await d.quitarTarjeta(700);
 }
 
-export async function terminar(d, tarjeta) {
+export async function terminar(d, tarjeta, ms = 3800) {
   await d.sinDedo();
-  await d.tarjeta(tarjeta, 3800);
+  await d.tarjeta(tarjeta, ms);
+}
+
+/**
+ * La presentacion "Tu casa es…" (0057) sale una vez al entrar en la primera
+ * ruta, por encima de todo. Los videos que no hablan de casas la quitan antes
+ * de grabar; el de Casas la ensena.
+ */
+export async function quitarCasaNueva(d) {
+  const vamos = d.app.getByText('¡Vamos!', { exact: true });
+  if (await d.buscar(vamos, 6000).then(() => true, () => false)) {
+    await d.clic(vamos);
+    await d.esperar(800);
+  }
 }

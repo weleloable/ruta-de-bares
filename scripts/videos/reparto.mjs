@@ -102,3 +102,21 @@ export const VENTANAS = [
 ];
 export const SELLADAS_POR_PROTA = 3;
 export const PARADA_EN_VIVO = 3;
+
+/**
+ * Parada de FOTO (0060): sale en el mapa con su horario pero no se sella. Va
+ * entre el 6.º y el 7.º bar. Los indices de arriba (VENTANAS, PARADA_EN_VIVO...)
+ * son de los BARES; esta no cuenta en ellos, igual que en la app.
+ */
+export const PARADA_FOTO = {
+  nombre: 'Banco del Quijote',
+  // Calle Mayor, frente a la casa natal de Cervantes: el banco con don Quijote y
+  // Sancho. Posicion aproximada; en el recorrido cae entre Wheelan's y Green Factory.
+  lat: 40.48268,
+  lng: -3.36725,
+  despuesDelBar: 5,
+  ventana: [200, 230],
+};
+
+/** Sorteo de la ruta (0061): entra quien sella todos los bares. */
+export const SORTEO = { premio: 'Camiseta de la ruta' };

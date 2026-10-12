@@ -5,7 +5,7 @@ const MARTA = GENTE.find((g) => g.nombre === PROTA);
 
 export default {
   id: 'cana',
-  fichero: '05-la-cana',
+  fichero: '06-la-cana',
   titulo: 'La Caña',
   async preparar(d, ctx) {
     await entrarDeprisa(d, ctx, PROTA);
