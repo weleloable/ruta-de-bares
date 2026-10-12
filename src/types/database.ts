@@ -745,6 +745,11 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** Lo que se usa en una ruta: participacion, bares, horas, consumiciones, juegos, retos, QR (0058). */
+      admin_estadisticas_actividad: {
+        Args: { p_route_id: string };
+        Returns: unknown;
+      };
       /** Estadisticas por casa: puntos por origen, sellos y consumiciones (0057). */
       casas_estadisticas: {
         Args: { p_route_id: string };

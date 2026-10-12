@@ -5,6 +5,7 @@ import { DIAS_CONSERVACION } from '../legal/responsable';
 import { borrarFotosSobrantes } from '../profile/fotosSobrantes';
 import { listRoutes } from '../routes/api';
 import { terminoEl } from '../routes/estado';
+import type { ActividadRuta } from './actividad';
 import type { EstadisticasRuta } from './estadisticas';
 import { avisosDeRutasTerminadas, rutasSinVer, type AvisoRutaTerminada } from './rutasTerminadas';
 import type {
@@ -387,6 +388,13 @@ export async function leerEstadisticasRuta(routeId: string): Promise<Estadistica
   const { data, error } = await supabase.rpc('admin_estadisticas_ruta', { p_route_id: routeId });
   if (error) fallo(error);
   return data as EstadisticasRuta;
+}
+
+/** Lo que se usa en una ruta (0058): participacion, bares, horas, consumiciones, juegos, retos y QR. */
+export async function leerActividadRuta(routeId: string): Promise<ActividadRuta> {
+  const { data, error } = await supabase.rpc('admin_estadisticas_actividad', { p_route_id: routeId });
+  if (error) fallo(error);
+  return data as ActividadRuta;
 }
 
 /** Las fotos guardadas como prueba de una denuncia (0032), para su ficha. */

@@ -329,6 +329,12 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    **ANTES de desplegar la app**. Estadisticas por casa para la pestana Casas
    (`casas_estadisticas`): de donde sacan los puntos y que casa destaca en
    cada cosa, siempre en proporcion a su gente. Se puede pegar dos veces.
+56. [`supabase/migrations/0058_estadisticas_actividad.sql`](../supabase/migrations/0058_estadisticas_actividad.sql)
+   y **Run**, despues de la 0057 y **ANTES de desplegar la app**. Amplia
+   Estadisticas (Mi perfil > Estadisticas, solo admins) con participacion,
+   bares, actividad por horas, consumiciones, minijuegos, retos y QR, y el
+   boton de descargar el resumen de la ruta en CSV (`admin_estadisticas_actividad`).
+   Solo totales de la ruta. Se puede pegar dos veces.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

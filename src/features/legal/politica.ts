@@ -86,7 +86,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'organiza la ruta puede ver el detalle para corregir errores.',
               'Las consumiciones que apuntas en un bar (qué categoría y a qué hora): sirven para dar puntos a tu ' +
                 'casa con un tope y una espera entre una y otra. La lista solo la ves tú; quien organiza la ruta ve los ' +
-                'puntos que dieron (y la categoría cuando fue nueva). Apuntarlas es opcional.',
+                'puntos que dieron (y la categoría cuando fue nueva), además de totales de toda la ruta por categoría, ' +
+                'nunca de una persona. Apuntarlas es opcional.',
               'Los encuentros por QR: con quién te encontraste y cuándo, para dar los puntos a tu casa. Los ves ' +
                 'tú y la otra persona; quien organiza la ruta, para corregir errores. El QR solo lleva un código ' +
                 'que caduca en un minuto, sin tus datos. Para escanear, la cámara se usa en el momento y no se ' +

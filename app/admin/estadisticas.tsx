@@ -3,14 +3,27 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, EmptyState, Loading } from '../../src/components/ui';
-import { leerEstadisticasRuta } from '../../src/features/admin/api';
+import { Banner, Button, EmptyState, Loading } from '../../src/components/ui';
+import { nombreFicheroCsv, resumenCsv, type ActividadRuta } from '../../src/features/admin/actividad';
+import { SeccionesActividad, type SeccionActividad } from '../../src/features/admin/ActividadRuta';
+import { leerActividadRuta, leerEstadisticasRuta } from '../../src/features/admin/api';
+import { descargarCsv } from '../../src/features/admin/descargarCsv';
 import { seccionesEstadisticas, type Baldosa, type EstadisticasRuta } from '../../src/features/admin/estadisticas';
+import { Chips } from '../../src/features/casas/panel/piezas';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { listRoutes } from '../../src/features/routes/api';
 import { estadoDeRuta, etiquetaEstado } from '../../src/features/routes/estado';
 import { colors, fonts, radius, space, typography } from '../../src/lib/theme';
 import type { RouteRow } from '../../src/types/database';
+
+type Vista = 'general' | SeccionActividad;
+const VISTAS: { id: Vista; texto: string }[] = [
+  { id: 'general', texto: 'General' },
+  { id: 'participacion', texto: 'Participación' },
+  { id: 'bares', texto: 'Bares' },
+  { id: 'actividad', texto: 'Actividad' },
+  { id: 'juegos', texto: 'Juegos y retos' },
+];
 
 /**
  * Estadisticas de una ruta, solo admins (0037). Cifras de AHORA MISMO y solo
@@ -25,6 +38,10 @@ export default function EstadisticasAdmin() {
   const [rutas, setRutas] = useState<RouteRow[]>([]);
   const [elegida, setElegida] = useState<string | null>(null);
   const [datos, setDatos] = useState<EstadisticasRuta | null>(null);
+  const [actividad, setActividad] = useState<ActividadRuta | null>(null);
+  const [errorActividad, setErrorActividad] = useState<string | null>(null);
+  const [vista, setVista] = useState<Vista>('general');
+  const [descargando, setDescargando] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +64,7 @@ export default function EstadisticasAdmin() {
   const cargarDatos = useCallback(async (routeId: string | null) => {
     if (!routeId) {
       setDatos(null);
+      setActividad(null);
       setCargando(false);
       return;
     }
@@ -57,6 +75,15 @@ export default function EstadisticasAdmin() {
     } catch (e) {
       setDatos(null);
       setError(e instanceof Error ? e.message : 'No se pudieron leer las estadísticas.');
+    }
+    // Aparte: si falta la 0058, lo de siempre sigue viendose y solo estas secciones avisan.
+    try {
+      setActividad(await leerActividadRuta(routeId));
+      setErrorActividad(null);
+    } catch (e) {
+      setActividad(null);
+      const m = e instanceof Error ? e.message : '';
+      setErrorActividad(/PGRST202|Could not find/i.test(m) ? 'Falta aplicar la migración 0058 en Supabase.' : m || 'No se pudo leer la actividad.');
     } finally {
       setCargando(false);
     }
@@ -87,6 +114,19 @@ export default function EstadisticasAdmin() {
 
   const secciones = datos ? seccionesEstadisticas(datos) : [];
 
+  async function bajarResumen() {
+    if (!ruta || !datos || !actividad) return;
+    setDescargando(true);
+    try {
+      const ahora = new Date();
+      await descargarCsv(nombreFicheroCsv(ruta.name, ahora), resumenCsv(ruta.name, datos, actividad, ahora));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo descargar el resumen.');
+    } finally {
+      setDescargando(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
       <ScrollView
@@ -114,9 +154,14 @@ export default function EstadisticasAdmin() {
           <Text style={styles.nota}>{etiquetaEstado(estadoDeRuta(ruta, new Date()))} · datos de ahora mismo</Text>
         ) : null}
 
-        {error ? <Banner tone="error">{error}</Banner> : null}
+        <Chips<Vista> opciones={VISTAS} elegida={vista} onElegir={setVista} />
 
-        {datos
+        {error ? <Banner tone="error">{error}</Banner> : null}
+        {vista !== 'general' && errorActividad ? <Banner tone="error">{errorActividad}</Banner> : null}
+
+        {vista !== 'general' && actividad ? <SeccionesActividad a={actividad} seccion={vista} /> : null}
+
+        {vista === 'general' && datos
           ? secciones.map((seccion, i) => (
               <View key={seccion.titulo} style={styles.seccion}>
                 <Text style={typography.overline}>{seccion.titulo}</Text>
@@ -130,6 +175,16 @@ export default function EstadisticasAdmin() {
               </View>
             ))
           : null}
+
+        {datos && actividad && ruta ? (
+          <Button
+            title="Descargar resumen de la ruta (CSV)"
+            variant="secondary"
+            icon="download-outline"
+            loading={descargando}
+            onPress={() => void bajarResumen()}
+          />
+        ) : null}
 
         {datos ? (
           <Text style={styles.nota}>
