@@ -6,7 +6,9 @@ import { Animated, Platform, Pressable, StyleSheet, Text, Vibration, View } from
 import { Card } from '../../components/ui';
 import { colors, radius, space, typography } from '../../lib/theme';
 import { useAuth } from '../auth/AuthProvider';
+import { useActiveRoute } from '../routes/ActiveRouteProvider';
 import { AportesCasa } from './AportesCasa';
+import { InfoPuntos } from './InfoPuntos';
 import { CASAS, type IdCasa } from './casas';
 import { Escudo } from './Escudo';
 import { useMiCasa } from './MiCasa';
@@ -25,10 +27,20 @@ export function RankingCasas({ rutaId }: { rutaId: string }) {
   const { casa: miCasa } = useMiCasa();
   const router = useRouter();
   const { session } = useAuth();
+  const { routes, activeRoute } = useActiveRoute();
+  const ruta = routes.find((r) => r.id === rutaId) ?? activeRoute;
   const [abierta, setAbierta] = useState<IdCasa | null>(null);
+  const [info, setInfo] = useState(false);
   return (
     <>
-      <TablaCasas filas={filas} miCasa={miCasa} onHistorico={() => router.push('/casas/historico')} onCasa={setAbierta} />
+      <TablaCasas
+        filas={filas}
+        miCasa={miCasa}
+        onHistorico={() => router.push('/casas/historico')}
+        onCasa={setAbierta}
+        onInfo={() => setInfo(true)}
+      />
+      <InfoPuntos ruta={ruta} visible={info} onCerrar={() => setInfo(false)} />
       <AportesCasa rutaId={rutaId} casa={abierta} miId={session?.user.id ?? null} onCerrar={() => setAbierta(null)} />
     </>
   );
@@ -40,12 +52,15 @@ export function TablaCasas({
   miCasa,
   onHistorico,
   onCasa,
+  onInfo,
 }: {
   filas: FilaServidor[] | null;
   miCasa: IdCasa | null;
   onHistorico?: () => void;
   /** Al tocar una casa (abre la lista de quien pone sus puntos). */
   onCasa?: (casa: IdCasa) => void;
+  /** El (i) junto al titulo: como se ganan puntos. */
+  onInfo?: () => void;
 }) {
   const anteriores = useRef<FilaServidor[] | null>(null);
   const [ganado, setGanado] = useState<Partial<Record<IdCasa, number>>>({});
@@ -81,6 +96,17 @@ export function TablaCasas({
       <View style={styles.cabecera}>
         <Ionicons name="trophy" size={18} color={colors.beerDark} />
         <Text style={[typography.sectionTitle, styles.titulo]}>Casas en esta ruta</Text>
+        {onInfo ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cómo se ganan puntos"
+            onPress={onInfo}
+            hitSlop={10}
+            style={({ pressed }) => [styles.info, pressed && styles.filaPulsada]}
+          >
+            <Ionicons name="information-circle-outline" size={22} color={colors.beerDark} />
+          </Pressable>
+        ) : null}
         {onHistorico ? (
           <Pressable accessibilityRole="link" onPress={onHistorico} hitSlop={8}>
             <Text style={styles.historico}>Histórico ›</Text>
@@ -219,7 +245,8 @@ function AvisoLider({ casa, onFin }: { casa: IdCasa; onFin: () => void }) {
 const styles = StyleSheet.create({
   tarjeta: { gap: space.sm },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  titulo: { flex: 1 },
+  titulo: { flexShrink: 1 },
+  info: { flex: 1, alignItems: 'flex-start', paddingLeft: space.xs },
   historico: { fontSize: 12, fontWeight: '700', color: colors.beerDark, marginLeft: space.sm },
   fila: {
     flexDirection: 'row',

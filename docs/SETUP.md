@@ -319,6 +319,11 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    (`casas_aportes_detalle`), agrupado por tipo: sellos, consumiciones,
    categorias, ruta completa, podios por juego, retos, QR y racha. Se puede
    pegar dos veces.
+54. [`supabase/migrations/0054_puntos_publicos.sql`](../supabase/migrations/0054_puntos_publicos.sql)
+   y **Run**, despues de la 0053 y **ANTES de desplegar la app**. Deja ver a
+   quien participa cuanto vale cada accion (`casas_puntos`), para el boton (i)
+   de la tabla de casas con todas las formas de ganar puntos. Se puede pegar
+   dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

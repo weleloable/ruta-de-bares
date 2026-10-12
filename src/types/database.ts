@@ -745,6 +745,11 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** Cuanto vale cada accion, visible para quien participa (0054). */
+      casas_puntos: {
+        Args: Record<string, never>;
+        Returns: { action: string; points: number }[];
+      };
       /** De donde salen los puntos de una persona, agrupado por tipo (0053). */
       casas_aportes_detalle: {
         Args: { p_route_id: string; p_house: string; p_user_id: string };
