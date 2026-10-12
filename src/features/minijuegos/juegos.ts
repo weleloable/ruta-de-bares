@@ -6,6 +6,8 @@ import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
+import { DetalleTapon } from './juegos/tapon/DetalleTapon';
+import { ID_TAPON, TaponAlVuelo } from './juegos/tapon/TaponAlVuelo';
 import { DetalleQuiz, QuienQuiereSerCervecero } from '../quiz/QuienQuiereSerCervecero';
 import { ID_JUEGO as ID_QUIZ } from '../quiz/config';
 import type { JuegoDef } from './tipos';
@@ -73,6 +75,20 @@ export const JUEGOS: readonly JuegoDef[] = [
     icono: 'help-circle',
     Componente: QuienQuiereSerCervecero,
     Detalle: DetalleQuiz,
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
+  },
+  {
+    // Tirachinas de chapas (logica pura en juegos/tapon/modelo.ts). Ranking por ruta desde
+    // la 0056 (tope de 1250 puntos, ver PUNTUACION_MAXIMA).
+    id: ID_TAPON,
+    titulo: 'Tapón al Vuelo',
+    descripcion: 'Abre botellines y cuela la chapa. Diez tiros, con viento.',
+    icono: 'locate',
+    Componente: TaponAlVuelo,
+    Detalle: DetalleTapon,
     ranking: true,
     enviar: async (rutaId, r) => {
       await enviarNota(rutaId, r.juego, r.puntuacion);

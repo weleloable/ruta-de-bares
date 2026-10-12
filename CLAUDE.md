@@ -137,6 +137,7 @@ supabase/
   migrations/0053_*.sql     `casas_aportes_detalle`: de donde salen los puntos de una persona (agrupado por tipo)
   migrations/0054_*.sql     `casas_puntos`: cuanto vale cada accion, visible para quien participa (boton (i))
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
+  migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)
@@ -936,3 +937,25 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   nada (casi todas son cortas): `verificar:juego` mide el hueco que deja el
   menu y monta ahi la partida con los textos mas largos del banco (`bancoPeor`).
   Si se anaden preguntas mas largas, esa prueba es la que avisa.
+- **Tapon al Vuelo: el arrastre del tirachinas NO es un Pressable ni un
+  PanResponder** (`juegos/tapon/ZonaArrastre.tsx` y `.web.tsx`). Mismo problema
+  de "quien es el dueno del toque" que BotonMantener, pero con el dedo
+  MOVIENDOSE. En web: Pointer Events con `setPointerCapture`, `touch-action:
+  none`, sin seleccion ni menu; solo cuenta el PRIMER dedo, y
+  `lostpointercapture` / `pointercancel` ANULAN el tiro (no se dispara a medias
+  con la ultima posicion). En nativo: el sistema de responder con
+  `onResponderTerminationRequest={() => false}`, asi ningun ScrollView ni la
+  navegacion le quita el toque; lo que el sistema se lleva igual (gesto de
+  atras) llega como `onResponderTerminate` y tambien anula. Las coordenadas en
+  nativo salen de `pageX - origen` tomado al empezar, NO de `locationX`, que es
+  relativo al elemento bajo el dedo y cambia al pasar por un hijo; por eso los
+  hijos van con `pointerEvents="none"`. Solo se agarra tocando a menos de 56 px
+  de la chapa, y soltar con menos del 12 % de fuerza no gasta el tiro.
+  **Fisica a pasos fijos** (`PASO` = 1/120 s, `avanzarVuelo` acumula el tiempo
+  real): el mismo tiro acaba igual a 30, 60 o 144 fps, y un test lo comprueba.
+  Colarse es CRUZAR la boca bajando con la chapa entera dentro; rozar el borde
+  o el lado rebota y no cuenta (la oreja no tiene cuerpo: rozarla no hace nada).
+  La chapa se DIBUJA mas grande que su radio fisico (3 cm serian 3 px): se ve
+  un poco mas gorda de lo que choca. `PUNTUACION_MAXIMA` (1250) es el tope de
+  la 0056; un test con programacion dinamica demuestra que ninguna secuencia de
+  10 tiros la supera.

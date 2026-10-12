@@ -23,9 +23,12 @@
  *      boton no suelta y levantar el dedo si (ver `recorrerCana`). Y el chorro acaba
  *      DENTRO de la jarra, inclinada y recta (antes, inclinada, la atravesaba);
  *   6. ¿Quien quiere ser cervecero? cabe sin scroll con la pregunta, al elegir,
- *      al plantarse y al revelar, con los textos MAS LARGOS del banco (ver `recorrerQuiz`).
+ *      al plantarse y al revelar, con los textos MAS LARGOS del banco (ver `recorrerQuiz`);
+ *   7. Tapon al Vuelo con tactil emulado: cabe sin scroll, un toque no gasta el
+ *      tiro y un arrastre de verdad lanza la chapa (ver `recorrerTapon`).
  *
- * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_QUIZ=1` deja solo el quiz. `CAPTURAS=<carpeta>` guarda capturas de
+ * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_QUIZ=1` deja solo el quiz;
+ * `SOLO_TAPON=1`, solo Tapon al Vuelo. `CAPTURAS=<carpeta>` guarda capturas de
  * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -49,8 +52,10 @@ const PANTALLA = join(raiz, 'app', '(auth)', 'verificar-juego.tsx');
 
 /** Que juegos se recorren (ver SOLO_* en la cabecera). */
 const HACER = {
-  maestro: !(process.env.SOLO_CANA || process.env.SOLO_QUIZ),
-  cana: !process.env.SOLO_QUIZ,
+  maestro: !(process.env.SOLO_CANA || process.env.SOLO_QUIZ || process.env.SOLO_TAPON),
+  cana: !(process.env.SOLO_QUIZ || process.env.SOLO_TAPON),
+  tapon: !process.env.SOLO_QUIZ,
+  quiz: !process.env.SOLO_TAPON,
 };
 
 /** Alturas de ventana (con barra y pestanas incluidas) y ancho de movil a probar. */
@@ -607,6 +612,87 @@ async function recorrerQuiz(chrome, perfil, url, tamano) {
   }
 }
 
+/**
+ * Tapon al Vuelo con el tactil emulado, como un movil de verdad:
+ *  - la partida cabe sin scroll (ni la pagina ni ningun contenedor) y la zona
+ *    de lanzamiento y el texto de abajo quedan por encima de las pestanas;
+ *  - un arrastre REAL con el dedo (touchStart en la chapa, varios touchMove hacia
+ *    abajo a la izquierda, touchEnd) lanza: la chapa vuela hacia arriba y a la
+ *    derecha, y el tiro se gasta (pasa al 2/10);
+ *  - un toque sin arrastrar NO gasta el tiro.
+ */
+async function recorrerTapon(chrome, perfil, url, tamano) {
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  const chapa = () =>
+    c.ev(`(() => {
+      const e = document.querySelector('[data-testid="tapon-chapa"]');
+      if (!e) return null;
+      const r = e.getBoundingClientRect();
+      return [r.left + r.width / 2, r.top + r.height / 2];
+    })()`);
+  const scroll = () =>
+    c.ev(`(() => {
+      let peor = document.scrollingElement.scrollHeight - innerHeight;
+      for (const e of document.querySelectorAll('body *')) {
+        const s = getComputedStyle(e).overflowY;
+        if (/(auto|scroll)/.test(s) && e.scrollHeight > e.clientHeight + 1 && e.clientHeight > 0) peor = Math.max(peor, e.scrollHeight - e.clientHeight);
+      }
+      return Math.max(0, peor);
+    })()`);
+  try {
+    await c.navegar({ movil: true });
+    await c.clic('Jugar a Tapón', 80);
+    await c.clic('Empezar');
+    if (!(await c.hasta('Arrastra la chapa', { limite: 10000 }))) throw new Error('no empieza la partida');
+    await esperar(400);
+    const scrollJugando = await scroll();
+    // Lo que la app le quita abajo son 64 px de pestanas (ver CODIGO_PANTALLA).
+    const visible = await c.ev(`(() => {
+      const z = document.querySelector('[aria-label^="Zona de lanzamiento"]');
+      const pie = [...document.querySelectorAll('body *')].find((x) => x.children.length === 0 && /^Arrastra la chapa/.test((x.innerText || '').trim()));
+      if (!z || !pie) return null;
+      return { zonaAbajo: Math.round(z.getBoundingClientRect().bottom), zonaAlto: Math.round(z.getBoundingClientRect().height),
+        pieAbajo: Math.round(pie.getBoundingClientRect().bottom), limite: innerHeight - 64 };
+    })()`);
+    await c.foto('tapon-apuntar');
+
+    // Un toque sin arrastrar: no lanza.
+    const [x0, y0] = (await chapa()) ?? [0, 0];
+    await c.dedos('touchStart', [{ x: x0, y: y0, id: 1 }]);
+    await esperar(80);
+    await c.dedos('touchEnd', []);
+    await esperar(400);
+    const toqueNoGasta = /1\/10/.test(await c.texto());
+
+    // El arrastre de verdad: abajo y a la izquierda, por pasos, y soltar.
+    await c.dedos('touchStart', [{ x: x0, y: y0, id: 1 }]);
+    for (let i = 1; i <= 8; i++) {
+      await c.dedos('touchMove', [{ x: x0 - 8 * i, y: y0 + 7 * i, id: 1 }]);
+      await esperar(25);
+    }
+    const flecha = (await c.texto()).includes('Arrastra la chapa');
+    await c.foto('tapon-tensando');
+    await c.dedos('touchEnd', []);
+    const trayectoria = [];
+    for (let i = 0; i < 8; i++) {
+      await esperar(60);
+      const p = await chapa();
+      if (p) trayectoria.push(p.map(Math.round));
+    }
+    await c.foto('tapon-volando');
+    const vuela =
+      trayectoria.length >= 3 &&
+      trayectoria.some(([x, y]) => x > x0 + 20 && y < y0 - 10) &&
+      new Set(trayectoria.map((p) => p.join(','))).size >= 3;
+    const gasta = await c.hasta('2/10', { limite: 6000 });
+    const scrollTrasTiro = await scroll();
+    return { scrollJugando, scrollTrasTiro, visible, toqueNoGasta, flecha, salida: [Math.round(x0), Math.round(y0)], trayectoria, vuela, gasta };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
 async function main() {
   const chrome = buscarChrome();
   if (!chrome) {
@@ -711,6 +797,32 @@ async function main() {
       }
       }
 
+      if (HACER.tapon) {
+        console.log(`${tamano.nombre}: Tapón al Vuelo, arrastrando con el dedo...`);
+        let t = null;
+        try {
+          t = await recorrerTapon(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
+        } catch (e) {
+          console.log(`FALLA  no se pudo jugar a Tapón al Vuelo: ${e.message}`);
+          fallos += 1;
+        }
+        if (t) {
+          console.log(JSON.stringify(t));
+          for (const [nombre, ok] of [
+            ['tapon: apuntando, sin scroll', t.scrollJugando === 0],
+            ['tapon: la zona de lanzamiento y el texto de abajo quedan encima de las pestanas', t.visible && t.visible.pieAbajo <= t.visible.limite && t.visible.zonaAlto >= 180],
+            ['tapon: un toque sin arrastrar no gasta el tiro', t.toqueNoGasta],
+            ['tapon: arrastrar y soltar lanza; la chapa vuela arriba y a la derecha', t.vuela],
+            ['tapon: el tiro se gasta (pasa al 2/10)', t.gasta],
+            ['tapon: tras el tiro, sin scroll', t.scrollTrasTiro === 0],
+          ]) {
+            console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+            if (!ok) fallos += 1;
+          }
+        }
+      }
+
+      if (!HACER.quiz) continue;
       console.log(`${tamano.nombre}: ¿Quién quiere ser cervecero?, con los textos más largos...`);
       let q;
       try {

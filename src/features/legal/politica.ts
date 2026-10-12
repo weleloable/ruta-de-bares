@@ -121,7 +121,7 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
           {
             subtitulo: 'Además, si juegas a los minijuegos',
             puntos: [
-              'Tu mejor nota en La Caña Perfecta y en La Conga Cervecera, tu mejor distancia en ¿Conduces tú? (por nivel de ' +
+              'Tu mejor nota en La Caña Perfecta, La Conga Cervecera, ¿Quién quiere ser cervecero? y Tapón al Vuelo, tu mejor distancia en ¿Conduces tú? (por nivel de ' +
                 'cañas), y las cervezas que hagas en Maestro Cervecero (con el nombre ' +
                 'que les pongas) las ve la gente de esa misma ruta, con tu nombre visible. No cruzan de una ruta ' +
                 'a otra.',
