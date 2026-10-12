@@ -994,6 +994,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   esquematico). En web una `Image` con `left/right` no se estira: el fondo y la
   barra llevan ancho explicito. La cabeza del camarero CHOCA (`CABEZA`) y se
   dice "¡Al camarero no!": antes se atravesaba y no se entendia que era.
+  **Colarse perdona** (`GENEROSIDAD`, 3,5 cm): cuenta si el CENTRO de la chapa
+  cae a menos de boca/2 + 3,5 cm (sin pasar del vidrio). La primera version
+  pedia la chapa entera dentro y mandaba a "borde" tiros que a la vista habian
+  entrado. El radio de choque de la cabeza (`CABEZA.r`) es MENOR que la cabeza
+  dibujada, tambien a favor del jugador. En el generador de sprites, `sombra()`
+  NO usa `ImageChops.offset` (envuelve por el borde y metia la base del torso
+  arriba como una franja gris).
   **Fisica a pasos fijos** (`PASO` = 1/120 s, `avanzarVuelo` acumula el tiempo
   real): el mismo tiro acaba igual a 30, 60 o 144 fps, y un test lo comprueba.
   Colarse es CRUZAR la boca bajando con la chapa entera dentro; rozar el borde
