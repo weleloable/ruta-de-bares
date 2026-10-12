@@ -136,6 +136,7 @@ supabase/
   migrations/0050_*.sql     quita la excepcion de casa por nombre (Pablo/Rodrigo)
   migrations/0051_*.sql     `match_grid` devuelve `es_admin`: estrella y "Moderador" en La Cana
   migrations/0052_*.sql     `casas_aportes`: cuanto pone cada persona a los puntos de su casa
+  migrations/0053_*.sql     `casas_aportes_detalle`: de donde salen los puntos de una persona (agrupado por tipo)
                             (NO hay Edge Functions: todo son funciones de Postgres)
 docs/SETUP.md             puesta en marcha completa + checklist de verificacion
 tests/                    tests que no encajan en un feature (p.ej. migration.test.ts)

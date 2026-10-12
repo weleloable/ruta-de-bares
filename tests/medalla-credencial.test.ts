@@ -5,8 +5,9 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 /**
- * La medalla de credencial completa vive en la tarjeta de la credencial, a la
- * derecha de los textos, y NO se guarda: se deduce de los sellos.
+ * La medalla de credencial completa vive en la tarjeta de la credencial, en la
+ * misma fila que el nombre y la barra de progreso (pequena, para no gastar
+ * altura), y NO se guarda: se deduce de los sellos.
  */
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -19,7 +20,7 @@ describe('pantalla Sellos', () => {
   it('pinta la medalla solo cuando la credencial esta completa', () => {
     assert.match(
       codigo,
-      /\{credencialCompleta\(conseguidos, bars\.length\) \? \(\s*<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>\s*\) : null\}/,
+      /\{credencialCompleta\(conseguidos, bars\.length\) \? \(\s*<View style=\{styles\.medallaHueco\}>\s*<View style=\{styles\.medallaEscala\}>\s*<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>\s*<\/View>\s*<\/View>\s*\) : null\}/,
     );
   });
 
@@ -28,13 +29,13 @@ describe('pantalla Sellos', () => {
     assert.doesNotMatch(codigo, /<Banner tone="success">/);
   });
 
-  it('la medalla va en la cabecera de la tarjeta, a la derecha de los textos', () => {
-    const cabecera = /<View style=\{styles\.credencialCabecera\}>([\s\S]*?)<\/View>\s*\n\s*<View style=\{styles\.progresoFila\}>/.exec(codigo);
-    assert.ok(cabecera, 'no encuentro la cabecera de la credencial');
-    const iTextos = cabecera[1].indexOf('styles.credencialTextos');
-    const iMedalla = cabecera[1].indexOf('<Medalla onPress=');
-    assert.ok(iTextos > -1 && iMedalla > iTextos, 'la medalla tiene que ir despues de los textos');
-    assert.match(codigo, /credencialCabecera:\s*\{\s*flexDirection:\s*'row'/);
+  it('la medalla va en la fila del nombre, entre el nombre y la barra de progreso', () => {
+    const fila = /<View style=\{styles\.credencialFila\}>([\s\S]*?)<View style=\{styles\.progresoFila\}>/.exec(codigo);
+    assert.ok(fila, 'no encuentro la fila de la credencial');
+    const iNombre = fila[1].indexOf('styles.credencialNombre');
+    const iMedalla = fila[1].indexOf('<Medalla onPress=');
+    assert.ok(iNombre > -1 && iMedalla > iNombre, 'la medalla tiene que ir despues del nombre');
+    assert.match(codigo, /credencialFila:\s*\{\s*flexDirection:\s*'row'/);
   });
 
   it('no hay nada persistido: ni tablas ni llamadas nuevas para la medalla', () => {

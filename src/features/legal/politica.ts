@@ -80,7 +80,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'y la ve el resto de la gente, porque es con quien compites.',
               'Los puntos que consigues para tu casa (por sellar, completar la ruta o quedar en el podio de un ' +
                 'minijuego) se apuntan con su origen. La gente de la ruta ve el total de cada casa y cuántos ' +
-                'puntos pone cada persona de ella (solo el total de cada una, no de dónde salen); quien ' +
+                'puntos pone cada persona de ella y, agrupado por tipo (cuántos sellos, retos, podios…), de ' +
+                'dónde salen; nunca horas ni lugares concretos. Quien ' +
                 'organiza la ruta puede ver el detalle para corregir errores.',
               'Las consumiciones que apuntas en un bar (qué categoría y a qué hora): sirven para dar puntos a tu ' +
                 'casa con un tope y una espera entre una y otra. La lista solo la ves tú; quien organiza la ruta ve los ' +

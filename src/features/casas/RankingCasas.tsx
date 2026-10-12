@@ -81,10 +81,6 @@ export function TablaCasas({
       <View style={styles.cabecera}>
         <Ionicons name="trophy" size={18} color={colors.beerDark} />
         <Text style={[typography.sectionTitle, styles.titulo]}>Casas en esta ruta</Text>
-        <View style={styles.directo}>
-          <View style={styles.punto} />
-          <Text style={styles.directoTexto}>EN DIRECTO</Text>
-        </View>
         {onHistorico ? (
           <Pressable accessibilityRole="link" onPress={onHistorico} hitSlop={8}>
             <Text style={styles.historico}>Histórico ›</Text>
@@ -224,9 +220,6 @@ const styles = StyleSheet.create({
   tarjeta: { gap: space.sm },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   titulo: { flex: 1 },
-  directo: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  punto: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.stamp },
-  directoTexto: { fontSize: 10, fontWeight: '800', color: colors.stamp, letterSpacing: 0.8 },
   historico: { fontSize: 12, fontWeight: '700', color: colors.beerDark, marginLeft: space.sm },
   fila: {
     flexDirection: 'row',

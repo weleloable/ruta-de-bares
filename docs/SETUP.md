@@ -313,6 +313,12 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    casa en la tabla de Sellos sale cuanto pone cada persona de esa casa
    (`casas_aportes`): los encuentros QR se reparten a medias y la racha a
    partes iguales. Se puede pegar dos veces.
+53. [`supabase/migrations/0053_procedencia_puntos.sql`](../supabase/migrations/0053_procedencia_puntos.sql)
+   y **Run**, despues de la 0052 y **ANTES de desplegar la app**. Al tocar a
+   una persona en la lista de su casa sale de donde salen sus puntos
+   (`casas_aportes_detalle`), agrupado por tipo: sellos, consumiciones,
+   categorias, ruta completa, podios por juego, retos, QR y racha. Se puede
+   pegar dos veces.
 
 Y una cosa que no es SQL: el **responsable del tratamiento y el correo de
 privacidad** viven en `src/features/legal/responsable.ts` y ya estan puestos

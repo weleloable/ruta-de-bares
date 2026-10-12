@@ -745,6 +745,11 @@ export type Database = {
         Args: { p_route_bar_id: string; p_categoria: string };
         Returns: { puntos: number; casa: string; puntua: boolean; categoria_nueva: boolean; siguiente: string };
       };
+      /** De donde salen los puntos de una persona, agrupado por tipo (0053). */
+      casas_aportes_detalle: {
+        Args: { p_route_id: string; p_house: string; p_user_id: string };
+        Returns: { tipo: string; detalle: string | null; puesto: number | null; veces: number; puntos: number }[];
+      };
       /** Cuanto pone cada persona a los puntos de su casa en la ruta (0052). */
       casas_aportes: {
         Args: { p_route_id: string; p_house: string };
