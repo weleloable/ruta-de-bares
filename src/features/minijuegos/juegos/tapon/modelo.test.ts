@@ -10,6 +10,7 @@ import {
   DIANAS,
   dianaFavorita,
   ficha,
+  GENEROSIDAD,
   GRAVEDAD,
   lanzar,
   MULTIPLICADORES,
@@ -104,16 +105,36 @@ describe('colarse por la boca', () => {
 
   it('un tiro que entra limpio por el centro cuenta', () => {
     assert.equal(choque(vaso, cx, cx, yb + 0.05, cx, yb - 0.01), 'dentro');
-    // Pegado al borde, pero con la chapa entera dentro, tambien.
-    const justo = cx + mitad - RADIO_CHAPA - 0.001;
-    assert.equal(choque(vaso, cx, justo, yb + 0.05, justo, yb - 0.01), 'dentro');
   });
 
-  it('un tiro que roza el borde NO cuenta (rebota)', () => {
-    for (const lejos of [mitad - RADIO_CHAPA + 0.002, mitad, mitad + RADIO_CHAPA]) {
+  it('se perdona: una chapa que muerde el borde por dentro o por poco fuera de la boca cuenta', () => {
+    // Antes hacia falta la chapa ENTERA dentro y esto salia "ha tocado el borde".
+    for (const lejos of [mitad - RADIO_CHAPA + 0.002, mitad, mitad + 0.01, vaso.ancho / 2 - 0.001]) {
+      for (const signo of [-1, 1]) {
+        const x = cx + signo * lejos;
+        assert.equal(choque(vaso, cx, x, yb + 0.05, x, yb - 0.01), 'dentro', `a ${signo * lejos} del centro`);
+      }
+    }
+    // La generosidad llega mas alla de la boca dibujada: hay un colchon de verdad.
+    assert.ok(GENEROSIDAD >= 0.03);
+  });
+
+  it('un tiro que cae sobre el vidrio o rozandolo por fuera NO cuenta (rebota)', () => {
+    const cuerpo = vaso.ancho / 2;
+    for (const lejos of [cuerpo + 0.002, cuerpo + RADIO_CHAPA - 0.002]) {
       const x = cx + lejos;
       assert.equal(choque(vaso, cx, x, yb + 0.05, x, yb - 0.01), 'borde', `a ${lejos} del centro`);
     }
+    // Y mas alla de eso, ni lo toca.
+    const lejos = cx + cuerpo + RADIO_CHAPA + 0.01;
+    assert.equal(choque(vaso, cx, lejos, yb + 0.05, lejos, yb - 0.01), null);
+  });
+
+  it('en la boca de la oreja, que no tiene cuerpo, tambien se perdona y mas alla no pasa nada', () => {
+    const oreja = ficha('oreja');
+    const y = oreja.alturaBoca;
+    assert.equal(choque(oreja, 2.5, 2.5 + oreja.boca / 2 + 0.02, y + 0.05, 2.5 + oreja.boca / 2 + 0.02, y - 0.01), 'dentro');
+    assert.equal(choque(oreja, 2.5, 2.5 + oreja.boca / 2 + 0.06, y + 0.05, 2.5 + oreja.boca / 2 + 0.06, y - 0.01), null);
   });
 
   it('tocar el vaso por el lado no cuenta, aunque luego quede dentro del ancho', () => {
@@ -142,7 +163,7 @@ describe('colarse por la boca', () => {
 
   it('la oreja no tiene cuerpo: rozarla no rebota, solo no cuenta', () => {
     const oreja = ficha('oreja');
-    const x = 2.5 + oreja.boca / 2;
+    const x = 2.5 + oreja.boca / 2 + GENEROSIDAD + 0.01;
     assert.equal(choque(oreja, 2.5, x, oreja.alturaBoca + 0.05, x, oreja.alturaBoca - 0.01), null);
     assert.equal(choque(oreja, 2.5, 2.5, 0.5, 2.5, 0.4), null);
   });

@@ -36,7 +36,7 @@ VASO = dict(boca=0.30, ancho=0.33, alto=0.42)
 JARRA = dict(boca=0.24, ancho=0.27, alto=0.36)
 CAJA = dict(boca=0.20, ancho=0.40, alto=0.30)
 OREJA = dict(boca=0.12, alto=0.90)
-CABEZA = dict(dx=0.20, dy=0.03, r=0.11)
+CABEZA = dict(dx=0.17, dy=0.04, r=0.085)
 ALTURA_SALIDA = 0.35
 # Catapulta: el eje del brazo, respecto al punto de la barra bajo la cuchara.
 PIVOTE = (-0.07, 0.12)
@@ -133,7 +133,10 @@ class Lienzo:
         self.pegar(capa, luz)
 
     def sombra(self, mk, dx, dy, alfa=70, desenfoque=0.012):
-        s = ImageChops.offset(mk, int(self.m(dx)), int(-self.m(dy))).filter(ImageFilter.GaussianBlur(self.m(desenfoque)))
+        # Sin ImageChops.offset: ese ENVUELVE por el borde y metia la base del torso arriba, como una franja gris.
+        movida = Image.new('L', (self.w, self.h), 0)
+        movida.paste(mk, (int(self.m(dx)), int(-self.m(dy))))
+        s = movida.filter(ImageFilter.GaussianBlur(self.m(desenfoque)))
         self.color(s, (40, 20, 5, alfa))
 
     def guardar(self, nombre):
@@ -289,79 +292,138 @@ def caja():
 # --- Camarero -------------------------------------------------------------------
 
 
+def curva_hombros(cx, y_base, y_hombro, y_cuello, w_cuerpo, w_cuello, n=26):
+    """Contorno de un torso con hombros REDONDEADOS (un cuarto de elipse), no una caja."""
+    der = [(cx + w_cuerpo, y_base), (cx + w_cuerpo, y_hombro)]
+    for k in range(1, n + 1):
+        t = k / n
+        ang = t * math.pi / 2
+        der.append((cx + w_cuello + (w_cuerpo - w_cuello) * math.cos(ang), y_hombro + (y_cuello - y_hombro) * math.sin(ang)))
+    izq = [(2 * cx - x, y) for x, y in reversed(der)]
+    return der + izq
+
+
 def camarero():
-    """Medio cuerpo tras la barra, con la oreja izquierda grande: es la diana."""
-    yo = OREJA['alto']
-    hx, hy, r = CABEZA['dx'], yo + CABEZA['dy'], CABEZA['r']
-    lz = Lienzo(-0.12, 0.47, 0.0, hy + r + 0.07)
-    # Cuerpo: camisa blanca con mangas, chaleco negro, pajarita roja. Va detras de la barra.
-    cuello_y = hy - r - 0.01
-    hombro_y = cuello_y - 0.07
-    torso = ImageChops.lighter(
-        lz.rect(hx - 0.2, 0, hx + 0.2, hombro_y, 0.0),
-        ImageChops.lighter(lz.elipse(hx - 0.15, hombro_y - 0.01, 0.075, 0.07), lz.elipse(hx + 0.15, hombro_y - 0.01, 0.075, 0.07)),
-    )
-    torso = ImageChops.lighter(torso, lz.rect(hx - 0.16, hombro_y - 0.05, hx + 0.16, cuello_y, 0.06))
-    brazos = ImageChops.lighter(lz.rect(hx - 0.235, 0, hx - 0.14, hombro_y, 0.04), lz.rect(hx + 0.14, 0, hx + 0.235, hombro_y, 0.04))
-    lz.sombra(ImageChops.lighter(torso, brazos), 0.01, -0.004)
-    lz.contorno(ImageChops.lighter(torso, brazos))
-    lz.degradado(brazos, (250, 250, 252, 255), (206, 208, 214, 255), horizontal=True)
-    lz.degradado(torso, (255, 255, 255, 255), (224, 226, 230, 255))
+    """Medio cuerpo tras la barra, con una OREJA grande y bien hecha: es la diana."""
+    hx = CABEZA['dx']
+    hy = OREJA['alto'] + CABEZA['dy']
+    R = 0.112  # la cabeza se dibuja un poco mas grande que lo que choca (CABEZA['r'])
+    lz = Lienzo(-0.12, 0.47, 0.0, hy + R + 0.07)
+    cuello_y = hy - R * 0.92
+    hombro_y = cuello_y - 0.11
+    ancho = 0.185
+
+    # Torso: camisa blanca con hombros redondos, sombreada hacia los lados.
+    forma = lz.poligono(curva_hombros(hx, 0, hombro_y, cuello_y, ancho, 0.05))
+    lz.sombra(forma, 0.012, -0.006)
+    lz.contorno(forma)
+    lz.degradado(forma, (255, 255, 255, 255), (222, 226, 232, 255), horizontal=True)
+    lz.brillo(forma, hx - 0.09, hombro_y - 0.02, 0.025, 0.07, 110, 0.012)
+    # Brazos: la manga baja hasta un puno doblado y de ahi, el antebrazo con piel.
     for lado in (-1, 1):
-        lz.color(lz.rect(hx + lado * 0.14 - 0.004, 0, hx + lado * 0.14 + 0.004, hombro_y - 0.03), (170, 172, 180, 255))
-    chaleco_i = lz.poligono([(hx - 0.14, 0), (hx - 0.01, 0), (hx - 0.01, cuello_y - 0.2), (hx - 0.07, cuello_y - 0.04), (hx - 0.14, hombro_y - 0.03)])
-    chaleco_d = lz.poligono([(hx + 0.14, 0), (hx + 0.01, 0), (hx + 0.01, cuello_y - 0.2), (hx + 0.07, cuello_y - 0.04), (hx + 0.14, hombro_y - 0.03)])
-    for ch in (chaleco_i, chaleco_d):
-        lz.contorno(ch, 0.004)
-        lz.degradado(ch, (62, 56, 66, 255), (26, 24, 30, 255), horizontal=True)
-    for k in range(3):
-        lz.color(lz.elipse(hx + 0.022, cuello_y - 0.24 - k * 0.07, 0.008, 0.008), (210, 176, 90, 255))
-    # Trapo al hombro.
-    trapo = lz.poligono([(hx + 0.12, hombro_y + 0.04), (hx + 0.2, hombro_y + 0.0), (hx + 0.21, hombro_y - 0.22), (hx + 0.15, hombro_y - 0.2)])
+        cx_b = hx + lado * 0.172
+        antebrazo = lz.poligono([(cx_b - 0.034, 0.0), (cx_b + 0.034, 0.0), (cx_b + 0.04, 0.31), (cx_b - 0.04, 0.31)])
+        lz.contorno(antebrazo, 0.005)
+        lz.degradado(antebrazo, (238, 184, 150, 255), (216, 152, 118, 255), horizontal=True)
+        manga = lz.poligono([(cx_b - 0.05, 0.28), (cx_b + 0.05, 0.28), (cx_b + 0.058, hombro_y + 0.0), (cx_b - 0.058, hombro_y + 0.0)])
+        lz.contorno(manga, 0.005)
+        lz.degradado(manga, (252, 252, 254, 255), (212, 216, 226, 255), horizontal=True)
+        puno = lz.rect(cx_b - 0.056, 0.275, cx_b + 0.056, 0.335, 0.014)
+        lz.contorno(puno, 0.004)
+        lz.degradado(puno, (236, 240, 248, 255), (190, 198, 214, 255))
+    # Delantal de barman: peto oscuro con tirantes al cuello, bolsillo y cordon.
+    peto = lz.poligono([(hx - 0.115, 0), (hx + 0.115, 0), (hx + 0.1, hombro_y - 0.02), (hx + 0.06, cuello_y - 0.085),
+                        (hx - 0.06, cuello_y - 0.085), (hx - 0.1, hombro_y - 0.02)])
+    lz.contorno(peto, 0.005)
+    lz.degradado(peto, (46, 80, 96, 255), (24, 48, 62, 255))
+    for lado in (-1, 1):
+        tirante = lz.poligono([(hx + lado * 0.06, cuello_y - 0.085), (hx + lado * 0.095, cuello_y - 0.02), (hx + lado * 0.075, cuello_y + 0.0),
+                               (hx + lado * 0.04, cuello_y - 0.075)])
+        lz.contorno(tirante, 0.004)
+        lz.degradado(tirante, (60, 96, 112, 255), (30, 56, 70, 255))
+    bolsillo = lz.rect(hx - 0.07, 0.2, hx + 0.07, 0.31, 0.02)
+    lz.contorno(bolsillo, 0.004, (16, 34, 44, 255))
+    lz.degradado(bolsillo, (58, 92, 108, 255), (34, 62, 76, 255))
+    lz.color(lz.rect(hx - 0.07, 0.295, hx + 0.07, 0.31, 0.01), (96, 132, 148, 255))
+    # Un abrebotellas asomando del bolsillo.
+    lz.color(lz.rect(hx + 0.035, 0.29, hx + 0.05, 0.37, 0.006), (170, 174, 184, 255))
+    lz.color(lz.elipse(hx + 0.0425, 0.37, 0.016, 0.012), (212, 214, 222, 255))
+    lz.brillo(peto, hx - 0.05, hombro_y - 0.1, 0.015, 0.09, 80, 0.008)
+    # Trapo al hombro, con rayas.
+    trapo = lz.poligono([(hx + 0.07, cuello_y + 0.0), (hx + 0.16, hombro_y + 0.04), (hx + 0.21, hombro_y - 0.06), (hx + 0.2, hombro_y - 0.2),
+                         (hx + 0.135, hombro_y - 0.19), (hx + 0.135, hombro_y - 0.04)])
     lz.contorno(trapo, 0.004)
-    lz.color(trapo, (240, 236, 220, 255))
-    for i in range(3):
-        lz.color(interseccion(lz.rect(hx + 0.1, hombro_y - 0.06 - i * 0.05, hx + 0.24, hombro_y - 0.045 - i * 0.05), trapo), (196, 70, 60, 255))
-    # Cuello y cabeza.
-    cuello = lz.rect(hx - 0.045, cuello_y - 0.03, hx + 0.045, hy - r + 0.04, 0.02)
-    lz.color(cuello, PIEL_SOMBRA)
-    paja = ImageChops.lighter(lz.poligono([(hx, hy - r - 0.035), (hx - 0.06, hy - r - 0.005), (hx - 0.06, hy - r - 0.065)]),
-                              lz.poligono([(hx, hy - r - 0.035), (hx + 0.06, hy - r - 0.005), (hx + 0.06, hy - r - 0.065)]))
-    lz.contorno(paja, 0.004)
-    lz.color(paja, (190, 40, 36, 255))
-    lz.color(lz.elipse(hx, hy - r - 0.035, 0.014, 0.014), (150, 26, 24, 255))
-    # La oreja (diana): grande, a la izquierda, con su pabellon.
-    ox, oyc = 0.0, yo
-    # Se alarga hacia la cabeza, que se pinta encima y tapa su lado derecho: asi va pegada.
-    oreja = lz.elipse(ox + 0.03, oyc - 0.008, 0.078, 0.066)
+    lz.color(trapo, (246, 240, 224, 255))
+    for k in range(3):
+        y = hombro_y - 0.03 - k * 0.045
+        lz.color(interseccion(lz.rect(hx + 0.12, y - 0.011, hx + 0.23, y + 0.011), trapo), (200, 80, 66, 255))
+    # Cuello y cuello de la camisa en pico.
+    cuello = lz.rect(hx - 0.04, cuello_y - 0.04, hx + 0.04, hy - R * 0.5, 0.02)
+    lz.contorno(cuello, 0.004)
+    lz.degradado(cuello, (232, 176, 142, 255), (206, 140, 108, 255), horizontal=True)
+    for lado in (-1, 1):
+        solapa = lz.poligono([(hx, cuello_y - 0.06), (hx + lado * 0.07, cuello_y - 0.005), (hx + lado * 0.075, cuello_y - 0.065)])
+        lz.contorno(solapa, 0.004)
+        lz.color(solapa, (255, 255, 255, 255))
+    # Pajarita roja.
+    for lado in (-1, 1):
+        ala = lz.poligono([(hx, cuello_y - 0.03), (hx + lado * 0.055, cuello_y - 0.005), (hx + lado * 0.055, cuello_y - 0.06)])
+        lz.contorno(ala, 0.004)
+        lz.degradado(ala, (214, 56, 48, 255), (150, 28, 26, 255))
+    nudo = lz.rect(hx - 0.013, cuello_y - 0.05, hx + 0.013, cuello_y - 0.012, 0.01)
+    lz.contorno(nudo, 0.003)
+    lz.color(nudo, (170, 34, 30, 255))
+
+    # LA OREJA (la diana): grande, de perfil, con su hélix, el antehelix y el lobulo. Va detras de la cabeza.
+    ox, oy = 0.0, OREJA['alto']
+    pabellon = lz.elipse(ox, oy + 0.005, 0.068, 0.088)
+    lobulo = lz.elipse(ox - 0.004, oy - 0.07, 0.03, 0.028)
+    oreja = ImageChops.lighter(pabellon, lobulo)
+    lz.sombra(oreja, 0.008, -0.004)
     lz.contorno(oreja, 0.005)
-    lz.degradado(oreja, PIEL, PIEL_SOMBRA, horizontal=True)
-    lz.color(lz.elipse(ox + 0.0, oyc - 0.01, 0.034, 0.042), (214, 140, 110, 255))
-    lz.color(lz.elipse(ox + 0.01, oyc - 0.014, 0.016, 0.024), (190, 112, 88, 255))
-    lz.brillo(oreja, ox - 0.03, oyc + 0.02, 0.012, 0.02, 120, 0.004)
-    cabeza = lz.elipse(hx, hy, r, r * 1.08)
-    lz.contorno(cabeza)
-    lz.degradado(cabeza, PIEL, PIEL_SOMBRA, horizontal=True)
-    # Pelo con raya y patillas.
-    pelo = interseccion(lz.elipse(hx, hy + 0.03, r * 1.04, r * 1.0), lz.rect(hx - r * 1.1, hy + 0.035, hx + r * 1.1, hy + r * 1.3))
-    pelo = ImageChops.lighter(pelo, lz.rect(hx - r * 0.98, hy - 0.02, hx - r * 0.78, hy + 0.06, 0.01))
-    lz.contorno(pelo, 0.004)
-    lz.degradado(pelo, (60, 40, 30, 255), (28, 18, 14, 255))
-    lz.brillo(pelo, hx - 0.03, hy + r * 0.8, 0.04, 0.012, 120, 0.005)
-    # Cara: cejas, ojos, nariz, bigote, sonrisa, mofletes.
-    for dx in (-0.045, 0.04):
-        lz.color(lz.elipse(hx + dx, hy + 0.012, 0.016, 0.019), (255, 255, 255, 255))
-        lz.color(lz.elipse(hx + dx - 0.004, hy + 0.009, 0.009, 0.011), (40, 30, 26, 255))
-        lz.color(lz.elipse(hx + dx - 0.007, hy + 0.014, 0.003, 0.003), (255, 255, 255, 255))
-        lz.color(lz.rect(hx + dx - 0.02, hy + 0.04, hx + dx + 0.018, hy + 0.05, 0.004), (40, 26, 20, 255))
-        lz.color(lz.elipse(hx + dx * 1.35, hy - 0.035, 0.018, 0.011), (240, 140, 130, 120))
-    nariz = lz.elipse(hx - 0.004, hy - 0.022, 0.02, 0.022)
-    lz.color(nariz, PIEL_SOMBRA)
-    lz.brillo(nariz, hx - 0.01, hy - 0.015, 0.006, 0.006, 160, 0.002)
-    bigote = ImageChops.lighter(lz.elipse(hx - 0.028, hy - 0.05, 0.032, 0.013), lz.elipse(hx + 0.022, hy - 0.05, 0.032, 0.013))
-    lz.color(bigote, (40, 26, 20, 255))
-    sonrisa = resta(lz.elipse(hx - 0.002, hy - 0.072, 0.03, 0.016), lz.elipse(hx - 0.002, hy - 0.064, 0.03, 0.013))
-    lz.color(sonrisa, (120, 40, 34, 255))
+    lz.degradado(oreja, (246, 200, 166, 255), (226, 164, 130, 255), horizontal=True)
+    # Helix: el aro exterior, mas oscuro, y la concha interior en sombra.
+    aro = resta(lz.elipse(ox - 0.003, oy + 0.008, 0.056, 0.074), lz.elipse(ox - 0.003, oy + 0.004, 0.044, 0.062))
+    lz.color(aro, (206, 136, 108, 200))
+    lz.degradado(lz.elipse(ox + 0.004, oy - 0.002, 0.03, 0.045), (214, 140, 112, 255), (176, 100, 80, 255))
+    lz.color(lz.elipse(ox + 0.012, oy - 0.012, 0.014, 0.026), (150, 78, 62, 255))
+    lz.brillo(oreja, ox - 0.03, oy + 0.04, 0.012, 0.022, 110, 0.006)
+
+    # Cabeza redonda con barbilla suave.
+    cara = ImageChops.lighter(lz.elipse(hx, hy, R, R * 1.03), lz.elipse(hx, hy - R * 0.38, R * 0.86, R * 0.75))
+    lz.sombra(cara, 0.008, -0.004)
+    lz.contorno(cara)
+    lz.degradado(cara, (250, 206, 172, 255), (232, 172, 138, 255), horizontal=True)
+    # Pelo: casquete con tupe hacia delante y patillas. Sin brillos grandes.
+    casquete = resta(lz.elipse(hx, hy + 0.02, R * 1.07, R * 1.04), lz.elipse(hx + 0.012, hy - 0.025, R * 0.93, R * 0.9))
+    tupe = lz.elipse(hx - 0.018, hy + R * 0.86, 0.075, 0.042)
+    flequillo = lz.poligono([(hx - 0.085, hy + 0.03), (hx + 0.07, hy + 0.04), (hx + 0.045, hy + 0.012), (hx - 0.03, hy + 0.01)])
+    pelo = interseccion(ImageChops.lighter(ImageChops.lighter(casquete, tupe), flequillo), lz.rect(hx - R * 1.2, hy - 0.04, hx + R * 1.2, hy + R * 1.4))
+    lz.contorno(pelo, 0.005)
+    lz.degradado(pelo, (92, 58, 36, 255), (46, 28, 18, 255))
+    mecha = interseccion(lz.elipse(hx - 0.03, hy + R * 0.84, 0.045, 0.012), pelo)
+    lz.color(mecha, (150, 104, 70, 150))
+    # Cejas, ojos, nariz, bigote, sonrisa y mofletes.
+    for dx in (-0.042, 0.042):
+        lz.color(lz.elipse(hx + dx, hy + 0.005, 0.022, 0.026), (255, 255, 255, 255))
+        lz.color(lz.elipse(hx + dx - 0.004, hy + 0.002, 0.012, 0.015), (74, 44, 26, 255))
+        lz.color(lz.elipse(hx + dx - 0.004, hy + 0.002, 0.0065, 0.0085), (20, 14, 12, 255))
+        lz.color(lz.elipse(hx + dx - 0.009, hy + 0.009, 0.0042, 0.0042), (255, 255, 255, 255))
+        ceja = resta(lz.elipse(hx + dx + (0.004 if dx < 0 else -0.004), hy + 0.053, 0.026, 0.014),
+                     lz.elipse(hx + dx + (0.004 if dx < 0 else -0.004), hy + 0.047, 0.028, 0.0145))
+        lz.color(ceja, (60, 38, 26, 255))
+        lz.color(lz.elipse(hx + dx * 1.45, hy - 0.04, 0.02, 0.012), (240, 128, 120, 110))
+    nariz = lz.elipse(hx - 0.004, hy - 0.026, 0.024, 0.024)
+    lz.contorno(nariz, 0.003, (190, 120, 94, 255))
+    lz.degradado(nariz, (244, 178, 146, 255), (222, 148, 118, 255))
+    lz.brillo(nariz, hx - 0.011, hy - 0.019, 0.007, 0.007, 170, 0.003)
+    # Bigote de manillar con las puntas rizadas.
+    bigote = ImageChops.lighter(lz.elipse(hx - 0.03, hy - 0.056, 0.036, 0.016), lz.elipse(hx + 0.022, hy - 0.056, 0.036, 0.016))
+    bigote = ImageChops.lighter(bigote, ImageChops.lighter(lz.elipse(hx - 0.068, hy - 0.046, 0.011, 0.014), lz.elipse(hx + 0.06, hy - 0.046, 0.011, 0.014)))
+    lz.contorno(bigote, 0.003, (30, 18, 12, 255))
+    lz.degradado(bigote, (70, 44, 28, 255), (34, 20, 14, 255))
+    sonrisa = resta(lz.elipse(hx - 0.002, hy - 0.078, 0.034, 0.02), lz.elipse(hx - 0.002, hy - 0.068, 0.034, 0.017))
+    lz.color(sonrisa, (130, 44, 38, 255))
     return lz.guardar('camarero.png'), lz.extent
 
 

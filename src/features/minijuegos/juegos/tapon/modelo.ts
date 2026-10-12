@@ -21,6 +21,12 @@ export const RADIO_CHAPA = 0.03;
 export const ALTURA_SALIDA = 0.35;
 /** Velocidad de salida con el arrastre a tope (m/s). */
 export const VELOCIDAD_MAXIMA = 7.5;
+/**
+ * Cuanto se perdona (m) por fuera de la boca dibujada: el centro de la chapa
+ * puede caer a esta distancia mas alla del borde y cuenta como acierto. A ojo,
+ * una chapa que MORDIA el borde parecia dentro y no lo era.
+ */
+export const GENEROSIDAD = 0.035;
 /** Grosor de las paredes de los vasos (m): por donde se roza el borde. */
 export const PARED = 0.015;
 /** Un vuelo no dura mas que esto, pase lo que pase (s). */
@@ -75,7 +81,7 @@ export const DIANAS: readonly FichaDiana[] = [
  * se entendia que era aquella figura. Va a la DERECHA de la oreja y lo bastante
  * separada para que una chapa que cae limpia en la oreja no la roce antes.
  */
-export const CABEZA = { dx: 0.2, dy: 0.03, r: 0.11 };
+export const CABEZA = { dx: 0.17, dy: 0.04, r: 0.085 };
 
 const FICHA: Record<IdDiana, FichaDiana> = Object.fromEntries(DIANAS.map((d) => [d.id, d])) as Record<IdDiana, FichaDiana>;
 export const ficha = (id: IdDiana) => FICHA[id];
@@ -256,9 +262,11 @@ export function lanzar(p: Partida, vx: number, vy: number, t: number): Vuelo {
  * Lo que pasa en el tramo de (x0,y0) a (x1,y1) contra una diana cuya boca esta
  * centrada en `cx`. Exportada para probarla sin depender de una parabola.
  *
- *  - 'dentro': cruza la linea de la boca BAJANDO con la chapa entera dentro
- *    (centro a menos de boca/2 - radio del centro);
- *  - 'borde': cruza esa linea tocando el borde (a menos de boca/2 + radio), o
+ *  - 'dentro': cruza la linea de la boca BAJANDO con el CENTRO de la chapa a
+ *    menos de boca/2 + GENEROSIDAD del centro (sin pasar del cuerpo del vaso).
+ *    La primera version pedia la chapa ENTERA dentro y se quedaba en "ha tocado
+ *    el borde" tiros que a la vista habian entrado: frustraba;
+ *  - 'borde': cruza esa linea por fuera de eso (sobre el vidrio o rozandolo), o
  *    se mete en el cuerpo por el lado. Rebota y se acabo;
  *  - null: no toca.
  */
@@ -277,7 +285,7 @@ export function choque(
     // Donde corta la linea de la boca, interpolando: un paso largo no se la salta.
     const x = x0 + ((x1 - x0) * (y0 - yb)) / (y0 - y1);
     const lejos = Math.abs(x - cx);
-    if (lejos <= mitad - RADIO_CHAPA) return 'dentro';
+    if (lejos <= (d.cuerpo ? Math.min(mitad + GENEROSIDAD, fuera) : mitad + GENEROSIDAD)) return 'dentro';
     if (lejos <= fuera + RADIO_CHAPA) return d.cuerpo ? 'borde' : null;
   }
   // Por el lado: el cuerpo es un bloque de la barra a la boca.
