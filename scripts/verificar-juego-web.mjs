@@ -22,14 +22,10 @@
  *      vaso hacia el lado en que se inclina el movil y de forma fluida, se sirve con un dedo mientras otro mueve el deslizador, salirse del
  *      boton no suelta y levantar el dedo si (ver `recorrerCana`). Y el chorro acaba
  *      DENTRO de la jarra, inclinada y recta (antes, inclinada, la atravesaba);
- *   6. Ocupado en horizontal, con un juego de mentira (ver `recorrerOcupado`): la
- *      capa tapa la ventana, solo cuenta el aviso de SU iframe, sale el resultado
- *      (tambien saliendo con la X tras ganar) y salir quita el iframe;
- *   7. ¿Quien quiere ser cervecero? cabe sin scroll con la pregunta, al elegir,
+ *   6. ¿Quien quiere ser cervecero? cabe sin scroll con la pregunta, al elegir,
  *      al plantarse y al revelar, con los textos MAS LARGOS del banco (ver `recorrerQuiz`).
  *
- * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_OCUPADO=1` deja solo Ocupado
- * y el quiz; `SOLO_QUIZ=1`, solo el quiz. `CAPTURAS=<carpeta>` guarda capturas de
+ * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_QUIZ=1` deja solo el quiz. `CAPTURAS=<carpeta>` guarda capturas de
  * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -53,9 +49,8 @@ const PANTALLA = join(raiz, 'app', '(auth)', 'verificar-juego.tsx');
 
 /** Que juegos se recorren (ver SOLO_* en la cabecera). */
 const HACER = {
-  maestro: !(process.env.SOLO_CANA || process.env.SOLO_OCUPADO || process.env.SOLO_QUIZ),
-  cana: !(process.env.SOLO_OCUPADO || process.env.SOLO_QUIZ),
-  ocupado: !process.env.SOLO_QUIZ,
+  maestro: !(process.env.SOLO_CANA || process.env.SOLO_QUIZ),
+  cana: !process.env.SOLO_QUIZ,
 };
 
 /** Alturas de ventana (con barra y pestanas incluidas) y ancho de movil a probar. */
@@ -612,94 +607,6 @@ async function recorrerQuiz(chrome, perfil, url, tamano) {
   }
 }
 
-/**
- * Un "Ocupado" de mentira: la app lo carga en el iframe en vez del juego de Godot (40 MB
- * y depende de GitHub Pages). Avisa de que se gano como el juego real
- * (scripts/core/app_bridge.gd en weleloable/ocupado): 4,5 °C -> 90 puntos. Se sirve en
- * el MISMO origen que la app, como publicado (los dos en weleloable.github.io): ahi el
- * origen no distingue al juego de la propia app, y lo que tiene que frenar un aviso
- * falso es que la app mire que lo mande SU iframe.
- */
-// Un fichero y no una carpeta: `servir` no busca index.html dentro, cae al de la app.
-const RUTA_OCUPADO_FALSO = 'ocupado-de-prueba.html';
-const JUEGO_OCUPADO_FALSO = `<!doctype html><meta charset="utf-8"><title>Ocupado (prueba)</title>
-<body style="margin:0;background:#1d2a33;color:#fff;font:16px sans-serif">Juego de prueba
-<script>setTimeout(() => parent.postMessage({ tipo: 'ocupado:fin', version: 1, final: 'door', segundos: 95, temperatura: 4.5, pistas: 1 }, '*'), 800);</script>`;
-
-/**
- * Ocupado en un movil en horizontal (el juego se juega asi):
- *  - abrir la ficha NO monta el iframe (no se descarga el juego hasta pulsar Jugar);
- *  - al pulsar Jugar, la capa tapa la ventana entera y queda por encima de todo;
- *  - un aviso de la propia app (mismo origen, no su iframe) no da record;
- *  - el aviso del juego saca "Ver resultado" y la tarjeta ensena puntos y detalle;
- *  - ganar y salir con la X tambien entrega el resultado (antes se perdia, o su
- *    temporizador cortaba la partida siguiente);
- *  - salir sin ganar cierra la capa y quita el iframe.
- */
-async function recorrerOcupado(chrome, perfil, url, tamano) {
-  // En horizontal: el ancho del alto y al reves.
-  const c = await abrirChrome(chrome, perfil, url, { ancho: tamano.alto, alto: tamano.ancho });
-  const abrirYJugar = async () => {
-    await c.clic('Jugar a Ocupado', 80);
-    await esperar(800);
-    const iframes = await c.ev('document.querySelectorAll("iframe").length');
-    await c.clic('Jugar');
-    await esperar(300);
-    return iframes;
-  };
-  try {
-    await c.navegar({ movil: true });
-    const iframeAntes = await abrirYJugar();
-    // La propia app haciendose pasar por el juego, ya con el iframe puesto: 2 °C = 100 puntos.
-    await c.ev(`window.postMessage({ tipo: 'ocupado:fin', version: 1, final: 'door', segundos: 1, temperatura: 2, pistas: 0 }, '*'); true`);
-    const capa = await c.ev(`(() => {
-      const f = document.querySelector('iframe');
-      if (!f) return null;
-      const r = f.getBoundingClientRect();
-      return { ancho: Math.round(r.width), alto: Math.round(r.height), ventana: [innerWidth, innerHeight],
-        encima: document.elementFromPoint(innerWidth / 2, innerHeight - 4) === f };
-    })()`);
-    const boton = await c.hasta('Ver resultado · ', { limite: 20000 });
-    if (!boton) {
-      throw new Error(`no llego el aviso del juego: ${JSON.stringify(await c.ev(`({ src: document.querySelector('iframe')?.src, texto: document.body.innerText.slice(0, 200) })`))}`);
-    }
-    const textoBoton = ((await c.texto()).match(/Ver resultado · \d+ puntos/) ?? [''])[0];
-    await c.foto('ocupado-ganado');
-    await c.clic('Ver resultado');
-    const tarjeta = await c.hasta('Cerveza a 4,5 °C · 1:35 · 1 pista', { limite: 8000 });
-    const iframeDespues = await c.ev('document.querySelectorAll("iframe").length');
-    await c.foto('ocupado-tarjeta');
-
-    // Ganar y salir con la X sin pulsar "Ver resultado": el resultado llega igual.
-    await c.clic('Volver');
-    await abrirYJugar();
-    await c.hasta('Ver resultado · ', { limite: 20000 });
-    await c.clic('Salir del juego');
-    const tarjetaAlSalir = await c.hasta('Cerveza a 4,5 °C', { limite: 4000 });
-    const iframeTrasSalirGanado = await c.ev('document.querySelectorAll("iframe").length');
-
-    // Salir sin ganar (el juego avisa a los 800 ms de cargar): cierra la capa y quita el iframe.
-    await c.clic('Volver');
-    await abrirYJugar();
-    const conIframe = await c.ev('document.querySelectorAll("iframe").length');
-    await c.clic('Salir del juego');
-    await esperar(1500);
-    // La capa se oculta (display: none), no se desmonta: su boton de salir deja de pintarse
-    // y lo que hay en el centro de la pantalla vuelve a ser la app. Y un aviso tardio no cuenta.
-    const salida = await c.ev(`(() => {
-      const x = document.querySelector('[aria-label="Salir del juego"]');
-      const capa = x && x.parentElement;
-      const centro = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
-      return { iframes: document.querySelectorAll('iframe').length, resultado: /Cerveza a/.test(document.body.innerText),
-        capaOculta: !!capa && x.getClientRects().length === 0 && !capa.contains(centro) };
-    })()`);
-    return { iframeAntes, capa, textoBoton, tarjeta, iframeDespues, tarjetaAlSalir, iframeTrasSalirGanado, conIframe, salida };
-  } finally {
-    c.cerrar();
-    await esperar(1500);
-  }
-}
-
 async function main() {
   const chrome = buscarChrome();
   if (!chrome) {
@@ -712,8 +619,6 @@ async function main() {
   }
 
   const salida = mkdtempSync(join(tmpdir(), 'rb-verificar-juego-'));
-  // Se sirve ANTES de exportar (lee cada fichero al pedirlo) porque la URL del juego
-  // de mentira lleva su puerto y se incrusta al exportar.
   const servidor = await servir(salida);
   const { port } = servidor.address();
   try {
@@ -721,11 +626,8 @@ async function main() {
     console.log('Exportando la web (1 min aprox)...');
     const entorno = { ...process.env };
     delete entorno.WEB_BASE_URL;
-    // La URL del juego se fija al exportar (EXPO_PUBLIC_*): apunta al Ocupado de mentira.
-    entorno.EXPO_PUBLIC_OCUPADO_URL = `http://127.0.0.1:${port}/${RUTA_OCUPADO_FALSO}`;
     // --clear: la cache de Metro guarda cada fichero transformado por su CONTENIDO, no por
-    // el valor de los EXPO_PUBLIC_* que lleva incrustados. Sin borrarla, Ocupado.web.tsx
-    // salia con la URL de un export anterior y el iframe apuntaba a un puerto muerto (paso).
+    // el valor de los EXPO_PUBLIC_* que lleva incrustados.
     const exportacion = spawnSync(`npx expo export --platform web --clear --output-dir "${salida}"`, {
       cwd: raiz,
       env: entorno,
@@ -739,9 +641,6 @@ async function main() {
   } finally {
     rmSync(PANTALLA, { force: true });
   }
-  // Despues del export, que vacia la carpeta de salida.
-  writeFileSync(join(salida, RUTA_OCUPADO_FALSO), JUEGO_OCUPADO_FALSO);
-
   let fallos = 0;
   try {
     // `npm run verificar:juego -- 740` repite solo ese alto (para comprobar un arreglo sin esperar los tres).
@@ -750,7 +649,7 @@ async function main() {
       const perfil = mkdtempSync(join(tmpdir(), 'rb-chrome-'));
       console.log(`\n${tamano.nombre} (${tamano.ancho}x${tamano.alto}): recorriendo el juego (~1 min)...`);
       let r;
-      // SOLO_CANA / SOLO_OCUPADO / SOLO_QUIZ: para iterar sobre un juego sin esperar a los demas.
+      // SOLO_CANA / SOLO_QUIZ: para iterar sobre un juego sin esperar a los demas.
       if (!HACER.maestro) console.log('SOLO_*: Maestro Cervecero no se recorre');
       else try {
         r = await recorrer(chrome, perfil, `http://127.0.0.1:${port}/verificar-juego`, tamano);
@@ -828,30 +727,6 @@ async function main() {
         ['quiz (peor caso): al elegir, sin scroll y "Sí, definitiva" a la vista', q.elegida.scroll === 0 && q.elegida.visible],
         ['quiz (peor caso): al plantarse, sin scroll y la confirmacion a la vista', q.plantando.scroll === 0 && q.plantando.visible],
         ['quiz (peor caso): al revelar, sin scroll y el boton de seguir a la vista', q.revelada.scroll === 0 && q.revelada.visible],
-      ]) {
-        console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
-        if (!ok) fallos += 1;
-      }
-
-      if (!HACER.ocupado) continue;
-      console.log(`${tamano.nombre}: Ocupado en horizontal...`);
-      let o;
-      try {
-        o = await recorrerOcupado(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
-      } catch (e) {
-        console.log(`FALLA  no se pudo jugar a Ocupado: ${e.message}`);
-        fallos += 1;
-        continue;
-      }
-      console.log(JSON.stringify(o));
-      for (const [nombre, ok] of [
-        ['ocupado: abrir la ficha no monta el iframe (no descarga el juego)', o.iframeAntes === 0],
-        ['ocupado: la capa del juego tapa la ventana entera y queda encima de todo', o.capa && o.capa.ancho === o.capa.ventana[0] && o.capa.alto === o.capa.ventana[1] && o.capa.encima],
-        ['ocupado: un aviso de la propia app (mismo origen, no su iframe) no cuenta', o.textoBoton === 'Ver resultado · 90 puntos'],
-        ['ocupado: la tarjeta ensena la cerveza, el tiempo y las pistas', o.tarjeta],
-        ['ocupado: tras el resultado el iframe se desmonta', o.iframeDespues === 0],
-        ['ocupado: ganar y salir con la X entrega el resultado igual', o.tarjetaAlSalir && o.iframeTrasSalirGanado === 0],
-        ['ocupado: salir sin ganar cierra la capa, quita el iframe y no da resultado', o.conIframe === 1 && o.salida.iframes === 0 && o.salida.capaOculta && !o.salida.resultado],
       ]) {
         console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
         if (!ok) fallos += 1;

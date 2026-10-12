@@ -6,8 +6,6 @@ import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
-import { DetalleOcupado } from './juegos/ocupado/DetalleOcupado';
-import { Ocupado } from './juegos/ocupado/Ocupado';
 import { DetalleQuiz, QuienQuiereSerCervecero } from '../quiz/QuienQuiereSerCervecero';
 import { ID_JUEGO as ID_QUIZ } from '../quiz/config';
 import type { JuegoDef } from './tipos';
@@ -67,26 +65,17 @@ export const JUEGOS: readonly JuegoDef[] = [
     RankingPropio: RankingConduces,
   },
   {
-    // Juego de Godot con su propio repo y su propia web (github.com/weleloable/ocupado):
-    // la app lo carga en un iframe (web) o lo abre en el navegador (nativo). Ver juegos/ocupado/.
-    // Solo record local: un ranking por ruta pediria una migracion (minigame_scores solo acepta
-    // los juegos que lista).
-    id: 'ocupado',
-    titulo: 'Ocupado',
-    descripcion: 'Escápate del baño del bar antes de que se caliente tu cerveza.',
-    icono: 'key',
-    Componente: Ocupado,
-    Detalle: DetalleOcupado,
-  },
-  {
-    // Preguntas de cerveza al estilo concurso (logica pura en features/quiz/). Solo record
-    // local: un ranking por ruta pediria una migracion (minigame_scores solo acepta los
-    // juegos que lista).
+    // Preguntas de cerveza al estilo concurso (logica pura en features/quiz/). Ranking por
+    // ruta desde la 0055 (tope de 25 puntos, el premio de la ultima pregunta).
     id: ID_QUIZ,
     titulo: '¿Quién quiere ser cervecero?',
     descripcion: 'Cinco preguntas de cerveza, cada una más difícil. Con comodines.',
     icono: 'help-circle',
     Componente: QuienQuiereSerCervecero,
     Detalle: DetalleQuiz,
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
   },
 ];
