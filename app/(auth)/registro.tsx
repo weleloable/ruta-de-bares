@@ -7,6 +7,9 @@ import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
 import { colors, space, typography } from '../../src/lib/theme';
 
+/** Minimo de caracteres de la contrasena. */
+const MIN_PASSWORD = 6;
+
 /**
  * Alta abierta.
  *
@@ -27,7 +30,9 @@ export default function RegistroScreen() {
   const [revisaCorreo, setRevisaCorreo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  const passwordValida = password.length >= 8;
+  // 6 es tambien el minimo de Supabase (Authentication > Providers > Email): por debajo, la
+  // pantalla aceptaria algo que el servidor rechaza.
+  const passwordValida = password.length >= MIN_PASSWORD;
   const coinciden = password === repetir;
   const puedeEnviar = email.trim().length > 0 && passwordValida && coinciden && !enviando;
 
@@ -105,8 +110,8 @@ export default function RegistroScreen() {
             secureTextEntry
             autoComplete="new-password"
             editable={!enviando}
-            error={password.length > 0 && !passwordValida ? 'Minimo 8 caracteres.' : null}
-            hint="Minimo 8 caracteres."
+            error={password.length > 0 && !passwordValida ? 'Minimo 6 caracteres.' : null}
+            hint="Minimo 6 caracteres."
           />
           <Field
             label="Repite la contrasena"
