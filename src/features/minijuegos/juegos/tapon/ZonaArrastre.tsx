@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 export type PropsZonaArrastre = {
@@ -8,6 +8,12 @@ export type PropsZonaArrastre = {
   onSoltar: (x: number, y: number) => void;
   /** El sistema se llevo el toque: no se lanza. */
   onCancelar: () => void;
+  /**
+   * La zona se pinta girada 90 grados (movil en vertical, juego tumbado). En
+   * web hay que deshacer el giro a mano; en nativo `locationX` ya viene en las
+   * coordenadas de la zona, giro incluido.
+   */
+  girado?: boolean;
   onLayout?: (e: LayoutChangeEvent) => void;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel: string;
@@ -23,31 +29,24 @@ export type PropsZonaArrastre = {
  * sistema se lleva igual (el gesto de atras de Android, una llamada) llega como
  * `onResponderTerminate` y el tiro se anula, no se dispara a medias.
  *
- * Las coordenadas salen de `pageX - origen`, con el origen tomado al empezar:
- * `locationX` es relativo al elemento que hay bajo el dedo en cada momento, y
- * al pasar por encima de un hijo cambia de referencia. Por eso tambien los
- * hijos van con `pointerEvents="none"`.
+ * Coordenadas: `locationX/Y`, que son las de la vista TOCADA en su propio
+ * sistema (con sus transformaciones, asi que el giro del juego tumbado no hay
+ * que deshacerlo). Para que la vista tocada sea siempre esta zona, los hijos van
+ * con `pointerEvents="none"`. SIN PROBAR en un movil de verdad.
  *
  * La variante web (ZonaArrastre.web.tsx) usa Pointer Events con captura.
  */
 export function ZonaArrastre({ onInicio, onMover, onSoltar, onCancelar, onLayout, style, accessibilityLabel, children }: PropsZonaArrastre) {
-  // Ref y no variable: cada movimiento repinta al padre, y una variable volveria a 0.
-  const origen = useRef({ x: 0, y: 0 });
   return (
     <View
       accessibilityLabel={accessibilityLabel}
       onLayout={onLayout}
       style={style}
-      onStartShouldSetResponder={(e) => {
-        const { locationX, locationY, pageX, pageY } = e.nativeEvent;
-        if (!onInicio(locationX, locationY)) return false;
-        origen.current = { x: pageX - locationX, y: pageY - locationY };
-        return true;
-      }}
+      onStartShouldSetResponder={(e) => onInicio(e.nativeEvent.locationX, e.nativeEvent.locationY)}
       onMoveShouldSetResponder={() => false}
       onResponderTerminationRequest={() => false}
-      onResponderMove={(e) => onMover(e.nativeEvent.pageX - origen.current.x, e.nativeEvent.pageY - origen.current.y)}
-      onResponderRelease={(e) => onSoltar(e.nativeEvent.pageX - origen.current.x, e.nativeEvent.pageY - origen.current.y)}
+      onResponderMove={(e) => onMover(e.nativeEvent.locationX, e.nativeEvent.locationY)}
+      onResponderRelease={(e) => onSoltar(e.nativeEvent.locationX, e.nativeEvent.locationY)}
       onResponderTerminate={onCancelar}
     >
       <View pointerEvents="none" style={{ flex: 1 }}>

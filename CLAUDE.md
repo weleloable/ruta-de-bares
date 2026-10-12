@@ -971,10 +971,36 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   `onResponderTerminationRequest={() => false}`, asi ningun ScrollView ni la
   navegacion le quita el toque; lo que el sistema se lleva igual (gesto de
   atras) llega como `onResponderTerminate` y tambien anula. Las coordenadas en
-  nativo salen de `pageX - origen` tomado al empezar, NO de `locationX`, que es
-  relativo al elemento bajo el dedo y cambia al pasar por un hijo; por eso los
-  hijos van con `pointerEvents="none"`. Solo se agarra tocando a menos de 56 px
-  de la chapa, y soltar con menos del 12 % de fuerza no gasta el tiro.
+  nativo son `locationX/Y` de la zona (los hijos van con `pointerEvents="none"`
+  para que la tocada sea siempre ella), que ya traen el giro del juego tumbado.
+  **Se arrastra desde CUALQUIER sitio**: el tiro sale del vector entre donde se
+  puso el dedo y donde se suelta. La primera version obligaba a empezar en la
+  chapa, pegada al borde izquierdo, y no quedaba sitio para estirar. Un toque,
+  o soltar con menos del 12 % de fuerza, no gasta el tiro.
+  **Se juega en horizontal, a pantalla completa** (`pantallaCompleta` del
+  menu). Con el movil en vertical NO se pide girar: el juego se pinta TUMBADO
+  (girado 90 grados, `hayQueGirar`), asi funciona aunque el bloqueo de rotacion
+  este puesto y en nativo, donde la app esta fijada en vertical y no hay modulo
+  de orientacion (meterlo pide build nuevo). En web, al pulsar Empezar se pide
+  pantalla completa y bloqueo en horizontal (`pantallaCompleta.web.ts`); si el
+  navegador lo concede, la ventana pasa a horizontal y deja de tumbarse solo.
+  En web el giro se deshace a mano en el arrastre (`desdePantallaGirada`).
+  `verificar:juego` prueba los dos casos.
+  **Los dibujos son PNG generados** (`scripts/generar-sprites-tapon.py`, Pillow,
+  -> `assets/tapon/` y `spritesGeometria.ts`, que NO se edita a mano). Se
+  dibujan en METROS con las medidas de la fisica, asi que la boca que se ve es
+  la que choca; `tests/sprites-tapon.test.ts` falla si dibujo, geometria y
+  modelo se separan. Ni SVG (modulo nativo, build nuevo) ni Views (quedaba
+  esquematico). En web una `Image` con `left/right` no se estira: el fondo y la
+  barra llevan ancho explicito. La cabeza del camarero CHOCA (`CABEZA`) y se
+  dice "¡Al camarero no!": antes se atravesaba y no se entendia que era.
+  **Colarse perdona** (`GENEROSIDAD`, 3,5 cm): cuenta si el CENTRO de la chapa
+  cae a menos de boca/2 + 3,5 cm (sin pasar del vidrio). La primera version
+  pedia la chapa entera dentro y mandaba a "borde" tiros que a la vista habian
+  entrado. El radio de choque de la cabeza (`CABEZA.r`) es MENOR que la cabeza
+  dibujada, tambien a favor del jugador. En el generador de sprites, `sombra()`
+  NO usa `ImageChops.offset` (envuelve por el borde y metia la base del torso
+  arriba como una franja gris).
   **Fisica a pasos fijos** (`PASO` = 1/120 s, `avanzarVuelo` acumula el tiempo
   real): el mismo tiro acaba igual a 30, 60 o 144 fps, y un test lo comprueba.
   Colarse es CRUZAR la boca bajando con la chapa entera dentro; rozar el borde

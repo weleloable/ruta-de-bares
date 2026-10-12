@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 
+import { desdePantallaGirada } from './escena';
 import type { PropsZonaArrastre } from './ZonaArrastre';
 
 /**
@@ -13,15 +14,20 @@ import type { PropsZonaArrastre } from './ZonaArrastre';
  * abajo desplaza la pagina o recarga, y el navegador manda `pointercancel`),
  * sin seleccion de texto ni menu de pulsacion larga.
  *
+ * Con `girado` (movil en vertical, juego tumbado) el rectangulo de pantalla
+ * esta girado y las coordenadas se deshacen con `desdePantallaGirada`.
+ *
  * Solo cuenta el PRIMER dedo: un segundo dedo mientras se apunta se ignora en
  * vez de mover la flecha a saltos. Perder la captura (cambio de pestana, el
  * navegador se lleva el gesto) anula el tiro.
  */
-export function ZonaArrastre({ onInicio, onMover, onSoltar, onCancelar, onLayout, style, accessibilityLabel, children }: PropsZonaArrastre) {
+export function ZonaArrastre({ onInicio, onMover, onSoltar, onCancelar, girado, onLayout, style, accessibilityLabel, children }: PropsZonaArrastre) {
   const nodo = useRef<View>(null);
   // Refs: los manejadores del DOM se registran una vez y leen siempre lo ultimo.
   const cb = useRef({ onInicio, onMover, onSoltar, onCancelar });
   cb.current = { onInicio, onMover, onSoltar, onCancelar };
+  const giro = useRef(girado);
+  giro.current = girado;
 
   useEffect(() => {
     const el = nodo.current as unknown as HTMLElement | null;
@@ -35,6 +41,7 @@ export function ZonaArrastre({ onInicio, onMover, onSoltar, onCancelar, onLayout
     let activo: number | null = null;
     const local = (e: PointerEvent) => {
       const r = el.getBoundingClientRect();
+      if (giro.current) return desdePantallaGirada(r, e.clientX, e.clientY);
       return [e.clientX - r.left, e.clientY - r.top] as const;
     };
     const abajo = (e: PointerEvent) => {

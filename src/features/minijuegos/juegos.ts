@@ -88,6 +88,8 @@ export const JUEGOS: readonly JuegoDef[] = [
     descripcion: 'Abre botellines y cuela la chapa. Diez tiros, con viento.',
     icono: 'locate',
     Componente: TaponAlVuelo,
+    // En horizontal y a pantalla completa (con el movil en vertical se pinta tumbado).
+    pantallaCompleta: true,
     Detalle: DetalleTapon,
     ranking: true,
     enviar: async (rutaId, r) => {
