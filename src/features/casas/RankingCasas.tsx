@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 
 import { Card } from '../../components/ui';
-import { colors, radius, space, typography } from '../../lib/theme';
+import { colors, fonts, radius, space, typography } from '../../lib/theme';
 import { useAuth } from '../auth/AuthProvider';
 import { useActiveRoute } from '../routes/ActiveRouteProvider';
 import { AportesCasa } from './AportesCasa';
@@ -93,9 +93,15 @@ export function TablaCasas({
 
   return (
     <Card style={styles.tarjeta}>
+      {/* La tabla importante de la pestana Casas: borde y titulo mas fuertes. */}
       <View style={styles.cabecera}>
-        <Ionicons name="trophy" size={18} color={colors.beerDark} />
-        <Text style={[typography.sectionTitle, styles.titulo]}>Casas en esta ruta</Text>
+        <View style={styles.copa}>
+          <Ionicons name="trophy" size={20} color={colors.white} />
+        </View>
+        <View style={styles.titulos}>
+          <Text style={styles.titulo}>Clasificación</Text>
+          <Text style={styles.subtitulo}>Las casas en esta ruta</Text>
+        </View>
         {onInfo ? (
           <Pressable
             accessibilityRole="button"
@@ -243,9 +249,20 @@ function AvisoLider({ casa, onFin }: { casa: IdCasa; onFin: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  tarjeta: { gap: space.sm },
-  cabecera: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  titulo: { flexShrink: 1 },
+  tarjeta: { gap: space.sm, borderWidth: 2, borderColor: colors.beer },
+  cabecera: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingBottom: space.sm,
+    marginBottom: space.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  copa: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.beer },
+  titulos: { flexShrink: 1 },
+  titulo: { fontFamily: fonts.title, fontSize: 24, color: colors.ink },
+  subtitulo: { fontSize: 12, fontWeight: '700', color: colors.inkSoft, textTransform: 'uppercase', letterSpacing: 0.6 },
   info: { flex: 1, alignItems: 'flex-start', paddingLeft: space.xs },
   historico: { fontSize: 12, fontWeight: '700', color: colors.beerDark, marginLeft: space.sm },
   fila: {

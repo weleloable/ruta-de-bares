@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 
+import { Button } from '../../components/ui';
 import { colors, radius, space } from '../../lib/theme';
 import { useSondeo } from '../../lib/useSondeo';
 import { leerEstadoSorteo } from './api';
@@ -26,37 +28,75 @@ export function BannerSorteo({ rutaId, sellos }: { rutaId: string; sellos: numbe
   return estado ? <AvisoSorteo estado={estado} /> : null;
 }
 
-/** El banner en si, a partir del estado (se puede ensenar solo). */
+/**
+ * El aviso en si, a partir del estado (se puede ensenar solo). Es UNA linea
+ * ("Información del sorteo") para que Sellos quepa sin scroll; al tocarla se
+ * abre la explicacion completa (premio, como se entra, si estas dentro o quien
+ * ha ganado). Si has ganado, la linea lo dice y va en rojo.
+ */
 export function AvisoSorteo({ estado }: { estado: EstadoSorteo }) {
+  const [abierto, setAbierto] = useState(false);
   const t = textoBanner(estado);
   if (!t) return null;
+  const ganaste = estado.resultado?.soy_ganador === true;
   return (
-    <View style={[styles.banner, t.destacado && styles.destacado]} accessibilityRole="summary">
-      <Text style={styles.icono}>{t.icono}</Text>
-      <View style={styles.textos}>
-        <Text style={[styles.titulo, t.destacado && styles.tituloDestacado]}>{t.titulo}</Text>
-        <Text style={[styles.cuerpo, t.destacado && styles.cuerpoDestacado]}>{t.cuerpo}</Text>
-      </View>
-    </View>
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={ganaste ? 'Has ganado el sorteo. Ver más' : 'Información del sorteo'}
+        onPress={() => setAbierto(true)}
+        style={({ pressed }) => [styles.linea, ganaste && styles.lineaGanaste, pressed && styles.pulsada]}
+      >
+        <Text style={styles.lineaIcono}>{t.icono}</Text>
+        <Text style={[styles.lineaTexto, ganaste && styles.textoBlanco]} numberOfLines={1}>
+          {ganaste ? '¡Has ganado el sorteo!' : 'Información del sorteo'}
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={ganaste ? colors.white : colors.beerDark} />
+      </Pressable>
+
+      <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>
+        <Pressable style={styles.fondo} onPress={() => setAbierto(false)} accessibilityLabel="Cerrar">
+          <Pressable style={styles.hoja} onPress={() => undefined}>
+            <Text style={styles.icono}>{t.icono}</Text>
+            <Text style={styles.titulo}>{t.titulo}</Text>
+            <Text style={styles.cuerpo}>{t.cuerpo}</Text>
+            <Button title="Entendido" onPress={() => setAbierto(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
+  linea: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.md,
-    padding: space.md,
-    borderRadius: radius.lg,
+    gap: space.sm,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.md,
     backgroundColor: colors.beerSoft,
     borderWidth: 1,
     borderColor: colors.beer,
   },
-  destacado: { backgroundColor: colors.stamp, borderColor: colors.stamp },
-  icono: { fontSize: 30 },
-  textos: { flex: 1, gap: 2 },
-  titulo: { fontSize: 15, fontWeight: '900', color: colors.ink },
-  tituloDestacado: { color: colors.white },
-  cuerpo: { fontSize: 13, color: colors.inkSoft },
-  cuerpoDestacado: { color: colors.white },
+  lineaGanaste: { backgroundColor: colors.stamp, borderColor: colors.stamp },
+  pulsada: { opacity: 0.75 },
+  lineaIcono: { fontSize: 16 },
+  lineaTexto: { flex: 1, fontSize: 14, fontWeight: '800', color: colors.ink },
+  textoBlanco: { color: colors.white },
+  fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: space.lg },
+  hoja: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 420,
+    padding: space.lg,
+    gap: space.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.paper,
+    alignItems: 'stretch',
+  },
+  icono: { fontSize: 40, textAlign: 'center' },
+  titulo: { fontSize: 20, fontWeight: '900', color: colors.ink, textAlign: 'center' },
+  cuerpo: { fontSize: 15, lineHeight: 21, color: colors.inkSoft, textAlign: 'center' },
 });
