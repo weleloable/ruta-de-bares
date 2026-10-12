@@ -106,13 +106,12 @@ export default function SellosScreen() {
 
           {activeRoute ? (
             <Card style={styles.credencial}>
-              {/* "Credencial de", tu nombre a su derecha (en la misma linea, para ahorrar
-                  scroll) y, si la hay, la medalla (pequena, al final). La medalla se deduce
-                  de los sellos: si se borra uno, desaparece. */}
+              {/* "Credenciales" (sin el nombre: en la app ya se sabe que es la tuya) y, si
+                  la hay, la medalla (pequena, a la derecha). La medalla se deduce de los
+                  sellos: si se borra uno, desaparece. */}
               <View style={styles.credencialFila}>
-                <Text style={[typography.overline, styles.credencialDe]}>Credencial de</Text>
-                <Text style={[typography.screenTitle, styles.credencialNombre]} numberOfLines={1}>
-                  {profile?.display_name || 'Peregrino'}
+                <Text style={[typography.overline, styles.credencialNombre]} numberOfLines={1}>
+                  Credenciales
                 </Text>
                 {credencialCompleta(conseguidos, bares.length) ? (
                   <View style={styles.medallaHueco}>
@@ -232,11 +231,10 @@ const styles = StyleSheet.create({
   chipTexto: { color: colors.inkSoft, fontWeight: '600', fontSize: 13 },
   chipTextoActivo: { color: colors.white },
   credencial: { gap: space.xs },
-  // "Credencial de" + nombre en una linea y, si la ruta esta completa, la medalla a la derecha.
+  // "Credenciales" y, si la ruta esta completa, la medalla a la derecha.
   credencialFila: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  // Pequeno y sin encogerse: lo que se recorta si no cabe es el nombre (con "...").
-  credencialDe: { flexShrink: 0 },
-  credencialNombre: { flex: 1 },
+  // El estilo de etiqueta (mayusculas, espaciado), algo mas grande que el de 11.
+  credencialNombre: { flex: 1, fontSize: 14 },
   rutaFila: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.md },
   rutaNombre: { flex: 1 },
   rutaFecha: { flexShrink: 0 },
