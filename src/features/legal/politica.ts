@@ -101,7 +101,9 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'ni se guarda nada aparte (se deduce de tus sellos). El sorteo lo hace quien organiza, al azar, ' +
                 'y se guarda quién gana, quiénes quedan de suplentes, cuándo se hizo, quién lo hizo y, si se ' +
                 'repite, el motivo. El nombre visible de quien gana y de los suplentes lo ve la gente de la ruta. ' +
-                'Si no quieres participar, escríbenos antes del sorteo. Se borra con la ruta.',
+                'Si no quieres participar, escríbenos antes del sorteo y te sacamos: se apunta que no participas, ' +
+                'con el motivo, y lo puedes ver en el aviso del sorteo. Se borra con la ruta.',
+              'Para avisarte una vez cuando cambie esta política, guardamos qué versión de ella te enseñamos.',
               'Quien organiza ve estadísticas de cada ruta (cuánta gente sella, apunta consumiciones, juega o ' +
                 'hace retos; sellos por bar y por hora; consumiciones por categoría) y puede descargarlas en un ' +
                 'fichero. Son siempre totales: nada de eso dice qué hizo una persona concreta.',
@@ -279,7 +281,8 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
         'Todo: tu cuenta y tu correo, lo que nos dio Google si entraste con Google, las rutas en las que estás, ' +
           'tus sellos con la hora y el sitio, las fotos que enviaste a revisión, lo que se ha decidido sobre tu ' +
           'cuenta y por qué, tu casa y tus puntos con su origen, tus consumiciones, tus encuentros por QR, si se ' +
-          'te cambió de casa, los sorteos en los que has salido, lo de los minijuegos (tu mejor nota, el tiempo ' +
+          'te cambió de casa, los sorteos en los que has salido o de los que se te sacó, la versión de esta ' +
+          'política que viste, lo de los minijuegos (tu mejor nota, el tiempo ' +
           'del quiz y tus cervezas) y lo de La Caña (perfil, Me gusta y Vistos, conexiones y los mensajes que ' +
           'escribiste tú).',
         'No salen los mensajes de la otra persona, que son suyos, ni el texto de una denuncia sobre ti que siga ' +

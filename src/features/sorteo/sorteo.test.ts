@@ -33,6 +33,12 @@ describe('sorteo', () => {
     assert.ok(textoBanner({ ...base, activo: false, resultado }));
   });
 
+  it('quien pidio no participar lo ve, aunque haya sellado todo', () => {
+    const t = textoBanner({ ...base, dentro: false, excluido: true });
+    assert.match(t!.cuerpo, /no participas en este sorteo/);
+    assert.equal(t!.destacado, false);
+  });
+
   it('la ruleta frena y se para SIEMPRE en el ganador, sin repetir nombre seguido', () => {
     let s = 7;
     const azar = () => ((s = (s * 9301 + 49297) % 233280) / 233280);

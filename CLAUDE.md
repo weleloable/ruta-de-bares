@@ -142,6 +142,7 @@ supabase/
   migrations/0060_*.sql     tipo de parada (`route_bars.tipo`: bar/foto/otra): solo los bares se sellan y cuentan
   migrations/0061_*.sql     copa, margen de sellado (`route_bars.margen_min`), sorteo (`sorteos`) y quiz a 1 punto por acierto + tiempo
   migrations/0062_*.sql     export_my_data() con los sorteos y el tiempo del quiz
+  migrations/0063_*.sql     aviso de politica nueva (`profiles.politica_vista`) y sacar a alguien del sorteo (`sorteo_excluidos`)
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
                             (NO hay Edge Functions: todo son funciones de Postgres)

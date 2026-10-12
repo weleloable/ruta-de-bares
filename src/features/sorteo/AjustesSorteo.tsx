@@ -7,13 +7,15 @@ import type { RouteRow } from '../../types/database';
 import { Casilla } from '../match/piezas';
 import { updateRoute } from '../routes/api';
 import { leerEstadoSorteo, realizarSorteo } from './api';
+import { PersonasSorteo } from './PersonasSorteo';
 import { RuletaSorteo } from './RuletaSorteo';
 import type { EstadoSorteo, ResultadoSorteo } from './sorteo';
 
 /**
  * El sorteo de la ruta en el editor (0061): activarlo, escribir el premio y,
  * cuando acabe la ruta, hacerlo con la ruleta. Entra quien ha sellado todos los
- * bares (admins incluidos). Repetirlo pide un motivo, que queda registrado.
+ * bares (admins incluidos), menos quien pidio no participar (0063, "Quién
+ * participa"). Repetirlo pide un motivo, que queda registrado.
  */
 export function AjustesSorteo({ ruta }: { ruta: RouteRow }) {
   const [activo, setActivo] = useState(ruta.sorteo_activo ?? false);
@@ -115,6 +117,8 @@ export function AjustesSorteo({ ruta }: { ruta: RouteRow }) {
           onPress={() => void sortear()}
         />
       ) : null}
+
+      {activo ? <PersonasSorteo routeId={ruta.id} onCambio={() => void cargar()} /> : null}
 
       <RuletaSorteo
         resultado={resultado}

@@ -1,8 +1,10 @@
 -- Ruta de Bares - 0061: copa, margen de sellado, sorteo y nueva puntuacion del quiz.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0060.
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists`,
--- restricciones quitadas antes de ponerlas, funciones con `or replace` y el
--- vaciado del quiz solo toca las notas de la escala vieja).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * sorteo_elegibles() la rehace la 0063
+--   * sorteo_estado() la rehace la 0063
 -- Ojo al reves: rehace funciones de la 0034, 0044, 0045, 0056 y 0060, que ya no
 -- se pueden volver a pegar despues.
 --

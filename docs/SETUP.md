@@ -364,6 +364,12 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    sorteos en los que has salido y el tiempo del quiz. Rehace
    `export_my_data()`, asi que la 0048 ya **no se vuelve a pegar**. Se puede
    pegar dos veces.
+61. [`supabase/migrations/0063_aviso_politica_y_salir_del_sorteo.sql`](../supabase/migrations/0063_aviso_politica_y_salir_del_sorteo.sql)
+   y **Run**, despues de la 0062. Guarda que version de la politica ha visto
+   cada uno (la app avisa una vez si cambia) y deja a un admin sacar del
+   sorteo a quien lo pida ("Quién participa" en el sorteo de la ruta). Rehace
+   funciones de la 0061 y la 0062, que ya **no se vuelven a pegar**. Se puede
+   pegar dos veces.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

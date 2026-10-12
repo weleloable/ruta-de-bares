@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import { BarraSuperior } from '../../src/components/BarraSuperior';
 import { BotonSellos } from '../../src/components/BotonSellos';
 import { DescubrimientoCasa } from '../../src/features/casas/DescubrimientoCasa';
+import { AvisoPolitica } from '../../src/features/legal/AvisoPolitica';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { colors } from '../../src/lib/theme';
@@ -16,6 +17,8 @@ export default function TabsLayout() {
     <>
     {/* Encima de las pestanas: sale una vez, cuando ya tienes casa y no la has visto. */}
     <DescubrimientoCasa />
+    {/* Si cambia la politica, un aviso una vez (espera a que se cierre el de la casa). */}
+    <AvisoPolitica />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.stamp,

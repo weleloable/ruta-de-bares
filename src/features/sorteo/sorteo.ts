@@ -10,6 +10,8 @@ export type EstadoSorteo = {
   bares: number;
   participantes: number;
   dentro: boolean;
+  /** Pidio no participar y un admin le saco (0063). Sin la 0063, no viene. */
+  excluido?: boolean;
   resultado: {
     premio: string;
     ganador: string | null;
@@ -20,7 +22,17 @@ export type EstadoSorteo = {
   } | null;
 };
 
-export type ResultadoSorteo = { ganador: string; suplentes: string[]; participantes: number; nombres: string[] };
+/** Una persona de la ruta, para que un admin la saque del sorteo o la vuelva a meter (0063). */
+export type PersonaSorteo = {
+  user_id: string;
+  nombre: string;
+  bares_sellados: number;
+  completa: boolean;
+  excluido: boolean;
+  motivo: string | null;
+};
+
+export type ResultadoSorteo ={ ganador: string; suplentes: string[]; participantes: number; nombres: string[] };
 
 const premioDe = (e: Pick<EstadoSorteo, 'premio'>) => (e.premio.trim() ? e.premio.trim() : 'un premio');
 
@@ -41,6 +53,14 @@ export function textoBanner(e: EstadoSorteo): { icono: string; titulo: string; c
     };
   }
   if (!e.activo) return null;
+  if (e.excluido) {
+    return {
+      icono: '🎽',
+      titulo: `Sorteamos ${premioDe(e)}`,
+      cuerpo: 'Como pediste, no participas en este sorteo. Si cambias de idea, díselo a la organización.',
+      destacado: false,
+    };
+  }
   const todos = e.bares === 1 ? 'el bar' : `los ${e.bares} bares`;
   return {
     icono: '🎽',
@@ -80,6 +100,7 @@ const ERRORES: Record<string, string> = {
   REASON_REQUIRED: 'Escribe por qué se repite el sorteo (al menos 3 letras).',
   NO_PARTICIPANTS: 'Todavía nadie ha sellado todos los bares: no hay a quién sortear.',
   FORBIDDEN: 'Solo para administradores.',
+  NOT_FOUND: 'Esa persona no está en la ruta.',
 };
 
 export function describirErrorSorteo(mensaje: string): string {

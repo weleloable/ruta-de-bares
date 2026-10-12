@@ -17,6 +17,11 @@ export type ProfileRow = {
   role: UserRole;
   created_at: string;
   updated_at: string;
+  /**
+   * Version de la politica que ya se le aviso (0063). NULL si nunca; no viene
+   * (undefined) si falta la 0063.
+   */
+  politica_vista?: string | null;
 };
 
 /**
@@ -759,6 +764,12 @@ export type Database = {
       /** Sorteo de la ruta (0061). */
       sorteo_estado: { Args: { p_route_id: string }; Returns: unknown };
       sorteo_realizar: { Args: { p_route_id: string; p_motivo?: string | null }; Returns: unknown };
+      /** Sacar a alguien del sorteo o volverle a meter, y la lista para elegir (0063). */
+      sorteo_personas: { Args: { p_route_id: string }; Returns: unknown };
+      sorteo_excluir: { Args: { p_route_id: string; p_user_id: string; p_motivo?: string | null }; Returns: undefined };
+      sorteo_incluir: { Args: { p_route_id: string; p_user_id: string }; Returns: undefined };
+      /** Ya vi esta version de la politica (0063). */
+      politica_marcar_vista: { Args: { p_version: string }; Returns: undefined };
       /** Auditoria de una ruta: anulados, ajustes y cambios de casa (0059). */
       admin_estadisticas_auditoria: { Args: { p_route_id: string }; Returns: unknown };
       /** Totales de todas las rutas o de una temporada (0059). */
