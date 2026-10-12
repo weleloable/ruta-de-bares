@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   ALTURA_SALIDA,
   avanzarVuelo,
+  CABEZA,
   choque,
   crearPartida,
   DIANAS,
@@ -12,8 +13,11 @@ import {
   GRAVEDAD,
   lanzar,
   MULTIPLICADORES,
+  paso,
+  PASO,
   PARED,
   posicionDiana,
+  previsualizar,
   PUNTUACION_MAXIMA,
   puntosAcierto,
   RADIO_CHAPA,
@@ -129,6 +133,13 @@ describe('colarse por la boca', () => {
     assert.equal(choque(vaso, cx, cx + 0.5, yb + 0.05, cx + 0.5, yb - 0.01), null);
   });
 
+  it('en la caja, caer en las chapas de los botellines de los lados es borde', () => {
+    const caja = ficha('caja');
+    const x = 3 + (caja.boca / 2 + caja.ancho / 2) / 2;
+    assert.equal(choque(caja, 3, x, caja.alturaBoca + 0.05, x, caja.alturaBoca - 0.01), 'borde');
+    assert.equal(choque(caja, 3, 3, caja.alturaBoca + 0.05, 3, caja.alturaBoca - 0.01), 'dentro');
+  });
+
   it('la oreja no tiene cuerpo: rozarla no rebota, solo no cuenta', () => {
     const oreja = ficha('oreja');
     const x = 2.5 + oreja.boca / 2;
@@ -139,13 +150,47 @@ describe('colarse por la boca', () => {
 
 describe('con una parabola de verdad', () => {
   it('cada diana se puede colar sin viento, y por debajo de la velocidad maxima', () => {
-    const p = crearPartida(11);
-    for (const d of DIANAS) {
-      if (d.id === 'oreja') continue; // se mueve siempre: aparte
-      const { vx, vy } = tiroLimpio(p, d.id);
-      assert.ok(Math.hypot(vx, vy) <= VELOCIDAD_MAXIMA, `${d.id} pide ${Math.hypot(vx, vy)} m/s`);
-      assert.deepEqual(simular(p, vx, vy).resultado, { tipo: 'dentro', diana: d.id }, d.id);
+    // El camarero se pasea y a veces tapa la parabola: con algun angulo y algun
+    // momento de soltar, tiene que entrar. En 50 partidas distintas.
+    for (let semilla = 0; semilla < 50; semilla++) {
+      const p = crearPartida(semilla);
+      for (const d of DIANAS) {
+        if (d.id === 'oreja') continue; // se mueve siempre: aparte
+        let entra = false;
+        for (let ang = 35; ang <= 70 && !entra; ang += 5) {
+          const { vx, vy } = tiroLimpio(p, d.id, ang);
+          if (Math.hypot(vx, vy) > VELOCIDAD_MAXIMA) continue;
+          for (let t = 0; t < 2.2 && !entra; t += 0.2) {
+            const r = simular(p, vx, vy, t).resultado;
+            entra = r?.tipo === 'dentro' && r.diana === d.id;
+          }
+        }
+        assert.ok(entra, `${d.id} con la semilla ${semilla}`);
+      }
     }
+  });
+
+  it('darle en la cabeza al camarero es fallo, y se dice', () => {
+    const p = crearPartida(11);
+    const oreja = p.dianas.find((d) => d.id === 'oreja')!;
+    const f = ficha('oreja');
+    // Un paso que cae justo sobre su cabeza (la oreja se mueve: se mira donde esta en t).
+    const t = 0.5;
+    const hx = posicionDiana(oreja, 1, t + PASO) + CABEZA.dx;
+    const v: Vuelo = { ...lanzar(p, 0, 0, t), x: hx, y: f.alturaBoca + CABEZA.dy + CABEZA.r + 0.035, vx: 0, vy: -2 };
+    assert.deepEqual(paso(v, p.dianas).resultado, { tipo: 'camarero' });
+    let partida = registrarTiro(p, { tipo: 'dentro', diana: 'vaso' });
+    partida = registrarTiro(partida, { tipo: 'camarero' });
+    assert.equal(partida.racha, 0);
+    assert.equal(partida.tiro, 2);
+  });
+
+  it('el punteado de apuntar sale de la catapulta y baja por la gravedad', () => {
+    const pts = previsualizar(3, 3, 0.4, 8);
+    assert.equal(pts.length, 8);
+    assert.ok(pts[0]!.x > 0 && pts[0]!.y > ALTURA_SALIDA);
+    assert.ok(pts.every((q, i) => i === 0 || q.x > pts[i - 1]!.x));
+    assert.deepEqual(previsualizar(0, -5, 1, 10), [], 'hacia abajo: no pinta bajo la barra');
   });
 
   it('la oreja se puede colar si se lanza cuando pasa por su sitio', () => {
@@ -171,7 +216,7 @@ describe('con una parabola de verdad', () => {
     const vistos: string[] = [];
     for (let k = 1; k < 1.15; k += 0.002) {
       const r = simular(p, vx * k, vy * k).resultado!;
-      const tipo = r.tipo === 'fuera' ? 'fuera' : `${r.tipo}:${r.diana}`;
+      const tipo = r.tipo === 'fuera' || r.tipo === 'camarero' ? r.tipo : `${r.tipo}:${r.diana}`;
       if (vistos.at(-1) !== tipo) vistos.push(tipo);
     }
     assert.equal(vistos[0], 'dentro:jarra');

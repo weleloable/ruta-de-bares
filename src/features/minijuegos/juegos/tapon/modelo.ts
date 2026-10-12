@@ -17,8 +17,8 @@ export const GRAVEDAD = 9.8;
 export const PASO = 1 / 120;
 /** Radio de la chapa (m). */
 export const RADIO_CHAPA = 0.03;
-/** Altura desde la que sale la chapa: la boca del botellin recien abierto (m). */
-export const ALTURA_SALIDA = 0.3;
+/** Altura desde la que sale la chapa: la cuchara de la catapulta en reposo (m). */
+export const ALTURA_SALIDA = 0.35;
 /** Velocidad de salida con el arrastre a tope (m/s). */
 export const VELOCIDAD_MAXIMA = 7.5;
 /** Grosor de las paredes de los vasos (m): por donde se roza el borde. */
@@ -26,7 +26,8 @@ export const PARED = 0.015;
 /** Un vuelo no dura mas que esto, pase lo que pase (s). */
 export const VUELO_MAXIMO = 3;
 /** Lo que se ve del campo, para la escala de la pantalla (m). */
-export const CAMPO = { xMin: -0.25, xMax: 3.45, yMax: 1.7 };
+// xMin deja ver la catapulta entera (su base llega a -0,34).
+export const CAMPO = { xMin: -0.4, xMax: 3.45, yMax: 1.7 };
 
 export const TIROS = 10;
 /** Desde que tiro (1..10) hay viento, y desde cual se mueven las dianas. */
@@ -47,18 +48,34 @@ export type FichaDiana = {
   alturaBoca: number;
   /** Ancho de la boca (m). */
   boca: number;
+  /**
+   * Ancho del cuerpo por fuera (m). En los vasos es la boca mas las paredes; en
+   * la caja es mas: la boca es el hueco del centro y a los lados hay botellines,
+   * y caer en sus chapas es borde, no acierto.
+   */
+  ancho: number;
   puntos: number;
   /** Tiene cuerpo solido de la barra a la boca (contra el que se choca por el lado). */
   cuerpo: boolean;
 };
 
 export const DIANAS: readonly FichaDiana[] = [
-  { id: 'vaso', nombre: 'Vaso de caña', distancia: 1.2, alturaBoca: 0.15, boca: 0.3, puntos: 10, cuerpo: true },
-  { id: 'jarra', nombre: 'Jarra', distancia: 2.0, alturaBoca: 0.2, boca: 0.24, puntos: 20, cuerpo: true },
-  { id: 'caja', nombre: 'Caja de botellines', distancia: 3.0, alturaBoca: 0.25, boca: 0.2, puntos: 35, cuerpo: true },
-  // La oreja flota (la cabeza del camarero asoma por detras de la barra): sin cuerpo.
-  { id: 'oreja', nombre: 'Oreja del camarero', distancia: 2.5, alturaBoca: 0.9, boca: 0.12, puntos: 50, cuerpo: false },
+  // Alturas con forma de vaso de verdad (la primera version era chata y no parecia un vaso).
+  { id: 'vaso', nombre: 'Vaso de caña', distancia: 1.2, alturaBoca: 0.42, boca: 0.3, ancho: 0.33, puntos: 10, cuerpo: true },
+  { id: 'jarra', nombre: 'Jarra', distancia: 2.0, alturaBoca: 0.36, boca: 0.24, ancho: 0.27, puntos: 20, cuerpo: true },
+  { id: 'caja', nombre: 'Caja de botellines', distancia: 3.0, alturaBoca: 0.3, boca: 0.2, ancho: 0.4, puntos: 35, cuerpo: true },
+  // La oreja es la del camarero, que asoma por detras de la barra: sin cuerpo. Su
+  // CABEZA si choca (ver CABEZA).
+  { id: 'oreja', nombre: 'Oreja del camarero', distancia: 2.5, alturaBoca: 0.9, boca: 0.12, ancho: 0.12, puntos: 50, cuerpo: false },
 ];
+
+/**
+ * La cabeza del camarero, respecto al centro de su oreja (m). Darle es fallar,
+ * y se dice ("¡Al camarero no!"): la primera version la dejaba atravesar y no
+ * se entendia que era aquella figura. Va a la DERECHA de la oreja y lo bastante
+ * separada para que una chapa que cae limpia en la oreja no la roce antes.
+ */
+export const CABEZA = { dx: 0.2, dy: 0.03, r: 0.11 };
 
 const FICHA: Record<IdDiana, FichaDiana> = Object.fromEntries(DIANAS.map((d) => [d.id, d])) as Record<IdDiana, FichaDiana>;
 export const ficha = (id: IdDiana) => FICHA[id];
@@ -159,7 +176,11 @@ export function posicionDiana(d: DianaEnJuego, n: number, t: number): number {
   return d.x + d.mov.amplitud * Math.sin((2 * Math.PI * t) / d.mov.periodo + d.mov.fase);
 }
 
-export type Resultado = { tipo: 'dentro'; diana: IdDiana } | { tipo: 'borde'; diana: IdDiana } | { tipo: 'fuera' };
+export type Resultado =
+  | { tipo: 'dentro'; diana: IdDiana }
+  | { tipo: 'borde'; diana: IdDiana }
+  | { tipo: 'camarero' }
+  | { tipo: 'fuera' };
 
 /** Apunta el resultado de un tiro. Solo 'dentro' suma y alarga la racha. */
 export function registrarTiro(p: Partida, r: Resultado): Partida {
@@ -251,15 +272,16 @@ export function choque(
 ): 'dentro' | 'borde' | null {
   const yb = d.alturaBoca;
   const mitad = d.boca / 2;
+  const fuera = d.ancho / 2;
   if (y0 >= yb && y1 < yb) {
     // Donde corta la linea de la boca, interpolando: un paso largo no se la salta.
     const x = x0 + ((x1 - x0) * (y0 - yb)) / (y0 - y1);
     const lejos = Math.abs(x - cx);
     if (lejos <= mitad - RADIO_CHAPA) return 'dentro';
-    if (lejos <= mitad + PARED + RADIO_CHAPA) return d.cuerpo ? 'borde' : null;
+    if (lejos <= fuera + RADIO_CHAPA) return d.cuerpo ? 'borde' : null;
   }
   // Por el lado: el cuerpo es un bloque de la barra a la boca.
-  if (d.cuerpo && y1 < yb && y1 >= 0 && Math.abs(x1 - cx) <= mitad + PARED + RADIO_CHAPA) return 'borde';
+  if (d.cuerpo && y1 < yb && y1 >= 0 && Math.abs(x1 - cx) <= fuera + RADIO_CHAPA) return 'borde';
   return null;
 }
 
@@ -281,6 +303,11 @@ export function paso(v: Vuelo, dianas: readonly DianaEnJuego[]): Vuelo {
       break;
     }
     if (c === 'borde' && !resultado) resultado = { tipo: 'borde', diana: d.id };
+    if (d.id === 'oreja' && !resultado) {
+      const hx = posicionDiana(d, v.n, t) + CABEZA.dx;
+      const hy = FICHA.oreja.alturaBoca + CABEZA.dy;
+      if (Math.hypot(x - hx, y - hy) <= CABEZA.r + RADIO_CHAPA) resultado = { tipo: 'camarero' };
+    }
   }
   if (!resultado && (y < 0 || x > CAMPO.xMax + 0.5 || x < CAMPO.xMin - 0.5 || t - v.t0 > VUELO_MAXIMO)) {
     resultado = { tipo: 'fuera' };
@@ -297,6 +324,22 @@ export function avanzarVuelo(v: Vuelo, dianas: readonly DianaEnJuego[], dt: numb
     actual = { ...paso(actual, dianas), resto: actual.resto - PASO };
   }
   return actual;
+}
+
+/**
+ * El arranque de la trayectoria, para pintarlo con puntos mientras se apunta:
+ * `segundos` de vuelo SIN viento ni dianas (el viento lo tiene que leer quien
+ * juega en la flecha, y el final de la parabola es cosa suya).
+ */
+export function previsualizar(vx: number, vy: number, segundos: number, puntos: number): { x: number; y: number }[] {
+  const salida: { x: number; y: number }[] = [];
+  for (let i = 1; i <= puntos; i++) {
+    const t = (segundos * i) / puntos;
+    const y = ALTURA_SALIDA + vy * t - (GRAVEDAD * t * t) / 2;
+    if (y < 0) break;
+    salida.push({ x: vx * t, y });
+  }
+  return salida;
 }
 
 /** Simula el tiro entero de una vez (tests y verificacion). */
