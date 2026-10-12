@@ -21,6 +21,7 @@ import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { credencialCompleta } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
 import { desdeFechaISO, diaLargo } from '../../src/lib/fechas';
+import { sellables } from '../../src/features/routes/tipoParada';
 import { colors, radius, space, typography } from '../../src/lib/theme';
 
 /**
@@ -53,11 +54,13 @@ export default function SellosScreen() {
   );
 
   const fecha = desdeFechaISO(activeRoute?.event_date ?? null);
-  const conseguidos = bars.filter((bar) => sellosPorBar.has(bar.id)).length;
-  const indiceAbierto = bars.findIndex((bar) => bar.id === abierto);
-  const barAbierto = indiceAbierto >= 0 ? bars[indiceAbierto] : null;
+  // Solo los bares se sellan (0060): las paradas de foto y otras salen en el mapa, no aqui.
+  const bares = useMemo(() => sellables(bars), [bars]);
+  const conseguidos = bares.filter((bar) => sellosPorBar.has(bar.id)).length;
+  const indiceAbierto = bares.findIndex((bar) => bar.id === abierto);
+  const barAbierto = indiceAbierto >= 0 ? bares[indiceAbierto] : null;
 
-  if (loading && bars.length === 0) return <Loading label="Buscando tu ruta..." />;
+  if (loading && bares.length === 0) return <Loading label="Buscando tu ruta..." />;
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
@@ -112,7 +115,7 @@ export default function SellosScreen() {
                 </Text>
                 {/* La medalla va pequena, en el hueco de la fila. Se deduce de los
                     sellos: si se borra uno, desaparece. */}
-                {credencialCompleta(conseguidos, bars.length) ? (
+                {credencialCompleta(conseguidos, bares.length) ? (
                   <View style={styles.medallaHueco}>
                     <View style={styles.medallaEscala}>
                       <Medalla onPress={() => setDiplomaAbierto(true)} />
@@ -124,12 +127,12 @@ export default function SellosScreen() {
                     <View
                       style={[
                         styles.progresoRelleno,
-                        { width: bars.length === 0 ? '0%' : `${(conseguidos / bars.length) * 100}%` },
+                        { width: bares.length === 0 ? '0%' : `${(conseguidos / bares.length) * 100}%` },
                       ]}
                     />
                   </View>
                   <Text style={styles.progresoTexto}>
-                    {conseguidos}/{bars.length}
+                    {conseguidos}/{bares.length}
                   </Text>
                 </View>
               </View>
@@ -147,11 +150,11 @@ export default function SellosScreen() {
             title="Todavia no hay ruta"
             body="Solo ves las rutas a las que te han invitado. Cuando te pasen una, abre su enlace de invitacion y sus bares apareceran aqui como huecos que ir sellando."
           />
-        ) : bars.length === 0 ? (
+        ) : bares.length === 0 ? (
           <EmptyState title="Ruta sin bares" body="Esta ruta esta publicada pero todavia no tiene paradas." />
         ) : (
           <View style={styles.rejilla}>
-            {bars.map((bar, indice) => {
+            {bares.map((bar, indice) => {
               const sello = sellosPorBar.get(bar.id) ?? null;
               return (
                 <StampSeal
@@ -179,18 +182,18 @@ export default function SellosScreen() {
           addStamp(sello);
         }}
         ruta={activeRoute}
-        esUltimoSellado={barAbierto !== null && barAbierto.id === ultimoBarSellado(stamps, new Set(bars.map((b) => b.id)))}
+        esUltimoSellado={barAbierto !== null && barAbierto.id === ultimoBarSellado(stamps, new Set(bares.map((b) => b.id)))}
       />
 
       {/* Solo existe con la credencial completa: es lo que abre la medalla. */}
-      {activeRoute && credencialCompleta(conseguidos, bars.length) ? (
+      {activeRoute && credencialCompleta(conseguidos, bares.length) ? (
         <DiplomaModal
           visible={diplomaAbierto}
           onClose={() => setDiplomaAbierto(false)}
           nombre={profile?.display_name ?? ''}
           ruta={activeRoute.name}
           foto={profile?.avatar_url ?? null}
-          paradas={bars.map((b) => ({ id: b.id, nombre: b.name, lat: b.lat, lng: b.lng, logo: b.logo }))}
+          paradas={bares.map((b) => ({ id: b.id, nombre: b.name, lat: b.lat, lng: b.lng, logo: b.logo }))}
         />
       ) : null}
     </SafeAreaView>

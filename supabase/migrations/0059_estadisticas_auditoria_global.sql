@@ -1,6 +1,9 @@
 -- Ruta de Bares - 0059: estadisticas de auditoria y de todas las rutas, para admins.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0058.
--- Idempotente: se puede re-ejecutar sin romper nada (funciones con `or replace`).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * admin_estadisticas_global() la rehace la 0060
 --
 -- Que hace. Completa la pantalla de Estadisticas (0037, 0058) con dos cosas,
 -- las dos solo para admins y solo agregadas:

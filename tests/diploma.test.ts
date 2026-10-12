@@ -21,12 +21,12 @@ describe('pantalla Sellos', () => {
   });
 
   it('el diploma solo existe con la credencial completa y con los datos de la persona y la ruta', () => {
-    const bloque = /credencialCompleta\(conseguidos, bars\.length\) \? \(\s*<DiplomaModal([\s\S]*?)\/>/.exec(codigo);
+    const bloque = /credencialCompleta\(conseguidos, bares\.length\) \? \(\s*<DiplomaModal([\s\S]*?)\/>/.exec(codigo);
     assert.ok(bloque, 'no hay DiplomaModal condicionado a la credencial completa');
     assert.match(bloque[1], /nombre=\{profile\?\.display_name \?\? ''\}/);
     assert.match(bloque[1], /ruta=\{activeRoute\.name\}/);
     assert.match(bloque[1], /foto=\{profile\?\.avatar_url \?\? null\}/);
-    assert.match(bloque[1], /paradas=\{bars\.map\(\(b\) => \(\{ id: b\.id, nombre: b\.name, lat: b\.lat, lng: b\.lng, logo: b\.logo \}\)\)\}/);
+    assert.match(bloque[1], /paradas=\{bares\.map\(\(b\) => \(\{ id: b\.id, nombre: b\.name, lat: b\.lat, lng: b\.lng, logo: b\.logo \}\)\)\}/);
   });
 });
 

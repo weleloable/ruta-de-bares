@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { infoTipo, numeroDeBar, tipoDe } from '../features/routes/tipoParada';
 
 import {
   ZOOM_PARADA,
@@ -150,19 +151,27 @@ export const RutaMapa = forwardRef<RutaMapaHandle, RutaMapaProps>(function RutaM
         />
       ) : null}
 
-      {bars.map((bar, indice) => {
-        const sellado = sellados.has(bar.id);
+      {bars.map((bar) => {
+        const numero = numeroDeBar(bars, bar.id);
+        const info = infoTipo(tipoDe(bar));
+        const sellado = numero !== null && sellados.has(bar.id);
         return (
           <Marker
             key={bar.id}
             coordinate={{ latitude: bar.lat, longitude: bar.lng }}
-            title={`${indice + 1}. ${bar.name}`}
-            description={ventana(new Date(bar.opens_at), new Date(bar.closes_at))}
+            title={numero !== null ? `${numero}. ${bar.name}` : `${info.icono} ${bar.name}`}
+            description={
+              numero !== null
+                ? ventana(new Date(bar.opens_at), new Date(bar.closes_at))
+                : `${ventana(new Date(bar.opens_at), new Date(bar.closes_at))} · ${info.nombre}: no se sella`
+            }
             onPress={() => onSeleccionar(bar.id)}
             tracksViewChanges={false}
           >
-            <View style={[styles.pin, sellado && styles.pinSellado]}>
-              <Text style={[styles.pinTexto, sellado && styles.pinTextoSellado]}>{indice + 1}</Text>
+            <View style={[styles.pin, sellado && styles.pinSellado, numero === null && styles.pinOtra]}>
+              <Text style={[styles.pinTexto, (sellado || numero === null) && styles.pinTextoSellado]}>
+                {numero !== null ? numero : info.icono}
+              </Text>
             </View>
           </Marker>
         );
@@ -198,6 +207,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pinSellado: { backgroundColor: colors.stamp, borderColor: colors.stamp },
+  // Parada que no es un bar (foto, otra): otro color y su simbolo, sin numero.
+  pinOtra: { backgroundColor: colors.beerDark, borderColor: colors.white },
   pinTexto: { fontWeight: '800', color: colors.ink },
   pinTextoSellado: { color: colors.white },
 });

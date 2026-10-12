@@ -1,6 +1,9 @@
 -- Ruta de Bares - 0058: estadisticas de actividad de una ruta para los admins.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0057.
--- Idempotente: se puede re-ejecutar sin romper nada (funcion con `or replace`).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * admin_estadisticas_actividad() la rehace la 0060
 --
 -- Que hace. La pantalla de Estadisticas (0037) solo sabia de sellos, La Cana y
 -- moderacion. `admin_estadisticas_actividad(ruta)` anade lo que ha llegado

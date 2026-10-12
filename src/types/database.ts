@@ -77,6 +77,8 @@ export type RouteBarRow = {
    * la parada para que los jugadores la vean. null: logo de assets/ o iniciales.
    */
   logo: string | null;
+  /** 'bar' (se sella), 'foto' u 'otra' (salen en el mapa, no se sellan) (0060). */
+  tipo: 'bar' | 'foto' | 'otra';
   created_at: string;
 };
 

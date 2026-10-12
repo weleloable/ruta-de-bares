@@ -139,6 +139,7 @@ supabase/
   migrations/0057_*.sql     `casas_estadisticas`: puntos por origen y datos por casa (pestana Casas)
   migrations/0058_*.sql     `admin_estadisticas_actividad`: participacion, bares, horas, consumiciones, juegos, retos y QR (Estadisticas, admins)
   migrations/0059_*.sql     `admin_estadisticas_auditoria` y `admin_estadisticas_global` (auditoria de una ruta; todas las rutas / temporada)
+  migrations/0060_*.sql     tipo de parada (`route_bars.tipo`: bar/foto/otra): solo los bares se sellan y cuentan
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
                             (NO hay Edge Functions: todo son funciones de Postgres)
@@ -292,6 +293,16 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   Los puntos salen del reto, no de `point_rules`. Se evaluan con disparadores
   en stamps, consumiciones y encuentros (no se tocan las funciones de puntos)
   y al llamar a `retos_mios`, por si el reto se creo despues.
+
+- **Tipo de parada (0060)**: `route_bars.tipo` es 'bar' (se sella), 'foto' u
+  'otra'. Las dos ultimas salen en el mapa pero NO se sellan: `claim_stamp` las
+  rechaza (NOT_STAMPABLE) y todo lo que cuenta bares (completar la ruta, retos,
+  nivel de "¿Conduces tu?", estadisticas) cuenta solo `tipo = 'bar'`. En el
+  cliente, `sellables(bars)` (routes/tipoParada.ts) es lo que usan Sellos, el
+  diploma y Conduces; el mapa y el editor usan todas. La hora/lugar de la ruta
+  (La Cana, fin de ruta) siguen usando la primera/ultima parada sea cual sea su
+  tipo. Pasar un bar a otro tipo ANULA los puntos de sus sellos y de su racha y
+  BORRA esos sellos (disparador `route_bars_tipo`).
 
 - **Cambio de casa (0048)**: `casas_admin_cambiar_casa` mueve de casa los
   movimientos de la persona (UPDATE de `house`, no se recrean) salvo racha y

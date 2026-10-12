@@ -1,4 +1,5 @@
 import type * as L from 'leaflet';
+import { infoTipo, numeroDeBar, tipoDe } from '../features/routes/tipoParada';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Circle, MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
@@ -229,20 +230,31 @@ export const RutaMapa = forwardRef<RutaMapaHandle, RutaMapaProps>(function RutaM
   // regeneraria el HTML de todos los pines y se reengancharian sus eventos.
   const marcadores = useMemo(
     () =>
-      bars.map((bar, indice) => (
-        <Marker
-          key={bar.id}
-          position={[bar.lat, bar.lng]}
-          icon={iconoParada(indice + 1, sellados.has(bar.id), bar.id === seleccionado)}
-          eventHandlers={{ click: () => onSeleccionar(bar.id) }}
-        >
-          <Popup>
-            <strong>{`${indice + 1}. ${bar.name}`}</strong>
-            <br />
-            {ventana(new Date(bar.opens_at), new Date(bar.closes_at))}
-          </Popup>
-        </Marker>
-      )),
+      bars.map((bar) => {
+        const numero = numeroDeBar(bars, bar.id);
+        const tipo = tipoDe(bar);
+        const info = infoTipo(tipo);
+        return (
+          <Marker
+            key={bar.id}
+            position={[bar.lat, bar.lng]}
+            icon={iconoParada(numero, sellados.has(bar.id), bar.id === seleccionado, tipo)}
+            eventHandlers={{ click: () => onSeleccionar(bar.id) }}
+          >
+            <Popup>
+              <strong>{numero !== null ? `${numero}. ${bar.name}` : `${info.icono} ${bar.name}`}</strong>
+              <br />
+              {ventana(new Date(bar.opens_at), new Date(bar.closes_at))}
+              {numero === null ? (
+                <>
+                  <br />
+                  <em>{`${info.nombre}: no se sella`}</em>
+                </>
+              ) : null}
+            </Popup>
+          </Marker>
+        );
+      }),
     [bars, sellados, seleccionado, onSeleccionar],
   );
 

@@ -20,7 +20,7 @@ describe('pantalla Sellos', () => {
   it('pinta la medalla solo cuando la credencial esta completa', () => {
     assert.match(
       codigo,
-      /\{credencialCompleta\(conseguidos, bars\.length\) \? \(\s*<View style=\{styles\.medallaHueco\}>\s*<View style=\{styles\.medallaEscala\}>\s*<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>\s*<\/View>\s*<\/View>\s*\) : null\}/,
+      /\{credencialCompleta\(conseguidos, bares.length\) \? \(\s*<View style=\{styles\.medallaHueco\}>\s*<View style=\{styles\.medallaEscala\}>\s*<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>\s*<\/View>\s*<\/View>\s*\) : null\}/,
     );
   });
 

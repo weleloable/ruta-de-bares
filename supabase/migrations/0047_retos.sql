@@ -1,8 +1,9 @@
 -- Ruta de Bares - 0047: retos de cada ruta.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0046.
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists`,
--- disparadores y politicas quitados antes de ponerlos y funciones con
--- `or replace`).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * reto_progreso() la rehace la 0060
 --
 -- Que hace.
 --

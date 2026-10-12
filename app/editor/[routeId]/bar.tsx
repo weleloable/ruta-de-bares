@@ -15,6 +15,8 @@ import { consumirUltimoCreado, reintentarCatalogo, useCatalogo } from '../../../
 import { construirVentana, formatHora } from '../../../src/features/routes/horas';
 import { CampoHora, RelojHora } from '../../../src/features/routes/RelojHora';
 import { SelectorBar } from '../../../src/features/routes/SelectorBar';
+import { SelectorTipoParada } from '../../../src/features/routes/SelectorTipoParada';
+import { tipoDe, type TipoParada } from '../../../src/features/routes/tipoParada';
 import {
   opcionesDeRadio,
   RADIO_INICIAL_M,
@@ -62,6 +64,9 @@ export default function EditorDeBar() {
 
   const [elegido, setElegido] = useState<BarElegido | null>(null);
   const [radio, setRadio] = useState<number>(RADIO_INICIAL_M);
+  const [tipo, setTipo] = useState<TipoParada>('bar');
+  // Lo que era al abrir el editor: si era un bar y deja de serlo, se avisa de lo que se pierde.
+  const [tipoOriginal, setTipoOriginal] = useState<TipoParada>('bar');
   const [abre, setAbre] = useState('19:00');
   const [cierra, setCierra] = useState('20:00');
   // Que hora esta editando el reloj (solo hay un reloj abierto a la vez).
@@ -111,6 +116,8 @@ export default function EditorDeBar() {
             logo: existente.logo,
           });
           setRadio(existente.radius_m);
+          setTipo(tipoDe(existente));
+          setTipoOriginal(tipoDe(existente));
           setAbre(formatHora(new Date(existente.opens_at)));
           setCierra(formatHora(new Date(existente.closes_at)));
           return;
@@ -180,6 +187,7 @@ export default function EditorDeBar() {
         id: existente?.id,
         routeId,
         sortOrder: existente ? existente.sort_order : nextSortOrder(bares),
+        tipo,
         ...borrador,
       });
       router.back();
@@ -221,8 +229,14 @@ export default function EditorDeBar() {
             />
           </View>
 
+          <SelectorTipoParada
+            valor={tipo}
+            onCambiar={setTipo}
+            avisoPerdida={editando && tipoOriginal === 'bar' && tipo !== 'bar'}
+          />
+
           <Desplegable
-            etiqueta="Radio para sellar"
+            etiqueta={tipo === 'bar' ? 'Radio para sellar' : 'Radio de la zona'}
             opciones={opcionesDeRadio(radio).map((metros) => ({ valor: metros, etiqueta: `${metros} m` }))}
             valor={radio}
             onCambiar={setRadio}

@@ -17,6 +17,7 @@ import { direccionVisible } from '../../src/features/routes/catalogo';
 import { EnlacesRuta } from '../../src/features/routes/EnlacesRuta';
 import { huecosDesdeMedidas } from '../../src/lib/encuadre';
 import { ventana } from '../../src/lib/fechas';
+import { rotuloParada, sellables } from '../../src/features/routes/tipoParada';
 import { colors, radius, shadow, space, typography } from '../../src/lib/theme';
 
 /** Aire entre lo que tapa el mapa y el primer pin que se ve. */
@@ -44,6 +45,7 @@ export default function RutaScreen() {
   const [altoPie, setAltoPie] = useState(0);
 
   const sellados = useMemo(() => new Set(stamps.map((s) => s.route_bar_id)), [stamps]);
+  const bares = useMemo(() => sellables(bars), [bars]);
 
   // Sin las dos medidas no se pasa nada y el mapa usa sus valores por defecto.
   const huecos = useMemo(
@@ -116,7 +118,8 @@ export default function RutaScreen() {
                 {activeRoute.name}
               </Text>
               <Text style={typography.muted}>
-                {bars.length} paradas, {sellados.size} selladas
+                {bars.length} paradas
+                {bares.length !== bars.length ? ` (${bares.length} ${bares.length === 1 ? 'bar' : 'bares'})` : ''}, {sellados.size} selladas
               </Text>
               {Platform.OS === 'web' ? (
                 // En web el mapa es OpenStreetMap, que exige atribucion VISIBLE
@@ -156,14 +159,14 @@ export default function RutaScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.carrusel}
             >
-              {bars.map((bar, indice) => (
+              {bars.map((bar) => (
                 <Pressable
                   key={bar.id}
                   onPress={() => irA(bar.id)}
                   style={[styles.tarjeta, bar.id === seleccionado && styles.tarjetaActiva]}
                 >
                   <Text style={typography.overline}>
-                    Parada {indice + 1}
+                    {rotuloParada(bars, bar)}
                     {sellados.has(bar.id) ? ' - sellada' : ''}
                   </Text>
                   <Text style={typography.cardTitle} numberOfLines={1}>

@@ -12,6 +12,8 @@ export type NewRoute = {
   createdBy: string;
 };
 
+import type { TipoParada } from './tipoParada';
+
 export type BarInput = {
   id?: string;
   routeId: string;
@@ -26,6 +28,8 @@ export type BarInput = {
   notes: string;
   /** data URL del sello (bar propio) o null: se copia a la parada para que los jugadores la vean. */
   logo: string | null;
+  /** Solo los bares se sellan (0060). */
+  tipo: TipoParada;
 };
 
 /**
@@ -137,6 +141,7 @@ export async function saveBar(input: BarInput): Promise<RouteBarRow> {
     closes_at: input.closesAt.toISOString(),
     notes: input.notes.trim(),
     logo: input.logo,
+    tipo: input.tipo,
   };
 
   const query = input.id

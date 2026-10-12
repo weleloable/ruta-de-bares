@@ -1,3 +1,4 @@
+import { sellables } from '../../../routes/tipoParada';
 import { useMemo } from 'react';
 
 import { useActiveRoute } from '../../../routes/ActiveRouteProvider';
@@ -25,10 +26,12 @@ export function useDatosRuta(): DatosRuta {
   const { activeRoute, bars, stamps } = useActiveRoute();
   return useMemo(() => {
     if (!activeRoute) return { rutaId: null, numeroBares: NIVELES_PRUEBA, sellos: 0 };
-    const deEstaRuta = new Set(bars.map((b) => b.id));
+    // Solo los bares: las paradas de foto no se sellan ni cuentan para el nivel (0060).
+    const bares = sellables(bars);
+    const deEstaRuta = new Set(bares.map((b) => b.id));
     return {
       rutaId: activeRoute.id,
-      numeroBares: Math.max(bars.length, 1),
+      numeroBares: Math.max(bares.length, 1),
       sellos: stamps.filter((s) => deEstaRuta.has(s.route_bar_id)).length,
     };
   }, [activeRoute, bars, stamps]);

@@ -2,6 +2,7 @@ import 'leaflet/dist/leaflet.css';
 
 import * as L from 'leaflet';
 
+import { infoTipo, type TipoParada } from '../features/routes/tipoParada';
 import { OSM_COPYRIGHT_URL } from './osm';
 import { colors } from './theme';
 
@@ -46,19 +47,23 @@ export function asegurarEstilosMapa(): void {
  * En el HTML solo entra un entero: nunca texto escrito por un usuario (el
  * nombre del bar va en el Popup, que React escapa).
  */
-export function iconoParada(numero: number, sellado: boolean, activo: boolean): L.DivIcon {
-  const n = Math.trunc(numero);
+export function iconoParada(numero: number | null, sellado: boolean, activo: boolean, tipo: TipoParada = 'bar'): L.DivIcon {
   const tam = activo ? 40 : 34;
-  const fondo = sellado ? colors.stamp : colors.card;
-  const borde = activo ? colors.ink : sellado ? colors.stamp : colors.borderStrong;
-  const tinta = sellado ? colors.white : colors.ink;
+  // Las paradas que no son un bar (foto, otra) llevan su simbolo (un texto fijo
+  // nuestro, nunca del usuario) en vez de un numero, y no se "sellan".
+  const esBar = tipo === 'bar' && numero !== null;
+  const contenido = esBar ? String(Math.trunc(numero)) : infoTipo(tipo).icono;
+  const fondo = !esBar ? colors.beerDark : sellado ? colors.stamp : colors.card;
+  const borde = activo ? colors.ink : !esBar ? colors.white : sellado ? colors.stamp : colors.borderStrong;
+  const tinta = !esBar || sellado ? colors.white : colors.ink;
+  const letra = esBar ? 14 : 17;
   return L.divIcon({
     className: 'rb-pin',
     html:
       `<div style="width:${tam}px;height:${tam}px;box-sizing:border-box;border-radius:999px;` +
       `background:${fondo};border:${activo ? 3 : 2}px solid ${borde};color:${tinta};` +
-      `display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;` +
-      `box-shadow:0 2px 6px rgba(36,26,18,0.35)">${n}</div>`,
+      `display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${letra}px;` +
+      `box-shadow:0 2px 6px rgba(36,26,18,0.35)">${contenido}</div>`,
     iconSize: [tam, tam],
     iconAnchor: [tam / 2, tam / 2],
     popupAnchor: [0, -tam / 2],

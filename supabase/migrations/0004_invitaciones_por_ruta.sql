@@ -1,6 +1,9 @@
 -- Ruta de Bares - las invitaciones dejan de dar cuenta y pasan a dar RUTA.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, despues de 0003.
--- Idempotente: se puede re-ejecutar sin romper nada.
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
+-- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
+--   * claim_stamp() la rehace la 0060
 --
 -- Que cambia respecto a 0001:
 --   Antes: el alta estaba cerrada y una invitacion creaba una CUENTA. Toda

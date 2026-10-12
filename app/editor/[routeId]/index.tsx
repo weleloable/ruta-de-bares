@@ -15,6 +15,7 @@ import {
 import { EditorRetos } from '../../../src/features/casas/EditorRetos';
 import { AjustesCana } from '../../../src/features/routes/AjustesCana';
 import { BarLogo } from '../../../src/features/routes/BarLogo';
+import { infoTipo, numeroDeBar, tipoDe } from '../../../src/features/routes/tipoParada';
 import { direccionVisible } from '../../../src/features/routes/catalogo';
 import {
   assignSortOrder,
@@ -214,11 +215,14 @@ export default function EditorDeRuta() {
             <Card key={bar.id}>
               <View style={styles.filaTitulo}>
                 <View style={styles.numero}>
-                  <Text style={styles.numeroTexto}>{indice + 1}</Text>
+                  <Text style={styles.numeroTexto}>{numeroDeBar(bares, bar.id) ?? infoTipo(tipoDe(bar)).icono}</Text>
                 </View>
                 <BarLogo nombre={bar.name} logo={bar.logo} tamano={40} />
                 <View style={styles.tituloTexto}>
                   <Text style={typography.cardTitle}>{bar.name}</Text>
+                  {tipoDe(bar) !== 'bar' ? (
+                    <Text style={typography.muted}>{`${infoTipo(tipoDe(bar)).nombre} · no se sella`}</Text>
+                  ) : null}
                   <Text style={typography.muted}>
                     {ventana(new Date(bar.opens_at), new Date(bar.closes_at))} · {bar.radius_m} m
                   </Text>

@@ -342,6 +342,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    vista de todas las rutas o de una temporada (`admin_estadisticas_global`).
    El reparto de personas y puntos por casa usa la funcion de la 0048. Se puede
    pegar dos veces.
+58. [`supabase/migrations/0060_tipo_de_parada.sql`](../supabase/migrations/0060_tipo_de_parada.sql)
+   y **Run**, despues de la 0059 y **ANTES de desplegar la app**. Tipo de
+   parada (`route_bars.tipo`: bar, foto u otra): las de foto y otra salen en el
+   mapa con su horario pero no se sellan ni cuentan para la credencial, los
+   puntos, los retos ni las estadisticas. Se elige al anadir o editar una
+   parada en el editor. Rehace `claim_stamp` y las funciones que cuentan bares,
+   asi que la 0004, 0040, 0041, 0045, 0047, 0058 y 0059 ya **no se vuelven a
+   pegar**. Se puede pegar dos veces.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite
