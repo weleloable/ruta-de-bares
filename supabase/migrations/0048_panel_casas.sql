@@ -4,6 +4,7 @@
 -- Define una funcion que una migracion POSTERIOR rehizo: volver a pegarla la
 -- devuelve a esta version, en silencio y sin avisar. Aqui queda obsoleta:
 --   * export_my_data() la rehace la 0062
+--   * casas_admin_regla() la rehace la 0065 (su ultimo UPDATE no llevaba WHERE)
 -- Ojo al reves: rehace export_my_data() de la 0044, que ya no se puede volver
 -- a pegar despues.
 --
