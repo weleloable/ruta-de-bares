@@ -32,6 +32,12 @@
       body {
         height: 100%;
       }
+      /* Safari cambia el alto visible al mostrar u ocultar sus barras. */
+      @supports (height: 100dvh) {
+        html {
+          height: 100dvh;
+        }
+      }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;

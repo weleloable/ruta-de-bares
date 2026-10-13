@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarraSuperior } from '../../src/components/BarraSuperior';
 import { BotonSellos } from '../../src/components/BotonSellos';
@@ -13,6 +14,8 @@ import { colors } from '../../src/lib/theme';
 export default function TabsLayout() {
   const { avisos } = useAvisosCana();
   const { activeRoute } = useActiveRoute();
+  const insets = useSafeAreaInsets();
+  const margenInferior = Math.max(insets.bottom, 8);
 
   return (
     <>
@@ -26,7 +29,16 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.stamp,
         tabBarInactiveTintColor: colors.inkFaint,
-        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          // El margen del indicador de inicio se suma al alto de los botones.
+          height: 64 + margenInferior,
+          paddingTop: 8,
+          paddingBottom: margenInferior,
+          overflow: 'visible',
+        },
+        tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         // Misma barra en todas las pestanas. Por defecto, titulada con el
         // title de cada una (el mismo texto que su boton en la barra de
