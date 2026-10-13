@@ -29,22 +29,22 @@ describe('Perfil: boton "Instalar App"', () => {
     assert.match(perfil, /from '\.\.\/\.\.\/src\/lib\/pwaInstalar'/);
   });
 
-  it('el boton esta gateado por "disponible" y no se pinta a pelo', () => {
-    const bloque = /\{instalarDisponible \? \(([\s\S]*?)\) : null\}/.exec(perfil);
-    assert.ok(bloque, 'no hay bloque {instalarDisponible ? (...) : null}');
+  it('el boton esta gateado por "disponible" o por la guia, y no se pinta a pelo', () => {
+    const bloque = /\{instalarDisponible \|\| guiaInstalar \? \(([\s\S]*?)\) : null\}/.exec(perfil);
+    assert.ok(bloque, 'no hay bloque {instalarDisponible || guiaInstalar ? (...) : null}');
     assert.match(bloque[1], /title='Instalar App'/);
-    assert.match(bloque[1], /onPress=\{instalar\}/);
+    assert.match(bloque[1], /onPress=\{instalarDisponible \? instalar : \(\) => setGuiaAbierta\(true\)\}/);
   });
 
   it('la variable disponible viene del propio hook, no de un estado propio inventado', () => {
     assert.match(
       perfil,
-      /const \{ disponible: instalarDisponible, instalando, instalar \} = useInstalarApp\(\);/,
+      /const \{ disponible: instalarDisponible, instalando, instalar, guia: guiaInstalar \} = useInstalarApp\(\);/,
     );
   });
 
   it('el boton no ocupa todo el ancho: alignSelf center, ancho del contenido', () => {
-    const bloque = /\{instalarDisponible \? \(([\s\S]*?)\) : null\}/.exec(perfil);
+    const bloque = /\{instalarDisponible \|\| guiaInstalar \? \(([\s\S]*?)\) : null\}/.exec(perfil);
     assert.ok(bloque);
     assert.match(bloque[1], /style=\{styles\.botonInstalar\}/);
     assert.match(perfil, /botonInstalar:\s*\{\s*alignSelf:\s*'center'\s*\}/);
@@ -58,10 +58,27 @@ describe('Perfil: boton "Instalar App"', () => {
   });
 });
 
+describe('Perfil: instrucciones cuando el navegador no da aviso (iPhone, WhatsApp...)', () => {
+  const perfil = sinComentarios(leer('app/(tabs)/perfil.tsx')).replace(/["`]/g, "'");
+
+  it('el modal solo se abre con la guia del entorno y se cierra con onCerrar', () => {
+    assert.match(perfil, /<GuiaInstalarModal guia=\{guiaAbierta \? guiaInstalar : null\} onCerrar=\{\(\) => setGuiaAbierta\(false\)\} \/>/);
+  });
+
+  it('la guia sale del hook, que la elige con elegirGuia (pura y probada en guiaInstalar.test.ts)', () => {
+    const web = sinComentarios(leer('src/lib/pwaInstalar.web.ts'));
+    assert.match(web, /import \{ elegirGuia, type GuiaInstalar \} from '\.\/guiaInstalar'/);
+    assert.match(web, /const guia = useSyncExternalStore\(suscribir, guiaActual, \(\) => null\);/);
+    assert.match(web, /avisoNativoListo: eventoCapturado !== null/);
+    assert.match(web, /return \{ disponible, instalando, instalar, guia \};/);
+  });
+});
+
 describe('useInstalarApp: version nativa siempre inactiva', () => {
   it('pwaInstalar.ts (fallback fuera de web) nunca ofrece el boton', () => {
     const codigo = sinComentarios(leer('src/lib/pwaInstalar.ts'));
     assert.match(codigo, /disponible:\s*false/);
+    assert.match(codigo, /guia:\s*null/);
     assert.match(codigo, /export function iniciarInstalarApp\(\): void \{\}/);
   });
 });

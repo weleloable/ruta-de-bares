@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
+import { elegirGuia, type GuiaInstalar } from './guiaInstalar';
 import { estaInstalada } from './pwaInstalada';
 
 /**
@@ -17,11 +18,12 @@ import { estaInstalada } from './pwaInstalada';
  *
  * El navegador dispara `beforeinstallprompt` solo cuando la PWA es instalable
  * Y TODAVIA NO ESTA instalada (Chrome/Edge/Android). Con eso basta para
- * "aparece solo si falta instalar": si el evento no llega, no se ofrece nada.
- * Safari (iOS/iPadOS) nunca lo dispara -- ahi no hay boton posible, toca
- * "Compartir > Anadir a pantalla de inicio" a mano -- por eso ademas se
- * comprueba `display-mode: standalone` y `navigator.standalone`: si ya esta
- * instalada por esa via, tampoco se escucha el evento.
+ * "aparece solo si falta instalar": si el evento no llega, no hay aviso nativo.
+ * Safari (iOS/iPadOS) nunca lo dispara, ni los navegadores integrados de
+ * WhatsApp o Instagram, ni Firefox: en esos casos `guia` dice que ensenar
+ * (guiaInstalar.ts) y el boton abre las instrucciones a mano, en vez de no
+ * salir. Ademas se comprueba `display-mode: standalone` y `navigator.standalone`:
+ * si ya esta instalada por esa via, ni se escucha el evento ni hay guia.
  */
 
 interface EventoInstalar extends Event {
@@ -63,9 +65,30 @@ function suscribir(callback: () => void) {
   return () => oyentes.delete(callback);
 }
 
+/**
+ * Que guia ensenar cuando NO hay aviso nativo (ver guiaInstalar.ts). Lee el
+ * navegador cada vez que se pregunta: devuelve un texto o null, asi que
+ * useSyncExternalStore ve un valor estable, y cambia solo cuando llega (o se
+ * gasta) el evento, que es cuando `avisar()` despierta a los suscritos.
+ */
+function guiaActual(): GuiaInstalar | null {
+  if (typeof window === 'undefined') return null;
+  return elegirGuia({
+    userAgent: window.navigator.userAgent,
+    plataforma: window.navigator.platform,
+    puntosTactiles: window.navigator.maxTouchPoints ?? 0,
+    yaInstalada: estaInstalada(
+      window.matchMedia?.('(display-mode: standalone)').matches ?? false,
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true,
+    ),
+    avisoNativoListo: eventoCapturado !== null,
+  });
+}
+
 export function useInstalarApp() {
   const disponible = useSyncExternalStore(suscribir, () => eventoCapturado !== null, () => false);
   const instalando = useSyncExternalStore(suscribir, () => instalandoAhora, () => false);
+  const guia = useSyncExternalStore(suscribir, guiaActual, () => null);
 
   const instalar = useCallback(async () => {
     const evento = eventoCapturado;
@@ -83,5 +106,5 @@ export function useInstalarApp() {
     }
   }, []);
 
-  return { disponible, instalando, instalar };
+  return { disponible, instalando, instalar, guia };
 }
