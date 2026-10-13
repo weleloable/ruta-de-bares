@@ -1,300 +1,52 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { Card } from '../../components/ui';
-import { colors, fonts, radius, space, typography } from '../../lib/theme';
 import { useAuth } from '../auth/AuthProvider';
 import { useActiveRoute } from '../routes/ActiveRouteProvider';
 import { AportesCasa } from './AportesCasa';
 import { InfoPuntos } from './InfoPuntos';
-import { CASAS, type IdCasa } from './casas';
-import { Escudo } from './Escudo';
+import type { IdCasa } from './casas';
 import { useMiCasa } from './MiCasa';
-import { lider, ordenarRanking, subidas, type FilaRanking, type FilaServidor } from './ranking';
+import { TablaCasas } from './TablaCasas';
 import { useRankingCasas } from './useRankingCasas';
 
-const nativo = Platform.OS !== 'web';
-
-/**
- * La clasificacion de las cuatro casas en la ruta, en directo (0044). Va en
- * Sellos, bajo la credencial. Cuando una casa suma, sale un "+N" sobre su fila;
- * cuando cambia el lider, un aviso con la corona.
- */
-export function RankingCasas({ rutaId }: { rutaId: string }) {
-  const { filas } = useRankingCasas(rutaId);
+export function RankingCasas({ rutaId, pie, retos }: { rutaId: string; pie?: ReactNode; retos?: ReactNode }) {
+  const { filas, error, recargar } = useRankingCasas(rutaId);
   const { casa: miCasa } = useMiCasa();
   const router = useRouter();
   const { session } = useAuth();
-  const { routes, activeRoute } = useActiveRoute();
+  const { routes, activeRoute, refresh } = useActiveRoute();
   const ruta = routes.find((r) => r.id === rutaId) ?? activeRoute;
   const [abierta, setAbierta] = useState<IdCasa | null>(null);
   const [info, setInfo] = useState(false);
+  const [actualizando, setActualizando] = useState(false);
+
+  async function actualizar() {
+    if (actualizando) return;
+    setActualizando(true);
+    try {
+      await Promise.all([recargar(), refresh()]);
+    } finally {
+      setActualizando(false);
+    }
+  }
+
   return (
     <>
       <TablaCasas
         filas={filas}
         miCasa={miCasa}
+        error={error}
+        actualizando={actualizando}
+        onActualizar={() => void actualizar()}
         onHistorico={() => router.push('/casas/historico')}
-        onCasa={setAbierta}
-        onInfo={() => setInfo(true)}
+        onCasa={(casa) => { setInfo(false); setAbierta(casa); }}
+        pie={pie}
       />
-      <InfoPuntos ruta={ruta} visible={info} onCerrar={() => setInfo(false)} />
+      {info ? <Pressable accessibilityLabel="Cerrar formas de conseguir puntos" onPress={() => setInfo(false)} style={StyleSheet.absoluteFill} /> : null}
+      <InfoPuntos ruta={ruta} visible={info} onCambiar={setInfo} retos={retos} />
       <AportesCasa rutaId={rutaId} casa={abierta} miId={session?.user.id ?? null} onCerrar={() => setAbierta(null)} />
     </>
   );
 }
-
-/** La tabla en si, a partir de las filas del servidor (se puede ensenar sola). */
-export function TablaCasas({
-  filas,
-  miCasa,
-  onHistorico,
-  onCasa,
-  onInfo,
-}: {
-  filas: FilaServidor[] | null;
-  miCasa: IdCasa | null;
-  onHistorico?: () => void;
-  /** Al tocar una casa (abre la lista de quien pone sus puntos). */
-  onCasa?: (casa: IdCasa) => void;
-  /** El (i) junto al titulo: como se ganan puntos. */
-  onInfo?: () => void;
-}) {
-  const anteriores = useRef<FilaServidor[] | null>(null);
-  const [ganado, setGanado] = useState<Partial<Record<IdCasa, number>>>({});
-  const [nuevoLider, setNuevoLider] = useState<IdCasa | null>(null);
-
-  const ordenadas = filas ? ordenarRanking(filas) : null;
-
-  // Que ha cambiado desde la lectura anterior: subidas y cambio de lider.
-  useEffect(() => {
-    if (!filas) return;
-    const previas = anteriores.current;
-    anteriores.current = filas;
-    if (!previas) return;
-    const s = subidas(previas, filas);
-    if (Object.keys(s).length > 0) setGanado(s);
-    const antes = lider(ordenarRanking(previas));
-    const ahora = lider(ordenarRanking(filas));
-    if (ahora && ahora !== antes) {
-      setNuevoLider(ahora);
-      try {
-        Vibration.vibrate([0, 40, 60, 40]);
-      } catch {
-        // Sin vibracion: solo se ve.
-      }
-    }
-  }, [filas]);
-
-  if (!ordenadas) return null;
-  const hayPuntos = ordenadas.some((f) => f.puntos > 0);
-
-  return (
-    <Card style={styles.tarjeta}>
-      {/* La tabla importante de la pestana Casas: borde y titulo mas fuertes. */}
-      <View style={styles.cabecera}>
-        <View style={styles.copa}>
-          <Ionicons name="trophy" size={20} color={colors.white} />
-        </View>
-        <View style={styles.titulos}>
-          <Text style={styles.titulo}>Clasificación</Text>
-          <Text style={styles.subtitulo}>Las casas en esta ruta</Text>
-        </View>
-        {onInfo ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Cómo se ganan puntos"
-            onPress={onInfo}
-            hitSlop={10}
-            style={({ pressed }) => [styles.info, pressed && styles.filaPulsada]}
-          >
-            <Ionicons name="information-circle-outline" size={22} color={colors.beerDark} />
-          </Pressable>
-        ) : null}
-        {onHistorico ? (
-          <Pressable accessibilityRole="link" onPress={onHistorico} hitSlop={8}>
-            <Text style={styles.historico}>Histórico ›</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      {nuevoLider ? <AvisoLider casa={nuevoLider} onFin={() => setNuevoLider(null)} /> : null}
-
-      {ordenadas.map((f) => (
-        <Fila
-          key={f.house}
-          fila={f}
-          mia={f.house === miCasa}
-          ganado={ganado[f.house]}
-          onVisto={() => setGanado((g) => ({ ...g, [f.house]: undefined }))}
-          onPress={onCasa ? () => onCasa(f.house) : undefined}
-        />
-      ))}
-
-      {!hayPuntos ? (
-        <Text style={typography.muted}>Aún no hay puntos: el primer sello abre el marcador.</Text>
-      ) : null}
-    </Card>
-  );
-}
-
-function Fila({
-  fila,
-  mia,
-  ganado,
-  onVisto,
-  onPress,
-}: {
-  fila: FilaRanking;
-  mia: boolean;
-  ganado?: number;
-  onVisto: () => void;
-  onPress?: () => void;
-}) {
-  const c = CASAS[fila.house];
-  const barra = useRef(new Animated.Value(fila.progreso)).current;
-  const globo = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(barra, { toValue: fila.progreso, duration: 600, useNativeDriver: false }).start();
-  }, [fila.progreso, barra]);
-
-  useEffect(() => {
-    if (!ganado) return;
-    globo.setValue(0);
-    Animated.timing(globo, { toValue: 1, duration: 1400, useNativeDriver: nativo }).start(() => onVisto());
-  }, [ganado, globo, onVisto]);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${c.nombre}, ${fila.puntos} puntos. Ver quién los pone`}
-      disabled={!onPress}
-      onPress={onPress}
-      style={({ pressed }) => [styles.fila, mia && { borderColor: c.color, backgroundColor: `${c.color}12` }, pressed && styles.filaPulsada]}
-    >
-      <Text style={[styles.puesto, fila.puesto === 1 && fila.puntos > 0 && { color: c.color }]}>{fila.puesto}</Text>
-      <Escudo casa={fila.house} tamano={34} />
-      <View style={styles.centro}>
-        <View style={styles.nombreFila}>
-          <Text style={styles.nombre} numberOfLines={1}>
-            {c.nombre}
-          </Text>
-          {fila.lider ? <Ionicons name="star" size={14} color={c.color} /> : null}
-          {mia ? <Text style={[styles.tuya, { color: c.color }]}>· tu casa</Text> : null}
-        </View>
-        <View style={styles.pista}>
-          <Animated.View
-            style={[
-              styles.relleno,
-              { backgroundColor: c.color, width: barra.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
-            ]}
-          />
-        </View>
-        <Text style={styles.diferencia}>
-          {fila.lider
-            ? `Lidera por ${fila.sobreSiguiente}`
-            : fila.aLider > 0
-              ? `A ${fila.aLider} del primer puesto`
-              : fila.puntos > 0
-                ? 'Empatada en cabeza'
-                : `${fila.miembros} ${fila.miembros === 1 ? 'miembro' : 'miembros'} en la ruta`}
-        </Text>
-      </View>
-      <View style={styles.puntosCaja}>
-        <Text style={[styles.puntos, { color: c.color }]}>{fila.puntos}</Text>
-        <Text style={styles.pts}>pts</Text>
-        {ganado ? (
-          <Animated.Text
-            style={[
-              styles.globo,
-              { color: c.color },
-              {
-                opacity: globo.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 1, 1, 0] }),
-                transform: [{ translateY: globo.interpolate({ inputRange: [0, 1], outputRange: [6, -26] }) }],
-              },
-            ]}
-          >
-            +{ganado}
-          </Animated.Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
-function AvisoLider({ casa, onFin }: { casa: IdCasa; onFin: () => void }) {
-  const c = CASAS[casa];
-  const v = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.sequence([
-      Animated.spring(v, { toValue: 1, friction: 5, useNativeDriver: nativo }),
-      Animated.delay(2600),
-      Animated.timing(v, { toValue: 0, duration: 300, useNativeDriver: nativo }),
-    ]).start(() => onFin());
-  }, [v, onFin]);
-  return (
-    <Animated.View
-      style={[
-        styles.aviso,
-        { backgroundColor: c.color, opacity: v, transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }] },
-      ]}
-    >
-      <Ionicons name="trophy" size={20} color={c.detalle} />
-      <Text style={[styles.avisoTexto, { color: c.texto }]}>¡{c.nombre} toma el liderato!</Text>
-    </Animated.View>
-  );
-}
-
-const styles = StyleSheet.create({
-  tarjeta: { gap: space.sm, borderWidth: 2, borderColor: colors.beer },
-  cabecera: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingBottom: space.sm,
-    marginBottom: space.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  copa: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.beer },
-  titulos: { flexShrink: 1 },
-  titulo: { fontFamily: fonts.title, fontSize: 24, color: colors.ink },
-  subtitulo: { fontSize: 12, fontWeight: '700', color: colors.inkSoft, textTransform: 'uppercase', letterSpacing: 0.6 },
-  info: { flex: 1, alignItems: 'flex-start', paddingLeft: space.xs },
-  historico: { fontSize: 12, fontWeight: '700', color: colors.beerDark, marginLeft: space.sm },
-  fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.sm,
-    borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  filaPulsada: { opacity: 0.7 },
-  puesto: { width: 18, fontSize: 18, fontWeight: '900', color: colors.inkSoft, textAlign: 'center' },
-  centro: { flex: 1, gap: 3 },
-  nombreFila: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  nombre: { fontSize: 15, fontWeight: '800', color: colors.ink, flexShrink: 1 },
-  tuya: { fontSize: 12, fontWeight: '700' },
-  pista: { height: 8, borderRadius: 4, backgroundColor: colors.paperDeep, overflow: 'hidden' },
-  relleno: { height: '100%', borderRadius: 4 },
-  diferencia: { fontSize: 11, color: colors.inkSoft },
-  puntosCaja: { minWidth: 52, alignItems: 'flex-end' },
-  puntos: { fontSize: 22, fontWeight: '900', fontVariant: ['tabular-nums'] },
-  pts: { fontSize: 10, fontWeight: '700', color: colors.inkSoft, marginTop: -2 },
-  globo: { position: 'absolute', right: 0, top: -6, fontSize: 16, fontWeight: '900' },
-  aviso: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.sm,
-    padding: space.sm,
-    borderRadius: radius.pill,
-  },
-  avisoTexto: { fontSize: 15, fontWeight: '900' },
-});

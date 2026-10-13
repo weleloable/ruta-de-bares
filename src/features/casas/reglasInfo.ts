@@ -1,5 +1,5 @@
 /**
- * "Como se ganan puntos" (el boton (i) de la tabla de casas): el texto de cada
+ * "Como conseguir puntos" (el desplegable de Casas): el texto de cada
  * forma de puntuar, con los valores REALES (los que un admin puede cambiar) y
  * los limites de la ruta. Sin importaciones: los tests lo cargan tal cual.
  */
@@ -85,7 +85,7 @@ export function reglasInfo(puntos: Readonly<Record<string, number>>, r: LimitesR
       icono: '🎯',
       titulo: 'Retos',
       puntos: null,
-      texto: 'Cada reto de la ruta da los puntos que indica. Los ves en la fila «Retos» de esta pantalla.',
+      texto: 'Cada reto de la ruta da los puntos que indica, una sola vez. Consulta tu progreso en «Retos».',
     },
   ];
 }

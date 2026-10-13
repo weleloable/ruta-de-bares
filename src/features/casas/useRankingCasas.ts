@@ -22,19 +22,23 @@ export function useRankingCasas(rutaId: string | null) {
 
   const cargar = useCallback(async () => {
     if (!rutaId) return;
-    const { data, error: e } = await supabase.rpc('casas_ranking', { p_route_id: rutaId });
-    if (vigente.current !== rutaId) return;
-    if (e) {
-      // Sin la 0044 la funcion no existe: no es un error de la persona, se calla.
-      setError(/PGRST202|Could not find the function/i.test(e.message) ? null : e.message);
-      return;
+    try {
+      const { data, error: e } = await supabase.rpc('casas_ranking', { p_route_id: rutaId });
+      if (vigente.current !== rutaId) return;
+      if (e) {
+        setError(e.message);
+        return;
+      }
+      setError(null);
+      setFilas((data ?? []).filter((f) => esCasa(f.house)) as FilaServidor[]);
+    } catch {
+      if (vigente.current === rutaId) setError('No se pudo conectar con la clasificación.');
     }
-    setError(null);
-    setFilas((data ?? []).filter((f) => esCasa(f.house)) as FilaServidor[]);
   }, [rutaId]);
 
   useEffect(() => {
     setFilas(null);
+    setError(null);
     if (!rutaId) return;
     void cargar();
     const canal = supabase

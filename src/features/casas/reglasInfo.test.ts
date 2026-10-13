@@ -8,7 +8,7 @@ const RUTA: LimitesRuta = { consumo_minutos: 30, consumo_por_bar: 1, consumo_por
 
 const por = (puntos: Readonly<Record<string, number>> = PUNTOS, ruta = RUTA) => Object.fromEntries(reglasInfo(puntos, ruta).map((r) => [r.titulo, r]));
 
-describe('reglas de puntos (boton i)', () => {
+describe('reglas de puntos (desplegable)', () => {
   it('cubre todas las formas de ganar puntos, con los valores reales', () => {
     const r = reglasInfo(PUNTOS, RUTA);
     assert.deepEqual(
@@ -38,5 +38,22 @@ describe('reglas de puntos (boton i)', () => {
     const r = por({}, RUTA);
     assert.equal(r['Sellar un bar']?.puntos, null);
     assert.equal(r['Podio de los minijuegos']?.puntos, null);
+  });
+
+  it('refleja todos los importes editables, incluso si el admin los deja a cero', () => {
+    const acciones = {
+      sello: 'Sellar un bar',
+      ruta_completa: 'Completar la ruta',
+      consumicion: 'Consumición',
+      categoria_nueva: 'Categoría nueva',
+      racha: 'Racha de casa',
+      qr: 'Encuentro por QR',
+    };
+    for (const valor of [0, 37, 1000]) {
+      const reglas = por(Object.fromEntries(Object.keys(PUNTOS).map((accion) => [accion, valor])));
+      for (const titulo of Object.values(acciones)) assert.equal(reglas[titulo]?.puntos, `+${valor}`);
+      assert.equal(reglas['Podio de los minijuegos']?.puntos, `${valor} · ${valor} · ${valor}`);
+      assert.equal(reglas['Retos']?.puntos, null, 'cada reto tiene su propio importe');
+    }
   });
 });
