@@ -711,7 +711,7 @@ No hace falta APK ni tienda: la web es una **PWA** y se instala desde el navegad
 | Movil | Como |
 | --- | --- |
 | **Android** (Chrome) | Menu de Chrome > "Instalar aplicacion" (o el icono de instalar de la barra de direcciones) |
-| **iPhone / iPad** | Abrir en **Safari** > boton Compartir > "Anadir a pantalla de inicio" |
+| **iPhone / iPad** | Abrir en **Safari** > los tres puntos "•••" > Compartir > "Ver mas" > "Anadir a pantalla de inicio" |
 
 En Mi perfil hay un boton **"Instalar App"** mientras la web no este instalada.
 Con Chrome/Edge (Android y escritorio) lanza el aviso nativo del navegador
