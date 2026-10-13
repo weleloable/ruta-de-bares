@@ -87,20 +87,30 @@ describe('elegirGuia', () => {
 describe('textoGuia', () => {
   const guias: GuiaInstalar[] = ['ios-safari', 'ios-otro', 'abrir-en-navegador', 'menu'];
 
-  it('cada guia tiene titulo y tres pasos con texto', () => {
+  it('cada guia tiene titulo y de tres a cuatro pasos con texto', () => {
     for (const g of guias) {
       const t = textoGuia(g);
       assert.ok(t.titulo.length > 0, g);
-      assert.equal(t.pasos.length, 3, g);
+      assert.ok(t.pasos.length >= 3 && t.pasos.length <= 4, `${g}: ${t.pasos.length} pasos`);
       for (const p of t.pasos) assert.ok(p.trim().length > 10, `${g}: ${p}`);
     }
   });
 
-  it('las de iPhone nombran Compartir y "Añadir a pantalla de inicio"', () => {
+  it('las de iPhone nombran Compartir, "Ver más" y "Añadir a pantalla de inicio"', () => {
     for (const g of ['ios-safari', 'ios-otro'] as const) {
       const texto = textoGuia(g).pasos.join(' ');
       assert.match(texto, /Compartir/);
+      assert.match(texto, /«Ver más»/);
       assert.match(texto, /Añadir a pantalla de inicio/);
+      // El boton se llama "Ver más", no "Más": asi lo ve quien lo usa en su iPhone.
+      assert.doesNotMatch(texto, /«Más»/);
     }
+  });
+
+  it('en Safari, lo primero son los tres puntos «•••» y luego Compartir, en ese orden', () => {
+    const pasos = textoGuia('ios-safari').pasos;
+    assert.match(pasos[0] ?? '', /«•••»/);
+    assert.match(pasos[1] ?? '', /Compartir/);
+    assert.ok(pasos.findIndex((p) => /Ver más/.test(p)) > 1, '"Ver más" va despues de Compartir');
   });
 });

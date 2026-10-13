@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Banner, Button, Field, Screen } from '../src/components/ui';
 import { useAuth } from '../src/features/auth/AuthProvider';
+import { AvisoNavegadorIntegrado } from '../src/features/profile/AvisoNavegadorIntegrado';
 import { redeemRouteInvite } from '../src/features/invites/api';
 import {
   isValidTokenShape,
@@ -109,6 +110,7 @@ export default function InvitacionScreen() {
   if (!loading && !session) {
     return (
       <Screen scroll>
+        <AvisoNavegadorIntegrado />
         <View style={styles.cabecera}>
           <Text style={typography.screenTitle}>Te han invitado a una ruta</Text>
           <Text style={typography.muted}>

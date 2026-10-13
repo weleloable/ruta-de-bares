@@ -459,7 +459,15 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   pestana de Chrome indistinguible de Chrome: ahi cae en la guia del menu, que
   termina diciendo "abre este enlace en Chrome". Sin probar en un iPhone de
   verdad (ahi hay que mirar si el texto de "Anadir a pantalla de inicio" coincide
-  con la version de iOS).
+  con la version de iOS). Los pasos de Safari (•••, Compartir, "Ver mas") los
+  dicta quien lo usa en su iPhone, no salen de la documentacion de Apple.
+  **Navegador de otra app = aviso fijo** (`profile/AvisoNavegadorIntegrado.tsx`):
+  con la guia 'abrir-en-navegador' sale arriba en la invitacion (rama sin
+  sesion), entrar, crear cuenta y Sellos, y se cierra para siempre en ese
+  navegador (`localStorage`). Sale ANTES de crear la cuenta porque desde ahi no
+  funciona Google y la invitacion pendiente y la sesion no viajan al navegador
+  de verdad. No hay boton que lo abra: iOS no lo permite; en Android un
+  `intent://` quiza funcione pero no se ha probado.
 - **Los iconos no se editan a mano, los genera `scripts/generar-iconos.py`**
   (Pillow) desde `assets/marca/`: `logo-10.png` (RxB) para el icono nativo,
   el adaptativo de Android, la PWA, el favicon, el login y la pagina sin

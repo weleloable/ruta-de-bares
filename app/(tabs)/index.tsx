@@ -17,6 +17,7 @@ import { Banner, Card, EmptyState, Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { ultimoBarSellado } from '../../src/features/casas/reglasConsumo';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
+import { AvisoNavegadorIntegrado } from '../../src/features/profile/AvisoNavegadorIntegrado';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { credencialCompleta, nivelMedalla } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
@@ -97,6 +98,7 @@ export default function SellosScreen() {
             ver altoCabecera arriba. Nunca vacio del todo (el padding de
             'cuerpo' ya le da algo de alto), asi que no hace falta ignorar 0. */}
         <View onLayout={medirCabecera} style={styles.cabecera}>
+          <AvisoNavegadorIntegrado />
           {error ? <Banner tone="error">{error}</Banner> : null}
 
           {routes.length > 1 ? (

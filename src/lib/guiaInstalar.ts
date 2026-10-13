@@ -68,8 +68,9 @@ export function textoGuia(guia: GuiaInstalar): TextoGuia {
       return {
         titulo: 'Instalar en el iPhone',
         pasos: [
-          'Toca el botón Compartir (el cuadrado con una flecha hacia arriba), abajo en la pantalla.',
-          'Baja y toca «Añadir a pantalla de inicio». Si no la ves, toca «Más» o desliza la lista.',
+          'Toca los tres puntos «•••» de la barra de Safari.',
+          'Toca «Compartir».',
+          'Toca «Ver más» y, en la lista, «Añadir a pantalla de inicio».',
           'Toca «Añadir». Ya la tienes como una app más.',
         ],
       };
@@ -78,7 +79,7 @@ export function textoGuia(guia: GuiaInstalar): TextoGuia {
         titulo: 'Instalar en el iPhone',
         pasos: [
           'Toca el botón Compartir (el cuadrado con una flecha hacia arriba), junto a la barra de direcciones.',
-          'Baja y toca «Añadir a pantalla de inicio». Si no la ves, toca «Más» o desliza la lista.',
+          'Toca «Ver más» y, en la lista, «Añadir a pantalla de inicio».',
           'Toca «Añadir». Ya la tienes como una app más.',
         ],
       };
@@ -88,7 +89,7 @@ export function textoGuia(guia: GuiaInstalar): TextoGuia {
         pasos: [
           'Ahora estás dentro de otra app (WhatsApp, Instagram...) y desde aquí no se puede instalar.',
           'Toca el menú ⋯ (o el icono del navegador) y elige «Abrir en Safari», «Abrir en Chrome» o «Abrir en el navegador».',
-          'Ya en el navegador, vuelve a Mi perfil y toca «Instalar App».',
+          'Ya en el navegador, vuelve a abrir el enlace. Para instalar la app, toca luego «Instalar App» en Mi perfil.',
         ],
       };
     case 'menu':
