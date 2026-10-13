@@ -395,8 +395,17 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   Requiere que la Site URL de Supabase Auth sea la web (ver `docs/SETUP.md`).
 - **`redeem_route_invite()` bloquea la fila con `FOR UPDATE`**: sin eso, dos
   canjes simultáneos leen el mismo recuento y el tope de plazas se pasa por uno.
-  Ojo: eso NO está probado, PGlite es de una sola conexión y no puede abrir dos
-  transacciones a la vez. Está anotado como tal en `tests/migration-0004.test.ts`.
+  PGlite (una sola conexión) no puede probarlo, pero el Postgres real sí:
+  `scripts/pruebas-locales/5-concurrencia.mjs` (C1) lanza 15 canjes a la vez de
+  una invitación de 3 plazas y entran exactamente 3 (`npm run pruebas:local`).
+- **`npm run pruebas:local` prueba contra el Supabase local lo que PGlite no ve**
+  (`scripts/pruebas-locales/`, docs/SETUP.md sección 10): flujos por la API real,
+  un barrido de TODAS las funciones como 6 personas con la llamada deshecha al
+  final, la matriz de permisos por tabla, ráfagas en paralelo y la web en Chrome.
+  Entra en la base como `authenticator` porque solo ese rol carga `safeupdate`
+  (el que tiró el cambio de puntos de la 0048). El barrido se comprueba solo con
+  tres funciones rotas a propósito; si no las caza, sus resultados no valen.
+  BORRA la base local al empezar.
 - **Claves de Supabase en formato nuevo** (`sb_publishable_...` / `sb_secret_...`),
   no el antiguo `anon`/`service_role`. Ver equivalencia en `docs/SETUP.md`.
 - **"Continuar con Google" es OAuth de Supabase con PKCE, sin SDK de Google**
