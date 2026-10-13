@@ -447,6 +447,19 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **PWA: el service worker (`public/sw.js`) NO cachea la app**, solo una pagina
   de "sin conexion": cachear HTML/JS deja a la gente en la version vieja tras
   cada despliegue. Subir `VERSION` al cambiarlo.
+- **"Instalar App" sale tambien donde el navegador no da `beforeinstallprompt`**
+  (`src/lib/guiaInstalar.ts`, `profile/GuiaInstalarModal.tsx`): Safari de iPhone
+  no lo dispara NUNCA y tampoco el navegador interno de WhatsApp/Instagram (justo
+  donde se reparten las invitaciones), Firefox ni un Chrome que ya descarto la
+  oferta; antes el boton no salia y nadie sabia por que. Con aviso nativo, el
+  boton lo lanza; sin el, abre instrucciones segun el navegador (`elegirGuia`,
+  pura, probada con user-agents reales). Un ordenador sin aviso no recibe nada.
+  Los navegadores integrados se detectan por user-agent y es una lista que
+  envejece: en iOS, ademas, por NO llevar "Safari/". Telegram en Android abre una
+  pestana de Chrome indistinguible de Chrome: ahi cae en la guia del menu, que
+  termina diciendo "abre este enlace en Chrome". Sin probar en un iPhone de
+  verdad (ahi hay que mirar si el texto de "Anadir a pantalla de inicio" coincide
+  con la version de iOS).
 - **Los iconos no se editan a mano, los genera `scripts/generar-iconos.py`**
   (Pillow) desde `assets/marca/`: `logo-10.png` (RxB) para el icono nativo,
   el adaptativo de Android, la PWA, el favicon, el login y la pagina sin

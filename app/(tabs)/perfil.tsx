@@ -21,6 +21,7 @@ import {
 import { useAvatarFirmado } from '../../src/features/profile/avatarFirmado';
 import { CONFIRMAR_BORRADO } from '../../src/features/profile/borrarCuenta';
 import { DialogoConfirmar } from '../../src/features/profile/DialogoConfirmar';
+import { GuiaInstalarModal } from '../../src/features/profile/GuiaInstalarModal';
 import {
   avisoDeSolicitud,
   mensajeTrasEnviar,
@@ -36,7 +37,8 @@ import { AjustesAvisos } from '../../src/features/push/AjustesAvisos';
 export default function PerfilScreen() {
   const { session, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const router = useRouter();
-  const { disponible: instalarDisponible, instalando, instalar } = useInstalarApp();
+  const { disponible: instalarDisponible, instalando, instalar, guia: guiaInstalar } = useInstalarApp();
+  const [guiaAbierta, setGuiaAbierta] = useState(false);
 
   const [nombre, setNombre] = useState(profile?.display_name ?? '');
   const [guardando, setGuardando] = useState(false);
@@ -439,14 +441,17 @@ export default function PerfilScreen() {
           </Card>
         ) : null}
 
-        {instalarDisponible ? (
+        {/* Con aviso nativo (Chrome/Edge/Android) lo lanza. Sin el (iPhone, el
+            navegador de WhatsApp, Firefox...) el boton sale igual y abre las
+            instrucciones a mano: antes no salia nada y nadie sabia por que. */}
+        {instalarDisponible || guiaInstalar ? (
           <Button
             title="Instalar App"
             variant="secondary"
             icon="download-outline"
             style={styles.botonInstalar}
             loading={instalando}
-            onPress={instalar}
+            onPress={instalarDisponible ? instalar : () => setGuiaAbierta(true)}
           />
         ) : null}
 
@@ -468,6 +473,8 @@ export default function PerfilScreen() {
           <Text style={styles.borrarCuentaTexto}>Borrar Cuenta</Text>
         </Pressable>
       </ScrollView>
+
+      <GuiaInstalarModal guia={guiaAbierta ? guiaInstalar : null} onCerrar={() => setGuiaAbierta(false)} />
 
       <DialogoConfirmar
         visible={confirmandoSalida}

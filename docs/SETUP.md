@@ -713,9 +713,15 @@ No hace falta APK ni tienda: la web es una **PWA** y se instala desde el navegad
 | **Android** (Chrome) | Menu de Chrome > "Instalar aplicacion" (o el icono de instalar de la barra de direcciones) |
 | **iPhone / iPad** | Abrir en **Safari** > boton Compartir > "Anadir a pantalla de inicio" |
 
-No hay un boton propio para instalar: el navegador ofrece el suyo cuando
-quiere (Chrome/Edge en Android y escritorio) o, en iPhone, se hace a mano
-desde el menu Compartir. Una vez instalada se abre a pantalla completa con el
+En Mi perfil hay un boton **"Instalar App"** mientras la web no este instalada.
+Con Chrome/Edge (Android y escritorio) lanza el aviso nativo del navegador
+(`beforeinstallprompt`). Donde el navegador NO da ese aviso -- Safari de
+iPhone/iPad (nunca lo da), el navegador interno de WhatsApp/Instagram/Facebook,
+Firefox, un Chrome que ya descarto la oferta -- el boton sale igual y abre unas
+instrucciones segun el navegador (`src/lib/guiaInstalar.ts`): Compartir >
+"Anadir a pantalla de inicio" en iPhone, "abrelo en tu navegador" si esta dentro
+de otra app, y el menu del navegador en Android. En un ordenador sin aviso no
+se ofrece nada. Una vez instalada se abre a pantalla completa con el
 icono del logo "RxB" (Don Quijote y Sancho).
 
 Piezas: `public/manifest.json`, `public/icons/`, `public/sw.js` y
