@@ -957,3 +957,23 @@ npx expo start --web --port 8091
 - La semilla se niega a funcionar si la URL no es local (`tests/semilla-local.test.ts`). Los datos de produccion NO se copian: la ruta local se reconstruye desde `catalog_bars`.
 - La ruta de prueba lleva un sorteo abierto (premio: una camiseta), sin celebrar, para ver el aviso de Sellos.
 - Parar: `npm run db:local:stop`. Reiniciar de cero: `npx supabase db reset`, luego la semilla.
+
+### Pruebas contra el Supabase local (`npm run pruebas:local`)
+
+Prueban lo que los tests de siempre (PGlite) no pueden: la API real (PostgREST, Auth,
+Storage), `safeupdate` (el que tumbo el cambio de puntos, 0065), los permisos reales de
+cada rol y acciones A LA VEZ. Estan en `scripts/pruebas-locales/` y **borran la base
+local** (`supabase db reset`) antes de empezar; despues, `npm run semilla:local` para
+volver a tener a Dudu.
+
+| Script | Que prueba |
+| --- | --- |
+| `1-flujos.mjs` | ~125 pasos de uso real por la API: alta, rutas, invitaciones, sellar (radio, horario, borrador), casas, La Caña, moderacion, panel de casas, minijuegos, sorteo, fotos, exportar y borrar cuenta. Deja el "mundo" en `mundo.json`. |
+| `2-barrido.mjs` | TODAS las funciones ejecutables, como 6 personas y con 5 juegos de argumentos (~2500 llamadas, cada una deshecha). Busca errores internos. Se comprueba solo con tres funciones rotas a proposito. |
+| `3-permisos.mjs` | Cada tabla x persona: cuantas filas ve, cambia o borra con un UPDATE/DELETE "a todo". |
+| `5-concurrencia.mjs` | Rafagas en paralelo: canjes por encima del tope, doble toque al sellar, sorteo doble, me gusta cruzado... |
+| `4-web.mjs` | Las ~30 pantallas en Chrome headless como anonimo, participante y admin: excepciones, console.error, peticiones fallidas. Necesita `npx expo start --web --port 8091`. |
+
+Resultados (JSON y capturas) en `%TEMP%\ruta-de-bares-pruebas` (o `PRUEBAS_SALIDA`).
+`-- --sin-web` se salta la parte de Chrome. Las pruebas entran en la base como
+`authenticator`, el rol de la API, para que `safeupdate` este cargado igual que en produccion.
