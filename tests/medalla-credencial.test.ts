@@ -5,9 +5,10 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 /**
- * La medalla de credencial completa vive en la tarjeta de la credencial, en la
- * misma fila que el nombre y la barra de progreso (pequena, para no gastar
- * altura), y NO se guarda: se deduce de los sellos.
+ * La medalla de credencial completa vive en la tarjeta de la credencial, a
+ * tamano completo y pegada a la derecha, con los datos (ruta, fecha, barra) a
+ * su izquierda, y NO se guarda: se deduce de los sellos. El sorteo es la
+ * ultima fila de la misma tarjeta, no un recuadro suelto.
  */
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,8 +21,12 @@ describe('pantalla Sellos', () => {
   it('pinta la medalla solo cuando la credencial esta completa', () => {
     assert.match(
       codigo,
-      /\{credencialCompleta\(conseguidos, bares.length\) \? \(\s*<View style=\{styles\.medallaHueco\}>\s*<View style=\{styles\.medallaEscala\}>\s*<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>\s*<\/View>\s*<\/View>\s*\) : null\}/,
+      /\{credencialCompleta\(conseguidos, bares.length\) \? \(\s*<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>\s*\) : null\}/,
     );
+  });
+
+  it('la medalla va a tamano completo: sin escala reducida', () => {
+    assert.doesNotMatch(codigo, /medallaEscala|medallaHueco|scale:\s*0\.45/);
   });
 
   it('el globo verde "Ruta completa. Compostelana ganada." ya no existe', () => {
@@ -29,13 +34,26 @@ describe('pantalla Sellos', () => {
     assert.doesNotMatch(codigo, /<Banner tone="success">/);
   });
 
-  it('la medalla va en la fila del nombre, a su derecha, antes de la ruta y la barra', () => {
-    const fila = /<View style=\{styles\.credencialFila\}>([\s\S]*?)<View style=\{styles\.rutaFila\}>/.exec(codigo);
-    assert.ok(fila, 'no encuentro la fila de la credencial');
-    const iNombre = fila[1].indexOf('styles.credencialNombre');
-    const iMedalla = fila[1].indexOf('<Medalla onPress=');
-    assert.ok(iNombre > -1 && iMedalla > iNombre, 'la medalla tiene que ir despues del nombre');
-    assert.match(codigo, /credencialFila:\s*\{\s*flexDirection:\s*'row'/);
+  it('la medalla va a la derecha de los datos, en una fila', () => {
+    const cuerpo = /<View style=\{styles\.credencialCuerpo\}>([\s\S]*?)<BannerSorteo/.exec(codigo);
+    assert.ok(cuerpo, 'no encuentro el cuerpo de la credencial');
+    const iDatos = cuerpo[1].indexOf('styles.credencialDatos');
+    const iMedalla = cuerpo[1].indexOf('<Medalla onPress=');
+    assert.ok(iDatos > -1 && iMedalla > iDatos, 'la medalla tiene que ir despues de los datos');
+    assert.match(codigo, /credencialCuerpo:\s*\{\s*flexDirection:\s*'row'/);
+    assert.match(codigo, /credencialDatos:\s*\{\s*flex:\s*1/);
+  });
+
+  it('el titulo es el nombre de la ruta: ya no hay "Credenciales"', () => {
+    assert.doesNotMatch(codigo, /Credenciales/);
+    assert.match(codigo, /styles\.credencialNombre\][^>]*>\s*\{activeRoute\.name\}/);
+  });
+
+  it('el sorteo va dentro de la tarjeta, no como recuadro aparte', () => {
+    const tarjeta = /<Card style=\{styles\.credencial\}>([\s\S]*?)<\/Card>/.exec(codigo);
+    assert.ok(tarjeta, 'no encuentro la tarjeta');
+    assert.match(tarjeta[1], /<BannerSorteo [^>]*enTarjeta/);
+    assert.equal(codigo.match(/<BannerSorteo/g)?.length, 1, 'el sorteo no puede salir dos veces');
   });
 
   it('no hay nada persistido: ni tablas ni llamadas nuevas para la medalla', () => {
