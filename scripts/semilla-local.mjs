@@ -64,6 +64,11 @@ const salida = psql(`
          (select id from auth.users where email = 'admin@local.test')
    where not exists (select 1 from public.routes where name = 'Ruta de Bares 26');
 
+  -- Sorteo abierto (0061): sale el aviso en Sellos. No se hace el sorteo: asi se
+  -- ve "estas dentro" y no un ganador.
+  update public.routes set sorteo_activo = true, sorteo_premio = 'Una camiseta de la Ruta de Bares 26'
+   where name = 'Ruta de Bares 26';
+
   insert into public.route_bars (route_id, sort_order, name, address, lat, lng, radius_m, opens_at, closes_at, logo)
   select r.id, row_number() over (order by c.name) - 1, c.name, '', c.lat, c.lng, 120,
          date_trunc('day', now()) + interval '10 hours',

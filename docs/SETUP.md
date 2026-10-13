@@ -949,4 +949,5 @@ npx expo start --web --port 8091
 - Puertos 544xx (no 543xx) para convivir con otros proyectos Supabase locales; estan en `supabase/config.toml`.
 - Usuarios: `admin@local.test` y `dudu@local.test`, contrasena `password123`. `npm run semilla:local -- --sin-sellos` deja a Dudu sin sellos.
 - La semilla se niega a funcionar si la URL no es local (`tests/semilla-local.test.ts`). Los datos de produccion NO se copian: la ruta local se reconstruye desde `catalog_bars`.
+- La ruta de prueba lleva un sorteo abierto (premio: una camiseta), sin celebrar, para ver el aviso de Sellos.
 - Parar: `npm run db:local:stop`. Reiniciar de cero: `npx supabase db reset`, luego la semilla.
