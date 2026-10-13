@@ -18,7 +18,7 @@ import { useAuth } from '../../src/features/auth/AuthProvider';
 import { ultimoBarSellado } from '../../src/features/casas/reglasConsumo';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
-import { credencialCompleta } from '../../src/features/stamps/progreso';
+import { credencialCompleta, nivelMedalla } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
 import { desdeFechaISO, diaCorto } from '../../src/lib/fechas';
 import { sellables } from '../../src/features/routes/tipoParada';
@@ -49,6 +49,16 @@ export default function SellosScreen() {
     setAltoCabecera((previo) => (previo === total ? previo : total));
   }, []);
 
+  // Lo que miden el titulo y la barra juntos: es el alto de la medalla. No
+  // depende de la medalla (la fila es tan alta como ellos), asi que no hay bucle.
+  // 48 hasta la primera medida; el minimo evita una medalla ilegible si una
+  // lectura rara llega casi a 0.
+  const [altoDatos, setAltoDatos] = useState(48);
+  const medirDatos = useCallback((evento: LayoutChangeEvent) => {
+    const alto = Math.round(evento.nativeEvent.layout.height);
+    if (alto >= 24) setAltoDatos((previo) => (previo === alto ? previo : alto));
+  }, []);
+
   const sellosPorBar = useMemo(
     () => new Map(stamps.map((sello) => [sello.route_bar_id, sello])),
     [stamps],
@@ -60,6 +70,7 @@ export default function SellosScreen() {
   const conseguidos = bares.filter((bar) => sellosPorBar.has(bar.id)).length;
   const indiceAbierto = bares.findIndex((bar) => bar.id === abierto);
   const barAbierto = indiceAbierto >= 0 ? bares[indiceAbierto] : null;
+  const nivel = nivelMedalla(conseguidos, bares.length);
 
   if (loading && bares.length === 0) return <Loading label="Buscando tu ruta..." />;
 
@@ -107,12 +118,14 @@ export default function SellosScreen() {
           {activeRoute ? (
             <Card style={styles.credencial}>
               {/* A la izquierda, los datos: el nombre de la ruta como titulo (con su
-                  fecha a la derecha) y debajo cuantos sellos llevas. A la derecha, a
-                  tamano completo y pegada al borde, la medalla; los datos se estrechan
-                  para dejarle sitio. La medalla se deduce de los sellos: si se borra
-                  uno, desaparece y los datos recuperan todo el ancho. */}
+                  fecha a la derecha) y debajo cuantos sellos llevas. A la derecha,
+                  pegada al borde, la medalla, tan alta como los datos para que la
+                  tarjeta no crezca por ella; los datos se estrechan para dejarle sitio.
+                  La medalla se deduce de los sellos (bronce, plata u oro; solo la de
+                  oro abre el diploma): si se borra uno, baja de nivel o desaparece y
+                  los datos recuperan todo el ancho. */}
               <View style={styles.credencialCuerpo}>
-                <View style={styles.credencialDatos}>
+                <View style={styles.credencialDatos} onLayout={medirDatos}>
                   <View style={styles.rutaFila}>
                     <Text style={[typography.overline, styles.credencialNombre]} numberOfLines={1}>
                       {activeRoute.name}
@@ -133,8 +146,12 @@ export default function SellosScreen() {
                     </Text>
                   </View>
                 </View>
-                {credencialCompleta(conseguidos, bares.length) ? (
-                  <Medalla onPress={() => setDiplomaAbierto(true)} />
+                {nivel ? (
+                  <Medalla
+                    nivel={nivel}
+                    alto={altoDatos}
+                    onPress={nivel === 'oro' ? () => setDiplomaAbierto(true) : undefined}
+                  />
                 ) : null}
               </View>
 
