@@ -934,3 +934,19 @@ Metro ya corriendo. `npx expo start --clear`.
 **Sellar dice `TOO_FAR_...` estando dentro del bar.** El GPS en interiores se
 va con facilidad. Sube `radius_m` de ese bar en el editor; el maximo que acepta
 el esquema son 2000 m.
+
+## 10. Entorno local (Docker): probar sin tocar produccion
+
+Un Supabase entero en tu maquina, con las migraciones aplicadas solas. Necesita Docker Desktop abierto.
+
+```bash
+npm run db:local        # arranca y aplica supabase/migrations (la primera vez baja imagenes)
+npm run semilla:local   # admin, Dudu, "Ruta de Bares 26" con los 14 bares y los 14 sellos de Dudu
+npx expo start --web --port 8091
+```
+
+- `.env.local` (gitignored, gana a `.env`) con `EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421` y la clave publicable que imprime `npx supabase status`.
+- Puertos 544xx (no 543xx) para convivir con otros proyectos Supabase locales; estan en `supabase/config.toml`.
+- Usuarios: `admin@local.test` y `dudu@local.test`, contrasena `password123`. `npm run semilla:local -- --sin-sellos` deja a Dudu sin sellos.
+- La semilla se niega a funcionar si la URL no es local (`tests/semilla-local.test.ts`). Los datos de produccion NO se copian: la ruta local se reconstruye desde `catalog_bars`.
+- Parar: `npm run db:local:stop`. Reiniciar de cero: `npx supabase db reset`, luego la semilla.

@@ -52,6 +52,9 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
     "doctor": "expo-doctor",
     "check": "npm run typecheck && npm test",
+    "db:local": "npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,mailpit",
+    "db:local:stop": "npx supabase stop",
+    "semilla:local": "node scripts/semilla-local.mjs",
     "verificar:web": "node scripts/verificar-mapa-web.mjs",
     "verificar:juego": "node scripts/verificar-juego-web.mjs"
   },
