@@ -22,16 +22,21 @@ describe('reglas de puntos (desplegable)', () => {
 
   it('los limites de la ruta salen en el texto', () => {
     const t = por()['Consumición']!.texto;
-    assert.match(t, /solo puntúa la primera/);
-    assert.match(t, /6 consumiciones como máximo en toda la ruta/);
-    assert.match(t, /30 minutos/);
-    assert.match(t, /con alcohol que sin él/);
+    assert.match(t, /hasta 1 por bar y 6 por ruta/);
+    assert.match(t, /30 min/);
+    assert.match(t, /Sin alcohol puntúa igual/);
     const t2 = por(PUNTOS, { ...RUTA, consumo_por_bar: 3, consumo_minutos: 0 })['Consumición']!.texto;
-    assert.match(t2, /puntúan las 3 primeras/);
-    assert.doesNotMatch(t2, /minutos/);
-    assert.match(por()['Encuentro por QR']!.texto, /hasta 5 encuentros/);
-    assert.match(por()['Racha de casa']!.texto, /Solo una vez por casa y bar/);
+    assert.match(t2, /hasta 3 por bar/);
+    assert.doesNotMatch(t2, /Espera/);
+    assert.match(por()['Encuentro por QR']!.texto, /Hasta 5 encuentros/);
+    assert.match(por()['Racha de casa']!.texto, /Una vez por casa y bar/);
     assert.match(por(PUNTOS, { ...RUTA, racha_repetible: true })['Racha de casa']!.texto, /Puede repetirse/);
+  });
+
+  it('indica que no puntuan las consumiciones cuando cualquiera de sus limites es cero', () => {
+    for (const limite of ['consumo_por_bar', 'consumo_por_ruta'] as const) {
+      assert.equal(por(PUNTOS, { ...RUTA, [limite]: 0 })['Consumición']!.texto, 'No puntúa en esta ruta.');
+    }
   });
 
   it('si no se pudieron leer los puntos, no inventa cifras', () => {

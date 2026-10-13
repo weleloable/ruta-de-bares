@@ -7,12 +7,8 @@ import {
 
 import { colors, fonts } from '../../lib/theme';
 import { CASAS, type IdCasa } from './casas';
-import { LogoCasa } from './LogoCasa';
+import { Escudo } from './Escudo';
 import { formatearPuntos, ordenarRanking, type FilaRanking, type FilaServidor } from './ranking';
-
-const TINTAS: Record<IdCasa, string> = {
-  mahou: '#B71932', estrella: '#252825', alhambra: '#18583D', cruzcampo: '#A14D20',
-};
 
 type Props = {
   filas: FilaServidor[] | null;
@@ -20,15 +16,13 @@ type Props = {
   error?: string | null;
   actualizando?: boolean;
   onActualizar?: () => void;
-  onHistorico?: () => void;
   onCasa?: (casa: IdCasa) => void;
-  onInfo?: () => void;
   pie?: ReactNode;
 };
 
 /** Presentacion independiente del servidor; el desempate sigue en ranking.ts. */
 export function TablaCasas({
-  filas, miCasa, error, actualizando = false, onActualizar, onHistorico, onCasa, onInfo, pie,
+  filas, miCasa, error, actualizando = false, onActualizar, onCasa, pie,
 }: Props) {
   const [alto, setAlto] = useState(0);
   const { width, fontScale } = useWindowDimensions();
@@ -49,23 +43,6 @@ export function TablaCasas({
         alwaysBounceVertical={false}
         refreshControl={onActualizar ? <RefreshControl refreshing={actualizando} onRefresh={onActualizar} tintColor={colors.stamp} /> : undefined}
       >
-        <View style={styles.cabecera}>
-          <Text accessibilityRole="header" style={styles.titulo}>CLASIFICACIÓN</Text>
-          <View style={styles.acciones}>
-            {onInfo ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="Cómo se ganan puntos" onPress={onInfo} style={styles.icono}>
-                <Ionicons name="information-circle-outline" size={19} color={colors.inkSoft} />
-              </Pressable>
-            ) : null}
-            {onHistorico ? (
-              <Pressable accessibilityRole="link" onPress={onHistorico} style={({ pressed }) => [styles.historico, pressed && styles.pulsada]}>
-                <Ionicons name="time-outline" size={15} color={colors.inkSoft} />
-                <Text style={styles.historicoTexto}>Histórico</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-
         {error ? (
           <View accessibilityRole="alert" style={styles.error}>
             <Text style={styles.errorTexto}>{filas ? 'No se pudo actualizar. Se muestra la última clasificación.' : 'No se pudo cargar la clasificación.'}</Text>
@@ -80,7 +57,7 @@ export function TablaCasas({
 
         {ordenadas ? (
           <View testID="clasificacion-filas" style={styles.filas}>
-            {ordenadas.map((fila) => (
+            {ordenadas.map((fila, indice) => (
               <FilaCasa
                 key={fila.house}
                 fila={fila}
@@ -89,6 +66,7 @@ export function TablaCasas({
                 apilada={apilada}
                 anchoPuntos={anchoPuntos}
                 reducirMovimiento={reducirMovimiento}
+                ultima={indice === ordenadas.length - 1}
                 onPress={onCasa ? () => onCasa(fila.house) : undefined}
               />
             ))}
@@ -106,17 +84,18 @@ export function TablaCasas({
   );
 }
 
-function FilaCasa({ fila, mia, compacta, apilada, anchoPuntos, reducirMovimiento, onPress }: {
+function FilaCasa({ fila, mia, compacta, apilada, anchoPuntos, reducirMovimiento, ultima, onPress }: {
   fila: FilaRanking;
   mia: boolean;
   compacta: boolean;
   apilada: boolean;
   anchoPuntos: number;
   reducirMovimiento: boolean;
+  ultima: boolean;
   onPress?: () => void;
 }) {
   const casa = CASAS[fila.house];
-  const tinta = TINTAS[fila.house];
+  const tinta = casa.color;
   const diferencia = fila.lider
     ? 'Líder de la ruta'
     : fila.aLider > 0
@@ -130,30 +109,24 @@ function FilaCasa({ fila, mia, compacta, apilada, anchoPuntos, reducirMovimiento
       accessibilityLabel={`Puesto ${fila.puesto}. ${casa.nombre}. ${formatearPuntos(fila.puntos)} puntos. ${diferencia}.${mia ? ' Tu casa.' : ''}`}
       accessibilityHint={onPress ? 'Abre las aportaciones de esta casa' : undefined}
       onPress={onPress}
-      style={({ pressed }) => [styles.fila, compacta && styles.filaCompacta, pressed && onPress && styles.pulsada]}
+      style={({ pressed }) => [styles.fila, compacta && styles.filaCompacta, ultima && styles.ultima, pressed && onPress && styles.pulsada]}
     >
-      <View style={styles.principal}>
-        <View style={styles.posicion}>
-          {fila.lider ? <Ionicons name="trophy" size={12} color={tinta} style={styles.distincion} /> : null}
-          <Text style={[styles.puesto, fila.lider && { color: tinta }]}>{fila.puesto}</Text>
+      <View style={[styles.identidadYPuntos, apilada && styles.apilada]}>
+        <View style={styles.identidad}>
+          <Escudo casa={fila.house} tamano={48} />
+          <View style={styles.nombreCaja}>
+            <Text style={styles.nombre}>{casa.nombre}</Text>
+            {mia ? (
+              <View style={styles.tuya}>
+                <View style={[styles.marcaTuya, { backgroundColor: tinta }]} />
+                <Text style={[styles.tuyaTexto, { color: tinta }]}>TU CASA</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
-        <View style={[styles.identidadYPuntos, apilada && styles.apilada]}>
-          <View style={styles.identidad}>
-            <LogoCasa casa={fila.house} />
-            <View style={styles.nombreCaja}>
-              <Text style={styles.nombre}>{casa.nombre}</Text>
-              {mia ? (
-                <View style={styles.tuya}>
-                  <View style={[styles.marcaTuya, { backgroundColor: tinta }]} />
-                  <Text style={[styles.tuyaTexto, { color: tinta }]}>TU CASA</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-          <View style={[styles.puntosCaja, !apilada && { width: anchoPuntos }]}>
-            <Text testID={`puntos-${fila.house}`} style={[styles.puntos, { color: tinta }]}>{formatearPuntos(fila.puntos)}</Text>
-            <Text style={styles.unidad}>PUNTOS</Text>
-          </View>
+        <View style={[styles.puntosCaja, !apilada && { width: anchoPuntos }]}>
+          <Text testID={`puntos-${fila.house}`} style={[styles.puntos, { color: tinta }]}>{formatearPuntos(fila.puntos)}</Text>
+          <Text style={styles.unidad}>PUNTOS</Text>
         </View>
       </View>
       <View style={styles.marcador}>
@@ -207,20 +180,11 @@ const styles = StyleSheet.create({
   pantalla: { flex: 1, minHeight: 0 },
   scroll: { flex: 1 },
   contenido: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, width: '100%', maxWidth: 760, alignSelf: 'center' },
-  cabecera: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8, borderBottomWidth: 2, borderBottomColor: colors.ink, paddingBottom: 4 },
-  titulo: { fontSize: 13, fontWeight: '800', color: colors.ink, letterSpacing: 0, paddingVertical: 12, flexShrink: 1 },
-  acciones: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  icono: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  historico: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 44 },
-  historicoTexto: { fontSize: 12, fontWeight: '600', color: colors.inkSoft },
   filas: { flexGrow: 1 },
   fila: { flexGrow: 1, flexShrink: 0, minHeight: 136, justifyContent: 'center', paddingVertical: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   filaCompacta: { minHeight: 110, paddingVertical: 6, gap: 6 },
-  principal: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  posicion: { minWidth: 28, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  puesto: { fontFamily: fonts.title, fontSize: 34, lineHeight: 44, color: colors.inkFaint, fontVariant: ['tabular-nums'] },
-  distincion: { position: 'absolute', top: -10 },
-  identidadYPuntos: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
+  ultima: { borderBottomWidth: 0 },
+  identidadYPuntos: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
   apilada: { flexDirection: 'column', alignItems: 'stretch' },
   identidad: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
   nombreCaja: { flex: 1, gap: 5, minWidth: 0 },
@@ -231,7 +195,7 @@ const styles = StyleSheet.create({
   puntosCaja: { alignItems: 'flex-end', flexShrink: 0 },
   puntos: { fontSize: 40, lineHeight: 44, fontWeight: '800', fontVariant: ['tabular-nums'] },
   unidad: { fontSize: 10, lineHeight: 14, fontWeight: '700', color: colors.inkSoft },
-  marcador: { marginLeft: 38, gap: 6 },
+  marcador: { gap: 6 },
   pista: { height: 13, borderRadius: 2, backgroundColor: colors.paperDeep, overflow: 'hidden', borderBottomWidth: 1, borderBottomColor: colors.border },
   barra: { height: '100%', borderRadius: 2, overflow: 'hidden' },
   brillo: { position: 'absolute', left: 0, right: 0, top: 2, height: 1, backgroundColor: 'rgba(255,255,255,0.25)' },

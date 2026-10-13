@@ -6,8 +6,9 @@ import type { RouteRow } from '../../types/database';
 import { DesplegablePuntos, type DatosPuntos } from './DesplegablePuntos';
 
 /** Lee las mismas reglas y limites que modifica el panel de administracion. */
-export function InfoPuntos({ ruta, visible, onCambiar, retos }: {
+export function InfoPuntos({ ruta, visible, onCambiar, onHistorico, retos }: {
   ruta: RouteRow | null; visible: boolean; onCambiar: (abierto: boolean) => void;
+  onHistorico: () => void;
   retos?: ReactNode;
 }) {
   const [datos, setDatos] = useState<DatosPuntos | null>(null);
@@ -48,5 +49,5 @@ export function InfoPuntos({ ruta, visible, onCambiar, retos }: {
   }, [cargar]);
   useSondeo(cargar, 30_000, visible && rutaId !== null);
 
-  return <DesplegablePuntos abierto={visible} datos={datos} error={error} onCambiar={onCambiar} onReintentar={() => void cargar()} retos={retos} />;
+  return <DesplegablePuntos abierto={visible} datos={datos} error={error} onCambiar={onCambiar} onHistorico={onHistorico} onReintentar={() => void cargar()} retos={retos} />;
 }

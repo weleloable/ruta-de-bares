@@ -40,12 +40,17 @@ export function RankingCasas({ rutaId, pie, retos }: { rutaId: string; pie?: Rea
         error={error}
         actualizando={actualizando}
         onActualizar={() => void actualizar()}
-        onHistorico={() => router.push('/casas/historico')}
         onCasa={(casa) => { setInfo(false); setAbierta(casa); }}
         pie={pie}
       />
       {info ? <Pressable accessibilityLabel="Cerrar formas de conseguir puntos" onPress={() => setInfo(false)} style={StyleSheet.absoluteFill} /> : null}
-      <InfoPuntos ruta={ruta} visible={info} onCambiar={setInfo} retos={retos} />
+      <InfoPuntos
+        ruta={ruta}
+        visible={info}
+        onCambiar={setInfo}
+        onHistorico={() => { setInfo(false); router.push('/casas/historico'); }}
+        retos={retos}
+      />
       <AportesCasa rutaId={rutaId} casa={abierta} miId={session?.user.id ?? null} onCerrar={() => setAbierta(null)} />
     </>
   );

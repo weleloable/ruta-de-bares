@@ -13,11 +13,12 @@ export type RetoPuntos = {
 };
 export type DatosPuntos = { puntos: Record<string, number>; limites: LimitesRuta; retos: RetoPuntos[] };
 
-export function DesplegablePuntos({ abierto, datos, error, onCambiar, onReintentar, retos }: {
+export function DesplegablePuntos({ abierto, datos, error, onCambiar, onHistorico, onReintentar, retos }: {
   abierto: boolean;
   datos: DatosPuntos | null;
   error: string | null;
   onCambiar: (abierto: boolean) => void;
+  onHistorico: () => void;
   onReintentar: () => void;
   retos?: ReactNode;
 }) {
@@ -78,23 +79,27 @@ export function DesplegablePuntos({ abierto, datos, error, onCambiar, onReintent
                 </View>
               ))}
               {retos}
-              <Text style={styles.nota}>Los importes corresponden a la configuración actual. Las opciones sin alcohol puntúan igual.</Text>
             </> : null}
           </ScrollView>
         </View>
       ) : null}
-      <Pressable
-        ref={boton}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: abierto }}
-        accessibilityLabel="Cómo conseguir puntos"
-        onPress={() => onCambiar(!abierto)}
-        style={({ pressed }) => [styles.boton, pressed && styles.pulsado]}
-      >
-        <Ionicons name="add-circle-outline" size={20} color={colors.stamp} />
-        <Text style={styles.botonTexto}>Cómo conseguir puntos</Text>
-        <Ionicons name={abierto ? 'chevron-down' : 'chevron-up'} size={17} color={colors.inkSoft} />
-      </Pressable>
+      <View testID="casas-acciones" style={styles.acciones}>
+        <Pressable
+          ref={boton}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: abierto }}
+          accessibilityLabel="Cómo conseguir puntos"
+          onPress={() => onCambiar(!abierto)}
+          style={({ pressed }) => [styles.boton, pressed && styles.pulsado]}
+        >
+          <Ionicons name="star-outline" size={18} color={colors.stamp} />
+          <Text style={styles.botonTexto}>Cómo conseguir puntos</Text>
+        </Pressable>
+        <Pressable accessibilityRole="link" onPress={onHistorico} style={({ pressed }) => [styles.historico, pressed && styles.pulsado]}>
+          <Ionicons name="time-outline" size={15} color={colors.inkSoft} />
+          <Text style={styles.historicoTexto}>Histórico</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -114,9 +119,11 @@ const styles = StyleSheet.create({
   descripcion: { fontSize: 14, lineHeight: 21, color: colors.inkSoft },
   reto: { marginTop: 10, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: colors.borderStrong, gap: 4 },
   nombreReto: { fontSize: 14, fontWeight: '700', color: colors.ink, flexShrink: 1 },
-  nota: { paddingTop: 16, fontSize: 12, lineHeight: 18, color: colors.inkSoft },
-  boton: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: 1, borderTopColor: colors.borderStrong },
-  botonTexto: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.ink },
+  acciones: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  boton: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  botonTexto: { flexShrink: 1, fontSize: 14, fontWeight: '600', color: colors.ink },
+  historico: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 46, flexShrink: 1 },
+  historicoTexto: { fontSize: 12, fontWeight: '600', color: colors.inkSoft, flexShrink: 1 },
   pulsado: { opacity: 0.7 },
   error: { paddingVertical: 12 },
   errorTexto: { fontSize: 13, lineHeight: 19, color: colors.stamp },
