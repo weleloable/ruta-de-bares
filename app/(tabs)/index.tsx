@@ -18,7 +18,7 @@ import { useAuth } from '../../src/features/auth/AuthProvider';
 import { ultimoBarSellado } from '../../src/features/casas/reglasConsumo';
 import { DiplomaModal } from '../../src/features/diploma/DiplomaModal';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
-import { credencialCompleta } from '../../src/features/stamps/progreso';
+import { credencialCompleta, nivelMedalla } from '../../src/features/stamps/progreso';
 import { StampSheet } from '../../src/features/stamps/StampSheet';
 import { desdeFechaISO, diaCorto } from '../../src/lib/fechas';
 import { sellables } from '../../src/features/routes/tipoParada';
@@ -49,6 +49,16 @@ export default function SellosScreen() {
     setAltoCabecera((previo) => (previo === total ? previo : total));
   }, []);
 
+  // Lo que miden el titulo y la barra juntos: es el alto de la medalla. No
+  // depende de la medalla (la fila es tan alta como ellos), asi que no hay bucle.
+  // 48 hasta la primera medida; el minimo evita una medalla ilegible si una
+  // lectura rara llega casi a 0.
+  const [altoDatos, setAltoDatos] = useState(48);
+  const medirDatos = useCallback((evento: LayoutChangeEvent) => {
+    const alto = Math.round(evento.nativeEvent.layout.height);
+    if (alto >= 24) setAltoDatos((previo) => (previo === alto ? previo : alto));
+  }, []);
+
   const sellosPorBar = useMemo(
     () => new Map(stamps.map((sello) => [sello.route_bar_id, sello])),
     [stamps],
@@ -60,6 +70,7 @@ export default function SellosScreen() {
   const conseguidos = bares.filter((bar) => sellosPorBar.has(bar.id)).length;
   const indiceAbierto = bares.findIndex((bar) => bar.id === abierto);
   const barAbierto = indiceAbierto >= 0 ? bares[indiceAbierto] : null;
+  const nivel = nivelMedalla(conseguidos, bares.length);
 
   if (loading && bares.length === 0) return <Loading label="Buscando tu ruta..." />;
 
@@ -106,47 +117,49 @@ export default function SellosScreen() {
 
           {activeRoute ? (
             <Card style={styles.credencial}>
-              {/* "Credenciales" (sin el nombre: en la app ya se sabe que es la tuya) y, si
-                  la hay, la medalla (pequena, a la derecha). La medalla se deduce de los
-                  sellos: si se borra uno, desaparece. */}
-              <View style={styles.credencialFila}>
-                <Text style={[typography.overline, styles.credencialNombre]} numberOfLines={1}>
-                  Credenciales
-                </Text>
-                {credencialCompleta(conseguidos, bares.length) ? (
-                  <View style={styles.medallaHueco}>
-                    <View style={styles.medallaEscala}>
-                      <Medalla onPress={() => setDiplomaAbierto(true)} />
-                    </View>
+              {/* A la izquierda, los datos: el nombre de la ruta como titulo (con su
+                  fecha a la derecha) y debajo cuantos sellos llevas. A la derecha,
+                  pegada al borde, la medalla, tan alta como los datos para que la
+                  tarjeta no crezca por ella; los datos se estrechan para dejarle sitio.
+                  La medalla se deduce de los sellos (bronce, plata u oro; solo la de
+                  oro abre el diploma): si se borra uno, baja de nivel o desaparece y
+                  los datos recuperan todo el ancho. */}
+              <View style={styles.credencialCuerpo}>
+                <View style={styles.credencialDatos} onLayout={medirDatos}>
+                  <View style={styles.rutaFila}>
+                    <Text style={[typography.overline, styles.credencialNombre]} numberOfLines={1}>
+                      {activeRoute.name}
+                    </Text>
+                    {fecha ? <Text style={[typography.muted, styles.rutaFecha]}>{diaCorto(fecha)}</Text> : null}
                   </View>
+                  <View style={styles.progresoFila}>
+                    <View style={styles.progresoPista}>
+                      <View
+                        style={[
+                          styles.progresoRelleno,
+                          { width: bares.length === 0 ? '0%' : `${(conseguidos / bares.length) * 100}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.progresoTexto}>
+                      {conseguidos}/{bares.length}
+                    </Text>
+                  </View>
+                </View>
+                {nivel ? (
+                  <Medalla
+                    nivel={nivel}
+                    alto={altoDatos}
+                    onPress={nivel === 'oro' ? () => setDiplomaAbierto(true) : undefined}
+                  />
                 ) : null}
               </View>
-              {/* La ruta, con su fecha a la derecha. */}
-              <View style={styles.rutaFila}>
-                <Text style={[typography.body, styles.rutaNombre]} numberOfLines={1}>
-                  {activeRoute.name}
-                </Text>
-                {fecha ? <Text style={[typography.muted, styles.rutaFecha]}>{diaCorto(fecha)}</Text> : null}
-              </View>
-              {/* Y debajo, cuantos sellos llevas. */}
-              <View style={styles.progresoFila}>
-                <View style={styles.progresoPista}>
-                  <View
-                    style={[
-                      styles.progresoRelleno,
-                      { width: bares.length === 0 ? '0%' : `${(conseguidos / bares.length) * 100}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.progresoTexto}>
-                  {conseguidos}/{bares.length}
-                </Text>
-              </View>
+
+              {/* El sorteo de la ruta (0061), como ultima fila de la credencial: solo
+                  sale si la ruta lo tiene. */}
+              <BannerSorteo rutaId={activeRoute.id} sellos={stamps.length} enTarjeta />
             </Card>
           ) : null}
-
-          {/* El sorteo de la ruta (0061): solo sale si la ruta lo tiene. */}
-          {activeRoute ? <BannerSorteo rutaId={activeRoute.id} sellos={stamps.length} /> : null}
 
         </View>
 
@@ -231,17 +244,13 @@ const styles = StyleSheet.create({
   chipTexto: { color: colors.inkSoft, fontWeight: '600', fontSize: 13 },
   chipTextoActivo: { color: colors.white },
   credencial: { gap: space.xs },
-  // "Credenciales" y, si la ruta esta completa, la medalla a la derecha.
-  credencialFila: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  // El estilo de etiqueta (mayusculas, espaciado), algo mas grande que el de 11.
+  // Datos a la izquierda (ocupan lo que deje la medalla) y medalla a la derecha.
+  credencialCuerpo: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  credencialDatos: { flex: 1, gap: space.sm },
+  // El titulo: el estilo de etiqueta (mayusculas, espaciado), algo mas grande que el de 11.
   credencialNombre: { flex: 1, fontSize: 14 },
   rutaFila: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.md },
-  rutaNombre: { flex: 1 },
   rutaFecha: { flexShrink: 0 },
-  // Medalla a 45%: su caja sigue siendo de 68x86 y se encoge con transform, asi
-  // que se reserva el hueco ya reducido y se recoloca desde el centro.
-  medallaHueco: { width: 31, height: 39 },
-  medallaEscala: { width: 68, height: 86, marginLeft: -18.5, marginTop: -23.5, transform: [{ scale: 0.45 }] },
   progresoFila: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xs },
   progresoPista: {
     flex: 1,

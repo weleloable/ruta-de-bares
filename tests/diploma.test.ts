@@ -17,7 +17,7 @@ describe('pantalla Sellos', () => {
   const codigo = sinComentarios(leer('app/(tabs)/index.tsx'));
 
   it('pulsar la medalla abre el diploma', () => {
-    assert.match(codigo, /<Medalla onPress=\{\(\) => setDiplomaAbierto\(true\)\} \/>/);
+    assert.match(codigo, /onPress=\{nivel === 'oro' \? \(\) => setDiplomaAbierto\(true\) : undefined\}/);
   });
 
   it('el diploma solo existe con la credencial completa y con los datos de la persona y la ruta', () => {
@@ -50,7 +50,7 @@ describe('Medalla animada', () => {
   });
 
   it('es un boton accesible que avisa de que abre el diploma', () => {
-    assert.match(codigo, /accessibilityRole="button"/);
+    assert.match(codigo, /accessibilityRole=\{onPress \? 'button' : 'image'\}/);
     assert.match(codigo, /Toca para ver tu diploma/);
   });
 });

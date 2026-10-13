@@ -34,6 +34,35 @@ export type PersonaSorteo = {
 
 export type ResultadoSorteo ={ ganador: string; suplentes: string[]; participantes: number; nombres: string[] };
 
+/**
+ * Palabras del premio -> icono de Ionicons. El premio es texto libre (60
+ * caracteres, lo escribe el admin), asi que el icono se deduce de lo que dice y
+ * no hay otro campo que mantener en sincronia. Gana lo que aparece ANTES en el
+ * texto ("camiseta y cerveza" -> camiseta). Sin tildes ni mayusculas: "Caña" = "cana".
+ */
+const ICONOS_PREMIO: { icono: string; palabras: RegExp }[] = [
+  { icono: 'shirt', palabras: /\b(camisetas?|camisas?|sudaderas?|polos?)\b/ },
+  { icono: 'beer', palabras: /\b(cervezas?|canas?|birras?|pintas?|jarras?|barriles?)\b/ },
+  { icono: 'magnet', palabras: /\b(imanes|iman)\b/ },
+  { icono: 'pin', palabras: /\b(pins?|chapas?|insignias?)\b/ },
+  { icono: 'wine', palabras: /\b(vinos?|copas?)\b/ },
+  { icono: 'cafe', palabras: /\b(cafes?|desayunos?)\b/ },
+  { icono: 'ticket', palabras: /\b(entradas?|tickets?)\b/ },
+  { icono: 'restaurant', palabras: /\b(cenas?|comidas?|menus?|tapas?|bocadillos?)\b/ },
+  { icono: 'cash', palabras: /\b(vales?|bonos?|euros?|dinero)\b/ },
+];
+
+/** El icono (nombre de Ionicons) que le toca a un premio; un regalo si no se reconoce. */
+export function iconoDePremio(premio: string): string {
+  const texto = premio.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  let mejor: { icono: string; en: number } | null = null;
+  for (const { icono, palabras } of ICONOS_PREMIO) {
+    const en = texto.search(palabras);
+    if (en >= 0 && (mejor === null || en < mejor.en)) mejor = { icono, en };
+  }
+  return mejor?.icono ?? 'gift';
+}
+
 const premioDe = (e: Pick<EstadoSorteo, 'premio'>) => (e.premio.trim() ? e.premio.trim() : 'un premio');
 
 /** Lo que dice el banner de Sellos, o null si no hay sorteo en la ruta. */

@@ -1,9 +1,43 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { describirErrorSorteo, pasosRuleta, textoBanner, type EstadoSorteo } from './sorteo.ts';
+import glifos from '../../../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/Ionicons.json' with { type: 'json' };
+import { describirErrorSorteo, iconoDePremio, pasosRuleta, textoBanner, type EstadoSorteo } from './sorteo.ts';
 
 const base: EstadoSorteo = { activo: true, premio: 'una camiseta', bares: 8, participantes: 3, dentro: false, resultado: null };
+
+describe('iconoDePremio', () => {
+  it('cada premio reconocible tiene su icono', () => {
+    const casos: [string, string][] = [
+      ['Una camiseta de la Ruta de Bares 26', 'shirt'],
+      ['una CAÑA gratis', 'beer'],
+      ['Un barril de cerveza', 'beer'],
+      ['un imán de nevera', 'magnet'],
+      ['Un pin de la ruta', 'pin'],
+      ['2 entradas al concierto', 'ticket'],
+      ['Una cena para dos', 'restaurant'],
+      ['Un vale de 20 euros', 'cash'],
+      ['una copa de vino', 'wine'],
+    ];
+    for (const [premio, icono] of casos) assert.equal(iconoDePremio(premio), icono, premio);
+  });
+
+  it('gana lo que se nombra primero, y las palabras enteras (no "canal" ni "pinza")', () => {
+    assert.equal(iconoDePremio('Camiseta y cerveza'), 'shirt');
+    assert.equal(iconoDePremio('Cerveza y camiseta'), 'beer');
+    assert.equal(iconoDePremio('un canal de pinzas'), 'gift');
+  });
+
+  it('un premio raro o vacio es un regalo', () => {
+    assert.equal(iconoDePremio(''), 'gift');
+    assert.equal(iconoDePremio('un patinete'), 'gift');
+  });
+
+  it('todos los iconos que devuelve existen en Ionicons', () => {
+    const premios = ['camiseta', 'cerveza', 'iman', 'pin', 'vino', 'cafe', 'entrada', 'cena', 'vale', 'patinete'];
+    for (const p of premios) assert.ok(iconoDePremio(p) in glifos, `${p} -> ${iconoDePremio(p)}`);
+  });
+});
 
 describe('sorteo', () => {
   it('sin sorteo en la ruta, no hay banner', () => {
