@@ -7,6 +7,7 @@ import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
 import { CORREO_PRIVACIDAD } from '../../src/features/legal/responsable';
+import { AvisoNavegadorIntegrado } from '../../src/features/profile/AvisoNavegadorIntegrado';
 import { colors, space, typography } from '../../src/lib/theme';
 
 export default function LoginScreen() {
@@ -36,6 +37,7 @@ export default function LoginScreen() {
 
   return (
     <Screen scroll>
+      <AvisoNavegadorIntegrado />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.hero}>
           {/* Logo de la app (el mismo que el icono), no un sello dibujado: ver

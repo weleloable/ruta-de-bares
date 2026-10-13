@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
+import { AvisoNavegadorIntegrado } from '../../src/features/profile/AvisoNavegadorIntegrado';
 import { colors, space, typography } from '../../src/lib/theme';
 
 /** Minimo de caracteres de la contrasena. */
@@ -72,6 +73,7 @@ export default function RegistroScreen() {
 
   return (
     <Screen scroll>
+      <AvisoNavegadorIntegrado />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.cabecera}>
           <Text style={typography.screenTitle}>Crear cuenta</Text>

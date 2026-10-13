@@ -89,7 +89,7 @@ export function textoGuia(guia: GuiaInstalar): TextoGuia {
         pasos: [
           'Ahora estás dentro de otra app (WhatsApp, Instagram...) y desde aquí no se puede instalar.',
           'Toca el menú ⋯ (o el icono del navegador) y elige «Abrir en Safari», «Abrir en Chrome» o «Abrir en el navegador».',
-          'Ya en el navegador, vuelve a Mi perfil y toca «Instalar App».',
+          'Ya en el navegador, vuelve a abrir el enlace. Para instalar la app, toca luego «Instalar App» en Mi perfil.',
         ],
       };
     case 'menu':
