@@ -1,9 +1,11 @@
 -- Ruta de Bares - 0064: avisos en el movil (notificaciones push de la web).
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0063
 -- y con las extensiones pg_cron y pg_net activadas (Database > Extensions).
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists`,
--- funciones con `or replace`, disparadores y tarea programada quitados antes
--- de ponerlos).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * avisos_encolar() la rehace la 0066 (conoce el tipo `admin`)
+--   * push_preferencias_leer() la rehace la 0066 (devuelve `admin` a los admins)
 -- Ojo al reves: rehace export_my_data() de la 0063, que ya no se vuelve a pegar.
 --
 -- Que hace.

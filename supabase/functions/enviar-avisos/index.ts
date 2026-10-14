@@ -36,11 +36,13 @@ async function enviar(aviso: Aviso, d: Dispositivo): Promise<'ok' | 'caducado' |
         titulo: aviso.titulo,
         cuerpo: aviso.cuerpo,
         url: aviso.url,
-        // Los de La Caña se pisan entre si: el ultimo sustituye al anterior.
-        tag: aviso.tipo === 'cana' ? 'cana' : `${aviso.tipo}-${aviso.id}`,
+        // Los de La Caña se pisan entre si: el ultimo sustituye al anterior. Los de
+        // moderacion (admin, 0066) tambien: ya dicen cuantas cosas hay en total.
+        tag: aviso.tipo === 'cana' || aviso.tipo === 'admin' ? aviso.tipo : `${aviso.tipo}-${aviso.id}`,
       }),
       // Un "abre en 10 min" que llega una hora tarde sobra: caduca a los 15 min.
-      { TTL: 15 * 60, urgency: 'high' },
+      // Una denuncia o una foto por revisar sigue valiendo horas despues: 12 h.
+      { TTL: aviso.tipo === 'admin' ? 12 * 60 * 60 : 15 * 60, urgency: aviso.tipo === 'admin' ? 'normal' : 'high' },
     );
     return 'ok';
   } catch (e) {

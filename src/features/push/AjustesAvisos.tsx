@@ -4,7 +4,7 @@ import { StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import { Banner, Button, Card } from '../../components/ui';
 import { space, typography } from '../../lib/theme';
 import { Casilla } from '../match/piezas';
-import { guardarPreferenciasAvisos, leerPreferenciasAvisos, type PreferenciasAvisos } from './api';
+import { guardarAvisoAdmin, guardarPreferenciasAvisos, leerPreferenciasAvisos, type PreferenciasAvisos } from './api';
 import { textoEstado, type EstadoAvisos } from './estado';
 import { activarAvisos, desactivarAvisos, estadoAvisos } from './push';
 
@@ -32,7 +32,9 @@ export function AjustesAvisos({ estiloTitulo }: { estiloTitulo?: StyleProp<TextS
     setPrefs(nuevas);
     setError(null);
     try {
-      await guardarPreferenciasAvisos(nuevas);
+      // `admin` va por su propia funcion (0066): la de siempre no lo conoce.
+      if (clave === 'admin') await guardarAvisoAdmin(valor);
+      else await guardarPreferenciasAvisos(nuevas);
     } catch (e) {
       setPrefs(prefs);
       setError(e instanceof Error ? e.message : 'No se pudo guardar.');
@@ -74,6 +76,14 @@ export function AjustesAvisos({ estiloTitulo }: { estiloTitulo?: StyleProp<TextS
           <Casilla marcada={prefs.paradas} texto="10 min antes de cada parada" onCambiar={(m) => void cambiarPref('paradas', m)} />
           <Casilla marcada={prefs.sorteo} texto="El sorteo (y si te falta un bar)" onCambiar={(m) => void cambiarPref('sorteo', m)} />
           <Casilla marcada={prefs.cana} texto="La Caña: conexiones y mensajes" onCambiar={(m) => void cambiarPref('cana', m)} />
+          {/* Solo para admins: el servidor solo manda `admin` a quien lo es. */}
+          {prefs.admin !== undefined ? (
+            <Casilla
+              marcada={prefs.admin}
+              texto="Moderación pendiente: denuncias, fotos y mensajes"
+              onCambiar={(m) => void cambiarPref('admin', m)}
+            />
+          ) : null}
         </>
       ) : null}
     </Card>
