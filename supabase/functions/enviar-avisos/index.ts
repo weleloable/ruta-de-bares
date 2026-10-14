@@ -38,7 +38,7 @@ async function enviar(aviso: Aviso, d: Dispositivo): Promise<'ok' | 'caducado' |
         url: aviso.url,
         // Los de La Caña se pisan entre si: el ultimo sustituye al anterior. Los de
         // moderacion (admin, 0066) tambien: ya dicen cuantas cosas hay en total.
-        tag: aviso.tipo === 'cana' || aviso.tipo === 'admin' ? aviso.tipo : `${aviso.tipo}-${aviso.id}`,
+        tag: aviso.tipo === 'cana' || (aviso.tipo === 'admin' && aviso.url === '/admin/alertas') ? aviso.tipo : `${aviso.tipo}-${aviso.id}`,
       }),
       // Un "abre en 10 min" que llega una hora tarde sobra: caduca a los 15 min.
       // Una denuncia o una foto por revisar sigue valiendo horas despues: 12 h.

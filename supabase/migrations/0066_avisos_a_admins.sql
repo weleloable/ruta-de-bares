@@ -28,6 +28,12 @@
 -- dispositivo. Una persona que deja de ser admin deja de recibirlos al
 -- momento: se mira el rol al encolar, no al suscribirse.
 --
+-- Y uno SOLO INFORMATIVO: cuando un admin veta de La Cana, expulsa de una ruta o
+-- suspende una cuenta, los OTROS admins se enteran (`match_moderation_log`). No
+-- espera ninguna decision, asi que no suma al "hay N cosas por revisar" ni
+-- tiene punto rojo: abre `/admin/moderacion`, donde esta lo que se hizo y se
+-- puede retirar. Sin nombres, igual que los demas.
+--
 -- Lo que NO hace, a proposito: recordar lo que lleva dias sin mirar, y avisar
 -- de que una ruta terminada hay que borrarla (eso es un banner, no una decision).
 
@@ -227,12 +233,61 @@ drop trigger if exists avisos_tras_mensaje_admin on public.user_messages;
 create trigger avisos_tras_mensaje_admin after insert on public.user_messages
   for each row execute function public.avisos_tras_mensaje_admin();
 
+-- Aviso solo informativo (ver arriba): sin el total de pendientes y a otra
+-- pantalla. La url distinta es lo que lo separa de los de decision, que se
+-- sustituyen entre si en el movil (ver la Edge Function).
+create or replace function public.avisos_a_admins_info(p_clave text, p_titulo text, p_que text, p_excepto uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+begin
+  for r in select p.id from public.profiles p where p.role = 'admin' and p.id is distinct from p_excepto loop
+    perform public.avisos_encolar(r.id, 'admin', 'admin:info:' || p_clave || ':' || r.id, p_titulo, p_que, '/admin/moderacion');
+  end loop;
+end;
+$$;
+
+create or replace function public.avisos_tras_sancion()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.avisos_a_admins_info(
+    'sancion:' || new.id,
+    case new.action
+      when 'cana_desactivada' then '🔒 Veto de La Caña'
+      when 'expulsada_de_ruta' then '🚪 Expulsión de una ruta'
+      else '⛔ Cuenta suspendida'
+    end,
+    case new.action
+      when 'cana_desactivada' then 'Otro admin ha vetado a alguien de La Caña.'
+      when 'expulsada_de_ruta' then 'Otro admin ha expulsado a alguien de una ruta.'
+      else 'Otro admin ha suspendido una cuenta.'
+    end,
+    new.admin_id);
+  return null;
+end;
+$$;
+drop trigger if exists avisos_tras_sancion on public.match_moderation_log;
+create trigger avisos_tras_sancion after insert on public.match_moderation_log
+  for each row when (new.action in ('cana_desactivada', 'expulsada_de_ruta', 'cuenta_suspendida'))
+  execute function public.avisos_tras_sancion();
+
 -- ---------------------------------------------------------------------------
 -- 5. Permisos: lo interno no lo llama nadie desde la API
 -- ---------------------------------------------------------------------------
 revoke all on function public.avisos_encolar(uuid, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.admin_pendientes_total() from public, anon, authenticated;
 revoke all on function public.avisos_a_admins(text, text, text, uuid) from public, anon, authenticated;
+revoke all on function public.avisos_a_admins_info(text, text, text, uuid) from public, anon, authenticated;
+revoke all on function public.avisos_tras_sancion() from public, anon, authenticated;
 revoke all on function public.avisos_tras_denuncia() from public, anon, authenticated;
 revoke all on function public.avisos_tras_foto() from public, anon, authenticated;
 revoke all on function public.avisos_tras_mensaje_admin() from public, anon, authenticated;

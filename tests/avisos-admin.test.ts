@@ -38,8 +38,8 @@ describe('Mi perfil: casilla de moderacion pendiente', () => {
 describe('Edge Function enviar-avisos', () => {
   const codigo = sinComentarios(leer('supabase/functions/enviar-avisos/index.ts'));
 
-  it('los avisos de moderacion se sustituyen entre si (ya dicen cuantos hay) y duran 12 h', () => {
-    assert.match(codigo, /aviso\.tipo === 'cana' \|\| aviso\.tipo === 'admin' \? aviso\.tipo/);
+  it('los avisos de decision de admin se sustituyen entre si (ya dicen cuantos hay), los informativos no, y duran 12 h', () => {
+    assert.match(codigo, /aviso\.tipo === 'cana' \|\| \(aviso\.tipo === 'admin' && aviso\.url === '\/admin\/alertas'\) \? aviso\.tipo/);
     assert.match(codigo, /TTL: aviso\.tipo === 'admin' \? 12 \* 60 \* 60 : 15 \* 60/);
   });
 

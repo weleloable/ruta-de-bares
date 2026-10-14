@@ -226,4 +226,45 @@ describe('0066: avisos a admins', () => {
       assert.equal(n, 2, 'dos admins con dispositivo, un aviso cada uno');
     });
   });
+  it('un veto, una expulsion o una suspension avisan a los OTROS admins, solo para informar', async () => {
+    await conBase(async (db, a) => {
+      await a.como(ADMIN1);
+      await db.query(`select public.match_admin_deactivate('${uid(1)}', 'Motivo de prueba')`);
+      await db.query(`select public.match_admin_remove_from_route('${uid(2)}', '${RUTA}', 'Motivo de prueba')`);
+      await db.query(`select public.match_admin_suspend('${uid(3)}', 'Motivo de prueba')`);
+      const avisos = await avisosAdmin(db, a);
+      assert.equal(avisos.length, 3, 'un aviso por sancion, y solo al otro admin con dispositivo');
+      assert.ok(avisos.every((x) => x.user_id === ADMIN2), 'quien sanciona no se avisa a si mismo');
+      assert.ok(avisos.every((x) => x.url === '/admin/moderacion'), 'abren Moderacion, no la bandeja');
+      assert.deepEqual(avisos.map((x) => x.titulo).sort(), ['⛔ Cuenta suspendida', '🔒 Veto de La Caña', '🚪 Expulsión de una ruta'].sort());
+      // informativo: no habla de "cosas por revisar", no lleva nombres ni el motivo
+      for (const x of avisos) {
+        assert.ok(!/revisar/.test(x.cuerpo), 'un aviso informativo no cuenta pendientes');
+        assert.ok(!/Persona|Motivo de prueba/.test(`${x.titulo} ${x.cuerpo}`), 'el aviso lleva un nombre o el motivo');
+      }
+    });
+  });
+
+  it('retirar un veto no avisa, y una sancion no sube el total de pendientes', async () => {
+    await conBase(async (db, a) => {
+      const antes = (await a.comoPostgres(async () => (await db.query<{ n: number }>(`select public.admin_pendientes_total() as n`)).rows[0]?.n)) ?? 0;
+      await a.como(ADMIN1);
+      await db.query(`select public.match_admin_deactivate('${uid(1)}', 'Motivo de prueba')`);
+      const n1 = (await avisosAdmin(db, a)).length;
+      await db.query(`select public.match_admin_lift_cana('${uid(1)}', '')`);
+      assert.equal((await avisosAdmin(db, a)).length, n1, 'levantar un veto no avisa');
+      const despues = (await a.comoPostgres(async () => (await db.query<{ n: number }>(`select public.admin_pendientes_total() as n`)).rows[0]?.n)) ?? 0;
+      assert.equal(despues, antes, 'una sancion no es algo por revisar');
+    });
+  });
+
+  it('un admin que no quiere avisos no recibe tampoco los informativos', async () => {
+    await conBase(async (db, a) => {
+      await a.como(ADMIN2);
+      await db.query(`select public.push_preferencias_admin_guardar(false)`);
+      await a.como(ADMIN1);
+      await db.query(`select public.match_admin_deactivate('${uid(1)}', 'Motivo de prueba')`);
+      assert.deepEqual(await avisosAdmin(db, a), []);
+    });
+  });
 });
