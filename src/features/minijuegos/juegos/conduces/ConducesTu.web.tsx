@@ -11,6 +11,7 @@ import { Ciudad, COLORES_COCHE } from './ciudad';
 import { nivelPorDefecto, useDatosRuta } from './compostelana';
 import { Escena3D, hayWebGL, vistaPara, type CocheDibujo } from './escena3d';
 import { avanzarParticulas, bocanada, chispas, Derrapes, type Particula } from './efectos';
+import { cajaDeEscena, puntoLocal } from './orientacion';
 import { comoVas, MENSAJE_SEGURIDAD, mensajeFinal, metrosTexto, nombreNivel } from './mensajes';
 import {
   avanzarCoche,
@@ -87,7 +88,7 @@ type Final = {
   recordLocal: { esRecord: boolean; anterior: number | null };
 };
 
-const esVertical = () => typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+const medidaVentana = () => ({ ancho: typeof window !== 'undefined' ? window.innerWidth : 844, alto: typeof window !== 'undefined' ? window.innerHeight : 390 });
 let siguienteId = 0;
 
 function nuevaPartida(): Partida {
@@ -127,7 +128,9 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
   const [nivel, setNivel] = useState(() => nivelPorDefecto(datos));
   const [nivelRanking, setNivelRanking] = useState(nivel);
   const [partidaId, setPartidaId] = useState(0);
-  const [vertical, setVertical] = useState(esVertical);
+  // Se juega siempre en horizontal: con el movil en vertical la escena se pinta tumbada (ver orientacion.ts).
+  const [ventana, setVentana] = useState(medidaVentana);
+  const escenaCaja = cajaDeEscena(ventana);
   const [hud, setHud] = useState({ metros: 0, kmh: 0, choques: 0, invertidos: false, hipo: false });
   const [acelerando, setAcelerando] = useState(false);
   const [frenando, setFrenando] = useState(false);
@@ -148,7 +151,7 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
   }, [datos]);
 
   useEffect(() => {
-    const alGirar = () => setVertical(esVertical());
+    const alGirar = () => setVentana(medidaVentana());
     window.addEventListener('resize', alGirar);
     return () => window.removeEventListener('resize', alGirar);
   }, []);
@@ -419,16 +422,16 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
     if (joy.current) return;
     ev.currentTarget.setPointerCapture(ev.pointerId);
     const caja = ev.currentTarget.getBoundingClientRect();
-    const x = ev.clientX - caja.left;
-    const y = ev.clientY - caja.top;
+    const { x, y } = puntoLocal(ev.clientX, ev.clientY, caja, escenaCaja.girada);
     joy.current = { id: ev.pointerId, ox: x, oy: y, x, y };
   };
   const joyMover = (ev: PEvent<HTMLDivElement>) => {
     const j = joy.current;
     if (!j || j.id !== ev.pointerId) return;
     const caja = ev.currentTarget.getBoundingClientRect();
-    j.x = ev.clientX - caja.left;
-    j.y = ev.clientY - caja.top;
+    const dedo = puntoLocal(ev.clientX, ev.clientY, caja, escenaCaja.girada);
+    j.x = dedo.x;
+    j.y = dedo.y;
   };
   const joySoltar = (ev: PEvent<HTMLDivElement>) => {
     if (joy.current?.id === ev.pointerId) joy.current = null;
@@ -448,7 +451,9 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
   });
 
   return (
-    <div style={e.raiz} onContextMenu={(ev) => ev.preventDefault()}>
+    <div
+      style={escenaCaja.girada ? { ...e.raiz, ...e.raizGirada, width: escenaCaja.ancho, height: escenaCaja.alto, transform: escenaCaja.transform ?? undefined } : e.raiz}
+      onContextMenu={(ev) => ev.preventDefault()}>
       <canvas ref={lienzo} style={e.lienzo} />
 
       {fase === 'jugando' ? (
@@ -580,13 +585,6 @@ export function ConducesTu({ onFinish, onSalir }: PropsJuego) {
         </button>
       </div>
 
-      {vertical ? (
-        <div style={e.girar}>
-          <Ionicons name="phone-landscape-outline" size={64} color={AMBAR} />
-          <div style={e.titulo}>Gira el móvil</div>
-          <div style={e.texto}>Este juego se juega en horizontal.</div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -781,6 +779,8 @@ const sinGestos: CSSProperties = {
 
 const e: Record<string, CSSProperties> = {
   raiz: { ...sinGestos, position: 'fixed', inset: 0, background: '#0b0a09', overflow: 'hidden', fontFamily: 'system-ui, sans-serif', zIndex: 10 },
+  // En vertical: la escena girada ocupa su propio tamano (alto x ancho de ventana), no `inset: 0`.
+  raizGirada: { inset: 'auto', left: 0, top: 0, transformOrigin: '0 0' },
   lienzo: { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' },
   zonaJoystick: { ...sinGestos, position: 'absolute', left: 0, top: 0, bottom: 0, width: '50%' },
   joyBase: {
@@ -951,17 +951,4 @@ const e: Record<string, CSSProperties> = {
   pos: { width: 28, fontWeight: 900, color: AMBAR, fontSize: 18 },
   nombre: { flex: 1, textAlign: 'left', fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   dist: { fontWeight: 900, fontSize: 17 },
-  girar: {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 2,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    background: '#0b0a09',
-    padding: 24,
-    textAlign: 'center',
-  },
 };
