@@ -7,7 +7,7 @@ import { SelectorPosicion } from '../../../src/components/SelectorPosicion';
 import { Banner, Button, Card, Field, Loading } from '../../../src/components/ui';
 import { BarLogo } from '../../../src/features/routes/BarLogo';
 import { editarBarPropio, guardarBarPropio, useCatalogo } from '../../../src/features/routes/catalogoStore';
-import { CENTRO_POR_DEFECTO, NOMBRE_MAX, validarBarPropio } from '../../../src/features/routes/catalogoPropio';
+import { CENTRO_POR_DEFECTO, existentesSin, NOMBRE_MAX, validarBarPropio } from '../../../src/features/routes/catalogoPropio';
 import { elegirLogoBar } from '../../../src/features/routes/logoPropio';
 import { colors, space, typography } from '../../../src/lib/theme';
 
@@ -63,7 +63,7 @@ export default function BarNuevo() {
 
   async function onGuardar() {
     const borrador = { nombre, punto, logoUri: logo };
-    const problemas = validarBarPropio(borrador, catalogo);
+    const problemas = validarBarPropio(borrador, existentesSin(catalogo, editando ? catalogoId : null));
     setErrores(problemas);
     if (problemas.length > 0) return;
 

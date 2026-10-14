@@ -6,6 +6,7 @@ import type { BarCatalogo } from './catalogo';
 import { actualizarBarCompartido, crearBarCompartido, listarBaresCompartidos, subirBarLocal } from './catalogoCompartido';
 import {
   CLAVE_ALMACEN,
+  existentesSin,
   fusionarCatalogo,
   leerPropios,
   pendientesDeSubir,
@@ -209,7 +210,7 @@ export async function editarBarPropio(id: string, borrador: BorradorBarPropio): 
   await cargar();
   if (!compartidos.some((b) => b.id === id)) throw new Error('Este bar no esta en la lista compartida, asi que no se puede editar aqui.');
 
-  const errores = validarBarPropio(borrador, fusion.filter((b) => b.id !== id));
+  const errores = validarBarPropio(borrador, existentesSin(fusion, id));
   if (errores.length > 0) throw new Error(errores.join(' '));
   if (!borrador.punto) throw new Error('Marca la ubicacion del bar en el mapa.');
 
