@@ -957,3 +957,13 @@ npx expo start --web --port 8091
 - La semilla se niega a funcionar si la URL no es local (`tests/semilla-local.test.ts`). Los datos de produccion NO se copian: la ruta local se reconstruye desde `catalog_bars`.
 - La ruta de prueba lleva un sorteo abierto (premio: una camiseta), sin celebrar, para ver el aviso de Sellos.
 - Parar: `npm run db:local:stop`. Reiniciar de cero: `npx supabase db reset`, luego la semilla.
+
+## 11. Dejar la app limpia: reseteo de los datos de prueba
+
+`scripts/reseteo-pruebas/reseteo.sql` (se pega en el SQL Editor, NO es una migracion) borra de todas las rutas y personas: sellos, puntos, consumiciones, encuentros, resultados y sorteos, notas de los minijuegos y cervezas de Maestro Cervecero, mensajes a la organizacion y avisos de moderacion, chats, conexiones, "me gusta" y bloqueos de La Caña, denuncias, registro de moderacion, suspensiones, vetos (de ruta y de La Caña, todos se levantan), fotos de perfil pendientes y avisos al movil sin enviar. NO toca cuentas, perfiles, rutas, paradas, invitaciones, miembros, el catalogo, la casa de cada persona, reglas de puntos, retos ni la clave de los vetos: la ruta que quieras conservar sigue como esta.
+
+1. Pegarlo tal cual y ejecutar: es un SIMULACRO, cuenta lo que borraria y no toca nada.
+2. Cambiar `'NO'` por `'SI'` y poner la fecha de hoy (UTC) en las dos lineas marcadas `<<<`. Guarda antes una copia completa en el esquema `reseteo_AAAAMMDD_HHMMSS`, y si algo falla no se borra nada.
+3. La copia tiene datos personales: borrarla cuando todo este bien (como mucho a los 30 dias) con `drop schema reseteo_AAAAMMDD_HHMMSS cascade;`. Mientras exista se puede volver atras con `scripts/reseteo-pruebas/restaurar.sql`.
+
+Tabla nueva en una migracion = `tests/reseteo-pruebas.test.ts` falla hasta decidir si el reseteo la vacia. Los ficheros de fotos de Storage no los borra el SQL.

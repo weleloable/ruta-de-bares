@@ -773,6 +773,8 @@ export type Database = {
       push_borrar: { Args: { p_endpoint: string }; Returns: undefined };
       push_preferencias_leer: { Args: Record<string, never>; Returns: unknown };
       push_preferencias_guardar: { Args: { p_paradas: boolean; p_sorteo: boolean; p_cana: boolean }; Returns: undefined };
+      /** Aviso de moderacion pendiente, solo admins (0066). */
+      push_preferencias_admin_guardar: { Args: { p_admin: boolean }; Returns: undefined };
       /** Ya vi esta version de la politica (0063). */
       politica_marcar_vista: { Args: { p_version: string }; Returns: undefined };
       /** Auditoria de una ruta: anulados, ajustes y cambios de casa (0059). */
