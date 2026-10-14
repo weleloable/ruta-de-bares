@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 import { supabase } from '../../lib/supabase';
 import type { BarCatalogo } from './catalogo';
-import { crearBarCompartido, listarBaresCompartidos, subirBarLocal } from './catalogoCompartido';
+import { actualizarBarCompartido, crearBarCompartido, listarBaresCompartidos, subirBarLocal } from './catalogoCompartido';
 import {
   CLAVE_ALMACEN,
   fusionarCatalogo,
@@ -200,8 +200,35 @@ export async function guardarBarPropio(borrador: BorradorBarPropio): Promise<Bar
 }
 
 /**
- * Id del ultimo bar creado que aun no se ha usado, o null. Sirve para que el
- * formulario de bar lo deje elegido al volver de crearlo. Se consume: una
+ * Corrige un bar que ya esta en la tabla (0067): nombre, ubicacion e imagen.
+ * Misma validacion que al crearlo, salvo que el nombre del propio bar no cuenta
+ * como repetido. Deja el bar como el ultimo "creado" para que el formulario de
+ * parada lo vuelva a elegir con los datos nuevos.
+ */
+export async function editarBarPropio(id: string, borrador: BorradorBarPropio): Promise<BarCatalogo> {
+  await cargar();
+  if (!compartidos.some((b) => b.id === id)) throw new Error('Este bar no esta en la lista compartida, asi que no se puede editar aqui.');
+
+  const errores = validarBarPropio(borrador, fusion.filter((b) => b.id !== id));
+  if (errores.length > 0) throw new Error(errores.join(' '));
+  if (!borrador.punto) throw new Error('Marca la ubicacion del bar en el mapa.');
+
+  generacion += 1;
+  const bar = await actualizarBarCompartido(id, {
+    name: borrador.nombre,
+    lat: borrador.punto.lat,
+    lng: borrador.punto.lng,
+    logoUri: borrador.logoUri,
+  });
+
+  publicar(compartidos.map((b) => (b.id === id ? bar : b)), locales);
+  ultimoCreado = bar.id;
+  return bar;
+}
+
+/**
+ * Id del ultimo bar creado (o corregido) que aun no se ha usado, o null. Sirve
+ * para que el formulario de bar lo deje elegido al volver de crearlo. Se consume: una
  * segunda lectura no lo repite, o cada vez que la pantalla ganase el foco
  * volveria a pisar la eleccion del admin.
  */
