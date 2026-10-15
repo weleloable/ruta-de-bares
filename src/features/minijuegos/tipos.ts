@@ -8,7 +8,7 @@ import type { ComponentType } from 'react';
 export type ResultadoJuego = {
   /** Id estable del juego (el de `JuegoDef.id`). */
   juego: string;
-  /** Mas es mejor. Enteros: es lo que se compara y se guarda. */
+  /** Mas es mejor. Enteros, salvo La Caña Perfecta, que lleva dos decimales (ver nota.ts). */
   puntuacion: number;
   /** Datos propios de cada juego (aciertos, tiempo...), para mostrar o rankear. */
   detalles?: Record<string, number | string | boolean>;

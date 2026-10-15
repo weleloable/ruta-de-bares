@@ -469,6 +469,7 @@ export type MinigameRankingRow = {
   pos: number;
   user_id: string;
   display_name: string;
+  /** Con dos decimales en La Caña Perfecta (0069); entero en los demas juegos. */
   score: number;
   /** Tiempo que desempata, en ms (solo el quiz, 0061); null en los demas juegos. */
   ms: number | null;
@@ -751,6 +752,12 @@ export type Database = {
         Returns: unknown;
       };
       /** Minijuegos (0034): ranking por ruta y cervezas de Maestro Cervecero. */
+      /** La que usa la app nueva (0069): la nota puede llevar decimales. */
+      minigame_submit_nota: {
+        Args: { p_route_id: string; p_game: string; p_score: number; p_ms?: number };
+        Returns: { best: number; is_record: boolean };
+      };
+      /** La de antes (nota entera): solo para apps en cache; para la caña lanza APP_UPDATE_REQUIRED. */
       minigame_submit_score: {
         Args: { p_route_id: string; p_game: string; p_score: number; p_ms?: number };
         Returns: { best: number; is_record: boolean };
@@ -912,6 +919,10 @@ export type Database = {
         }[];
       };
       admin_sellar: { Args: { p_user_id: string; p_route_bar_id: string; p_motivo: string }; Returns: StampRow };
+      admin_meter_en_ruta: {
+        Args: { p_user_id: string; p_route_id: string };
+        Returns: { ya_estaba: boolean; casa: string | null };
+      };
       admin_borrar_cuenta: { Args: { p_user_id: string; p_motivo: string }; Returns: undefined };
       admin_cuentas_borradas_lista: {
         Args: Record<string, never>;

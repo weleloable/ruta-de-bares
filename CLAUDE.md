@@ -146,6 +146,7 @@ supabase/
   migrations/0063_*.sql     aviso de politica nueva (`profiles.politica_vista`) y sacar a alguien del sorteo (`sorteo_excluidos`)
   migrations/0064_*.sql     avisos en el movil: `push_suscripciones`, `push_preferencias`, `push_cola` (pg_cron + pg_net)
   migrations/0068_*.sql     pantalla de Usuarios (admins): correo de cada cuenta, sellar a mano (`stamps.sellado_por`) y borrar cuentas (`admin_cuentas_borradas`)
+  migrations/0069_*.sql     La Caña Perfecta con 2 decimales (`minigame_scores.best_score` numeric(7,2)) y `admin_meter_en_ruta` (meter a alguien en una ruta)
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
@@ -275,6 +276,44 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **La Caña Perfecta puntua con DOS DECIMALES y es mucho mas dificil** (`juegos/cana/modelo.ts`,
+  `minijuegos/nota.ts`, 0069): con enteros y mesetas anchas, un jugador bueno sacaba 95 o mas el
+  90 % de las veces y un experto el 100 un tercio de ellas (medido con un simulador de jugadores
+  sobre el modelo real). Ahora nada se redondea hasta el final (se guarda 99,03), la espuma ideal
+  baja de 15-20 % a 17-18 %, la rapidez va de 5 a 14 s y por encima de 90 se aplica
+  `curvaAlta` (100 - 10 * sqrt((100 - bruta) / 10)): 95 bruto vale 92,9 y para 99,0 hay que
+  tener 99,9 bruto, asi que el 100 solo sale de una partida perfecta. Para tocar la dificultad
+  se cambian las constantes de `modelo.ts` y se vuelve a medir: `modelo.test.ts` fija la forma
+  de la curva, no cuanta gente llega. El servidor NO verifica la nota (la manda el cliente: solo
+  rango, 2 decimales y espaciado de 4 s). `nota.ts` es el unico sitio que decide cuantos decimales
+  lleva un juego (`JUEGOS_CON_DECIMALES`) y tiene que coincidir con la 0069. La 0069 BORRA las
+  notas viejas de la caña (otra escala, mucho mas generosa: si no, quien jugo antes del cambio
+  se quedaria para siempre arriba del ranking); solo la primera vez. La app nueva guarda con
+  `minigame_submit_nota` (numeric); `minigame_submit_score` (entera) queda como envoltorio que
+  para la caña lanza `APP_UPDATE_REQUIRED`, porque una pestaña vieja ABIERTA seguiria enviando
+  notas de la escala generosa despues del borrado (mismo patron que la 0040). Da igual el orden
+  de despliegue: hasta pegar la 0069, guardar la caña en la ruta da error y el record se queda
+  en el movil.
+- **Meter a alguien en una ruta (0069, ficha de Usuarios)**: `admin_meter_en_ruta` inserta en
+  `route_members` con `added_by`. La casa NO se asigna ahi: la asigna el disparador
+  `route_members_casa` (0043) en el mismo INSERT, igual que con una invitacion (la casa con
+  menos gente en esa ruta; empate, al azar; si ya tenia, se queda). Tampoco se salta el veto:
+  `route_members_veto` (0015) rechaza a quien esta suspendido o vetado de esa ruta.
+
+- **Invitacion abierta SIN cuenta (Instagram)** (`auth/portero.ts`,
+  `auth/confirmacionUrl.ts`): el token pendiente vive en el `localStorage` del
+  navegador donde se abre el enlace, y CADA navegador tiene el suyo (el de
+  Instagram, Chrome y el de Gmail no comparten nada). Antes, quien se registraba
+  en el navegador de Instagram y abria el correo en otro caia en la raiz de la
+  app sin unirse a la ruta. Dos arreglos: (1) el portero (`AuthGate`) manda a
+  `/invitacion` SIEMPRE que haya sesion y pendiente, y no solo desde login o
+  registro (la vuelta de Google y el enlace del correo aterrizan en la raiz);
+  (2) el `emailRedirectTo` del alta lleva el token en la URL, asi llega a la
+  invitacion en el navegador que sea. NO se ha podido reproducir lo de que el
+  navegador de Instagram "vuelve a meter en la app" al reabrir el enlace:
+  probablemente reutiliza la pestaña con la pagina ya navegada; hay que probarlo
+  en un Instagram real (Android e iPhone) tras desplegar.
 
 - **Usuarios (0068, `app/admin/usuarios.tsx`)**: los admins ven el CORREO de
   cada cuenta (`admin_usuarios`, lee `auth.users`; la politica lo dice desde

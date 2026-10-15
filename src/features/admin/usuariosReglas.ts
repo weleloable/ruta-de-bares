@@ -6,7 +6,7 @@
 /** Los codigos que gritan admin_sellar / admin_borrar_cuenta, en lenguaje de persona. */
 export function describirErrorUsuarios(mensaje: string): string {
   const codigo =
-    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REASON_REQUIRED|REASON_TOO_LONG|SELF|ROUTE_NOT_PUBLISHED|NOT_FOUND|TARGET_IS_ADMIN|OWNS_ROUTES|BAR_NOT_FOUND|NOT_STAMPABLE|NOT_A_MEMBER)\b/.exec(
+    /\b(NOT_ADMIN|NOT_AUTHENTICATED|REASON_REQUIRED|REASON_TOO_LONG|SELF|ROUTE_NOT_PUBLISHED|ROUTE_NOT_FOUND|ROUTE_BANNED|ACCOUNT_SUSPENDED|NOT_FOUND|TARGET_IS_ADMIN|OWNS_ROUTES|BAR_NOT_FOUND|NOT_STAMPABLE|NOT_A_MEMBER)\b/.exec(
       mensaje,
     )?.[1];
   switch (codigo) {
@@ -24,6 +24,12 @@ export function describirErrorUsuarios(mensaje: string): string {
       return 'La ruta aún no está publicada: publícala antes de sellar.';
     case 'NOT_FOUND':
       return 'Esa cuenta ya no existe.';
+    case 'ROUTE_NOT_FOUND':
+      return 'Esa ruta ya no existe: se ha borrado.';
+    case 'ROUTE_BANNED':
+      return 'Esa persona está vetada de esa ruta. Para meterla, retira antes el veto en Moderación.';
+    case 'ACCOUNT_SUSPENDED':
+      return 'Esa cuenta está suspendida. Levanta la suspensión en Moderación antes de meterla en una ruta.';
     case 'TARGET_IS_ADMIN':
       return 'A un administrador no se le borra desde aquí. Quítale antes el rol en Supabase.';
     case 'OWNS_ROUTES':

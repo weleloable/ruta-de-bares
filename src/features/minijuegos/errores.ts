@@ -15,12 +15,13 @@ export function traducirErrorMinijuegos(mensaje: string): string {
   if (/INVALID_GAME/.test(mensaje)) {
     return 'Este juego aún no tiene ranking en Supabase: falta aplicar una migración (la 0039, 0055 o 0056, ver docs/SETUP.md).';
   }
+  if (/APP_UPDATE_REQUIRED/.test(mensaje)) return 'Hay una versión nueva de la app. Recarga la página para guardar tu nota.';
   if (/INVALID_(SCORE|RECIPE)/.test(mensaje)) return 'No se pudo guardar esta partida.';
   // PostgREST cuando la funcion no existe: falta una migracion de los minijuegos.
   // Puede ser la 0034 (todo) o la 0038 (guardar cervezas con la siembra): se
   // nombran las dos, porque mandar a mirar solo una que ya esta pegada despista.
   if (/PGRST202|Could not find the function|schema cache/i.test(mensaje)) {
-    return 'Falta aplicar una migración de los minijuegos en Supabase (la 0034, 0038 o 0041, ver docs/SETUP.md).';
+    return 'Falta aplicar una migración de los minijuegos en Supabase (la 0034, 0038, 0041 o 0069, ver docs/SETUP.md).';
   }
   return mensaje || 'No se pudo completar.';
 }

@@ -4,6 +4,19 @@ export const CLAVE_RECORDS = 'minijuegos.records.v1';
 export type Records = Record<string, number>;
 
 /**
+ * Marca de que el record de La Caña Perfecta de este dispositivo ya es de la escala
+ * nueva (0069). Quien tenia un 97 de la escala vieja, mucho mas generosa, no veria
+ * nunca "¡Nuevo record!" hasta pasar de 97 en una escala en la que 97 es de experto.
+ */
+export const CLAVE_ESCALA_CANA = 'minijuegos.cana-escala.v2';
+
+/** Los records sin el de un juego (el resto, intacto). */
+export function sinRecordDe(records: Records, juego: string): Records {
+  const { [juego]: _quitado, ...resto } = records;
+  return resto;
+}
+
+/**
  * Lee lo guardado sin fiarse de ello: el almacen lo puede haber tocado una
  * version anterior o el propio usuario, y un record corrupto no debe tumbar el menu.
  */
@@ -35,5 +48,7 @@ export function aplicarPuntuacion(
   if (!Number.isFinite(puntuacion) || puntuacion < 0) return { records, esRecord: false };
   const anterior = records[juego];
   if (anterior !== undefined && puntuacion <= anterior) return { records, esRecord: false };
-  return { records: { ...records, [juego]: Math.round(puntuacion) }, esRecord: true };
+  // Dos decimales y no un entero: La Caña Perfecta puntua con decimales (nota.ts). Los demas
+  // juegos puntuan en enteros, que este redondeo deja como estan.
+  return { records: { ...records, [juego]: Math.round(puntuacion * 100) / 100 }, esRecord: true };
 }

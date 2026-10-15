@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { destinoDelPortero } from '../src/features/auth/portero.ts';
 import { politica } from '../src/features/legal/politica.ts';
 import {
   CORREO_PRIVACIDAD,
@@ -84,16 +85,15 @@ describe('se informa donde se recogen los datos', () => {
   });
 
   it('se llega SIN sesion, que es cuando se registra la gente', () => {
-    // AuthGate manda al login todo lo que no sea publico. /privacidad tiene que
+    // El portero manda al login todo lo que no sea publico. /privacidad tiene que
     // estar en esa lista: el art. 13 obliga a informar ANTES de recoger los
     // datos, y el registro se hace sin sesion. Sin esto, el enlace del registro
     // rebota al login (paso, y el test que habia no lo cazo porque solo miraba
-    // que AuthGate existiera).
-    const layout = sinComentarios(leer('app/_layout.tsx'));
-    assert.match(layout, /const enPrivacidad = segments\[0\] === 'privacidad';/);
-    const guardia = /if \(!session && ([^)]*)\)/.exec(layout);
-    assert.ok(guardia, 'no encuentro el redirect al login');
-    assert.match(guardia[1] as string, /!enPrivacidad/);
+    // que AuthGate existiera). Ahora la regla vive en auth/portero.ts y se prueba
+    // EJECUTANDOLA, no leyendo su texto.
+    assert.equal(destinoDelPortero({ sesion: false, primero: 'privacidad', pendiente: null }), null);
+    assert.deepEqual(destinoDelPortero({ sesion: false, primero: '(tabs)', pendiente: null }), { pathname: '/login' });
+    assert.match(sinComentarios(leer('app/_layout.tsx')), /destinoDelPortero\(/, 'AuthGate ya no usa el portero');
   });
 });
 

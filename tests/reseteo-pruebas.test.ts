@@ -121,7 +121,7 @@ async function mundo(db: PGlite, a: Actor) {
   }
   // minijuego
   await a.como(uid(1));
-  await db.query(`select public.minigame_submit_score('${RUTA}', 'cana-perfecta', 20, 30000)`);
+  await db.query(`select public.minigame_submit_nota('${RUTA}', 'cana-perfecta', 20, 30000)`);
   // mensajes a la organizacion y una denuncia (genera avisos a admins: 0066)
   await a.como(uid(3));
   await db.query(`select public.send_admin_message('contacto', 'Hola', null)`);

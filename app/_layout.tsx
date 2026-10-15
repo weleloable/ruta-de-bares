@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/features/auth/AuthProvider';
+import { destinoDelPortero } from '../src/features/auth/portero';
 import { leerInvitacionPendiente } from '../src/features/invites/pendiente';
 import { AvisosCanaProvider } from '../src/features/match/AvisosCana';
 import { NotificacionesProvider } from '../src/features/notificaciones/Notificaciones';
@@ -49,29 +50,18 @@ function AuthGate() {
 
   useEffect(() => {
     if (loading) return;
-
-    const enAuth = segments[0] === '(auth)';
-    // /invitacion es publica a proposito: si exigiera sesion, abrir el enlace
-    // de una ruta sin haberla iniciado acabaria en /login y el token se
-    // perderia por el camino. La pantalla se apana sola con y sin sesion.
-    const enInvitacion = segments[0] === 'invitacion';
-    // /privacidad tambien, y por una razon de peso: el art. 13 del RGPD obliga
-    // a informar ANTES de recoger los datos, y el registro se hace sin sesion.
-    // Si exigiera sesion, el enlace del registro rebotaria al login (pasaba).
-    const enPrivacidad = segments[0] === 'privacidad';
-
-    if (!session && !enAuth && !enInvitacion && !enPrivacidad) {
-      router.replace('/login');
-    } else if (session && enAuth) {
-      // Si se llego aqui por un enlace de ruta, se vuelve a el en vez de a la
-      // pantalla de inicio: el usuario venia a entrar en esa ruta.
-      // Solo se LEE: este efecto se repite (supabase-js reemite la sesion) y un
-      // borrado aqui haria que la segunda pasada mandase a "/". La borra
-      // /invitacion cuando se muestra con sesion.
-      const pendiente = leerInvitacionPendiente();
-      if (pendiente) router.replace({ pathname: '/invitacion', params: { token: pendiente } });
-      else router.replace('/');
-    }
+    // La decision vive en portero.ts (pura y probada). Lo que no se puede perder:
+    // /invitacion y /privacidad son publicas, y con sesion y una invitacion
+    // pendiente se va SIEMPRE a ella, aunque la sesion aparezca en la raiz (vuelta
+    // de Google, enlace del correo). Solo se LEE el pendiente: este efecto se
+    // repite (supabase-js reemite la sesion) y un borrado aqui haria que la
+    // segunda pasada mandase a "/". Lo borra /invitacion al mostrarse con sesion.
+    const destino = destinoDelPortero({
+      sesion: session !== null,
+      primero: segments[0],
+      pendiente: leerInvitacionPendiente(),
+    });
+    if (destino) router.replace(destino);
   }, [session, loading, segments, router]);
 
   if (loading) return <Loading label="Abriendo la credencial..." />;

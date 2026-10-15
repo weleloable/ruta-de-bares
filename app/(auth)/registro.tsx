@@ -5,6 +5,8 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { BotonGoogle, SeparadorO } from '../../src/features/auth/BotonGoogle';
+import { leerInvitacionPendiente } from '../../src/features/invites/pendiente';
+import { AvisoInvitacionPendiente } from '../../src/features/invites/AvisoInvitacionPendiente';
 import { AvisoNavegadorIntegrado } from '../../src/features/profile/AvisoNavegadorIntegrado';
 import { colors, space, typography } from '../../src/lib/theme';
 
@@ -30,6 +32,8 @@ export default function RegistroScreen() {
   const [error, setError] = useState<string | null>(null);
   const [revisaCorreo, setRevisaCorreo] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  // Se mira antes de registrarse: el pendiente se puede borrar mas adelante.
+  const [invitada] = useState(() => leerInvitacionPendiente() !== null);
 
   // 6 es tambien el minimo de Supabase (Authentication > Providers > Email): por debajo, la
   // pantalla aceptaria algo que el servidor rechaza.
@@ -64,6 +68,7 @@ export default function RegistroScreen() {
           <Text style={typography.muted}>
             Te hemos mandado un enlace a {email.trim()}. Abrelo para confirmar la cuenta y luego
             inicia sesion.
+            {invitada ? ' Despues te llevamos a la invitacion para que te unas a la ruta.' : ''}
           </Text>
         </View>
         <Button title="Ir al inicio de sesion" onPress={() => router.replace('/login')} />
@@ -74,6 +79,7 @@ export default function RegistroScreen() {
   return (
     <Screen scroll>
       <AvisoNavegadorIntegrado />
+      <AvisoInvitacionPendiente />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.cabecera}>
           <Text style={typography.screenTitle}>Crear cuenta</Text>

@@ -8,6 +8,7 @@ import { feedback } from './feedback';
 import { JUEGOS } from './juegos';
 import { ListaCervezas } from './ListaCervezas';
 import { Ranking } from './Ranking';
+import { formatearNota } from './nota';
 import { cargarRecords, registrarPuntuacion } from './records';
 import type { Records } from './recordsReglas';
 import type { JuegoDef, ResultadoJuego } from './tipos';
@@ -118,9 +119,9 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
           <ScrollView contentContainerStyle={styles.lista}>
             <Card style={styles.resultado}>
               <Text style={typography.overline}>{ultimo.esRecord ? '¡Nuevo récord!' : 'Fin de la partida'}</Text>
-              <Text style={styles.puntos}>{ultimo.resultado.puntuacion}</Text>
+              <Text style={styles.puntos}>{formatearNota(ultimo.resultado.juego, ultimo.resultado.puntuacion)}</Text>
               {activo.Detalle ? <activo.Detalle resultado={ultimo.resultado} /> : null}
-              <Text style={typography.muted}>Tu récord: {records[activo.id] ?? 0}</Text>
+              <Text style={typography.muted}>Tu récord: {formatearNota(activo.id, records[activo.id] ?? 0)}</Text>
               {guardado ? <Banner tone={guardado.tono}>{guardado.texto}</Banner> : null}
               <Button title="Otra vez" onPress={() => { setUltimo(null); setGuardado(null); }} />
               {rutaId && activo.ranking ? (
@@ -165,7 +166,7 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
                   <Text style={typography.cardTitle}>{juego.titulo}</Text>
                   <Text style={typography.muted}>{juego.descripcion}</Text>
                   {records[juego.id] !== undefined ? (
-                    <Text style={styles.record}>Récord: {records[juego.id]}</Text>
+                    <Text style={styles.record}>Récord: {formatearNota(juego.id, records[juego.id])}</Text>
                   ) : null}
                 </View>
                 <Ionicons name="chevron-forward" size={22} color={colors.inkFaint} />

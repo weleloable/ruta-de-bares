@@ -4,13 +4,23 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner, Button, Card, Field, Loading } from '../../../src/components/ui';
-import { borrarCuenta, obtenerUsuario, sellarAMano, sellosDeUsuario, type Usuario } from '../../../src/features/admin/usuarios';
+import { Chips } from '../../../src/features/casas/panel/piezas';
+import {
+  borrarCuenta,
+  meterEnRuta,
+  obtenerUsuario,
+  sellarAMano,
+  sellosDeUsuario,
+  type Usuario,
+} from '../../../src/features/admin/usuarios';
 import { estadoPlazo, type RutaConSellos, type SelloFila } from '../../../src/features/admin/usuariosReglas';
 import { useAuth } from '../../../src/features/auth/AuthProvider';
 import { CASAS, esCasa } from '../../../src/features/casas/casas';
 import { DialogoConfirmar } from '../../../src/features/profile/DialogoConfirmar';
-import { diaCorto, hora, ventana } from '../../../src/lib/fechas';
+import { listRoutes } from '../../../src/features/routes/api';
+import { desdeFechaISO, diaCorto, hora, ventana } from '../../../src/lib/fechas';
 import { colors, radius, space, typography } from '../../../src/lib/theme';
+import type { RouteRow } from '../../../src/types/database';
 
 /**
  * Ficha de una cuenta para admins (0068): quien es (con su correo), sus sellos
@@ -35,6 +45,10 @@ export default function UsuarioAdmin() {
   const [motivoBorrar, setMotivoBorrar] = useState('');
   const [confirmarBorrar, setConfirmarBorrar] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  // Meter en una ruta (0069): las rutas que hay y la elegida.
+  const [rutasTodas, setRutasTodas] = useState<RouteRow[]>([]);
+  const [rutaElegida, setRutaElegida] = useState<string | null>(null);
+  const [confirmarMeter, setConfirmarMeter] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -52,6 +66,35 @@ export default function UsuarioAdmin() {
   useEffect(() => {
     void cargar();
   }, [cargar]);
+  useEffect(() => {
+    listRoutes()
+      .then(setRutasTodas)
+      .catch(() => setRutasTodas([]));
+  }, []);
+
+  async function meter() {
+    const ruta = rutasTodas.find((r) => r.id === rutaElegida);
+    if (!ruta || !usuario) return;
+    setOcupado(true);
+    setError(null);
+    // Sin esto, un fallo tras un exito dejaba el aviso verde viejo junto al rojo nuevo.
+    setHecho(null);
+    try {
+      const r = await meterEnRuta(userId, ruta.id);
+      setHecho(
+        r.yaEstaba
+          ? `${usuario.nombre} ya estaba en ${ruta.name}.`
+          : `${usuario.nombre} ya está en ${ruta.name}${r.casa ? ` y es de ${CASAS[r.casa as keyof typeof CASAS]?.nombre ?? r.casa}` : ''}.`,
+      );
+      setRutaElegida(null);
+      await cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo meter en la ruta.');
+    } finally {
+      setConfirmarMeter(false);
+      setOcupado(false);
+    }
+  }
 
   async function sellar() {
     if (!sellando) return;
@@ -115,6 +158,37 @@ export default function UsuarioAdmin() {
                 .filter(Boolean)
                 .join(' · ')}
             </Text>
+          </Card>
+        ) : null}
+
+        {usuario ? (
+          <Card style={styles.tarjeta}>
+            <Text style={typography.sectionTitle}>Meter en una ruta</Text>
+            <Text style={typography.muted}>
+              {usuario.rutas === 0
+                ? 'No está en ninguna ruta: no ve nada. Si la mete aquí, entra sin enlace.'
+                : 'Para una ruta más a la que no llegó con su enlace.'}{' '}
+              {usuario.house
+                ? 'Ya tiene casa y se la queda.'
+                : 'Al entrar se le asigna casa en el acto: la que menos gente tiene en esa ruta, y si hay empate, al azar. Verá la animación la próxima vez que abra la app.'}
+            </Text>
+            {rutasTodas.length === 0 ? (
+              <Text style={typography.muted}>No hay rutas.</Text>
+            ) : (
+              <>
+                <Chips<string>
+                  opciones={rutasTodas.map((r) => ({ id: r.id, texto: etiquetaRuta(r) }))}
+                  elegida={rutaElegida}
+                  onElegir={setRutaElegida}
+                />
+                <Button
+                  title="Meter en la ruta"
+                  disabled={!rutaElegida}
+                  loading={ocupado}
+                  onPress={() => setConfirmarMeter(true)}
+                />
+              </>
+            )}
           </Card>
         ) : null}
 
@@ -214,6 +288,22 @@ export default function UsuarioAdmin() {
       </ScrollView>
 
       <DialogoConfirmar
+        visible={confirmarMeter}
+        titulo={`¿Meter a ${usuario?.nombre ?? ''} en ${rutasTodas.find((r) => r.id === rutaElegida)?.name ?? 'la ruta'}?`}
+        mensaje={[
+          usuario?.house ? 'Verá la ruta en su app.' : 'Verá la ruta en su app y se le asignará una casa.',
+          rutasTodas.find((r) => r.id === rutaElegida)?.is_published === false
+            ? 'Esa ruta aún es un borrador: no la verá hasta que la publiques, y su casa se asignaría contra una ruta todavía vacía.'
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        textoConfirmar="Meter en la ruta"
+        ocupado={ocupado}
+        onConfirmar={() => void meter()}
+        onCancelar={() => setConfirmarMeter(false)}
+      />
+      <DialogoConfirmar
         visible={confirmarBorrar}
         titulo={`¿Borrar la cuenta de ${usuario?.nombre ?? ''}?`}
         mensaje="No se puede deshacer."
@@ -225,6 +315,12 @@ export default function UsuarioAdmin() {
       />
     </SafeAreaView>
   );
+}
+
+/** Nombre, fecha y si es borrador: dos rutas con el mismo nombre tienen que poder distinguirse. */
+function etiquetaRuta(r: RouteRow): string {
+  const dia = desdeFechaISO(r.event_date);
+  return `${r.name}${dia ? ` · ${diaCorto(dia)}` : ''}${r.is_published ? '' : ' (borrador)'}`;
 }
 
 const styles = StyleSheet.create({

@@ -43,6 +43,17 @@ export async function sellarAMano(userId: string, routeBarId: string, motivo: st
 }
 
 /**
+ * Mete a una persona en una ruta sin pasar por un enlace (0069). La casa se la
+ * asigna el servidor en el mismo instante (la que menos gente tiene en esa ruta;
+ * empate, al azar) si todavia no tenia. No se salta el veto ni la suspension.
+ */
+export async function meterEnRuta(userId: string, routeId: string): Promise<{ yaEstaba: boolean; casa: string | null }> {
+  const { data, error } = await supabase.rpc('admin_meter_en_ruta', { p_user_id: userId, p_route_id: routeId });
+  if (error) fallo(error);
+  return { yaEstaba: data.ya_estaba, casa: data.casa };
+}
+
+/**
  * Borra la cuenta y DESPUES sus fotos. Al reves que Borrar mi cuenta, que las
  * borra antes porque luego nadie podria: aqui un admin si puede, y la limpieza
  * de la 0032 ya trata como sobrante lo de una cuenta que no existe. Si esa

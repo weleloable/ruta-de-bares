@@ -390,6 +390,22 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
       select vault.create_secret('https://TU_REF.supabase.co/functions/v1/enviar-avisos', 'avisos_url');
       select vault.create_secret('EL_MISMO_AVISOS_SECRETO', 'avisos_secreto');
       ```
+63. [`supabase/migrations/0068_usuarios_admin.sql`](../supabase/migrations/0068_usuarios_admin.sql)
+   y **Run**, despues de la 0067. Pantalla de Usuarios para admins: correo de cada
+   cuenta, sellar a mano y borrar cuentas. Rehace `puntos_racha()` de la 0045
+   (la racha ignora los sellos a mano), asi que la 0045 ya **no se vuelve a
+   pegar**. Se puede pegar dos veces.
+64. [`supabase/migrations/0069_cana_decimales_y_meter_en_ruta.sql`](../supabase/migrations/0069_cana_decimales_y_meter_en_ruta.sql)
+   y **Run**, despues de la 0068. **Borra las notas viejas de La Caña Perfecta**
+   (la puntuacion nueva es mucho mas dificil y otra escala; solo la primera vez,
+   las de los demas juegos no se tocan) y pasa las notas a 2 decimales. Anade
+   `minigame_submit_nota` (la que usa la app nueva) y deja `minigame_submit_score`
+   como envoltorio que rechaza la caña a las apps en cache. Tambien anade
+   `admin_meter_en_ruta` (meter a alguien en una ruta desde Usuarios). Rehace
+   `minigame_submit_score()` y `minigame_ranking()` de la 0061, que ya **no se
+   vuelven a pegar**. Se puede pegar dos veces. Da igual si va antes o despues de
+   desplegar la app: hasta que se pegue, guardar la caña en la ruta da error y el
+   record se queda en el movil.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite
@@ -658,8 +674,13 @@ confirmacion de correo activada, el enlace del correo de confirmacion lleva a
 la **Site URL** de *Authentication > URL Configuration*. Tiene que ser
 `https://weleloable.github.io/ruta-de-bares/` (y esa misma en *Redirect
 URLs*). Con el valor por defecto (`localhost`) la persona invitada confirma en
-una pagina que no existe y no llega a entrar. La app no fija `emailRedirectTo`:
-manda esa configuracion.
+una pagina que no existe y no llega a entrar. En la web, el alta SI fija
+`emailRedirectTo`: a `/ruta-de-bares/invitacion?token=...` si la persona venia de
+una invitacion, y a la raiz si no (`features/auth/urlConfirmacion.web.ts`). Va el
+token en la URL porque el correo suele abrirse en OTRO navegador que el del
+enlace (Instagram -> Gmail/Chrome) y el almacen de cada navegador es suyo. Esa
+URL tiene que estar en Redirect URLs (`https://weleloable.github.io/ruta-de-bares/**`
+la cubre); si no esta, Supabase la ignora y vuelve a la Site URL.
 
 **Vista previa.** GitHub Pages sirve el fallback `404.html` con estado HTTP 404
 para `/invitacion`. Los navegadores lo pintan igual y el enlace funciona, pero

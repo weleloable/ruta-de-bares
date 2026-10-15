@@ -7,6 +7,7 @@ import { Banner, Card, EmptyState, Field, Loading } from '../../src/components/u
 import { listarCuentasBorradas, listarUsuarios, type CuentaBorrada, type Usuario } from '../../src/features/admin/usuarios';
 import { agruparPorCasa } from '../../src/features/casas/agruparPorCasa';
 import { CASAS, esCasa, ORDEN_CASAS } from '../../src/features/casas/casas';
+import { Chips } from '../../src/features/casas/panel/piezas';
 import { Escudo } from '../../src/features/casas/Escudo';
 import { diaCorto } from '../../src/lib/fechas';
 import { colors, radius, space, typography } from '../../src/lib/theme';
@@ -22,6 +23,9 @@ export default function UsuariosAdmin() {
   const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
   const [usuarios, setUsuarios] = useState<Usuario[] | null>(null);
+  // "Sin ruta": quien creo la cuenta y nunca entro en ninguna (no ve nada). Se filtra aqui, sobre
+  // lo que ya trajo la busqueda.
+  const [filtro, setFiltro] = useState<'todas' | 'sin-ruta'>('todas');
   const [borradas, setBorradas] = useState<CuentaBorrada[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +62,8 @@ export default function UsuariosAdmin() {
     }, []),
   );
 
+  const visibles = (usuarios ?? []).filter((u) => filtro === 'todas' || u.rutas === 0);
+
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled">
@@ -69,20 +75,31 @@ export default function UsuariosAdmin() {
           autoCapitalize="none"
           autoCorrect={false}
         />
+        <Chips<'todas' | 'sin-ruta'>
+          opciones={[
+            { id: 'todas', texto: 'Todas' },
+            { id: 'sin-ruta', texto: `Sin ruta${usuarios ? ` (${usuarios.filter((u) => u.rutas === 0).length})` : ''}` },
+          ]}
+          elegida={filtro}
+          onElegir={setFiltro}
+        />
         {error ? <Banner tone="error">{error}</Banner> : null}
 
         {usuarios === null ? (
           <Loading />
-        ) : usuarios.length === 0 ? (
-          <EmptyState title="Nadie" body="Ninguna cuenta coincide con la búsqueda." />
+        ) : visibles.length === 0 ? (
+          <EmptyState
+            title="Nadie"
+            body={filtro === 'sin-ruta' ? 'Todas las cuentas de esta búsqueda están en alguna ruta.' : 'Ninguna cuenta coincide con la búsqueda.'}
+          />
         ) : (
           <>
             <Text style={typography.muted}>
-              {usuarios.length >= 300
+              {(usuarios?.length ?? 0) >= 300
                 ? 'Salen las 300 primeras: busca por nombre o correo para encontrar el resto.'
-                : `${usuarios.length} ${usuarios.length === 1 ? 'cuenta' : 'cuentas'}`}
+                : `${visibles.length} ${visibles.length === 1 ? 'cuenta' : 'cuentas'}`}
             </Text>
-            {agruparPorCasa(usuarios, ORDEN_CASAS).map((grupo) => (
+            {agruparPorCasa(visibles, ORDEN_CASAS).map((grupo) => (
               <View key={grupo.casa ?? 'sin-casa'} style={styles.grupo}>
                 <View style={styles.grupoCabecera}>
                   {grupo.casa && esCasa(grupo.casa) ? <Escudo casa={grupo.casa} tamano={20} /> : null}

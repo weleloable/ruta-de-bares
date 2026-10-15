@@ -5,6 +5,8 @@
 -- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
 --   * sorteo_elegibles() la rehace la 0063
 --   * sorteo_estado() la rehace la 0063
+--   * minigame_submit_score() la rehace la 0069
+--   * minigame_ranking() la rehace la 0069
 -- Ojo al reves: rehace funciones de la 0034, 0044, 0045, 0056 y 0060, que ya no
 -- se pueden volver a pegar despues.
 --

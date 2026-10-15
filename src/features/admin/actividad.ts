@@ -160,6 +160,8 @@ const JUEGOS: Record<string, string> = {
 
 export function filasJuegos(a: ActividadRuta) {
   return a.juegos.map((j) => ({
+    // El id sirve para escribir la nota con sus decimales (minijuegos/nota.ts).
+    juego: j.juego,
     nombre: JUEGOS[j.juego] ?? j.juego,
     jugadores: j.jugadores,
     pct: porcentaje(j.jugadores, a.participacion.personas),
