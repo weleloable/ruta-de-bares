@@ -59,6 +59,15 @@ export function esPuntoValido(lat: unknown, lng: unknown): boolean {
  * es la clave con la que se recupera el logo y con la que se marca "ya esta en
  * la ruta", asi que dos bares con el mismo nombre se pisarian.
  */
+/**
+ * Contra que se compara el nombre al validar. Al CORREGIR un bar (0067), el
+ * propio bar no cuenta como repetido: sin esto, guardar sin cambiar el nombre
+ * (solo la ubicacion o la imagen) decia "Ya hay un bar con ese nombre".
+ */
+export function existentesSin<T extends { id: string }>(catalogo: readonly T[], id: string | null | undefined): T[] {
+  return id ? catalogo.filter((b) => b.id !== id) : [...catalogo];
+}
+
 export function validarBarPropio(borrador: BorradorBarPropio, existentes: readonly { name: string }[]): string[] {
   const errores: string[] = [];
   const nombre = borrador.nombre.trim();

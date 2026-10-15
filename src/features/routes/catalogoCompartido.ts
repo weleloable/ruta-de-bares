@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type { BarCatalogo } from './catalogo';
-import { aFilaCompartida, desdeFilaCompartida, desdeFilasCompartidas, traducirErrorAlta } from './catalogoPropio';
+import { aFilaCompartida, desdeFilaCompartida, NOMBRE_MAX, desdeFilasCompartidas, traducirErrorAlta } from './catalogoPropio';
 
 /**
  * Llamadas a `catalog_bars` (0035). RLS: solo los admins leen y escriben, asi que
@@ -46,6 +46,25 @@ export async function crearBarCompartido(bar: Pick<BarCatalogo, 'name' | 'lat' |
   const creado = desdeFilaCompartida(data);
   if (!creado) throw new Error('El bar se guardo pero la respuesta no es valida. Recarga la pantalla.');
   return creado;
+}
+
+/**
+ * Corrige nombre, ubicacion e imagen de un bar (0067). Solo el autor, o cualquier
+ * admin si no tiene autor. Sin permiso Postgres no da error: filtra la fila y no
+ * se actualiza ninguna, asi que "0 filas" se traduce a un mensaje claro.
+ * `logoUri: null` quita la imagen.
+ */
+export async function actualizarBarCompartido(id: string, bar: { name: string; lat: number; lng: number; logoUri: string | null }): Promise<BarCatalogo> {
+  const { data, error } = await supabase
+    .from('catalog_bars')
+    .update({ name: bar.name.trim().slice(0, NOMBRE_MAX), lat: bar.lat, lng: bar.lng, logo: bar.logoUri })
+    .eq('id', id)
+    .select('id, name, lat, lng, logo');
+  if (error?.code === '23505') throw new BarRepetido();
+  if (error) throw new Error(traducirErrorAlta(error));
+  const editado = desdeFilaCompartida(data?.[0]);
+  if (!editado) throw new Error('No se pudo editar: solo puede quien creó el bar (o cualquier admin si no tiene autor). Si lo borraron, vuelve a la lista.');
+  return editado;
 }
 
 /**

@@ -513,9 +513,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   funciones puras de `catalogoPropio.ts`): el admin anade un bar que no esta en
   la lista (nombre, ubicacion, imagen del sello) y lo ven todos los admins. Antes vivian en AsyncStorage / localStorage y otro admin no los veia.
   **Solo los admins leen y escriben la tabla** (no es publica: los nombres de
-  una ruta sin publicar son una sorpresa). Solo se ANADE y se BORRA, no se edita
-  (hay `insert` y `delete`, no `update`): editar cambiaria el logo de lo que
-  otros ya copiaron a sus rutas. Borra quien lo creo, o cualquier admin si el
+  una ruta sin publicar son una sorpresa). Se ANADE, se BORRA y desde la `0067` se CORRIGEN nombre,
+  ubicacion e imagen (`update` por columnas; la misma regla que borrar: el autor,
+  o cualquier admin si no tiene autor). Corregir NO cambia las paradas que ya
+  usaron el bar, que llevan su copia: se actualizan al volver a guardar la
+  parada (el boton "Corregir ubicacion o imagen de este bar" del formulario de
+  parada abre `bar-nuevo?catalogoId=`, y al volver deja el bar elegido con los
+  datos nuevos). Borra quien lo creo, o cualquier admin si el
   autor borro su cuenta (`created_by` queda a null). El logo es una data URL de
   256 px dentro de la fila (tope 300.000 caracteres, repetido en
   `route_bars.logo`), sin bucket: son 15-40 KB por bar. **El jugador ve el logo

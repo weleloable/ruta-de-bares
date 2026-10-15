@@ -1,18 +1,22 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SelectorPosicion } from '../../../src/components/SelectorPosicion';
-import { Banner, Button, Card, Field } from '../../../src/components/ui';
+import { Banner, Button, Card, Field, Loading } from '../../../src/components/ui';
 import { BarLogo } from '../../../src/features/routes/BarLogo';
-import { useCatalogo, guardarBarPropio } from '../../../src/features/routes/catalogoStore';
-import { CENTRO_POR_DEFECTO, NOMBRE_MAX, validarBarPropio } from '../../../src/features/routes/catalogoPropio';
+import { editarBarPropio, guardarBarPropio, useCatalogo } from '../../../src/features/routes/catalogoStore';
+import { CENTRO_POR_DEFECTO, existentesSin, NOMBRE_MAX, validarBarPropio } from '../../../src/features/routes/catalogoPropio';
 import { elegirLogoBar } from '../../../src/features/routes/logoPropio';
 import { colors, space, typography } from '../../../src/lib/theme';
 
 /**
- * Alta de un bar que no esta en la lista: nombre, ubicacion e imagen del sello.
+ * Alta de un bar que no esta en la lista, o correccion de uno que ya esta
+ * (`?catalogoId=`, 0067): nombre, ubicacion e imagen del sello.
+ *
+ * Corregir un bar del catalogo NO toca las paradas que ya lo usaron (llevan su
+ * copia): se actualizan al guardar la parada otra vez, que es a donde se vuelve.
  *
  * Al guardar entra en `catalog_bars` (0035) y lo ven TODOS los admins en el
  * desplegable de cualquier ruta, no solo en la que se estaba editando. El
@@ -22,10 +26,23 @@ import { colors, space, typography } from '../../../src/lib/theme';
 export default function BarNuevo() {
   const router = useRouter();
   const catalogo = useCatalogo();
+  const { catalogoId } = useLocalSearchParams<{ routeId: string; catalogoId?: string }>();
+  const editando = typeof catalogoId === 'string' && catalogoId.length > 0;
+  const original = editando ? catalogo.find((b) => b.id === catalogoId) : undefined;
 
   const [nombre, setNombre] = useState('');
   const [punto, setPunto] = useState<{ lat: number; lng: number } | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
+  // El catalogo puede llegar despues de abrir la pantalla: se rellena UNA vez, y
+  // el mapa se monta despues (toma el punto inicial al montarse).
+  const [cargado, setCargado] = useState(!editando);
+  useEffect(() => {
+    if (cargado || !original) return;
+    setNombre(original.name);
+    setPunto({ lat: original.lat, lng: original.lng });
+    setLogo(original.logoUri ?? null);
+    setCargado(true);
+  }, [cargado, original]);
   const [errores, setErrores] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [eligiendoLogo, setEligiendoLogo] = useState(false);
@@ -46,14 +63,15 @@ export default function BarNuevo() {
 
   async function onGuardar() {
     const borrador = { nombre, punto, logoUri: logo };
-    const problemas = validarBarPropio(borrador, catalogo);
+    const problemas = validarBarPropio(borrador, existentesSin(catalogo, editando ? catalogoId : null));
     setErrores(problemas);
     if (problemas.length > 0) return;
 
     setGuardando(true);
     setError(null);
     try {
-      await guardarBarPropio(borrador);
+      if (editando && catalogoId) await editarBarPropio(catalogoId, borrador);
+      else await guardarBarPropio(borrador);
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar el bar.');
@@ -61,6 +79,8 @@ export default function BarNuevo() {
       setGuardando(false);
     }
   }
+
+  if (!cargado) return <Loading label="Abriendo el bar..." />;
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['left', 'right']}>
@@ -83,7 +103,7 @@ export default function BarNuevo() {
               punto={punto}
               // Sin circulo: el radio se elige al anadir el bar a una ruta.
               radioM={null}
-              centroInicial={CENTRO_POR_DEFECTO}
+              centroInicial={punto ?? CENTRO_POR_DEFECTO}
               onCambiar={setPunto}
             />
           </Card>
@@ -113,7 +133,7 @@ export default function BarNuevo() {
             </Text>
           ))}
 
-          <Button title="Guardar bar" onPress={onGuardar} loading={guardando} />
+          <Button title={editando ? 'Guardar cambios' : 'Guardar bar'} onPress={onGuardar} loading={guardando} />
           <Button title="Cancelar" variant="ghost" onPress={() => router.back()} disabled={guardando} />
         </ScrollView>
       </KeyboardAvoidingView>

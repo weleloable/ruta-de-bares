@@ -623,8 +623,9 @@ export type Database = {
       catalog_bars: {
         Row: CatalogBarRow;
         Insert: Insert<CatalogBarRow, 'id' | 'logo' | 'created_by' | 'created_at'>;
-        // Sin update a proposito (0035): se anade y se borra.
-        Update: never;
+        // Se anade, se borra y (0067) se corrigen nombre, ubicacion e imagen: el
+        // resto de columnas no tiene permiso de update.
+        Update: Partial<Pick<CatalogBarRow, 'name' | 'lat' | 'lng' | 'logo'>>;
         Relationships: [];
       };
       stamps: {

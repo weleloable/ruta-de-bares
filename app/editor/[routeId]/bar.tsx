@@ -208,6 +208,7 @@ export default function EditorDeBar() {
 
   if (cargando) return <Loading label="Preparando el bar..." />;
 
+  const barDelCatalogo = elegido ? buscarPorNombre(elegido.name, catalogo) : undefined;
   const ocupados = idsYaEnRuta(bares, editando ? barId : undefined, catalogo);
 
   return (
@@ -235,6 +236,14 @@ export default function EditorDeBar() {
               onReintentar={reintentarCatalogo}
               onNuevo={() => router.push({ pathname: '/editor/[routeId]/bar-nuevo', params: { routeId } })}
             />
+            {/* Solo si el bar esta en la lista compartida: los de antes del catalogo no tienen donde corregirse. */}
+            {barDelCatalogo ? (
+              <Button
+                title="Corregir ubicación o imagen de este bar"
+                variant="ghost"
+                onPress={() => router.push({ pathname: '/editor/[routeId]/bar-nuevo', params: { routeId, catalogoId: barDelCatalogo.id } })}
+              />
+            ) : null}
           </View>
 
           <SelectorTipoParada

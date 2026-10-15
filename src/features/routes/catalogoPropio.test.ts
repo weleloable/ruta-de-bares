@@ -7,6 +7,7 @@ import {
   LOGO_MAX_CARACTERES,
   NOMBRE_MAX,
   crearBarPropio,
+  existentesSin,
   fusionarCatalogo,
   leerPropios,
   nuevoId,
@@ -203,5 +204,28 @@ describe('CENTRO_POR_DEFECTO', () => {
   it('cae dentro de Alcala de Henares', () => {
     assert.ok(CENTRO_POR_DEFECTO.lat > 40.47 && CENTRO_POR_DEFECTO.lat < 40.495);
     assert.ok(CENTRO_POR_DEFECTO.lng > -3.38 && CENTRO_POR_DEFECTO.lng < -3.35);
+  });
+});
+
+describe('corregir un bar (0067): el propio bar no cuenta como repetido', () => {
+  it('guardar con el MISMO nombre (solo cambia ubicacion o imagen) no da "ya hay un bar"', () => {
+    const errores = validarBarPropio(borrador({ nombre: 'Lola' }), existentesSin(CATALOGO_BARES, 'lola'));
+    assert.deepEqual(errores, []);
+  });
+
+  it('sin quitar el propio da el error de siempre (era el fallo)', () => {
+    assert.deepEqual(validarBarPropio(borrador({ nombre: 'Lola' }), CATALOGO_BARES), ['Ya hay un bar con ese nombre en la lista.']);
+  });
+
+  it('cambiar el nombre a las mayusculas de si mismo vale, pero al de OTRO bar no', () => {
+    assert.deepEqual(validarBarPropio(borrador({ nombre: ' LOLA ' }), existentesSin(CATALOGO_BARES, 'lola')), []);
+    assert.deepEqual(validarBarPropio(borrador({ nombre: 'quinto tapon' }), existentesSin(CATALOGO_BARES, 'lola')), ['Ya hay un bar con ese nombre en la lista.']);
+  });
+
+  it('al crear (sin id) no se quita nada', () => {
+    assert.equal(existentesSin(CATALOGO_BARES, null).length, CATALOGO_BARES.length);
+    assert.equal(existentesSin(CATALOGO_BARES, undefined).length, CATALOGO_BARES.length);
+    assert.equal(existentesSin(CATALOGO_BARES, 'no-existe').length, CATALOGO_BARES.length);
+    assert.equal(existentesSin(CATALOGO_BARES, 'lola').length, CATALOGO_BARES.length - 1);
   });
 });
