@@ -276,6 +276,20 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
 
+- **Invitacion abierta SIN cuenta (Instagram)** (`auth/portero.ts`,
+  `auth/confirmacionUrl.ts`): el token pendiente vive en el `localStorage` del
+  navegador donde se abre el enlace, y CADA navegador tiene el suyo (el de
+  Instagram, Chrome y el de Gmail no comparten nada). Antes, quien se registraba
+  en el navegador de Instagram y abria el correo en otro caia en la raiz de la
+  app sin unirse a la ruta. Dos arreglos: (1) el portero (`AuthGate`) manda a
+  `/invitacion` SIEMPRE que haya sesion y pendiente, y no solo desde login o
+  registro (la vuelta de Google y el enlace del correo aterrizan en la raiz);
+  (2) el `emailRedirectTo` del alta lleva el token en la URL, asi llega a la
+  invitacion en el navegador que sea. NO se ha podido reproducir lo de que el
+  navegador de Instagram "vuelve a meter en la app" al reabrir el enlace:
+  probablemente reutiliza la pestaña con la pagina ya navegada; hay que probarlo
+  en un Instagram real (Android e iPhone) tras desplegar.
+
 - **Usuarios (0068, `app/admin/usuarios.tsx`)**: los admins ven el CORREO de
   cada cuenta (`admin_usuarios`, lee `auth.users`; la politica lo dice desde
   la version 2026-10-15). Sellar a mano (`admin_sellar`) se salta horario y

@@ -658,8 +658,13 @@ confirmacion de correo activada, el enlace del correo de confirmacion lleva a
 la **Site URL** de *Authentication > URL Configuration*. Tiene que ser
 `https://weleloable.github.io/ruta-de-bares/` (y esa misma en *Redirect
 URLs*). Con el valor por defecto (`localhost`) la persona invitada confirma en
-una pagina que no existe y no llega a entrar. La app no fija `emailRedirectTo`:
-manda esa configuracion.
+una pagina que no existe y no llega a entrar. En la web, el alta SI fija
+`emailRedirectTo`: a `/ruta-de-bares/invitacion?token=...` si la persona venia de
+una invitacion, y a la raiz si no (`features/auth/urlConfirmacion.web.ts`). Va el
+token en la URL porque el correo suele abrirse en OTRO navegador que el del
+enlace (Instagram -> Gmail/Chrome) y el almacen de cada navegador es suyo. Esa
+URL tiene que estar en Redirect URLs (`https://weleloable.github.io/ruta-de-bares/**`
+la cubre); si no esta, Supabase la ignora y vuelve a la Site URL.
 
 **Vista previa.** GitHub Pages sirve el fallback `404.html` con estado HTTP 404
 para `/invitacion`. Los navegadores lo pintan igual y el enlace funciona, pero
