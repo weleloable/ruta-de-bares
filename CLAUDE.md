@@ -288,6 +288,18 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   un admin si puede y la limpieza de la 0032 ya las da por sobrantes. Borrar
   no es sancionar: para eso esta suspender (0015).
 
+- **Iconos de los avisos del movil** (`public/icono-aviso.js`, `public/icons/avisos/`):
+  cada aviso lleva un icono "chapa" (circulo del color de su familia: ruta ambar,
+  sorteo rojo, La Caña verde, admin tinta) y la silueta `badge.png` para la barra
+  de estado de Android. El aviso NO trae su tipo: el service worker lo saca del
+  `tag` (`cana`, `admin` o `<tipo>-<id>`) y el detalle del EMOJI con el que
+  empieza el titulo que escribe el SQL. Asi no hay que redesplegar la Edge
+  Function; a cambio, cambiar el emoji de un titulo en una migracion cambia el
+  icono, y `tests/iconos-avisos.test.ts` falla si un titulo ya no esta en el SQL.
+  Los PNG los genera `node scripts/generar-iconos-avisos.mjs` (SVG pasado a PNG
+  con Chrome headless; NO se editan a mano). En iPhone el aviso sale siempre con
+  el icono de la app: iOS ignora el `icon`.
+
 - **Puntos de las casas (0044)**: todo punto es una fila de `point_movements` con
   una `ref` UNICA por ruta ("sello:<id>", "ruta_completa:<persona>"...): es lo que
   impide duplicar, se reintente lo que se reintente. Se ANULAN (con motivo), no se
