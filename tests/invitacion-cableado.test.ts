@@ -52,3 +52,22 @@ describe('invitacion sin cuenta', () => {
     assert.match(c, /if \(!loading && session\) olvidarInvitacionPendiente\(\)/);
   });
 });
+
+describe('meter a alguien en una ruta desde Usuarios (0069)', () => {
+  it('la ficha llama a admin_meter_en_ruta y la lista tiene el filtro Sin ruta', () => {
+    assert.match(sinComentarios(leer('src/features/admin/usuarios.ts')), /rpc\('admin_meter_en_ruta'/);
+    const ficha = sinComentarios(leer('app/admin/usuario/[userId].tsx'));
+    assert.match(ficha, /meterEnRuta\(userId, ruta\.id\)/);
+    assert.match(ficha, /<DialogoConfirmar[\s\S]*visible=\{confirmarMeter\}/, 'meter pide confirmacion');
+    assert.match(sinComentarios(leer('app/admin/usuarios.tsx')), /u\.rutas === 0/);
+  });
+});
+
+describe('La Caña Perfecta con decimales (0069)', () => {
+  it('la nota se envia, se guarda y se ensena con la misma funcion', () => {
+    assert.match(sinComentarios(leer('src/features/minijuegos/api.ts')), /p_score: redondearNota\(game, score\)/);
+    for (const f of ['src/features/minijuegos/MenuMinijuegos.tsx', 'src/features/minijuegos/Ranking.tsx', 'src/features/admin/ActividadRuta.tsx']) {
+      assert.match(sinComentarios(leer(f)), /formatearNota\(/, f);
+    }
+  });
+});

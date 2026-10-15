@@ -13,6 +13,7 @@ import {
   type ActividadRuta,
 } from './actividad';
 import { repartoCasas, resumenAuditoria, type AuditoriaRuta, type CasaDatos } from './actividadExtra';
+import { formatearNota } from '../minijuegos/nota';
 
 export type SeccionActividad = 'participacion' | 'bares' | 'actividad' | 'juegos' | 'casas' | 'auditoria';
 
@@ -213,7 +214,7 @@ function Juegos({ a }: { a: ActividadRuta }) {
             <Barra
               key={j.nombre}
               etiqueta={j.nombre}
-              valor={`${j.jugadores} ${j.jugadores === 1 ? 'jugador' : 'jugadores'}${j.mejor !== null ? ` · mejor ${j.mejor}` : ''}`}
+              valor={`${j.jugadores} ${j.jugadores === 1 ? 'jugador' : 'jugadores'}${j.mejor !== null ? ` · mejor ${formatearNota(j.juego, j.mejor)}` : ''}`}
               pct={j.pct}
             />
           ))}

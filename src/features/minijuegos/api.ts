@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import type { ConducesRankingRow, MaestroBeerRow, MinigameRankingRow } from '../../types/database';
 import { traducirErrorMinijuegos } from './errores';
+import { redondearNota } from './nota';
 
 /**
  * Llamadas a las funciones de la 0034. Quien comprueba que estas dentro de la
@@ -12,10 +13,10 @@ export type ResultadoNota = { best: number; isRecord: boolean };
 
 /** `ms`: el tiempo que desempata (solo el quiz, 0061). */
 export async function enviarNota(routeId: string, game: string, score: number, ms?: number): Promise<ResultadoNota> {
-  const { data, error } = await supabase.rpc('minigame_submit_score', {
+  const { data, error } = await supabase.rpc('minigame_submit_nota', {
     p_route_id: routeId,
     p_game: game,
-    p_score: Math.round(score),
+    p_score: redondearNota(game, score),
     ...(ms !== undefined ? { p_ms: Math.round(ms) } : {}),
   });
   if (error) throw new Error(traducirErrorMinijuegos(error.message));

@@ -58,3 +58,15 @@ describe('describirErrorUsuarios', () => {
     );
   });
 });
+
+describe('errores de meter en una ruta', () => {
+  it('traduce el veto, la suspension y la ruta borrada, y dice que hacer', () => {
+    assert.match(describirErrorUsuarios('ROUTE_BANNED'), /Moderación/);
+    assert.match(describirErrorUsuarios('ACCOUNT_SUSPENDED'), /suspendida/);
+    assert.match(describirErrorUsuarios('ROUTE_NOT_FOUND'), /ruta/);
+  });
+
+  it('ROUTE_NOT_FOUND no se confunde con NOT_FOUND (cuenta)', () => {
+    assert.notEqual(describirErrorUsuarios('ROUTE_NOT_FOUND'), describirErrorUsuarios('NOT_FOUND'));
+  });
+});

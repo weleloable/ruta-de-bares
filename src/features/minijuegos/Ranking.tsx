@@ -5,6 +5,7 @@ import { Banner, Button, Card, EmptyState, Loading } from '../../components/ui';
 import { colors, radius, space, typography } from '../../lib/theme';
 import type { MinigameRankingRow } from '../../types/database';
 import { cargarRanking } from './api';
+import { formatearNota } from './nota';
 
 /**
  * Ranking de UN juego en UNA ruta: la mejor nota de cada persona. Tu fila sale
@@ -51,7 +52,7 @@ export function Ranking({ rutaId, juego }: { rutaId: string; juego: string }) {
             {f.is_me ? ' (tú)' : ''}
           </Text>
           <View style={styles.notaCaja}>
-            <Text style={styles.nota}>{f.score}</Text>
+            <Text style={styles.nota}>{formatearNota(juego, f.score)}</Text>
             {/* En el quiz, a igualdad de puntos gana quien tardo menos (0061). */}
             {f.ms !== null && f.ms !== undefined ? <Text style={styles.tiempo}>{`${(Math.round(f.ms / 100) / 10).toString().replace('.', ',')} s`}</Text> : null}
           </View>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { aplicarPuntuacion, leerRecords } from './recordsReglas.ts';
+import { aplicarPuntuacion, leerRecords, sinRecordDe } from './recordsReglas.ts';
 
 test('leerRecords tolera vacio, basura y formas raras', () => {
   assert.deepEqual(leerRecords(null), {});
@@ -37,4 +37,23 @@ test('no toca los records de otros juegos', () => {
 test('una puntuacion no valida se ignora', () => {
   assert.equal(aplicarPuntuacion({}, 'x', NaN).esRecord, false);
   assert.equal(aplicarPuntuacion({}, 'x', -1).esRecord, false);
+});
+
+test('un record con decimales se guarda con sus dos decimales (La Caña Perfecta)', () => {
+  const r = aplicarPuntuacion({}, 'cana-perfecta', 94.666);
+  assert.equal(r.esRecord, true);
+  assert.equal(r.records['cana-perfecta'], 94.67);
+  // Mejorar por una centesima ya es un record; igualar, no.
+  assert.equal(aplicarPuntuacion(r.records, 'cana-perfecta', 94.68).esRecord, true);
+  assert.equal(aplicarPuntuacion(r.records, 'cana-perfecta', 94.67).esRecord, false);
+});
+
+test('al cambiar la escala de la caña se descarta SU record y solo ese', () => {
+  const antes = { 'cana-perfecta': 97, 'conga-cervecera': 5000, 'tapon-al-vuelo': 800 };
+  assert.deepEqual(sinRecordDe(antes, 'cana-perfecta'), { 'conga-cervecera': 5000, 'tapon-al-vuelo': 800 });
+  // No toca el original, y quitar lo que no hay no rompe nada.
+  assert.equal(antes['cana-perfecta'], 97);
+  assert.deepEqual(sinRecordDe({}, 'cana-perfecta'), {});
+  // Tras descartarlo, una nota nueva de la escala nueva si es record.
+  assert.equal(aplicarPuntuacion(sinRecordDe(antes, 'cana-perfecta'), 'cana-perfecta', 88.4).esRecord, true);
 });
