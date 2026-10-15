@@ -13,6 +13,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import type { ProfileRow } from '../../types/database';
 import { signInWithGoogle } from './google';
+import { urlConfirmacion } from './urlConfirmacion';
 import { olvidarFirmasDeAvatar } from '../profile/avatarFirmado';
 
 type AuthState = {
@@ -143,7 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
-      options: { data: nombre.length > 0 ? { display_name: nombre } : undefined },
+      options: {
+        data: nombre.length > 0 ? { display_name: nombre } : undefined,
+        emailRedirectTo: urlConfirmacion(),
+      },
     });
     if (error) throw new Error(translateAuthError(error.message));
     // Con la confirmacion por correo activada, Supabase crea el usuario pero no
