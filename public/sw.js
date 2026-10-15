@@ -10,16 +10,26 @@
  *
  * Ademas ensena los avisos en el movil (0064): los manda la Edge Function
  * `enviar-avisos` con {titulo, cuerpo, url, tag}, y al tocarlos se abre la app
- * en esa pantalla.
+ * en esa pantalla. Cada tipo de aviso lleva su icono (icono-aviso.js decide
+ * cual; los PNG los genera scripts/generar-iconos-avisos.mjs).
  *
  * Si se cambia este fichero, se sube VERSION: asi se borra la cache anterior.
  */
-const VERSION = 'rb-sw-3';
+const VERSION = 'rb-sw-4';
 const OFFLINE = 'offline.html';
 // URL absoluta y no relativa: la pagina sin conexion se sirve en CUALQUIER ruta
 // (/editor/123 tambien), y un src relativo apuntaria a otro sitio. Sale de
 // donde vive este fichero, asi vale en localhost (/) y en Pages (/ruta-de-bares/).
 const ICONO = new URL('icons/icon-192.png', self.location).href;
+// La silueta de la barra de estado de Android (la pinta en un solo color).
+const BADGE = new URL('icons/avisos/badge.png', self.location).href;
+
+// Define self.iconoDeAviso. Si no carga, los avisos salen con el icono de la app.
+try {
+  importScripts('icono-aviso.js');
+} catch (_) {
+  self.iconoDeAviso = () => null;
+}
 
 const PAGINA_OFFLINE = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8" />
@@ -105,10 +115,18 @@ self.addEventListener('push', (evento) => {
   } catch (_) {
     datos = { cuerpo: evento.data ? evento.data.text() : '' };
   }
+  let icono = ICONO;
+  try {
+    const nombre = self.iconoDeAviso(datos);
+    if (nombre) icono = new URL(`icons/avisos/${nombre}.png`, self.location).href;
+  } catch (_) {
+    // Un aviso raro sale con el icono de la app: mejor eso que no salir.
+  }
   evento.waitUntil(
     self.registration.showNotification(datos.titulo || 'Ruta de Bares', {
       body: datos.cuerpo || '',
-      icon: ICONO,
+      icon: icono,
+      badge: BADGE,
       tag: datos.tag,
       renotify: Boolean(datos.tag),
       data: { url: datos.url || '/' },
