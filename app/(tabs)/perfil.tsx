@@ -438,6 +438,12 @@ export default function PerfilScreen() {
               textStyle={styles.textoAccionBarra}
               onPress={() => router.push('/admin/casas')}
             />
+            <Button
+              title="Usuarios"
+              variant="secondary"
+              textStyle={styles.textoAccionBarra}
+              onPress={() => router.push('/admin/usuarios')}
+            />
           </Card>
         ) : null}
 

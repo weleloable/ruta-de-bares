@@ -65,6 +65,7 @@ const SE_QUEDA: Record<string, string> = {
   push_preferencias: 'lo que cada persona quiere que le avisen',
   admin_rutas_terminadas_vistas: 'que admin ya vio el aviso de una ruta terminada (no es moderacion)',
   app_secrets: 'la clave con la que se firman los vetos: NO borrar nunca',
+  admin_cuentas_borradas: 'quien borro que cuenta y por que (0068): restaurar no devuelve la cuenta, asi que el rastro se queda',
 };
 /** Tablas de las que el reseteo solo borra una parte (fotos pendientes, avisos sin enviar). */
 const SOLO_PENDIENTES = new Set(['avatar_requests', 'push_cola']);

@@ -5,6 +5,7 @@
 -- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
 --   * puntos_por_sello() la rehace la 0060
 --   * registrar_consumicion() la rehace la 0061
+--   * puntos_racha() la rehace la 0068
 -- Ojo al reves: rehace puntos_por_sello() de la 0044, que ya no se puede volver
 -- a pegar despues.
 --

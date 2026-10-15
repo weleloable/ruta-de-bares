@@ -6,6 +6,7 @@ import { supabase } from '../../../lib/supabase';
 import { colors, radius, space, typography } from '../../../lib/theme';
 import type { Database } from '../../../types/database';
 import { describirErrorPanel } from '../acciones';
+import { agruparPorCasa } from '../agruparPorCasa';
 import { CASAS, esCasa, ORDEN_CASAS, type IdCasa } from '../casas';
 import { Escudo } from '../Escudo';
 import { Chips, fechaCorta } from './piezas';
@@ -93,25 +94,34 @@ export function Personas() {
         </Card>
       ) : null}
 
-      {personas.map((p) => (
-        <Pressable
-          key={p.user_id}
-          accessibilityRole="button"
-          onPress={() => {
-            setHecho(null);
-            setDestino(null);
-            setMotivo('');
-            setElegida(p);
-          }}
-          style={({ pressed }) => [styles.persona, pressed && styles.pulsada]}
-        >
-          {p.house && esCasa(p.house) ? <Escudo casa={p.house} tamano={26} /> : <View style={styles.sinEscudo} />}
-          <View style={styles.personaTextos}>
-            <Text style={styles.personaNombre}>{p.nombre}</Text>
-            <Text style={styles.personaSub}>{`${nombreCasa(p.house)} · ${p.rutas} ${p.rutas === 1 ? 'ruta' : 'rutas'}`}</Text>
+      {/* Por casas, que es como se piensa en ellas al repartir o corregir. */}
+      {agruparPorCasa(personas, ORDEN_CASAS).map((grupo) => (
+        <View key={grupo.casa ?? 'sin-casa'} style={styles.grupo}>
+          <View style={styles.grupoCabecera}>
+            {grupo.casa && esCasa(grupo.casa) ? <Escudo casa={grupo.casa} tamano={20} /> : null}
+            <Text style={styles.grupoTitulo}>{grupo.casa && esCasa(grupo.casa) ? CASAS[grupo.casa].nombre : 'Sin casa'}</Text>
+            <Text style={styles.grupoCuenta}>{`${grupo.personas.length} ${grupo.personas.length === 1 ? 'persona' : 'personas'}`}</Text>
           </View>
-          <Text style={styles.personaPuntos}>{p.puntos}</Text>
-        </Pressable>
+          {grupo.personas.map((p) => (
+            <Pressable
+              key={p.user_id}
+              accessibilityRole="button"
+              onPress={() => {
+                setHecho(null);
+                setDestino(null);
+                setMotivo('');
+                setElegida(p);
+              }}
+              style={({ pressed }) => [styles.persona, pressed && styles.pulsada]}
+            >
+              <View style={styles.personaTextos}>
+                <Text style={styles.personaNombre}>{p.nombre}</Text>
+                <Text style={styles.personaSub}>{`${p.rutas} ${p.rutas === 1 ? 'ruta' : 'rutas'}`}</Text>
+              </View>
+              <Text style={styles.personaPuntos}>{p.puntos}</Text>
+            </Pressable>
+          ))}
+        </View>
       ))}
 
       {cambios.length > 0 ? (
@@ -143,7 +153,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   pulsada: { opacity: 0.7 },
-  sinEscudo: { width: 26, height: 30 },
+  grupo: { gap: space.xs, marginTop: space.sm },
+  grupoCabecera: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.xs },
+  grupoTitulo: { ...typography.sectionTitle, flex: 1 },
+  grupoCuenta: { fontSize: 12, color: colors.inkSoft, fontWeight: '700' },
   personaTextos: { flex: 1 },
   personaNombre: { fontSize: 15, fontWeight: '700', color: colors.ink },
   personaSub: { fontSize: 12, color: colors.inkSoft },

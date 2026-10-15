@@ -62,8 +62,9 @@ app/                      pantallas (Expo Router)
   (tabs)/                 Ruta, Sellos y Cana (ese orden); Perfil sin boton abajo
   cana/                   presentacion, ficha, chat, bloqueados, condiciones
   admin/                  bandeja de alertas de administracion, ficha de una denuncia
-                          (alerta/), decidir una foto de perfil (foto/) y
-                          estadisticas de una ruta (estadisticas.tsx)
+                          (alerta/), decidir una foto de perfil (foto/),
+                          estadisticas de una ruta (estadisticas.tsx) y
+                          Usuarios (usuarios.tsx + usuario/[userId].tsx, 0068)
   avisos.tsx              lo que se te ha sancionado y por que (art. 17 DSA)
   contacto.tsx            escribir a la organizacion y reclamar una decision
   privacidad.tsx          que datos se recogen, quien los ve y descargarlos
@@ -144,6 +145,7 @@ supabase/
   migrations/0062_*.sql     export_my_data() con los sorteos y el tiempo del quiz
   migrations/0063_*.sql     aviso de politica nueva (`profiles.politica_vista`) y sacar a alguien del sorteo (`sorteo_excluidos`)
   migrations/0064_*.sql     avisos en el movil: `push_suscripciones`, `push_preferencias`, `push_cola` (pg_cron + pg_net)
+  migrations/0068_*.sql     pantalla de Usuarios (admins): correo de cada cuenta, sellar a mano (`stamps.sellado_por`) y borrar cuentas (`admin_cuentas_borradas`)
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
@@ -273,6 +275,18 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **Usuarios (0068, `app/admin/usuarios.tsx`)**: los admins ven el CORREO de
+  cada cuenta (`admin_usuarios`, lee `auth.users`; la politica lo dice desde
+  la version 2026-10-15). Sellar a mano (`admin_sellar`) se salta horario y
+  radio pero NO la pertenencia ni el tipo de parada; guarda `sellado_por` y
+  `sellado_motivo`, y como posicion la del bar con distancia 0 (no se sabe
+  donde estaba la persona). Puntua igual que un sello normal: los disparadores
+  de `stamps` no distinguen. Borrar una cuenta (`admin_borrar_cuenta`) hace lo
+  mismo que `delete_my_account` y deja registro SIN el correo; no a un admin
+  ni a una misma. Las fotos se borran DESPUES (al reves que Borrar mi cuenta):
+  un admin si puede y la limpieza de la 0032 ya las da por sobrantes. Borrar
+  no es sancionar: para eso esta suspender (0015).
 
 - **Puntos de las casas (0044)**: todo punto es una fila de `point_movements` con
   una `ref` UNICA por ruta ("sello:<id>", "ruta_completa:<persona>"...): es lo que
