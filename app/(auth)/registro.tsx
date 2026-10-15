@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-na
 
 import { Banner, Button, Field, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
-import { BotonGoogle } from '../../src/features/auth/BotonGoogle';
+import { BotonGoogle, SeparadorO } from '../../src/features/auth/BotonGoogle';
 import { AvisoNavegadorIntegrado } from '../../src/features/profile/AvisoNavegadorIntegrado';
 import { colors, space, typography } from '../../src/lib/theme';
 
@@ -83,6 +83,9 @@ export default function RegistroScreen() {
         </View>
 
         <View style={styles.formulario}>
+          {/* Google va PRIMERO y grande: es la opcion buena. El aviso de privacidad de abajo vale para las dos vias. */}
+          <BotonGoogle destacado deshabilitado={enviando} />
+          <SeparadorO texto="o crea la cuenta con tu correo" />
           <Field
             label="Como quieres que te llamemos"
             value={nombre}
@@ -144,8 +147,6 @@ export default function RegistroScreen() {
           </Text>
 
           <Button title="Crear cuenta" onPress={onSubmit} disabled={!puedeEnviar} loading={enviando} />
-          {/* Con Google se acepta lo mismo que arriba: el aviso de privacidad vale para las dos vias. */}
-          <BotonGoogle deshabilitado={enviando} />
           <Button
             title="Ya tengo cuenta"
             variant="ghost"

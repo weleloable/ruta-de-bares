@@ -17,7 +17,7 @@ describe('pantallas', () => {
   for (const pantalla of ['app/(auth)/login.tsx', 'app/(auth)/registro.tsx']) {
     it(`${pantalla} pinta el boton de Google`, () => {
       const codigo = sinComentarios(leer(pantalla));
-      assert.match(codigo, /import \{ BotonGoogle \} from '\.\.\/\.\.\/src\/features\/auth\/BotonGoogle'/);
+      assert.match(codigo, /import \{ BotonGoogle(, SeparadorO)? \} from '\.\.\/\.\.\/src\/features\/auth\/BotonGoogle'/);
       assert.match(codigo, /<BotonGoogle\b/);
     });
   }
@@ -100,5 +100,19 @@ describe('contrato con el resto de la app', () => {
 
   it('expo-web-browser esta en package.json', () => {
     assert.match(leer('package.json'), /"expo-web-browser":/);
+  });
+});
+
+describe('el registro empieza por Google', () => {
+  it('el boton destacado va antes del formulario y el de correo sigue debajo', () => {
+    const codigo = sinComentarios(leer('app/(auth)/registro.tsx'));
+    const google = codigo.indexOf('<BotonGoogle destacado');
+    assert.ok(google > 0, 'falta <BotonGoogle destacado');
+    assert.ok(google < codigo.indexOf('label="Correo electronico"'), 'Google tiene que ir antes del correo');
+    assert.equal((codigo.match(/<BotonGoogle\b/g) ?? []).length, 1, 'un solo boton de Google');
+  });
+
+  it('el login conserva el orden de siempre (Google debajo, sin destacar)', () => {
+    assert.doesNotMatch(leer('app/(auth)/login.tsx'), /destacado/);
   });
 });
