@@ -108,6 +108,8 @@ function AuthGate() {
       <Stack.Screen name="admin/moderacion" options={{ title: 'Moderación' }} />
       <Stack.Screen name="admin/estadisticas" options={{ title: 'Estadísticas' }} />
       <Stack.Screen name="admin/casas" options={{ title: 'Casas y puntuaciones' }} />
+      <Stack.Screen name="admin/usuarios" options={{ title: 'Usuarios' }} />
+      <Stack.Screen name="admin/usuario/[userId]" options={{ title: 'Usuario' }} />
       <Stack.Screen name="cana/presentacion" options={{ title: 'Preséntate' }} />
       <Stack.Screen name="cana/persona/[userId]" options={{ title: 'La Caña' }} />
       <Stack.Screen name="cana/chat/[connectionId]" options={{ title: 'Chat' }} />

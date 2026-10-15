@@ -67,15 +67,20 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
         bloques: [
           {
             puntos: [
-              'Tu correo y tu contraseña: para que puedas entrar. La contraseña no la vemos, se guarda cifrada.',
+              'Tu correo y tu contraseña: para que puedas entrar. La contraseña no la vemos, se guarda cifrada. ' +
+                'Tu correo lo ve quien administra la app, en su lista de cuentas, para saber quién es quién (el ' +
+                'nombre visible lo eliges tú y no siempre lo dice); nadie más lo ve.',
               'Si entras con Google, en lugar de contraseña: Google nos da tu correo, tu nombre, la foto de tu ' +
                 'cuenta de Google y un identificador de esa cuenta. Los usamos solo para saber que eres tú cuando ' +
-                'entras. Se quedan en el sistema de acceso: no los mostramos a nadie ni los usamos como tu nombre ' +
+                'entras. Se quedan en el sistema de acceso: no los mostramos a nadie (salvo el correo, como el ' +
+                'de cualquier cuenta, a quien administra) ni los usamos como tu nombre ' +
                 'visible ni como tu foto. No le pedimos a Google nada más: ni tus contactos, ni tus correos, ni tus ' +
                 'archivos. Nunca vemos tu contraseña de Google.',
               'Tu nombre visible y tu foto: para que la gente de tus rutas te reconozca. Las ven ellas, nadie más.',
               'Dónde estabas al sellar un bar (coordenadas y hora): es lo que permite comprobar que estabas allí ' +
                 'de verdad. Sin eso, sellar no significa nada. Lo ven solo tú y quien organiza la ruta.',
+              'Si quien organiza te sella un bar a mano (por ejemplo, porque te quedaste sin batería), se apunta ' +
+                'quién lo hizo y por qué, y como posición la del bar, no la tuya, porque no se sabe dónde estabas.',
               'A qué rutas perteneces y qué bares has sellado: lo ve quien organiza esa ruta.',
               'Tu casa (Mahou, Cruzcampo, Estrella Galicia o Alhambra): se te asigna al entrar en tu primera ruta ' +
                 'y la ve el resto de la gente, porque es con quien compites.',
@@ -234,6 +239,10 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
                 'su puesto, sin datos de nadie), para el ranking histórico.',
               'Puedes borrar tu cuenta junto con todos tus datos en cualquier momento desde Mi perfil. Eso ' +
                 'incluye lo que nos dio Google.',
+              'Quien administra la app también puede borrar una cuenta: si nos lo pides y no puedes hacerlo tú, o ' +
+                'si es una cuenta de prueba. No se usa para sancionar. Se borra lo mismo que si lo hicieras tú, y ' +
+                'queda apuntado el nombre visible que tenía, el motivo, quién la borró y cuándo (sin el correo), ' +
+                'para que se pueda saber qué pasó con ella.',
               'Las fotos que dejas de usar (porque subes otra o porque no se aprueban) se borran en el momento.',
               'Si denuncian tu foto, o se te retira como sanción, se guarda como prueba del caso, también si ' +
                 'borras tu cuenta, hasta que quien organiza la da por no necesaria o se borra la ruta. Mientras ' +

@@ -7,12 +7,9 @@
 
 /** Lo que cambio en la ultima version, para el aviso. Se reescribe al subir VERSION_POLITICA. */
 export const CAMBIOS_POLITICA: readonly string[] = [
-  'Avisos en el móvil: si los activas, guardamos a qué dispositivo enviarlos y de qué quieres que te avisemos.',
-  'Las casas: tus puntos se apuntan con su origen (sellos, consumiciones, encuentros por QR, retos, minijuegos…).',
-  'Los sorteos: entras al sellar todos los bares de una ruta con sorteo, y quien gana sale con su nombre. Si no quieres participar, díselo a la organización y te saca.',
-  'En ¿Quién quiere ser cervecero? se guarda también tu tiempo, porque desempata.',
-  'Quien organiza ve estadísticas de cada ruta, siempre en totales, sin datos de nadie en concreto.',
-  'En «Descargar mis datos» sale todo esto también.',
+  'Quien administra la app ve el correo de cada cuenta, para saber quién es quién. Nadie más lo ve.',
+  'Si quien organiza te sella un bar a mano, se apunta quién lo hizo y por qué, y como posición la del bar.',
+  'Quien administra puede borrar una cuenta si se lo pides o si es de prueba; queda apuntado el nombre, el motivo y quién lo hizo.',
 ];
 
 /**

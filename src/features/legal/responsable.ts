@@ -31,4 +31,4 @@ export const CORREO_PRIVACIDAD = 'jrdvag@gmail.com';
 export const DIAS_CONSERVACION = 30;
 
 /** La version del texto, para poder decir "aceptaste la del dia X". */
-export const VERSION_POLITICA = '2026-10-13';
+export const VERSION_POLITICA = '2026-10-15';

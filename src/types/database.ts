@@ -111,6 +111,9 @@ export type StampRow = {
   lat: number;
   lng: number;
   distance_m: number;
+  /** Admin que lo puso a mano (0068); null en un sello normal. */
+  sellado_por?: string | null;
+  sellado_motivo?: string | null;
 };
 
 /**
@@ -875,6 +878,45 @@ export type Database = {
         Returns: { action: string; points: number; label: string; updated_at: string }[];
       };
       casas_admin_regla: { Args: { p_action: string; p_points: number }; Returns: undefined };
+      /** Pantalla de Usuarios (0068). Solo admins: lo exige match_admin_require(). */
+      admin_usuarios: {
+        Args: { p_busqueda?: string | null };
+        Returns: {
+          user_id: string;
+          nombre: string;
+          email: string | null;
+          rol: string;
+          house: string | null;
+          rutas: number;
+          alta: string;
+          ultima_entrada: string | null;
+        }[];
+      };
+      admin_usuario: {
+        Args: { p_user_id: string };
+        Returns: Database['public']['Functions']['admin_usuarios']['Returns'];
+      };
+      admin_usuario_sellos: {
+        Args: { p_user_id: string };
+        Returns: {
+          route_id: string;
+          ruta: string;
+          route_bar_id: string;
+          bar: string;
+          orden: number;
+          opens_at: string;
+          closes_at: string;
+          sellado_at: string | null;
+          sellado_por: string | null;
+          sellado_motivo: string | null;
+        }[];
+      };
+      admin_sellar: { Args: { p_user_id: string; p_route_bar_id: string; p_motivo: string }; Returns: StampRow };
+      admin_borrar_cuenta: { Args: { p_user_id: string; p_motivo: string }; Returns: undefined };
+      admin_cuentas_borradas_lista: {
+        Args: Record<string, never>;
+        Returns: { nombre: string; motivo: string; por: string | null; el: string }[];
+      };
       casas_admin_personas: {
         Args: { p_busqueda?: string | null };
         Returns: { user_id: string; nombre: string; house: string | null; puntos: number; rutas: number }[];
