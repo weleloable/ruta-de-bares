@@ -55,7 +55,15 @@ jobs:
         env:
           # Solo aqui: app.config.ts pone experiments.baseUrl a partir de esto.
           WEB_BASE_URL: /ruta-de-bares
+          # El commit, incrustado en el bundle: la app lo compara con version.json
+          # para saber si hay una version nueva (src/lib/versionApp.ts).
+          EXPO_PUBLIC_APP_VERSION: ${{ github.sha }}
         run: npx expo export --platform web --output-dir dist
+
+      - name: version.json
+        # La version publicada. Mismo commit que el de arriba: si no coincidieran,
+        # la app creeria siempre que hay una nueva (y los admins verian la barra).
+        run: printf '{"version":"%s"}' "$GITHUB_SHA" > dist/version.json
 
       - name: Fallback SPA y .nojekyll
         run: |

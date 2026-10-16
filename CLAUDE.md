@@ -512,6 +512,19 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 - **PWA: el service worker (`public/sw.js`) NO cachea la app**, solo una pagina
   de "sin conexion": cachear HTML/JS deja a la gente en la version vieja tras
   cada despliegue. Subir `VERSION` al cambiarlo.
+- **Version nueva con la app ABIERTA** (`lib/versionApp.ts`,
+  `features/version/VersionNueva.web.tsx`): abrir la app siempre carga la
+  ultima, pero una PWA se queda dias en segundo plano con el JS viejo en
+  memoria. El workflow incrusta el commit (`EXPO_PUBLIC_APP_VERSION`) y publica
+  `version.json` con el MISMO (`tests/deploy-web.test.ts`). Los ADMINS ven una
+  barra "Hay una versión nueva · Actualizar"; el resto NO ve nada (lo pidio el
+  usuario): la app se recarga sola al volver tras >= 1 min en segundo plano,
+  nunca con la app delante ni con una partida en marcha (`useBloqueoRecarga`
+  en `MenuMinijuegos`). Un `version.json` raro es "no se sabe", nunca
+  "recarga", o la app entraria en bucle. Probado en Chrome headless contra un
+  export (recarga, no recarga, fichero roto); la barra de admin solo con tests.
+  En nativo no hace nada. Las apps abiertas ANTES de este cambio no lo tienen:
+  lo cogen la proxima vez que se abran en frio.
 - **"Instalar App" sale tambien donde el navegador no da `beforeinstallprompt`**
   (`src/lib/guiaInstalar.ts`, `profile/GuiaInstalarModal.tsx`): Safari de iPhone
   no lo dispara NUNCA y tampoco el navegador interno de WhatsApp/Instagram (justo

@@ -10,6 +10,7 @@ import { AvisosCanaProvider } from '../src/features/match/AvisosCana';
 import { NotificacionesProvider } from '../src/features/notificaciones/Notificaciones';
 import { MiCasaProvider } from '../src/features/casas/MiCasa';
 import { ActiveRouteProvider } from '../src/features/routes/ActiveRouteProvider';
+import { VersionNueva } from '../src/features/version/VersionNueva';
 import { iniciarPwa } from '../src/lib/pwa';
 import { iniciarInstalarApp } from '../src/lib/pwaInstalar';
 import { colors, fonts } from '../src/lib/theme';
@@ -123,6 +124,9 @@ export default function RootLayout() {
             <MiCasaProvider>
               <StatusBar style="dark" />
               <AuthGate />
+              {/* Despues del Stack para pintarse encima: barra de version nueva
+                  (solo admins) y recarga silenciosa para el resto. Solo web. */}
+              <VersionNueva />
             </MiCasaProvider>
           </NotificacionesProvider>
         </AvisosCanaProvider>
