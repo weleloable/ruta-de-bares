@@ -115,3 +115,13 @@ test('app.config: rechaza un WEB_BASE_URL sin barra inicial o con barra final', 
     await assert.rejects(cargarConfig(malo), /WEB_BASE_URL invalido/, malo);
   }
 });
+
+test('workflow: version.json y el bundle llevan el MISMO commit (aviso de version nueva)', () => {
+  // Si no coincidieran, la app creeria siempre que hay version nueva.
+  assert.match(codigo, /EXPO_PUBLIC_APP_VERSION: \$\{\{ github\.sha \}\}/);
+  assert.match(codigo, /printf '\{"version":"%s"\}' "\$GITHUB_SHA" > dist\/version\.json/);
+  const exportar = codigo.indexOf('npx expo export');
+  assert.ok(codigo.indexOf('EXPO_PUBLIC_APP_VERSION') < exportar, 'la variable tiene que estar en el paso del export');
+  assert.ok(codigo.indexOf('dist/version.json') > exportar, 'version.json se escribe despues del export (dist se crea ahi)');
+  assert.ok(codigo.indexOf('dist/version.json') < codigo.indexOf('upload-pages-artifact'));
+});

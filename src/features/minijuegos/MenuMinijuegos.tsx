@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Banner, Button, Card, EmptyState, Screen } from '../../components/ui';
+import { useBloqueoRecarga } from '../../lib/bloqueoRecarga';
 import { colors, radius, space, typography } from '../../lib/theme';
 import { feedback } from './feedback';
 import { JUEGOS } from './juegos';
@@ -32,6 +33,10 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
   const [ultimo, setUltimo] = useState<{ resultado: ResultadoJuego; esRecord: boolean } | null>(null);
   // Resultado de guardar en la ruta: null = sin novedad, texto = lo que se le dice a la persona.
   const [guardado, setGuardado] = useState<{ tono: 'success' | 'error'; texto: string } | null>(null);
+
+  // Con una partida en marcha, una version nueva no recarga la app al volver del
+  // segundo plano (lib/versionApp.ts): se perderia la partida.
+  useBloqueoRecarga(activo !== null && vista === 'juego' && ultimo === null);
 
   const abrir = useCallback(async (juego: JuegoDef, v: Vista = 'juego') => {
     // Se relee el record al abrir: es lo que enseñara la pantalla de resultado.
