@@ -75,7 +75,8 @@ app/                      pantallas (Expo Router)
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
 src/
   features/<dominio>/     reglas + llamadas a datos + componentes por dominio
-                           (auth, routes, stamps, invites, profile, pwa, match, admin, notices)
+                           (auth, routes, stamps, invites, profile, pwa, match, admin, notices,
+                           minijuegos: un juego por carpeta en minijuegos/juegos/, p. ej. la-penul/)
   components/             UI compartida (StampSeal, ui.tsx, Desplegable, RutaMapa,
                            SelectorPosicion con variantes .web.tsx)
   lib/                    cliente Supabase, secure-session-store, tema, fechas,
@@ -148,6 +149,7 @@ supabase/
   migrations/0068_*.sql     pantalla de Usuarios (admins): correo de cada cuenta, sellar a mano (`stamps.sellado_por`) y borrar cuentas (`admin_cuentas_borradas`)
   migrations/0069_*.sql     La Caña Perfecta con 2 decimales (`minigame_scores.best_score` numeric(7,2)) y `admin_meter_en_ruta` (meter a alguien en una ruta)
   migrations/0070_*.sql     Parejas de Barra: el primer juego en el que MENOS es mejor (`minijuego_menos_es_mejor`, tiempo de 4,00 a 600 s)
+  migrations/0071_*.sql     La Penul por ruta: `routes.la_penul_visible` (apagado por defecto; los admins la ven siempre)
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
@@ -277,6 +279,29 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **La Penul: esconderla es una SORPRESA, no un secreto** (0071,
+  `minijuegos/visibilidad.ts`, `juegos/la-penul/`). Historia interactiva para
+  adultos (en la ruta solo hay mayores de edad). Los admins la ven siempre (con
+  "Solo admins" si esta apagada); el resto, solo si un admin enciende
+  `routes.la_penul_visible` en el editor; cuando sale, va la primera. El menu
+  relee el interruptor al enfocar la pestana y cada minuto. PERO el texto y las
+  imagenes van en la web publicada: quien mire el JavaScript los encuentra con
+  el interruptor apagado. No protege nada y nadie debe tratarlo como protegido.
+  No hay policy nueva: `routes_write` (0001) ya deja escribir solo a admins y
+  `routes_select` (0004) leer a la gente de la ruta (`tests/migration-0071.test.ts`).
+  El guion es DATOS (`guion.ts`) y el motor es puro (`motor.ts`, genero al azar
+  con semilla, `{o|a}` para las concordancias). `guion.test.ts` recorre TODAS las
+  partidas con los dos generos: sin callejones, todo camino termina (volver a la
+  barra cuesta una ronda; tras 3, cierra), cada personaje tiene final bueno y
+  malo, y ninguna opcion marcada `'presiona'` (insistir, agobiar, mentir,
+  emborrachar) llega a un final bueno; ademas, la propuesta de irse la hace
+  siempre la otra persona. Sin nota ni ranking (`resultadoPropio`, nada en SQL).
+  Imagenes: los ORIGINALES y sus licencias en `assets/ultima-ronda/` (CREDITOS.md;
+  los fondos son CC BY 3.0 y se citan en la pantalla de Creditos); lo que pinta
+  la app lo genera `scripts/generar-la-penul.py` en `assets/la-penul/` (fondos
+  recortados a 3:4, bustos con borde crema de pegatina: sin el, la linea negra se
+  pierde en los fondos oscuros). 613 KB en total.
 
 - **El SENTIDO de la nota: en Parejas de Barra gana quien MENOS tarda** (0070,
   `minijuegos/nota.ts`). Es lo primero que se rompe al anadir el siguiente juego:

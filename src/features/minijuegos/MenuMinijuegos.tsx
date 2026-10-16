@@ -13,6 +13,7 @@ import { formatearNota } from './nota';
 import { cargarRecords, registrarPuntuacion } from './records';
 import type { Records } from './recordsReglas';
 import type { JuegoDef, ResultadoJuego } from './tipos';
+import { juegosDelMenu } from './visibilidad';
 
 type Vista = 'juego' | 'ranking' | 'cervezas';
 
@@ -26,7 +27,19 @@ type Vista = 'juego' | 'ranking' | 'cervezas';
  * Sin ella (pruebas en local, sin cuenta) todo sigue funcionando pero solo con
  * el record de este dispositivo.
  */
-export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; nombreRuta?: string }) {
+export function MenuMinijuegos({
+  rutaId,
+  nombreRuta,
+  esAdmin = false,
+  penulVisible = false,
+}: {
+  rutaId: string | null;
+  nombreRuta?: string;
+  /** Quien mira y si la ruta tiene La Penul encendida: deciden si sale y donde (visibilidad.ts). */
+  esAdmin?: boolean;
+  penulVisible?: boolean;
+}) {
+  const lista = juegosDelMenu(JUEGOS, { esAdmin, penulVisible });
   const [records, setRecords] = useState<Records>({});
   const [activo, setActivo] = useState<JuegoDef | null>(null);
   const [vista, setVista] = useState<Vista>('juego');
@@ -161,10 +174,10 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
       <Text style={typography.muted}>
         {nombreRuta ? `Partidas cortas para el rato entre bar y bar. Ruta: ${nombreRuta}.` : 'Partidas cortas para el rato entre bar y bar.'}
       </Text>
-      {JUEGOS.length === 0 ? (
+      {lista.length === 0 ? (
         <EmptyState title="Muy pronto" body="Estamos sirviendo los primeros juegos." />
       ) : (
-        JUEGOS.map((juego) => (
+        lista.map(({ juego, soloAdmins }) => (
           <View key={juego.id} style={styles.juego}>
             <Pressable
               accessibilityRole="button"
@@ -178,6 +191,10 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
                 </View>
                 <View style={styles.textos}>
                   <Text style={typography.cardTitle}>{juego.titulo}</Text>
+                  {soloAdmins ? (
+                    // Para que el admin sepa que el resto de la ruta no lo ve todavia (se enciende en el editor).
+                    <Text style={styles.soloAdmins}>Solo admins</Text>
+                  ) : null}
                   <Text style={typography.muted}>{juego.descripcion}</Text>
                   {records[juego.id] !== undefined ? (
                     <Text style={styles.record}>Récord: {formatearNota(juego.id, records[juego.id])}</Text>
@@ -222,4 +239,15 @@ const styles = StyleSheet.create({
   },
   textos: { flex: 1, gap: 2 },
   record: { fontSize: 13, fontWeight: '700', color: colors.beerDark },
+  soloAdmins: {
+    alignSelf: 'flex-start',
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.white,
+    backgroundColor: colors.stamp,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.sm,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
 });

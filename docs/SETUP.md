@@ -416,6 +416,13 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    Los demas juegos no cambian. Se puede pegar dos veces. Si la app nueva llega
    antes, Parejas se juega igual, pero guardar en la ruta da INVALID_GAME y el
    record se queda en el movil.
+66. [`supabase/migrations/0071_la_penul_visible.sql`](../supabase/migrations/0071_la_penul_visible.sql)
+   y **Run**, despues de la 0070 y **ANTES de desplegar la app**. Anade
+   `routes.la_penul_visible` (apagado por defecto): el interruptor del editor que
+   ensena La Penul, la historia para adultos, a toda la gente de la ruta. Los
+   admins la ven siempre. No toca funciones ni policies. Se puede pegar dos veces.
+   Si la app nueva llega antes, el editor no puede guardar el interruptor (la
+   columna no existe) y la gente normal no la ve; los admins si.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

@@ -32,8 +32,15 @@
  *      scroll y sin nada encima; y el tiempo con el que se para el reloj es el
  *      que sale en la tarjeta de fin, que es el que se envia (ver `recorrerParejas`).
  *
+ *   9. La Penul: quien la ve (una persona normal con el interruptor apagado NO;
+ *      encendido, si y la PRIMERA; un admin siempre, la primera y con "Solo
+ *      admins" si esta apagado) y una partida hasta un final bueno en las tres
+ *      alturas, sin scroll ni botones fuera o tapados en ninguna pantalla (ver
+ *      `recorrerPenul`).
+ *
  * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_QUIZ=1` deja solo el quiz;
- * `SOLO_TAPON=1`, solo Tapon al Vuelo; `SOLO_PAREJAS=1`, solo Parejas de Barra. `CAPTURAS=<carpeta>` guarda capturas de
+ * `SOLO_TAPON=1`, solo Tapon al Vuelo; `SOLO_PAREJAS=1`, solo Parejas de Barra;
+ * `SOLO_PENUL=1`, solo La Penul. `CAPTURAS=<carpeta>` guarda capturas de
  * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -56,13 +63,14 @@ const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PANTALLA = join(raiz, 'app', '(auth)', 'verificar-juego.tsx');
 
 /** Que juegos se recorren (ver SOLO_* en la cabecera). */
-const { SOLO_CANA, SOLO_QUIZ, SOLO_TAPON, SOLO_PAREJAS } = process.env;
+const { SOLO_CANA, SOLO_QUIZ, SOLO_TAPON, SOLO_PAREJAS, SOLO_PENUL } = process.env;
 const HACER = {
-  maestro: !(SOLO_CANA || SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS),
-  cana: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS),
-  tapon: !(SOLO_QUIZ || SOLO_PAREJAS),
-  quiz: !(SOLO_TAPON || SOLO_PAREJAS),
-  parejas: !(SOLO_QUIZ || SOLO_TAPON),
+  maestro: !(SOLO_CANA || SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
+  cana: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
+  tapon: !(SOLO_QUIZ || SOLO_PAREJAS || SOLO_PENUL),
+  quiz: !(SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
+  parejas: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PENUL),
+  penul: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS),
 };
 
 /** Alturas de ventana (con barra y pestanas incluidas) y ancho de movil a probar. */
@@ -115,11 +123,12 @@ function QuizPeor({ ancho, alto }: { ancho: number; alto: number }) {
 
 // 56 px de barra de arriba y 64 de pestanas: lo que la app real le quita a la pantalla del juego.
 export default function VerificarJuego() {
-  const p = useLocalSearchParams<{ quiz?: string; ancho?: string; alto?: string }>();
+  const p = useLocalSearchParams<{ quiz?: string; ancho?: string; alto?: string; admin?: string; penul?: string }>();
   if (p.quiz === 'peor') return <QuizPeor ancho={Number(p.ancho)} alto={Number(p.alto)} />;
   return (
     <View style={{ flex: 1, paddingTop: 56, paddingBottom: 64, backgroundColor: '#F7F1E6' }}>
-      <MenuMinijuegos rutaId={null} nombreRuta="Prueba" />
+      {/* ?admin=1 y ?penul=1: quien mira y el interruptor de La Penul de la ruta (visibilidad.ts). */}
+      <MenuMinijuegos rutaId={null} nombreRuta="Prueba" esAdmin={p.admin === '1'} penulVisible={p.penul === '1'} />
     </View>
   );
 }
@@ -718,6 +727,164 @@ async function recorrerTapon(chrome, perfil, url, tamano, { horizontal }) {
   }
 }
 
+/** Los juegos del menu, en orden, y si llevan la etiqueta "Solo admins". */
+const leerMenu = `(() => [...document.querySelectorAll('[aria-label^="Jugar a "]')].map((b) => ({
+  titulo: b.getAttribute('aria-label').slice(8),
+  soloAdmins: (b.innerText || '').includes('Solo admins'),
+})))()`;
+
+/**
+ * Una pantalla de La Penul: si hay scroll, y cada boton visible si cabe entero
+ * en la ventana y no tiene nada encima (lo que hay en su centro es suyo).
+ */
+const medirPenul = `(() => {
+  const botones = [...document.querySelectorAll('[role="button"]')].filter((b) => b.getBoundingClientRect().width > 0);
+  let sc = 0;
+  for (const e of document.querySelectorAll('body *')) {
+    if (e.scrollHeight > e.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) sc = Math.max(sc, e.scrollHeight - e.clientHeight);
+  }
+  return {
+    scroll: Math.max(sc, document.scrollingElement.scrollHeight - innerHeight),
+    botones: botones.map((b) => {
+      const r = b.getBoundingClientRect();
+      const arriba = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return {
+        label: (b.getAttribute('aria-label') || b.innerText || '').slice(0, 40),
+        dentro: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 0.5 && r.right <= innerWidth + 0.5,
+        libre: !!arriba && b.contains(arriba),
+      };
+    }),
+  };
+})()`;
+
+/**
+ * La Penul. Primero QUIEN la ve (con ?admin=1 / ?penul=1 en la pantalla de
+ * prueba); luego una partida entera hasta el final bueno de Lola, midiendo cada
+ * pantalla. El genero sale al azar: el camino elige por textos que no cambian.
+ */
+async function recorrerPenul(chrome, perfil, url, tamano) {
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  const pantallas = [];
+  const medir = async (nombre) => {
+    await esperar(250);
+    const m = await c.ev(medirPenul);
+    pantallas.push({ nombre, ...m });
+    await c.foto(`penul-${String(pantallas.length).padStart(2, '0')}-${nombre}`);
+  };
+  const menu = async (query) => {
+    await c.ir(`${url}?${query}`);
+    let m = [];
+    for (let i = 0; i < 60 && m.length === 0; i++) {
+      await esperar(250);
+      m = await c.ev(leerMenu);
+    }
+    return m;
+  };
+  /** Pasa paginas con "Seguir" hasta que haya otra cosa que elegir. */
+  const leerTodo = async () => {
+    for (let i = 0; i < 12; i++) {
+      const hay = await c.ev(`!!document.querySelector('[aria-label="Seguir"]')`);
+      if (!hay) return;
+      await c.clic('Seguir');
+      await esperar(150);
+    }
+  };
+  try {
+    await c.navegar({ movil: true });
+    const vis = {
+      normalApagado: await menu('penul=0'),
+      normalEncendido: await menu('penul=1'),
+      adminApagado: await menu('admin=1&penul=0'),
+      adminEncendido: await menu('admin=1&penul=1'),
+    };
+
+    // Partida (como admin, que la ve siempre).
+    await menu('admin=1');
+    await c.clic('Jugar a La Penul');
+    if (!(await c.hasta('Empezar la noche', { limite: 15000 }))) throw new Error('no sale la portada');
+    await medir('portada');
+    await c.clic('Créditos');
+    await esperar(300);
+    const creditos = await c.texto();
+    await medir('creditos');
+    await c.clic('Volver');
+    await c.clic('Empezar la noche');
+    await esperar(300);
+    await medir('genero');
+    const genero = (await c.texto()).includes('eres un hombre') ? 'h' : 'm';
+    await esperar(700);
+    await c.clic('Entrar al bar');
+    await esperar(300);
+    await leerTodo();
+    await medir('puerta');
+    await esperar(700);
+    await c.clic('A beber');
+    await esperar(300);
+    await leerTodo();
+    await medir('barra');
+    await esperar(700);
+    await c.clic('Lola');
+    for (const [nombre, opcion] of [
+      ['lola-1', 'Vengo a preguntarte'],
+      ['lola-2', 'Dame una moneda'],
+      ['lola-3', 'Mover la cabeza'],
+      ['lola-4', '¿Y qué me vas a dejar'],
+    ]) {
+      await esperar(300);
+      await leerTodo();
+      await medir(nombre);
+      await esperar(700);
+      await c.clic(opcion);
+    }
+    await esperar(300);
+    await leerTodo();
+    await medir('lola-bueno');
+    await c.clic('Ver el final');
+    if (!(await c.hasta('LOLA Y EL ESTRIBILLO', { limite: 8000 }))) throw new Error('no sale la portada del final');
+    await esperar(400);
+    await medir('final');
+    const textoFinal = await c.texto();
+
+    // El fallo que cazo el critico: "Seguir" y la ultima opcion caen en el mismo
+    // sitio, y un doble toque rapido para pasar el texto elegia, sin leerla, la
+    // opcion de abajo (la de presionar). Con Vane: dos paginas y, abajo del todo
+    // en la siguiente pantalla, "Sonrie, guapa". Dos toques seguidos en "Seguir".
+    // El final tambien lleva candado: un toque recien aparecida la portada no cuenta.
+    await esperar(700);
+    await c.clic('Volver a jugar');
+    await esperar(700);
+    await c.clic('Entrar al bar');
+    await esperar(300);
+    await leerTodo();
+    await esperar(700);
+    await c.clic('A beber');
+    await esperar(300);
+    await leerTodo();
+    await esperar(700);
+    await c.clic('Vane');
+    await esperar(400);
+    const donde = await c.ev(`(() => { const b = document.querySelector('[aria-label="Seguir"]'); if (!b) return null; const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+    if (!donde) throw new Error('no hay "Seguir" en la primera pagina de Vane');
+    for (let i = 0; i < 2; i++) {
+      await c.dedos('touchStart', [{ x: donde[0], y: donde[1], id: 1 }]);
+      await esperar(40);
+      await c.dedos('touchEnd', []);
+      await esperar(90);
+    }
+    await esperar(1200);
+    const trasDobleToque = await c.texto();
+    const dobleToque = {
+      // Sigue en vane-1, con sus opciones a la vista, y no se ha elegido ninguna.
+      sinElegir: /¿Vienes a bailar o a mirar\?/.test(trasDobleToque) && !/se recoloca las gafas|ni en tus sueños/.test(trasDobleToque),
+      opcionesAVista: /Sonríe, guapa/.test(trasDobleToque),
+    };
+    return { vis, pantallas, creditos, genero, textoFinal, dobleToque };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
 /** Estado del tablero de Parejas: por carta, su centro, si se ve entera, si algo la tapa y lo que dice. */
 const leerTablero = `(() => {
   const cartas = [...document.querySelectorAll('[data-testid^="carta-"]')]
@@ -989,6 +1156,41 @@ async function main() {
         if (!ok) fallos += 1;
       }
     }
+    if (HACER.penul) {
+      const solo = process.argv[2] ? Number(process.argv[2]) : null;
+      for (const tamano of TAMANOS.filter((t) => solo === null || t.alto === solo)) {
+        console.log(`\n${tamano.nombre} (${tamano.ancho}x${tamano.alto}): La Penul, quién la ve y una partida hasta el final bueno...`);
+        let r;
+        try {
+          r = await recorrerPenul(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
+        } catch (e) {
+          console.log(`FALLA  no se pudo jugar a La Penul: ${e.message}`);
+          fallos += 1;
+          continue;
+        }
+        const malas = r.pantallas.flatMap((p) => [
+          ...(p.scroll > 0 ? [`${p.nombre}: scroll de ${p.scroll}px`] : []),
+          ...p.botones.filter((b) => !b.dentro || !b.libre).map((b) => `${p.nombre}: "${b.label}" ${!b.dentro ? 'fuera de la pantalla' : 'tapado'}`),
+        ]);
+        console.log(JSON.stringify({ genero: r.genero, pantallas: r.pantallas.length, malas }));
+        const primero = (m) => m[0]?.titulo;
+        for (const [nombre, ok] of [
+          ['penul: persona normal, interruptor apagado: NO sale', !r.vis.normalApagado.some((j) => j.titulo === 'La Penul') && r.vis.normalApagado.length > 0],
+          ['penul: persona normal, interruptor encendido: sale la PRIMERA y sin etiqueta', primero(r.vis.normalEncendido) === 'La Penul' && !r.vis.normalEncendido[0].soloAdmins],
+          ['penul: admin, interruptor apagado: sale la primera con "Solo admins"', primero(r.vis.adminApagado) === 'La Penul' && r.vis.adminApagado[0].soloAdmins],
+          ['penul: admin, interruptor encendido: la primera, sin etiqueta', primero(r.vis.adminEncendido) === 'La Penul' && !r.vis.adminEncendido[0].soloAdmins],
+          ['penul: los creditos citan los fondos (CC BY 3.0) y Open Peeps', /CC BY 3\.0/.test(r.creditos) && /Open Peeps/.test(r.creditos)],
+          [`penul: ${r.pantallas.length} pantallas sin scroll ni botones fuera o tapados`, malas.length === 0 && r.pantallas.length >= 10],
+          ['penul: llega al final bueno, con su titular y "Volver a jugar"', /LOLA Y EL ESTRIBILLO/.test(r.textoFinal) && /Volver a jugar/.test(r.textoFinal)],
+          ['penul: un doble toque rapido en "Seguir" NO elige la opcion que aparece debajo', r.dobleToque.sinElegir && r.dobleToque.opcionesAVista],
+        ]) {
+          console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+          if (!ok) fallos += 1;
+        }
+        for (const m of malas) console.log(`       ${m}`);
+      }
+    }
+
     if (HACER.parejas) {
       const solo = process.argv[2] ? Number(process.argv[2]) : null;
       for (const tamano of TAMANOS_PAREJAS.filter((t) => solo === null || t.alto === solo)) {

@@ -40,7 +40,7 @@ export type JuegoDef = {
   titulo: string;
   /** Una linea: se lee de pasada en un bar. */
   descripcion: string;
-  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'help-circle' | 'locate';
+  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'help-circle' | 'locate' | 'flame';
   Componente: ComponentType<PropsJuego>;
   /**
    * Se juega a pantalla completa, sin la cabecera del menu ni las pestanas
@@ -74,4 +74,10 @@ export type JuegoDef = {
   RankingPropio?: ComponentType<{ rutaId: string }>;
   /** Tiene lista de cervezas de la ruta. */
   cervezas?: boolean;
+  /**
+   * Quien lo ve (visibilidad.ts). 'la-penul': los admins siempre; el resto, solo
+   * si la ruta lo tiene encendido (0071). Cuando sale, va el primero. Es una
+   * SORPRESA, no un secreto: el contenido va en la web publicada igualmente.
+   */
+  visibilidad?: 'la-penul';
 };

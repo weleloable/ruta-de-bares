@@ -14,6 +14,7 @@ import {
 } from '../../../src/features/routes/api';
 import { EditorRetos } from '../../../src/features/casas/EditorRetos';
 import { AjustesCana } from '../../../src/features/routes/AjustesCana';
+import { AjustesLaPenul } from '../../../src/features/routes/AjustesLaPenul';
 import { AjustesSorteo } from '../../../src/features/sorteo/AjustesSorteo';
 import { BarLogo } from '../../../src/features/routes/BarLogo';
 import { infoTipo, numeroDeBar, tipoDe } from '../../../src/features/routes/tipoParada';
@@ -41,6 +42,7 @@ export default function EditorDeRuta() {
   const [borrando, setBorrando] = useState<RouteBarRow | null>(null);
   const [borrandoEnCurso, setBorrandoEnCurso] = useState(false);
   const [guardandoCana, setGuardandoCana] = useState(false);
+  const [guardandoPenul, setGuardandoPenul] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!routeId) return;
@@ -139,6 +141,24 @@ export default function EditorDeRuta() {
     }
   }
 
+  async function onAjustarPenul(cambio: Pick<RouteRow, 'la_penul_visible'>) {
+    if (!ruta) return;
+    const previa = ruta;
+    // Optimista, como La Caña: la casilla cambia al tocar y se deshace si el servidor dice que no.
+    setRuta({ ...ruta, ...cambio });
+    setGuardandoPenul(true);
+    setError(null);
+    try {
+      setRuta(await updateRoute(ruta.id, cambio));
+      await refrescarRutaActiva();
+    } catch (e) {
+      setRuta(previa);
+      setError(e instanceof Error ? e.message : 'No se pudo guardar el ajuste de La Penul.');
+    } finally {
+      setGuardandoPenul(false);
+    }
+  }
+
   async function onAjustarCana(cambio: Partial<Pick<RouteRow, 'cana_horas_antes' | 'cana_radio_km'>>) {
     if (!ruta) return;
     const previa = ruta;
@@ -197,6 +217,8 @@ export default function EditorDeRuta() {
         </Card>
 
         <AjustesCana ruta={ruta} ocupado={guardandoCana} onCambiar={onAjustarCana} />
+
+        <AjustesLaPenul ruta={ruta} ocupado={guardandoPenul} onCambiar={onAjustarPenul} />
 
         <AjustesSorteo ruta={ruta} />
 
