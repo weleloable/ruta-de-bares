@@ -26,10 +26,14 @@
  *      y al revelar, con los textos MAS LARGOS del banco (ver `recorrerQuiz`);
  *   7. Tapon al Vuelo con tactil emulado, con el movil en horizontal y en
  *      vertical (juego tumbado): sin scroll, un toque no gasta el tiro y un
- *      arrastre de verdad lanza la chapa (ver `recorrerTapon`).
+ *      arrastre de verdad lanza la chapa (ver `recorrerTapon`);
+ *   8. Parejas de Barra: una partida ENTERA con el tactil emulado, en las tres
+ *      alturas y a 360 px de ancho. Las 16 cartas dentro de la pantalla, sin
+ *      scroll y sin nada encima; y el tiempo con el que se para el reloj es el
+ *      que sale en la tarjeta de fin, que es el que se envia (ver `recorrerParejas`).
  *
  * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_QUIZ=1` deja solo el quiz;
- * `SOLO_TAPON=1`, solo Tapon al Vuelo. `CAPTURAS=<carpeta>` guarda capturas de
+ * `SOLO_TAPON=1`, solo Tapon al Vuelo; `SOLO_PAREJAS=1`, solo Parejas de Barra. `CAPTURAS=<carpeta>` guarda capturas de
  * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -52,11 +56,13 @@ const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PANTALLA = join(raiz, 'app', '(auth)', 'verificar-juego.tsx');
 
 /** Que juegos se recorren (ver SOLO_* en la cabecera). */
+const { SOLO_CANA, SOLO_QUIZ, SOLO_TAPON, SOLO_PAREJAS } = process.env;
 const HACER = {
-  maestro: !(process.env.SOLO_CANA || process.env.SOLO_QUIZ || process.env.SOLO_TAPON),
-  cana: !(process.env.SOLO_QUIZ || process.env.SOLO_TAPON),
-  tapon: !process.env.SOLO_QUIZ,
-  quiz: !process.env.SOLO_TAPON,
+  maestro: !(SOLO_CANA || SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS),
+  cana: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS),
+  tapon: !(SOLO_QUIZ || SOLO_PAREJAS),
+  quiz: !(SOLO_TAPON || SOLO_PAREJAS),
+  parejas: !(SOLO_QUIZ || SOLO_TAPON),
 };
 
 /** Alturas de ventana (con barra y pestanas incluidas) y ancho de movil a probar. */
@@ -65,6 +71,8 @@ const TAMANOS = [
   { ancho: 400, alto: 808, nombre: 'movil normal' },
   { ancho: 412, alto: 915, nombre: 'movil alto' },
 ];
+/** Parejas se prueba ademas en el movil mas estrecho que se espera (360 de ancho). */
+const TAMANOS_PAREJAS = [...TAMANOS, { ancho: 360, alto: 740, nombre: 'movil estrecho' }];
 
 const CODIGO_PANTALLA = `// GENERADO por scripts/verificar-juego-web.mjs. Se borra solo. No commitear.
 import { useLocalSearchParams } from 'expo-router';
@@ -710,6 +718,126 @@ async function recorrerTapon(chrome, perfil, url, tamano, { horizontal }) {
   }
 }
 
+/** Estado del tablero de Parejas: por carta, su centro, si se ve entera, si algo la tapa y lo que dice. */
+const leerTablero = `(() => {
+  const cartas = [...document.querySelectorAll('[data-testid^="carta-"]')]
+    .sort((a, b) => Number(a.dataset.testid.slice(6)) - Number(b.dataset.testid.slice(6)));
+  const tab = document.querySelector('[data-testid="tablero-parejas"]');
+  let sc = null;
+  for (let e = tab; e && !sc; e = e.parentElement) {
+    if (e.scrollHeight > e.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) sc = e;
+  }
+  return {
+    scroll: sc ? sc.scrollHeight - sc.clientHeight : 0,
+    paginaScroll: document.scrollingElement.scrollHeight - innerHeight,
+    reloj: (document.querySelector('[data-testid="reloj-parejas"]') || {}).innerText || null,
+    cartas: cartas.map((c) => {
+      const r = c.getBoundingClientRect();
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const arriba = document.elementFromPoint(x, y);
+      return {
+        x, y, lado: Math.round(r.width),
+        dentro: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth,
+        libre: !!arriba && c.contains(arriba),
+        label: c.getAttribute('aria-label') || '',
+      };
+    }),
+  };
+})()`;
+
+/**
+ * Parejas de Barra: una partida entera, con el dedo (tactil emulado) y con
+ * MEMORIA, como jugaria una persona: recuerda lo que ha visto y va a por la
+ * pareja en cuanto la conoce. Lo que es cada carta se lee de su aria-label, lo
+ * mismo que oiria alguien con lector de pantalla (no hace trampa).
+ */
+async function recorrerParejas(chrome, perfil, url, tamano) {
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  const simbolo = (label) => (/boca abajo/.test(label) ? null : label.replace(/^Carta \d+, /, '').replace(/, emparejada$/, ''));
+  try {
+    await c.navegar({ movil: true });
+    await c.clic('Jugar a Parejas de Barra', 80);
+    let t = null;
+    for (let i = 0; i < 100 && !(t && t.cartas.length === 16 && t.cartas[0].lado > 0); i++) {
+      await esperar(200);
+      t = await c.ev(leerTablero);
+    }
+    if (!t || t.cartas.length !== 16) throw new Error('no sale el tablero');
+    const inicio = t;
+    await c.foto('parejas-inicio');
+    const tocarCarta = async (i) => {
+      const { x, y } = (await c.ev(leerTablero)).cartas[i];
+      await c.dedos('touchStart', [{ x, y, id: 1 }]);
+      await esperar(30);
+      await c.dedos('touchEnd', []);
+    };
+    // Espera a que la carta i ensene su cara y devuelve lo que es.
+    const verCarta = async (i) => {
+      for (let k = 0; k < 60; k++) {
+        const s = simbolo((await c.ev(leerTablero)).cartas[i].label);
+        if (s) return s;
+        await esperar(50);
+      }
+      throw new Error(`la carta ${i} no se da la vuelta`);
+    };
+    // Tras un fallo, espera a que se tapen (mientras se ven, los toques no valen).
+    const tapadasYa = async () => {
+      for (let k = 0; k < 80; k++) {
+        const vistas = (await c.ev(leerTablero)).cartas.filter((x) => simbolo(x.label) && !/emparejada/.test(x.label));
+        if (vistas.length === 0) return;
+        await esperar(50);
+      }
+    };
+    const vistos = new Map(); // indice -> simbolo
+    let medio = null;
+    for (let jugada = 0; jugada < 40; jugada++) {
+      const tab = await c.ev(leerTablero);
+      const pend = tab.cartas.map((_, i) => i).filter((i) => !/emparejada/.test(tab.cartas[i].label));
+      if (pend.length === 0) break;
+      const conocida = pend.find((i) => vistos.has(i) && pend.some((j) => j !== i && vistos.get(j) === vistos.get(i)));
+      if (conocida !== undefined) {
+        const b = pend.find((j) => j !== conocida && vistos.get(j) === vistos.get(conocida));
+        await tocarCarta(conocida);
+        await verCarta(conocida);
+        // Espera a que acabe el giro: un toque antes no vale (y esta bien que no valga).
+        await esperar(300);
+        await tocarCarta(b);
+        await verCarta(b);
+      } else {
+        const a = pend.find((i) => !vistos.has(i));
+        await tocarCarta(a);
+        vistos.set(a, await verCarta(a));
+        const b = pend.find((j) => j !== a && vistos.get(j) === vistos.get(a)) ?? pend.find((j) => j !== a && !vistos.has(j));
+        await esperar(300);
+        await tocarCarta(b);
+        vistos.set(b, await verCarta(b));
+      }
+      if (jugada === 3) {
+        medio = await c.ev(leerTablero);
+        await c.foto('parejas-medio');
+      }
+      await tapadasYa();
+      await esperar(300);
+    }
+    // El reloj se para con la ultima pareja: lo que marca entonces es la nota.
+    await esperar(150);
+    const final = await c.ev(leerTablero);
+    await c.foto('parejas-fin');
+    if (!(await c.hasta('Fin de la partida|Nuevo récord', { limite: 15000 }))) throw new Error('no sale la tarjeta de fin');
+    await esperar(300);
+    const tarjeta = await c.ev(`(() => {
+      const t = [...document.querySelectorAll('body *')].find((x) => x.children.length === 0 && /^\\d+,\\d\\d s$/.test((x.innerText || '').trim()));
+      return t ? t.innerText.trim() : null;
+    })()`);
+    const textoFin = await c.texto();
+    await c.foto('parejas-tarjeta');
+    return { inicio, medio, final, tarjeta, textoFin };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
 async function main() {
   const chrome = buscarChrome();
   if (!chrome) {
@@ -859,6 +987,35 @@ async function main() {
       ]) {
         console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
         if (!ok) fallos += 1;
+      }
+    }
+    if (HACER.parejas) {
+      const solo = process.argv[2] ? Number(process.argv[2]) : null;
+      for (const tamano of TAMANOS_PAREJAS.filter((t) => solo === null || t.alto === solo)) {
+        console.log(`\n${tamano.nombre} (${tamano.ancho}x${tamano.alto}): Parejas de Barra, una partida entera...`);
+        let r;
+        try {
+          r = await recorrerParejas(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
+        } catch (e) {
+          console.log(`FALLA  no se pudo jugar a Parejas: ${e.message}`);
+          fallos += 1;
+          continue;
+        }
+        const todas = (t, f) => !!t && t.cartas.length === 16 && t.cartas.every(f);
+        console.log(JSON.stringify({ lado: r.inicio.cartas[0].lado, scroll: [r.inicio.scroll, r.medio?.scroll, r.final.scroll], reloj: r.final.reloj, tarjeta: r.tarjeta }));
+        for (const [nombre, ok] of [
+          ['parejas: 16 cartas, todas dentro de la pantalla', todas(r.inicio, (x) => x.dentro)],
+          ['parejas: ninguna carta tapada por otra cosa', todas(r.inicio, (x) => x.libre)],
+          ['parejas: sin scroll al empezar, a mitad y al terminar', [r.inicio, r.medio, r.final].every((t) => t && t.scroll === 0 && t.paginaScroll <= 0)],
+          ['parejas: las cartas no son minusculas (>= 56 px)', r.inicio.cartas[0].lado >= 56],
+          ['parejas: el reloj no corre antes del primer toque', r.inicio.reloj === '0,00 s'],
+          ['parejas: termina con las 8 parejas', todas(r.final, (x) => /emparejada/.test(x.label))],
+          ['parejas: el tiempo de la tarjeta (el que se envia) es el que marco el reloj', !!r.tarjeta && r.tarjeta === r.final.reloj],
+          ['parejas: la tarjeta dice intentos y fallos', /\d+ intentos? · \d+ fallos?/.test(r.textoFin)],
+        ]) {
+          console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+          if (!ok) fallos += 1;
+        }
       }
     }
   } finally {

@@ -6,6 +6,9 @@ import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
+import { DetalleParejas } from './juegos/parejas/DetalleParejas';
+import { ID_PAREJAS, notaValida, TIEMPO_MAXIMO } from './juegos/parejas/modelo';
+import { ParejasDeBarra } from './juegos/parejas/ParejasDeBarra';
 import { DetalleTapon } from './juegos/tapon/DetalleTapon';
 import { ID_TAPON, TaponAlVuelo } from './juegos/tapon/TaponAlVuelo';
 import { DetalleQuiz, QuienQuiereSerCervecero } from '../quiz/QuienQuiereSerCervecero';
@@ -93,6 +96,28 @@ export const JUEGOS: readonly JuegoDef[] = [
     Detalle: DetalleTapon,
     ranking: true,
     enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
+  },
+  {
+    // Memoria de 4 x 4 (logica pura en juegos/parejas/modelo.ts). La nota es el TIEMPO y
+    // MENOS es mejor: el primero asi (JUEGOS_MENOS_ES_MEJOR en nota.ts, 0070 en SQL).
+    id: ID_PAREJAS,
+    titulo: 'Parejas de Barra',
+    descripcion: 'Encuentra las 8 parejas lo más rápido que puedas.',
+    icono: 'timer',
+    Componente: ParejasDeBarra,
+    Detalle: DetalleParejas,
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      // El servidor lo rechazaria igual (0070), pero con un mensaje que nadie entiende.
+      if (!notaValida(r.puntuacion)) {
+        throw new Error(
+          r.puntuacion > TIEMPO_MAXIMO
+            ? `más de ${TIEMPO_MAXIMO / 60} minutos no cuenta para la ruta.`
+            : 'ese tiempo no es posible en una partida de verdad.',
+        );
+      }
       await enviarNota(rutaId, r.juego, r.puntuacion);
     },
   },

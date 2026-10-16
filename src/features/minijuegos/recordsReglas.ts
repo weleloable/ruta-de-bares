@@ -35,20 +35,30 @@ export function leerRecords(crudo: string | null): Records {
   }
 }
 
+/** Mas es mejor: lo de casi todos los juegos (y de los records por nivel de ¿Conduces tu?). */
+export const MAS_ES_MEJOR = (nueva: number, anterior: number) => nueva > anterior;
+
 /**
  * Devuelve los records tras una partida y si esta ha sido nuevo record. Un
  * empate NO cuenta: celebrar "nuevo record" por igualar el anterior da igual de
  * ganas de jugar pero es mentira.
+ *
+ * `mejora` es OBLIGATORIO y no tiene valor por defecto a proposito: en Parejas de
+ * Barra gana quien menos tarda, y un "por defecto, mas es mejor" haria que su
+ * record solo cambiase al jugar PEOR, sin dar error. Los minijuegos pasan
+ * `esMejorNota` de nota.ts (aqui no se importa: node --test no resuelve rutas
+ * sin extension). Sin record previo, siempre es record.
  */
 export function aplicarPuntuacion(
   records: Records,
   juego: string,
   puntuacion: number,
+  mejora: (nueva: number, anterior: number) => boolean,
 ): { records: Records; esRecord: boolean } {
   if (!Number.isFinite(puntuacion) || puntuacion < 0) return { records, esRecord: false };
   const anterior = records[juego];
-  if (anterior !== undefined && puntuacion <= anterior) return { records, esRecord: false };
-  // Dos decimales y no un entero: La Caña Perfecta puntua con decimales (nota.ts). Los demas
+  if (anterior !== undefined && !mejora(puntuacion, anterior)) return { records, esRecord: false };
+  // Dos decimales y no un entero: la caña y Parejas de Barra los llevan (nota.ts). Los demas
   // juegos puntuan en enteros, que este redondeo deja como estan.
   return { records: { ...records, [juego]: Math.round(puntuacion * 100) / 100 }, esRecord: true };
 }
