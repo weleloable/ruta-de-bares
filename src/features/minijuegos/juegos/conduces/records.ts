@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { aplicarPuntuacion, leerRecords, type Records } from '../../recordsReglas';
+import { aplicarPuntuacion, leerRecords, MAS_ES_MEJOR, type Records } from '../../recordsReglas';
 
 /**
  * Tu mejor distancia en "¿Conduces tú?", en ESTE movil, por ruta y nivel de
@@ -31,7 +31,7 @@ export async function registrarDistanciaLocal(
 ): Promise<{ esRecord: boolean; anterior: number | null }> {
   const records = await leer();
   const anterior = records[id(rutaId, nivel)] ?? null;
-  const r = aplicarPuntuacion(records, id(rutaId, nivel), Math.round(metros));
+  const r = aplicarPuntuacion(records, id(rutaId, nivel), Math.round(metros), MAS_ES_MEJOR);
   if (r.esRecord) {
     try {
       await AsyncStorage.setItem(CLAVE, JSON.stringify(r.records));

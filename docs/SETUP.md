@@ -403,8 +403,18 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    como envoltorio que rechaza la caña a las apps en cache. Tambien anade
    `admin_meter_en_ruta` (meter a alguien en una ruta desde Usuarios). Rehace
    `minigame_submit_score()` y `minigame_ranking()` de la 0061, que ya **no se
-   vuelven a pegar**. Se puede pegar dos veces. Da igual si va antes o despues de
-   desplegar la app: hasta que se pegue, guardar la caña en la ruta da error y el
+   vuelven a pegar**. Se podia pegar dos veces hasta aplicar la 0070. Da igual si
+   va antes o despues de desplegar la app: hasta que se pegue, guardar la caña en
+   la ruta da error y el record se queda en el movil.
+65. [`supabase/migrations/0070_parejas_de_barra.sql`](../supabase/migrations/0070_parejas_de_barra.sql)
+   y **Run**, despues de la 0069 y **ANTES de desplegar la app**. Mete Parejas de
+   Barra en el ranking por ruta y en el podio de las casas: el primer juego en el
+   que **MENOS es mejor** (la nota es el tiempo, de 4,00 a 600 s con dos
+   decimales). Anade `minijuego_menos_es_mejor()` y rehace `minigame_submit_nota()`
+   y `minigame_ranking()` de la 0069 y `casas_podios()` y
+   `admin_estadisticas_actividad()` de la 0061, que ya **no se vuelven a pegar**.
+   Los demas juegos no cambian. Se puede pegar dos veces. Si la app nueva llega
+   antes, Parejas se juega igual, pero guardar en la ruta da INVALID_GAME y el
    record se queda en el movil.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete

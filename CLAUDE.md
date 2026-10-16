@@ -147,6 +147,7 @@ supabase/
   migrations/0064_*.sql     avisos en el movil: `push_suscripciones`, `push_preferencias`, `push_cola` (pg_cron + pg_net)
   migrations/0068_*.sql     pantalla de Usuarios (admins): correo de cada cuenta, sellar a mano (`stamps.sellado_por`) y borrar cuentas (`admin_cuentas_borradas`)
   migrations/0069_*.sql     La Caña Perfecta con 2 decimales (`minigame_scores.best_score` numeric(7,2)) y `admin_meter_en_ruta` (meter a alguien en una ruta)
+  migrations/0070_*.sql     Parejas de Barra: el primer juego en el que MENOS es mejor (`minijuego_menos_es_mejor`, tiempo de 4,00 a 600 s)
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
@@ -276,6 +277,28 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **El SENTIDO de la nota: en Parejas de Barra gana quien MENOS tarda** (0070,
+  `minijuegos/nota.ts`). Es lo primero que se rompe al anadir el siguiente juego:
+  todo lo anterior daba por hecho que mas es mejor, y un sitio que compare notas
+  por su cuenta hace que gane quien mas tarda, SIN dar error. Hay UN sitio por
+  lado: `JUEGOS_MENOS_ES_MEJOR` + `esMejorNota` en el cliente y
+  `minijuego_menos_es_mejor()` en SQL (`tests/migration-0070.test.ts` compara las
+  dos listas). Lo usan: el record local (`aplicarPuntuacion` recibe la
+  comparacion OBLIGATORIA, sin valor por defecto a proposito), `formatearNota`
+  ("23,47 s"), `minigame_submit_nota` (guarda el menor), `minigame_ranking`
+  (asc), `casas_podios` (los 3 mas rapidos; lo heredan cierre, aportes y
+  estadisticas de casas) y `admin_estadisticas_actividad` (min). La tarjeta de
+  fin pinta "—" sin record (un "0,00 s" seria imposible de batir). Al anadir un
+  juego "menos es mejor": las dos listas y un test en cada sitio con ese juego
+  Y uno de los de siempre. **El tiempo lo manda el movil**: el servidor solo
+  frena con el rango (4,00 s es el minimo fisico: 16 cartas, cada una esperando
+  el giro de 0,25 s de la anterior; `TIEMPO_MINIMO` en `juegos/parejas/modelo.ts`,
+  con test que juega 10.000 partidas). Los dibujos de las cartas los genera
+  `scripts/generar-cartas-parejas.py` (jarra y chapa con las funciones de Tapon,
+  pato y RxB recortados por el aro); los escudos son `escudoSvg`. No se subio
+  `VERSION_POLITICA` por anadir el juego a la politica: la categoria de dato (tu
+  mejor nota en un minijuego) ya estaba y subirla saca el aviso a todo el mundo.
 
 - **La Caña Perfecta puntua con DOS DECIMALES y es mucho mas dificil** (`juegos/cana/modelo.ts`,
   `minijuegos/nota.ts`, 0069): con enteros y mesetas anchas, un jugador bueno sacaba 95 o mas el

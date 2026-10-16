@@ -124,9 +124,18 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
           <ScrollView contentContainerStyle={styles.lista}>
             <Card style={styles.resultado}>
               <Text style={typography.overline}>{ultimo.esRecord ? '¡Nuevo récord!' : 'Fin de la partida'}</Text>
-              <Text style={styles.puntos}>{formatearNota(ultimo.resultado.juego, ultimo.resultado.puntuacion)}</Text>
+              {/* Un tiempo largo ("123,45 s") no cabe a 64 px en un movil de 360 de ancho. */}
+              <Text
+                style={[styles.puntos, formatearNota(ultimo.resultado.juego, ultimo.resultado.puntuacion).length > 6 && styles.puntosLargos]}
+                numberOfLines={1}
+              >
+                {formatearNota(ultimo.resultado.juego, ultimo.resultado.puntuacion)}
+              </Text>
               {activo.Detalle ? <activo.Detalle resultado={ultimo.resultado} /> : null}
-              <Text style={typography.muted}>Tu récord: {formatearNota(activo.id, records[activo.id] ?? 0)}</Text>
+              {/* Sin record, una raya y no "0": en un juego de tiempo, 0,00 s seria un record imposible de batir. */}
+              <Text style={typography.muted}>
+                Tu récord: {records[activo.id] === undefined ? '—' : formatearNota(activo.id, records[activo.id])}
+              </Text>
               {guardado ? <Banner tone={guardado.tono}>{guardado.texto}</Banner> : null}
               <Button title="Otra vez" onPress={() => { setUltimo(null); setGuardado(null); }} />
               {rutaId && activo.ranking ? (
@@ -199,6 +208,7 @@ const styles = StyleSheet.create({
   lista: { gap: space.md, paddingBottom: space.xl },
   resultado: { alignItems: 'center' },
   puntos: { fontSize: 64, fontWeight: '800', color: colors.beerDark },
+  puntosLargos: { fontSize: 44 },
   juego: { gap: space.xs },
   fila: { flexDirection: 'row', alignItems: 'center', minHeight: 88 },
   pulsado: { opacity: 0.85 },

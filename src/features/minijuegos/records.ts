@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { esMejorNota } from './nota';
 import { aplicarPuntuacion, CLAVE_ESCALA_CANA, CLAVE_RECORDS, leerRecords, sinRecordDe, type Records } from './recordsReglas';
 
 /** Records de este dispositivo (AsyncStorage; localStorage en web). Sin red ni cuenta. */
@@ -25,7 +26,9 @@ export async function cargarRecords(): Promise<Records> {
 
 /** Guarda la puntuacion si mejora el record. Devuelve si lo ha sido. */
 export async function registrarPuntuacion(juego: string, puntuacion: number): Promise<boolean> {
-  const { records, esRecord } = aplicarPuntuacion(await cargarRecords(), juego, puntuacion);
+  const { records, esRecord } = aplicarPuntuacion(await cargarRecords(), juego, puntuacion, (nueva, anterior) =>
+    esMejorNota(juego, nueva, anterior),
+  );
   if (!esRecord) return false;
   try {
     await AsyncStorage.setItem(CLAVE_RECORDS, JSON.stringify(records));

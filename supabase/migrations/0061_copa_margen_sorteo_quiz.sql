@@ -7,6 +7,8 @@
 --   * sorteo_estado() la rehace la 0063
 --   * minigame_submit_score() la rehace la 0069
 --   * minigame_ranking() la rehace la 0069
+--   * casas_podios() la rehace la 0070
+--   * admin_estadisticas_actividad() la rehace la 0070
 -- Ojo al reves: rehace funciones de la 0034, 0044, 0045, 0056 y 0060, que ya no
 -- se pueden volver a pegar despues.
 --

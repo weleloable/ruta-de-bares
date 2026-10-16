@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { formatearNota, JUEGOS_CON_DECIMALES, redondearNota } from './nota.ts';
+import { esMejorNota, formatearNota, JUEGOS_CON_DECIMALES, JUEGOS_MENOS_ES_MEJOR, redondearNota } from './nota.ts';
 
 describe('formatearNota', () => {
   it('La Caña Perfecta: dos decimales con coma, siempre', () => {
@@ -37,7 +37,40 @@ describe('redondearNota', () => {
     }
   });
 
-  it('solo la caña lleva decimales', () => {
-    assert.deepEqual([...JUEGOS_CON_DECIMALES], ['cana-perfecta']);
+  it('llevan decimales la caña y Parejas de Barra (el tiempo)', () => {
+    assert.deepEqual([...JUEGOS_CON_DECIMALES].sort(), ['cana-perfecta', 'parejas-de-barra']);
+    assert.equal(redondearNota('parejas-de-barra', 23.4666), 23.47);
+  });
+});
+
+describe('Parejas de Barra: la nota es un tiempo', () => {
+  it('se escribe con dos decimales y "s"', () => {
+    assert.equal(formatearNota('parejas-de-barra', 23.47), '23,47 s');
+    assert.equal(formatearNota('parejas-de-barra', 4), '4,00 s');
+  });
+});
+
+describe('esMejorNota: el sentido de la nota', () => {
+  it('solo Parejas de Barra es "menos es mejor"', () => {
+    assert.deepEqual([...JUEGOS_MENOS_ES_MEJOR], ['parejas-de-barra']);
+  });
+
+  it('Parejas de Barra: mejora si BAJA; empatar o subir, no', () => {
+    assert.equal(esMejorNota('parejas-de-barra', 20.5, 23.47), true);
+    assert.equal(esMejorNota('parejas-de-barra', 23.47, 23.47), false);
+    assert.equal(esMejorNota('parejas-de-barra', 30, 23.47), false);
+  });
+
+  it('los de siempre no cambian: mejora si SUBE', () => {
+    for (const juego of ['cana-perfecta', 'conga-cervecera', 'tapon-al-vuelo', 'quien-quiere-ser-cervecero']) {
+      assert.equal(esMejorNota(juego, 51, 50), true, juego);
+      assert.equal(esMejorNota(juego, 50, 50), false, juego);
+      assert.equal(esMejorNota(juego, 10, 50), false, juego);
+    }
+  });
+
+  it('sin nota anterior, cualquiera es mejor (tambien en los de tiempo)', () => {
+    assert.equal(esMejorNota('parejas-de-barra', 599, undefined), true);
+    assert.equal(esMejorNota('cana-perfecta', 0, undefined), true);
   });
 });

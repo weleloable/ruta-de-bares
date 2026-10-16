@@ -1,8 +1,14 @@
 -- Ruta de Bares - 0069: notas con decimales en La Caña Perfecta y meter a alguien
 -- en una ruta desde la pantalla de Usuarios.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0068.
--- Idempotente: se puede re-ejecutar sin romper nada (el borrado de las notas
--- viejas solo corre la PRIMERA vez, cuando la columna aun es entera: ver 1).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * minigame_submit_nota() la rehace la 0070
+--   * minigame_ranking() la rehace la 0070
+-- (Hasta la 0070 si lo era: el borrado de las notas viejas solo corre la
+-- PRIMERA vez, cuando la columna aun es entera: ver 1. Y pegarla ahora, ademas,
+-- volveria a dejar fuera a 'parejas-de-barra' del check de best_score.)
 -- Ojo al reves: rehace minigame_submit_score() y minigame_ranking() de la 0061,
 -- que ya no se pueden volver a pegar despues.
 --
