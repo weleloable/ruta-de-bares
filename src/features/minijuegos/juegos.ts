@@ -6,6 +6,8 @@ import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
+import { ID_LA_PENUL, TITULO_LA_PENUL } from './juegos/la-penul/guion';
+import { LaPenul } from './juegos/la-penul/LaPenul';
 import { DetalleParejas } from './juegos/parejas/DetalleParejas';
 import { ID_PAREJAS, notaValida, TIEMPO_MAXIMO } from './juegos/parejas/modelo';
 import { ParejasDeBarra } from './juegos/parejas/ParejasDeBarra';
@@ -20,6 +22,19 @@ import type { JuegoDef } from './tipos';
  * componente en `juegos/<id>/` y sumarlo aqui: nada mas de la app se entera.
  */
 export const JUEGOS: readonly JuegoDef[] = [
+  {
+    // Historia interactiva para adultos (guion en juegos/la-penul/guion.ts). Sin nota, sin
+    // ranking y sin puntos de casa: se encarga de su propio final. La ven los admins siempre y
+    // el resto solo si la ruta la enciende (0071); cuando sale, va la primera (visibilidad.ts).
+    id: ID_LA_PENUL,
+    titulo: TITULO_LA_PENUL,
+    descripcion: 'Una noche, tres rondas y muchas ganas. Para mayores de edad.',
+    icono: 'flame',
+    Componente: LaPenul,
+    pantallaCompleta: true,
+    resultadoPropio: true,
+    visibilidad: 'la-penul',
+  },
   {
     id: 'cana-perfecta',
     titulo: 'La Caña Perfecta',
