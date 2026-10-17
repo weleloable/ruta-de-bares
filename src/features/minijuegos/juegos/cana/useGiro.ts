@@ -20,9 +20,12 @@ export function useGiro() {
   const objetivo = useRef(0);
   const giro = useRef(0);
 
-  /** Llamar UNA vez por fotograma con los segundos transcurridos. */
-  const avanzarGiro = useCallback((dt: number) => {
-    giro.current = suavizarEnTiempo(giro.current, objetivo.current, dt, TAU_GIRO);
+  /**
+   * Llamar UNA vez por fotograma con los segundos transcurridos. `tau` es opcional: La Caña usa la
+   * de siempre (TAU_GIRO); Pulso de Camarero pide una mas corta, porque la bandeja exige reflejos.
+   */
+  const avanzarGiro = useCallback((dt: number, tau: number = TAU_GIRO) => {
+    giro.current = suavizarEnTiempo(giro.current, objetivo.current, dt, tau);
   }, []);
 
   /** Pone el objetivo (con signo). Lo que llegue de fuera de rango se recorta. */

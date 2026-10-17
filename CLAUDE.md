@@ -152,6 +152,7 @@ supabase/
   migrations/0071_*.sql     ranking de Don Quijote Cervecero (techo 10.000.000) y `best_score` a numeric(12, 2)
   migrations/0072_*.sql     La Penul por ruta: `routes.la_penul_visible` (apagado por defecto; los admins la ven siempre)
   migrations/0073_*.sql     Barman Express en el ranking por ruta y el podio de casas (tope 5197 = PUNTUACION_MAXIMA, entero, mas es mejor); parte de la 0071
+  migrations/0075_*.sql     Pulso de Camarero en el ranking por ruta y el podio de casas (nota de 0 a 100,00 con 2 decimales, mas es mejor); parte de la 0073
   migrations/0074_*.sql     anuncios de los admins a una ruta (`anuncios`, `anuncio_enviar`...): 200 caracteres, 5/15/60 min, toda la ruta o solo admins, aviso al movil opcional
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
@@ -282,6 +283,57 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **APARTA!!! (antes «Pulso de Camarero»; el id sigue siendo `pulso-de-camarero`)** (`juegos/pulso/`, 0075). Cruzas un bar con una bandeja que se inclina sola;
+  se endereza girando el movil. Tres rondas (25, 35 y 40 puntos de peso: la nota va de 0 a
+  **100,00, como un porcentaje**, con DOS decimales y mas es mejor). Todo lo que decide la nota es
+  `modelo.ts` (puro, sin importaciones, con tests y jugadores simulados); `escena.ts` (perspectiva) y
+  `pantalla.ts` (reparto) tampoco importan nada: se les PASA lo que necesitan del modelo.
+  **El modelo**: angulo de la bandeja = empuje del camarero + giro del movil (`anguloBandeja`, el
+  UNICO sitio del signo: movil a la derecha, bandeja a la derecha, asi que se endereza inclinando al
+  lado contrario al que cae, "como un nivel de burbuja"). **SIN PROBAR EN UN MOVIL DE VERDAD**:
+  `verificar:juego` lo comprueba con el acelerometro emulado, pero si se siente al reves se cambia
+  el signo en esa funcion y en nada mas. El empuje es una oscilacion amortiguada (pico a los 0,87 s,
+  rebote de signo contrario, ~14 s); las esquivas se ven venir 2 s antes (`AVISO_ESQUIVA`) y el
+  **empujon de un cliente solo 0,3 s** (`AVISO_EMPUJON`): sale de OTRO flujo de azar que las
+  esquivas, asi que no se puede anticipar mirando lo que se ve (un test cambia los empujones y
+  comprueba que no se mueve ni una esquiva). Derrame: `dL/dt = -tasa * exceso * L` sobre el umbral de
+  cada bebida (cocktel 5 grados, balon 7, jarra 9, caña 10, chupito 12), con tasas de 0,05 (cocktel) a
+  0,0225 (chupito) por segundo y grado de exceso, integrado en exacto, sin redondear. **Las tasas se
+  bajaron a la mitad** al jugar (un fallo normal vaciaba demasiado la copa) y los umbrales 1 grado, para
+  que ese perdon no abra el 90; la botella casi no derrama pero se cae si pasa de 24 grados 0,3 s seguidos y pierde todo
+  su valor. Fisica a pasos fijos de 1/120 s con acumulador (a 30, 60 y 144 fps da EXACTAMENTE lo
+  mismo; un test lo comprueba). **Por que dos decimales y curva arriba**: igual que La Caña (0069),
+  con enteros habria empates constantes. Lineal hasta el 90 % del liquido y por encima
+  `1 - 0,1 * sqrt((1 - f) / 0,1)`: 95 % vale 92,9, 99 % vale 96,8 y el 100,00 solo sale de salvarlo
+  TODO. **Es dificil a proposito** (se pidio): jugadores simulados de `modelo.test.ts` (1000 partidas):
+  perfecto teorico 100,00; elite (50 ms, ±1°) 89 de media y un 24 % de partidas con 90 o mas; bueno
+  (120 ms, ±2°) 72, y ninguno llega a 80; torpe 38; quien no toca el movil, ~17. El elite saca el maximo
+  en menos del 5 %. Con tope 100 y 2 decimales hay solo ~10.000 valores y los buenos se amontonan: en
+  1000 partidas del bueno salen ~635 notas distintas (con tope 3000 salian 975); es el coste de que
+  parezca un porcentaje. **`PUNTUACION_MAXIMA` = 100 es la suma de los pesos** y ninguna partida la
+  supera (el nivel de cada bebida es <= 1 y la curva <= 1; un test lo comprueba con 500 partidas al azar).
+  **El servidor NO verifica la nota** (la manda el movil: solo rango, redondeo a 2 decimales y 4 s entre
+  envios), como en la 0039 y la 0069. `nota.ts` (`JUEGOS_CON_DECIMALES`) es el sitio que decide los
+  decimales en el cliente y DEBE coincidir con el check de la 0075: sin esa linea, `redondearNota` la
+  manda como entero sin dar error. El filtro del giro del movil es el de La Caña con otra constante de
+  tiempo (`TAU_GIRO_PULSO` = 0,08 s en vez de 0,12): `avanzarGiro(dt, tau)`; con 0,12 hasta el jugador
+  bueno perdia la mitad de la ultima ronda. El deslizador de respaldo (`SelectorGiro`) lleva el cero
+  en el CENTRO (el de La Caña solo da un lado; `useInclinacion` ahora devuelve tambien
+  `fijarConSigno`). **Pantalla completa** y vertical (dentro del menu a 740 px quedaban ~328 px y no
+  cabian el bar y la bandeja): cabecera 44, bar ~47 % de lo que queda y bandeja el resto, dibujada tan
+  ancha como cabe girada 35 grados. Se sale con la X (pausa y pregunta). Si la app pasa a segundo plano a
+  mitad de una ronda se para el reloj y sale "En pausa". Los dibujos los genera
+  `scripts/generar-pulso.py` (Pillow, sin SVG) en `assets/pulso/sprites/` y `spritesGeometria.ts` (no se
+  editan a mano): cada bebida en DOS capas (vidrio y liquido) y la app recorta el liquido por abajo
+  segun el nivel con el `INTERIOR` de cada vaso, asi "se vacia" sin un dibujo por nivel. Los clientes son
+  los Open Peeps (CC0) que ya estaban para Barman Express (bustos, no de cuerpo entero), con borde de
+  pegatina y unas piernas debajo. `npm run verificar:juego` (`SOLO_PULSO=1`) juega una partida ENTERA a
+  740, 808 y 915 px de alto y a 360 de ancho con el acelerometro emulado, y ademas la prueba SIN https
+  (se finge `isSecureContext = false`): la intro avisa, sale el deslizador con su explicacion y arrastrarlo
+  inclina la bandeja. Sin https el navegador NO da el sensor (se vio en el primer movil de verdad: la
+  bandeja no respondia al giro); el deslizador es el respaldo. **El suelo del bar llega hasta abajo del
+  todo** y la bandeja va encima, sujeta por las manos del camarero (con el suelo cortado, parecia flotar).
 
 - **Anuncios de los admins a la ruta** (0074, `src/features/anuncios/`, `app/admin/anuncio.tsx`).
   Un admin manda hasta 200 caracteres a la gente de UNA ruta, con duracion de 5, 15 o 60 min

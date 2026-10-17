@@ -3,8 +3,9 @@
  * para que ninguna pantalla decida por su cuenta cuantos decimales lleva.
  *
  * La Caña Perfecta puntua con DOS decimales (99,03): con enteros, un jugador
- * bueno empataba una y otra vez en el mismo 99. Parejas de Barra puntua con su
- * TIEMPO en segundos, tambien con dos decimales. El resto, en enteros.
+ * bueno empataba una y otra vez en el mismo 99. Pulso de Camarero tambien (de 0 a
+ * 100,00, como un porcentaje). Parejas de Barra puntua con su TIEMPO en segundos,
+ * tambien con dos decimales. El resto, en enteros.
  *
  * Y aqui vive tambien el SENTIDO de la nota (`JUEGOS_MENOS_ES_MEJOR`): en casi
  * todos los juegos mas es mejor, en Parejas de Barra gana quien MENOS tarda.
@@ -15,8 +16,12 @@
  * Sin importaciones: los tests lo cargan tal cual.
  */
 
-/** Juegos cuya nota lleva decimales. Tiene que coincidir con el check de best_score (0069, 0070). */
-export const JUEGOS_CON_DECIMALES: ReadonlySet<string> = new Set(['cana-perfecta', 'parejas-de-barra']);
+/**
+ * Juegos cuya nota lleva decimales. Tiene que coincidir con el check de best_score (0069, 0070, 0075).
+ * Pulso de Camarero entra aqui: su nota es un porcentaje de 0 a 100 con dos decimales, y sin esta
+ * linea `redondearNota` la mandaria al servidor como un entero SIN dar error.
+ */
+export const JUEGOS_CON_DECIMALES: ReadonlySet<string> = new Set(['cana-perfecta', 'parejas-de-barra', 'pulso-de-camarero']);
 
 /**
  * Juegos en los que MENOS es mejor (la nota es un tiempo). El UNICO sitio del

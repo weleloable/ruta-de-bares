@@ -128,7 +128,10 @@ describe('sensor de inclinacion en web', () => {
 
   it('el giro se filtra en el TIEMPO, un paso por fotograma, y no en cada lectura del sensor (daba trompicones)', () => {
     assert.match(cana, /avanzarGiro\(dt\);/);
-    assert.match(leer('src/features/minijuegos/juegos/cana/useGiro.ts'), /suavizarEnTiempo\(giro\.current, objetivo\.current, dt, TAU_GIRO\)/);
+    // La Caña usa la constante de siempre (TAU_GIRO es el valor por defecto de `tau`); APARTA!!! pasa la suya.
+    const useGiro = leer('src/features/minijuegos/juegos/cana/useGiro.ts');
+    assert.match(useGiro, /suavizarEnTiempo\(giro\.current, objetivo\.current, dt, tau\)/);
+    assert.match(useGiro, /tau: number = TAU_GIRO/);
     for (const f of ['useInclinacion.ts', 'useInclinacion.web.ts']) {
       const hook = leer(`src/features/minijuegos/juegos/cana/${f}`);
       assert.doesNotMatch(hook, /suavizar\(/, f);

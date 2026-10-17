@@ -1,7 +1,9 @@
 -- Ruta de Bares - 0073: Barman Express en el ranking por ruta y en el podio de las casas.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0072.
--- Idempotente: se puede re-ejecutar sin romper nada (rehace una funcion y dos
--- checks, sin tocar datos).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * minigame_submit_nota() la rehace la 0075 (Pulso de Camarero: tope 100 y decimales)
 -- Ojo al reves: rehace minigame_submit_nota() de la 0071 (Quijote), que ya no se puede
 -- volver a pegar despues.
 --

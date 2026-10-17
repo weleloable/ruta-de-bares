@@ -129,5 +129,8 @@ export function useInclinacion() {
     [parar],
   );
 
-  return { modo, motivo, objetivo, giro, avanzarGiro, empezar, usarManual, fijar };
+  /** Del deslizador de Pulso de Camarero: CON signo (-60 a 60), a diferencia de `fijar`, que solo da un lado. */
+  const fijarConSigno = useCallback((grados: number) => apuntar(grados), [apuntar]);
+
+  return { modo, motivo, objetivo, giro, avanzarGiro, empezar, usarManual, fijar, fijarConSigno };
 }

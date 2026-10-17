@@ -9,6 +9,9 @@ import { recetaDesdeResultado } from './juegos/maestro/publicar';
 import { BarmanExpress } from './juegos/barman/BarmanExpress';
 import { DetalleBarman } from './juegos/barman/DetalleBarman';
 import { ID_BARMAN } from './juegos/barman/modelo';
+import { DetallePulso } from './juegos/pulso/DetallePulso';
+import { ID_PULSO } from './juegos/pulso/modelo';
+import { PulsoDeCamarero } from './juegos/pulso/PulsoDeCamarero';
 import { ID_LA_PENUL, TITULO_LA_PENUL } from './juegos/la-penul/guion';
 import { LaPenul } from './juegos/la-penul/LaPenul';
 import { DetalleParejas } from './juegos/parejas/DetalleParejas';
@@ -157,6 +160,22 @@ const JUEGOS_DE_SIEMPRE: readonly JuegoDef[] = [
     Componente: BarmanExpress,
     pantallaCompleta: true,
     Detalle: DetalleBarman,
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
+  },
+  {
+    // Cruzas el bar con una bandeja que se inclina sola (logica pura en juegos/pulso/modelo.ts): tres
+    // rondas, la nota es un PORCENTAJE de 0 a 100,00 con dos decimales (mas es mejor). Ranking por ruta y
+    // podio de casas desde la 0075. Vertical y a pantalla completa: dentro del menu no cabia el bar y la bandeja.
+    id: ID_PULSO,
+    titulo: 'APARTA!!!',
+    descripcion: 'Cruza el bar con la bandeja sin derramar: inclina el móvil para enderezarla.',
+    icono: 'beer',
+    Componente: PulsoDeCamarero,
+    pantallaCompleta: true,
+    Detalle: DetallePulso,
     ranking: true,
     enviar: async (rutaId, r) => {
       await enviarNota(rutaId, r.juego, r.puntuacion);
