@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 
-import { PALETA, type Materiales } from './paleta';
+import { PALETA, ponerContorno, type Materiales } from './paleta';
 
 /**
- * Un molino manchego en low-poly: torre algo conica, tejado de cono y cuatro
- * aspas que giran. Mira hacia +z (hacia el jugador), con las aspas delante. El
- * origen es el pie de la torre. Se puede cambiar por un GLTF: lo demas usa
- * `grupo`, `aspas` y `girar`.
+ * Un molino manchego en low-poly: torre encalada algo conica, caperuza oscura
+ * de cono y cuatro aspas de madera con sus velas, que giran. Con contorno.
+ * Mira hacia +z (hacia el jugador), con las aspas delante. El origen es el pie
+ * de la torre. Se puede cambiar por un GLTF: lo demas usa `grupo`, `aspas` y
+ * `girar`.
  *
  * Los del paisaje son los de siempre (eje a 7 m); los que barren el camino
  * tienen el eje y las aspas que dice MOLINO (modelo.ts), porque eso es lo que
@@ -39,22 +40,25 @@ export function geometriasMolino(eje = 7, radio = 5.4) {
 }
 
 export function crearMolino(mats: Materiales, g: ReturnType<typeof geometriasMolino>, velocidadGiro = 1.2): Molino {
-  const negro = mats.mate(PALETA.silueta);
-  const claro = mats.mate(PALETA.siluetaClara);
+  const cal = mats.toon(PALETA.cal);
+  const caperuza = mats.toon(0x3c4a5c);
+  const madera = mats.toon(PALETA.madera);
+  const vela = mats.toon(0xf2e8d2);
   const grupo = new THREE.Group();
-  grupo.add(new THREE.Mesh(g.torre, claro), new THREE.Mesh(g.tejado, negro));
+  grupo.add(new THREE.Mesh(g.torre, cal), new THREE.Mesh(g.tejado, caperuza));
 
   const aspas = new THREE.Group();
   const aspasZ = 2.0;
   aspas.position.set(0, g.eje, aspasZ);
-  aspas.add(new THREE.Mesh(g.ejeGeo, negro));
+  aspas.add(new THREE.Mesh(g.ejeGeo, madera));
   for (let k = 0; k < 4; k++) {
     const aspa = new THREE.Group();
-    aspa.add(new THREE.Mesh(g.palo, negro), new THREE.Mesh(g.vela, negro));
+    aspa.add(new THREE.Mesh(g.palo, madera), new THREE.Mesh(g.vela, vela));
     aspa.rotation.z = (k * Math.PI) / 2;
     aspas.add(aspa);
   }
   grupo.add(aspas);
+  ponerContorno(grupo, mats, 0.08);
 
   return {
     grupo,

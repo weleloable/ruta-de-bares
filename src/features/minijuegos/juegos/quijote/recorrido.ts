@@ -1,30 +1,8 @@
 /**
- * Lo que cambia con los metros, sin pintar nada (la escena lo lee): la hora
- * del dia y los tramos por Alcala de Henares. Y el mensaje del final. Sin
- * importaciones: los tests lo cargan tal cual.
+ * Lo que cambia con los metros, sin pintar nada (la escena lo lee): los
+ * tramos por Alcala de Henares. Y el mensaje del final. Sin importaciones: los
+ * tests lo cargan tal cual. (Siempre es de dia: no hay ciclo de luz.)
  */
-
-// ---------------------------------------------------------------------------
-// Atardecer -> crepusculo -> noche
-// ---------------------------------------------------------------------------
-
-/**
- * Los metros en los que cambia la luz: atardecer hasta `crepusculo`, de ahi a
- * la noche hasta `noche`, noche cerrada hasta `alba` y vuelta al atardecer en
- * `vuelta`. Luego se repite (hay partidas muy largas).
- */
-export const CICLO = { crepusculo: 900, noche: 2000, alba: 4200, vuelta: 5000 } as const;
-
-const suave = (x: number) => x * x * (3 - 2 * x);
-
-/** Cuanto de noche es, de 0 (atardecer) a 1 (noche cerrada con luna). 0,5 es el crepusculo. */
-export function nocheEn(dist: number): number {
-  const d = ((Math.max(0, dist) % CICLO.vuelta) + CICLO.vuelta) % CICLO.vuelta;
-  if (d < CICLO.crepusculo) return 0;
-  if (d < CICLO.noche) return suave((d - CICLO.crepusculo) / (CICLO.noche - CICLO.crepusculo));
-  if (d < CICLO.alba) return 1;
-  return 1 - suave((d - CICLO.alba) / (CICLO.vuelta - CICLO.alba));
-}
 
 // ---------------------------------------------------------------------------
 // Alcala de Henares

@@ -1,22 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ALCALA, CICLO, enAlcala, entradasAlcala, mensajeFinal, nocheEn } from './recorrido.ts';
-
-describe('quijote: la hora del dia', () => {
-  it('empieza al atardecer, pasa por el crepusculo, llega la noche y vuelve', () => {
-    assert.equal(nocheEn(0), 0);
-    assert.equal(nocheEn(CICLO.crepusculo - 1), 0);
-    const media = nocheEn((CICLO.crepusculo + CICLO.noche) / 2);
-    assert.ok(media > 0.4 && media < 0.6, `crepusculo: ${media}`);
-    assert.equal(nocheEn(CICLO.noche + 10), 1);
-    assert.equal(nocheEn(CICLO.vuelta), 0, 'y vuelta a empezar');
-  });
-
-  it('cambia poco a poco: nunca un salto brusco de un metro a otro', () => {
-    for (let d = 0; d < CICLO.vuelta * 2; d += 1) assert.ok(Math.abs(nocheEn(d + 1) - nocheEn(d)) < 0.005);
-  });
-});
+import { ALCALA, enAlcala, entradasAlcala, mensajeFinal } from './recorrido.ts';
 
 describe('quijote: Alcala', () => {
   it('cada tanto se entra en Alcala, y se sale', () => {

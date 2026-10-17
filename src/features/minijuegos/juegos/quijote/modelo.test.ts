@@ -266,14 +266,38 @@ describe('quijote: embestida', () => {
     assert.ok(Math.abs(e.velocidad - velocidadEn(e.dist)) < 0.5, 'al acabar, a su velocidad');
   });
 
+  it('al lanzarla aparece un gigante delante, y se derriba antes de que acabe', () => {
+    const e = crearEstado();
+    e.generadoHasta = Number.POSITIVE_INFINITY;
+    e.carga = CONFIG.jarrasEmbestida;
+    aplicarAccion(e, 'embestida');
+    const gigante = e.obstaculos.find((o) => o.tipo === 'molino');
+    assert.ok(gigante && gigante.s > e.dist + 20, 'un molino por delante');
+    correr(e, CONFIG.embestida.duracion);
+    assert.equal(e.molinos, 1);
+    assert.equal(e.bonus, CONFIG.embestida.puntosMolino);
+  });
+
+  it('lo derribado dice donde estaba y cuanto ha dado (para el "+250")', () => {
+    const e = conObstaculo({ s: 12, carril: 1, tipo: 'bloque' });
+    e.carga = CONFIG.jarrasEmbestida;
+    aplicarAccion(e, 'embestida');
+    const vistos: { puntos: number }[] = [];
+    for (let k = 0; k < 60; k++) {
+      avanzar(e, 1 / 60, () => 0.5);
+      vistos.push(...e.derribos);
+    }
+    assert.deepEqual(vistos.map((d) => d.puntos), [CONFIG.embestida.puntosObstaculo]);
+  });
+
   it('un molino derribado es un gigante: cuenta y da su bonus', () => {
     const e = crearEstado();
     e.generadoHasta = Number.POSITIVE_INFINITY;
     e.obstaculos = [molino(15, 2)];
     e.carga = CONFIG.jarrasEmbestida;
     aplicarAccion(e, 'embestida');
-    correr(e, 1.5);
-    assert.equal(e.molinos, 1);
+    correr(e, 0.8);
+    assert.equal(e.molinos, 1, 'el de delante; el gigante de la Embestida aun no ha llegado');
     assert.equal(e.bonus, CONFIG.embestida.puntosMolino);
   });
 });

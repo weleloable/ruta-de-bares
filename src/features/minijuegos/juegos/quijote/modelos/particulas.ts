@@ -18,7 +18,8 @@ export class Particulas {
   readonly puntos: THREE.Points;
   private readonly p: Particula[] = Array.from({ length: N }, () => ({ vivo: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, vida: 0, total: 1, gravedad: 0, suelo: false }));
   private readonly posiciones = new Float32Array(N * 3);
-  private readonly colores = new Float32Array(N * 3);
+  /** Color y transparencia de cada punto (rgba): sobre un fondo claro, se desvanece en vez de oscurecerse. */
+  private readonly colores = new Float32Array(N * 4);
   private readonly color = new THREE.Color();
   private readonly geo = new THREE.BufferGeometry();
   private readonly tex = texturaHalo('#ffffff');
@@ -27,14 +28,13 @@ export class Particulas {
 
   constructor() {
     this.geo.setAttribute('position', new THREE.BufferAttribute(this.posiciones, 3).setUsage(THREE.DynamicDrawUsage));
-    this.geo.setAttribute('color', new THREE.BufferAttribute(this.colores, 3).setUsage(THREE.DynamicDrawUsage));
+    this.geo.setAttribute('color', new THREE.BufferAttribute(this.colores, 4).setUsage(THREE.DynamicDrawUsage));
     this.mat = new THREE.PointsMaterial({
       size: 0.45,
       map: this.tex,
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
     });
     this.puntos = new THREE.Points(this.geo, this.mat);
@@ -102,10 +102,11 @@ export class Particulas {
       this.posiciones[k * 3] = q.x;
       this.posiciones[k * 3 + 1] = q.vivo ? q.y : -100;
       this.posiciones[k * 3 + 2] = q.z;
-      this.color.set(q.suelo ? 0x8a5a3a : 0xffc04a).multiplyScalar(q.suelo ? f * 0.55 : f);
-      this.colores[k * 3] = this.color.r;
-      this.colores[k * 3 + 1] = this.color.g;
-      this.colores[k * 3 + 2] = this.color.b;
+      this.color.set(q.suelo ? 0xc9a26a : 0xffc63a);
+      this.colores[k * 4] = this.color.r;
+      this.colores[k * 4 + 1] = this.color.g;
+      this.colores[k * 4 + 2] = this.color.b;
+      this.colores[k * 4 + 3] = q.suelo ? f * 0.6 : f;
     }
     this.geo.attributes.position!.needsUpdate = true;
     this.geo.attributes.color!.needsUpdate = true;

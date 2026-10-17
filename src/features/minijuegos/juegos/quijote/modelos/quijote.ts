@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
-import { PALETA, type Materiales } from './paleta';
+import { PALETA, ponerContorno, type Materiales } from './paleta';
 
 /**
- * Don Quijote a lomos de Rocinante, en low-poly y a contraluz: un caballo
- * flaco, un jinete larguirucho, la lanza hacia delante y la jarra en alto (lo
- * unico dorado). Mira hacia -z (hacia el sol). El origen es el suelo, en el
+ * Don Quijote a lomos de Rocinante, en low-poly y en colores de dibujos: un
+ * caballo castaño y flaco con su silla roja, un jinete larguirucho con
+ * armadura, la lanza hacia delante y la jarra dorada en alto. Con contorno. Mira hacia -z (hacia el sol). El origen es el suelo, en el
  * centro de su caja de choque. Se puede cambiar por un GLTF: lo demas solo usa
  * `grupo` y `animar`.
  */
@@ -29,8 +29,15 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
     geos.push(g);
     return new THREE.Mesh(g, m);
   };
-  const negro = mats.mate(PALETA.silueta);
-  const oscuro = mats.mate(PALETA.siluetaClara);
+  const pelo = mats.toon(0x9a6436);
+  const patasColor = mats.toon(0x7c4e2a);
+  const crin = mats.toon(0x3b2416);
+  const silla = mats.toon(0xb3362b);
+  const armadura = mats.toon(0xa9b2bd);
+  const metal = mats.toon(0xc7cdd4);
+  const calzas = mats.toon(0x5d4a2e);
+  const piel = mats.toon(0xeab48a);
+  const madera = mats.toon(PALETA.maderaClara);
   const oro = mats.brillo(PALETA.oro);
 
   const grupo = new THREE.Group();
@@ -42,17 +49,17 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
   const caballo = new THREE.Group();
   cuerpo.add(caballo);
   // Mas largo que su caja de choque: desde atras, si no, el jinete tapa cuello y cabeza.
-  const tronco = caja(0.62, 0.6, 1.9, negro);
+  const tronco = caja(0.62, 0.6, 1.9, pelo);
   tronco.position.set(0, 1.25, -0.15);
   // La grupa, algo mas ancha y redonda: es lo que mas se ve desde atras.
-  const grupa = new THREE.Mesh(new THREE.DodecahedronGeometry(0.42, 0), negro);
+  const grupa = new THREE.Mesh(new THREE.DodecahedronGeometry(0.42, 0), pelo);
   geos.push(grupa.geometry);
   grupa.scale.set(0.95, 0.85, 0.9);
   grupa.position.set(0, 1.3, 0.52);
-  const cuello = caja(0.28, 1.05, 0.34, negro);
+  const cuello = caja(0.28, 1.05, 0.34, pelo);
   cuello.position.set(0, 1.8, -1.2);
   cuello.rotation.x = -0.5;
-  const cabezaCaballo = caja(0.26, 0.28, 0.66, negro);
+  const cabezaCaballo = caja(0.26, 0.28, 0.66, pelo);
   cabezaCaballo.position.set(0, 2.3, -1.62);
   cabezaCaballo.rotation.x = 0.4;
   // Dos orejas de punta, bien separadas: desde atras es lo que dice "caballo".
@@ -60,16 +67,22 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
   geos.push(geoOreja);
   const orejas = new THREE.Group();
   for (const x of [-0.12, 0.12]) {
-    const oreja = new THREE.Mesh(geoOreja, negro);
+    const oreja = new THREE.Mesh(geoOreja, pelo);
     oreja.position.set(x, 0, 0);
     oreja.rotation.z = -x * 2.2;
     orejas.add(oreja);
   }
   orejas.position.set(0, 2.55, -1.36);
-  const cola = colgante(0.09, 0.7, negro, geos);
+  const cola = colgante(0.09, 0.7, crin, geos);
   cola.position.set(0, 1.42, 0.85);
   cola.rotation.x = 0.55;
-  caballo.add(tronco, grupa, cuello, cabezaCaballo, orejas, cola);
+  // La crin por el cuello y la silla de montar (roja: se ve desde atras).
+  const melena = caja(0.1, 0.95, 0.14, crin);
+  melena.position.set(0, 1.92, -1.06);
+  melena.rotation.x = -0.5;
+  const montura = caja(0.72, 0.14, 0.62, silla);
+  montura.position.set(0, 1.6, 0.25);
+  caballo.add(tronco, grupa, cuello, cabezaCaballo, orejas, cola, melena, montura);
 
   // Las cuatro patas, colgando desde la cadera. Desfase de galope: las dos de delante
   // casi juntas, y las de atras a media vuelta.
@@ -80,7 +93,7 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
     [-0.22, 0.6, Math.PI],
     [0.22, 0.6, Math.PI + 0.45],
   ] as const) {
-    const pata = colgante(0.11, 1.0, negro, geos);
+    const pata = colgante(0.11, 1.0, patasColor, geos);
     pata.position.set(x, 1.05, z);
     caballo.add(pata);
     patas.push({ malla: pata, desfase, delante: z < 0 });
@@ -90,19 +103,19 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
   const jinete = new THREE.Group();
   jinete.position.set(0, 1.5, 0.3);
   cuerpo.add(jinete);
-  const torso = caja(0.4, 0.78, 0.26, oscuro);
+  const torso = caja(0.4, 0.78, 0.26, armadura);
   torso.position.set(0, 0.42, 0);
-  const cabeza = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0), oscuro);
+  const cabeza = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0), piel);
   geos.push(cabeza.geometry);
   cabeza.position.set(0, 0.98, -0.02);
-  const yelmo = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.16, 7), negro);
+  const yelmo = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.16, 7), metal);
   geos.push(yelmo.geometry);
   yelmo.position.set(0, 1.12, -0.02);
   // Las piernas, a los lados del caballo.
-  const piernaI = colgante(0.12, 0.7, oscuro, geos);
+  const piernaI = colgante(0.12, 0.7, calzas, geos);
   piernaI.position.set(-0.36, 0.1, 0);
   piernaI.rotation.z = 0.12;
-  const piernaD = colgante(0.12, 0.7, oscuro, geos);
+  const piernaD = colgante(0.12, 0.7, calzas, geos);
   piernaD.position.set(0.36, 0.1, 0);
   piernaD.rotation.z = -0.12;
   // El yelmo de Mambrino (una bacia de barbero, plateada) cuando lo lleva: para un golpe.
@@ -113,7 +126,7 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
   jinete.add(torso, cabeza, yelmo, bacia, piernaI, piernaD);
 
   // Brazo izquierdo en alto con la jarra (dorada: se ve desde lejos).
-  const brazoI = colgante(0.1, 0.62, oscuro, geos);
+  const brazoI = colgante(0.1, 0.62, armadura, geos);
   brazoI.position.set(-0.24, 0.78, 0);
   // Girado casi media vuelta: apunta arriba y un poco hacia fuera (a la izquierda).
   brazoI.rotation.z = -(Math.PI - 0.35);
@@ -131,14 +144,17 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
   jinete.add(brazoI);
 
   // Brazo derecho con la lanza, apuntando al frente y un poco arriba.
-  const brazoD = colgante(0.1, 0.55, oscuro, geos);
+  const brazoD = colgante(0.1, 0.55, armadura, geos);
   brazoD.position.set(0.24, 0.75, 0);
   brazoD.rotation.x = 0.9;
-  const lanza = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 3.4, 5), negro);
+  const lanza = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 3.4, 5), madera);
   geos.push(lanza.geometry);
   lanza.position.set(0.32, 0.35, -0.9);
   lanza.rotation.x = -Math.PI / 2 + 0.3;
   jinete.add(brazoD, lanza);
+
+  // El contorno negro de dibujos (no a la jarra ni a la bacia, que brillan).
+  ponerContorno(grupo, mats);
 
   let fase = 0;
   let embiste = 0;

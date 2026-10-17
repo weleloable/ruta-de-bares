@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-import { PALETA, type Materiales } from './paleta';
+import { PALETA, pintar, type Materiales } from './paleta';
 
 /**
- * El paisaje de La Mancha a los lados del camino, todo en silueta:
+ * El paisaje de La Mancha a los lados del camino, a pleno sol:
  *  - montes al fondo, en dos capas (la niebla aclara la de atras: profundidad
  *    por capas). Siguen a la camara: estan tan lejos que no se acercan;
  *  - arboles sueltos, con INSTANCING (una sola llamada de dibujo para todos)
@@ -26,8 +26,8 @@ export type Montes = { grupo: THREE.Group; seguir(z: number): void };
 export function crearMontes(mats: Materiales, azar: () => number, geos: THREE.BufferGeometry[]): Montes {
   const grupo = new THREE.Group();
   const capas = [
-    { z: -250, alto: [18, 34], color: PALETA.siluetaClara, n: 9 },
-    { z: -175, alto: [10, 22], color: PALETA.silueta, n: 11 },
+    { z: -250, alto: [18, 34], color: PALETA.monteLejano, n: 9 },
+    { z: -175, alto: [10, 22], color: PALETA.monte, n: 11 },
   ];
   for (const capa of capas) {
     const partes: THREE.BufferGeometry[] = [];
@@ -42,7 +42,7 @@ export function crearMontes(mats: Materiales, azar: () => number, geos: THREE.Bu
     }
     const fundida = mergeGeometries(partes, false)!;
     geos.push(fundida);
-    grupo.add(new THREE.Mesh(fundida, mats.mate(capa.color)));
+    grupo.add(new THREE.Mesh(fundida, mats.toon(capa.color)));
   }
   return {
     grupo,
@@ -62,9 +62,9 @@ export function crearArboles(mats: Materiales, azar: () => number, geos: THREE.B
   const copa = new THREE.IcosahedronGeometry(1.6, 0);
   copa.scale(1, 0.85, 1);
   copa.translate(0, 3.3, 0);
-  const g = mergeGeometries([sinIndices(tronco), sinIndices(copa)], false)!;
+  const g = mergeGeometries([pintar(tronco, PALETA.madera), pintar(copa, 0x5e9e3c)], false)!;
   geos.push(g);
-  const malla = new THREE.InstancedMesh(g, mats.mate(PALETA.silueta), n);
+  const malla = new THREE.InstancedMesh(g, mats.pintado(), n);
   malla.frustumCulled = false;
 
   // Donde esta cada uno (fijo): a que metros, a que lado y a que distancia del camino.

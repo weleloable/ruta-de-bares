@@ -13,7 +13,7 @@ export const FRASES: Record<Motivo, readonly string[]> = {
   inicio: ['En un lugar de La Mancha…', '¡Arre, Rocinante!', 'La aventura nos espera, Sancho.'],
   molino: ['¡Gigantes a la vista!', 'Mira, Sancho: ¡gigantes!', 'Aquellos que allí ves son gigantes.'],
   alcala: ['¡Alcalá, cuna de Cervantes!', 'Complutum, Sancho: aquí empezó todo.', 'Por la Calle Mayor, que hay soportales.'],
-  embestida: ['¡Por Dulcinea!', '¡Non fuyades, cobardes!', '¡Encomiéndome a mi señora!'],
+  embestida: ['¡Gigantes a la vista! ¡Por Dulcinea!', '¡Non fuyades, cobardes y viles criaturas!', '¡A la carga, Rocinante!'],
   gigante: ['¡Gigante derribado!', '¡Uno menos, Sancho!', 'Así se trata a los gigantes.'],
   choque: ['¡Válgame Dios!', 'Cosas de los encantadores…', 'Ha sido un mago, Sancho.'],
   escudo: ['¡Bendito yelmo!', 'El yelmo de Mambrino me salva.'],

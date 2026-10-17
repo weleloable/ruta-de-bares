@@ -6,21 +6,20 @@ import { crearCielo, type Cielo } from './modelos/cielo';
 import { crearArboles, crearMontes, zReciclada, type Arboles, type Montes } from './modelos/decorado';
 import { crearMolino, geometriasMolino, type Molino } from './modelos/molino';
 import { FabricaObstaculos, type PiezaObstaculo } from './modelos/obstaculos';
-import { Materiales, PALETA } from './modelos/paleta';
+import { Materiales, PALETA, texturaHalo } from './modelos/paleta';
 import { Particulas } from './modelos/particulas';
 import { crearQuijote, type Jinete } from './modelos/quijote';
 import { crearRecogibles, type Recogibles } from './modelos/recogibles';
-import { enAlcala, nocheEn } from './recorrido';
+import { enAlcala } from './recorrido';
 
 /**
  * Don Quijote Cervecero en 3D (three.js, solo web). Solo pinta: la logica es
  * modelo.ts. El jugador esta siempre en z = 0 y el mundo se le acerca: lo que
  * esta a `s` metros del camino se pinta en z = -(s - dist).
  *
- * Estetica de siluetas a contraluz: el sol al fondo del camino, el cielo en
- * degradado y la niebla del color del horizonte (lo lejano se funde con el).
- * La unica luz direccional viene del sol, de cara: lo que ve la camara es el
- * lado en sombra, y por eso todo sale oscuro sin pintarlo a mano.
+ * Estetica de dibujos a pleno sol (a lo Subway Surfers): cielo azul con nubes,
+ * campos de trigo, colores vivos con sombreado por bandas y contorno negro en
+ * Quijote y los obstaculos. La bruma del horizonte funde lo lejano.
  *
  * Para que vaya en un movil normal: sin sombras, densidad de pixeles como mucho
  * 2, materiales mates compartidos, obstaculos sacados de un POOL (con sus
@@ -58,18 +57,23 @@ export class Escena3D {
   private readonly luzCielo: THREE.HemisphereLight;
   private readonly luzSol: THREE.DirectionalLight;
   private embestidaVista = 0;
+  private readonly sombra: THREE.Mesh;
+  private readonly aura: THREE.Sprite;
+  private readonly texAura: THREE.CanvasTexture;
+  private readonly proyectado = new THREE.Vector3();
   private readonly tam = new THREE.Vector2();
   private densidad = 0;
   private camX = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-    this.escena.fog = new THREE.Fog(PALETA.niebla, 28, 240);
-    // Luz: cielo calido desde arriba y el sol de cara (desde el fondo del camino).
-    // (Los colores y la fuerza cambian con la hora del dia: ver `dibujar`.)
-    this.luzCielo = new THREE.HemisphereLight(0xffb48a, 0x2a1418, 1.15);
-    this.luzSol = new THREE.DirectionalLight(0xffc27a, 1.4);
-    this.luzSol.position.set(0, 12, -100);
+    // Bruma clara al fondo: lo lejano se funde con el horizonte.
+    this.escena.fog = new THREE.Fog(PALETA.niebla, 60, 300);
+    // Luz de mediodia: cielo blanco desde arriba y el sol desde atras y a la izquierda
+    // (asi lo que ve la camara esta iluminado y el sombreado de dibujos se nota).
+    this.luzCielo = new THREE.HemisphereLight(0xffffff, 0xb59a62, 1.25);
+    this.luzSol = new THREE.DirectionalLight(0xfff1d8, 1.9);
+    this.luzSol.position.set(-40, 80, 60);
     this.escena.add(this.luzCielo, this.luzSol);
 
     // Azar fijo para el paisaje: el mismo en todas las partidas.
@@ -81,14 +85,34 @@ export class Escena3D {
     this.montes = crearMontes(this.mats, azar, this.geometrias);
     this.escena.add(this.montes.grupo);
 
-    // El campo y el camino (iluminado por el sol: lo oscuro se lee encima).
-    const campo = this.malla(new THREE.PlaneGeometry(600, 600), this.mats.mate(PALETA.campo));
+    // El campo de trigo con sus surcos y el camino de tierra clara.
+    const campo = this.malla(new THREE.PlaneGeometry(700, 700), this.mats.toon(PALETA.campo));
     campo.rotation.x = -Math.PI / 2;
-    campo.position.z = -200;
+    campo.position.z = -250;
     const anchoCamino = CONFIG.carriles * CONFIG.anchoCarril + 1.2;
-    const camino = this.malla(new THREE.PlaneGeometry(anchoCamino, 600), this.mats.mate(PALETA.camino));
+    const camino = this.malla(new THREE.PlaneGeometry(anchoCamino, 700), this.mats.toon(PALETA.camino));
     camino.rotation.x = -Math.PI / 2;
-    camino.position.set(0, 0.01, -200);
+    camino.position.set(0, 0.01, -250);
+    // Los bordes del camino, algo mas oscuros: separan la tierra del trigo.
+    const borde = new THREE.PlaneGeometry(0.5, 700);
+    this.geometrias.push(borde);
+    for (const lado of [-1, 1]) {
+      const b = new THREE.Mesh(borde, this.mats.toon(0xb98a55));
+      b.rotation.x = -Math.PI / 2;
+      b.position.set(lado * (anchoCamino / 2 + 0.25), 0.012, -250);
+      this.escena.add(b);
+    }
+    // Surcos del trigo, paralelos al camino.
+    const surco = new THREE.PlaneGeometry(0.9, 700);
+    this.geometrias.push(surco);
+    for (let k = 0; k < 14; k++) {
+      for (const lado of [-1, 1]) {
+        const sc = new THREE.Mesh(surco, this.mats.toon(PALETA.campoOscuro));
+        sc.rotation.x = -Math.PI / 2;
+        sc.position.set(lado * (anchoCamino / 2 + 3 + k * 3.2), 0.005, -250);
+        this.escena.add(sc);
+      }
+    }
     this.escena.add(campo, camino);
 
     // Rayas entre carriles y mojones a los lados: lo que da sensacion de velocidad.
@@ -96,7 +120,7 @@ export class Escena3D {
     this.geometrias.push(raya);
     for (let k = 0; k < 36; k++) {
       for (const lado of [-0.5, 0.5]) {
-        const r = new THREE.Mesh(raya, this.mats.mate(PALETA.rayaCamino));
+        const r = new THREE.Mesh(raya, this.mats.toon(PALETA.rayaCamino));
         r.rotation.x = -Math.PI / 2;
         r.position.set(lado * CONFIG.anchoCarril, 0.02, 0);
         this.escena.add(r);
@@ -108,7 +132,7 @@ export class Escena3D {
     this.geometrias.push(mojon);
     for (let k = 0; k < 16; k++) {
       for (const lado of [-1, 1]) {
-        const m = new THREE.Mesh(mojon, this.mats.mate(PALETA.silueta));
+        const m = new THREE.Mesh(mojon, this.mats.toon(PALETA.mojon));
         m.position.set(lado * (anchoCamino / 2 + 0.8), 0, 0);
         this.escena.add(m);
         this.mojones.push(m);
@@ -134,6 +158,20 @@ export class Escena3D {
     this.geometrias.push(...quijote.geometrias);
     this.jinete = quijote;
     this.escena.add(this.jinete.grupo);
+    // Su sombra: un circulo oscuro en el suelo, que encoge al saltar (se nota la altura).
+    const geoSombra = new THREE.CircleGeometry(0.62, 20);
+    geoSombra.rotateX(-Math.PI / 2);
+    geoSombra.scale(1, 1, 1.9);
+    this.geometrias.push(geoSombra);
+    this.sombra = new THREE.Mesh(geoSombra, new THREE.MeshBasicMaterial({ color: 0x5a3e1c, transparent: true, opacity: 0.22, depthWrite: false }));
+    this.sombra.position.y = 0.03;
+    this.escena.add(this.sombra);
+    // El aura dorada de la Embestida, detras de Quijote.
+    this.texAura = texturaHalo('#ffc53a');
+    // Mezcla normal y no sumada: sobre un fondo claro, sumar luz lo deja en blanco.
+    this.aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.texAura, depthWrite: false, transparent: true, opacity: 0 }));
+    this.aura.scale.set(6, 6, 1);
+    this.escena.add(this.aura);
 
     // Un pool por tipo de obstaculo: todos se crean ahora, ninguno en plena partida.
     const fabrica = new FabricaObstaculos(this.mats, this.geometrias);
@@ -224,14 +262,6 @@ export class Escena3D {
     this.mojones.forEach((m, k) => {
       m.position.z = zReciclada(Math.floor(k / 2) * tramoMojon, e.dist, this.mojones.length * (tramoMojon / 2), 10);
     });
-    // La hora del dia: cielo, niebla y luces.
-    const luz = this.cielo.ponerHora(nocheEn(e.dist));
-    (this.escena.fog as THREE.Fog).color.copy(luz.niebla);
-    this.luzCielo.color.copy(luz.cieloLuz);
-    this.luzCielo.intensity = luz.cieloFuerza;
-    this.luzSol.color.copy(luz.sol);
-    this.luzSol.intensity = luz.solFuerza;
-
     // Alcala, y el paisaje de La Mancha se aparta mientras se esta en ella.
     this.alcala.colocar(e.dist, CONFIG.vista.delante + 40);
     const enCiudad = (s: number) => enAlcala(s) !== null || enAlcala(s + 30) !== null;
@@ -267,12 +297,19 @@ export class Escena3D {
       escudo: e.escudo,
     });
     this.jinete.grupo.visible = !(e.t < e.invulnerableHasta && Math.floor(e.t * 10) % 2 === 0);
+    const alturaSombra = Math.max(0.35, 1 - e.y / 3);
+    this.sombra.position.x = e.x;
+    this.sombra.scale.set(alturaSombra, 1, alturaSombra);
 
     // La camara sigue el carril con algo de retraso y abre el angulo con la velocidad.
     this.camX += (e.x - this.camX) * (1 - Math.exp(-8 * dt));
     const rapidez = (e.velocidad - CONFIG.velocidadInicial) / (CONFIG.velocidadMaxima - CONFIG.velocidadInicial);
     // Embistiendo, el angulo se abre algo mas (sensacion de acelerón).
     this.embestidaVista += ((embistiendo(e) ? 1 : 0) - this.embestidaVista) * (1 - Math.exp(-6 * dt));
+    // El aura: late mientras embiste y se apaga al acabar.
+    (this.aura.material as THREE.SpriteMaterial).opacity = this.embestidaVista * (0.55 + Math.sin(e.t * 18) * 0.2);
+    this.aura.visible = this.embestidaVista > 0.02;
+    this.aura.position.set(e.x, e.y + 1.7, -0.4);
     this.camara.fov = CAMARA.fovMin + (CAMARA.fovMax - CAMARA.fovMin) * Math.max(0, Math.min(1, rapidez)) + this.embestidaVista * 8;
     this.camara.aspect = ancho / Math.max(1, alto);
     this.camara.updateProjectionMatrix();
@@ -281,10 +318,21 @@ export class Escena3D {
     this.camara.position.set(this.camX * 0.85 + tx, CAMARA.altura + ty, CAMARA.detras);
     this.camara.lookAt(this.camX * 0.6, 0.6, -CAMARA.mira);
 
-    this.cielo.seguir(this.camara.position);
+    this.cielo.seguir(this.camara.position, e.t);
     this.montes.seguir(0);
 
     this.renderer.render(this.escena, this.camara);
+  }
+
+  /**
+   * Donde cae en pantalla (en px CSS, desde arriba a la izquierda) un punto del
+   * camino: lo que esta a `s` metros, en `x`, a `y` de altura. Para los "+250".
+   * Vale para el ultimo fotograma pintado.
+   */
+  proyectar(s: number, x: number, y: number, dist: number, ancho: number, alto: number): { x: number; y: number } | null {
+    this.proyectado.set(x, y, -(s - dist)).project(this.camara);
+    if (this.proyectado.z > 1) return null;
+    return { x: ((this.proyectado.x + 1) / 2) * ancho, y: ((1 - this.proyectado.y) / 2) * alto };
   }
 
   /** Brillos (los halos que hacen de "bloom"): se pueden apagar si el movil va justo. */
@@ -296,6 +344,7 @@ export class Escena3D {
   liberar() {
     this.cielo.liberar();
     this.alcala.liberar();
+    this.texAura.dispose();
     this.recogibles.liberar();
     this.particulas.liberar();
     this.geometrias.forEach((g) => g.dispose());

@@ -43,7 +43,8 @@ export function crearRecogibles(mats: Materiales, geos: THREE.BufferGeometry[]):
   const jarras = new THREE.InstancedMesh(geoJarra, mats.brillo(PALETA.oro), MAX_JARRAS);
   jarras.frustumCulled = false;
   const texOro = texturaHalo('#ffb52e');
-  const matHaloOro = new THREE.MeshBasicMaterial({ map: texOro, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  // Halos con mezcla normal y algo transparentes: de dia, sumar luz los deja en una mancha blanca.
+  const matHaloOro = new THREE.MeshBasicMaterial({ map: texOro, transparent: true, opacity: 0.65, depthWrite: false, fog: false });
   const halos = new THREE.InstancedMesh(geoHalo, matHaloOro, MAX_JARRAS);
   halos.frustumCulled = false;
   grupo.add(halos, jarras);
@@ -55,14 +56,14 @@ export function crearRecogibles(mats: Materiales, geos: THREE.BufferGeometry[]):
   geos.push(geoBacia, geoQueso);
   const texPlata = texturaHalo('#e6ecf2');
   const texQueso = texturaHalo('#ffd54a');
-  const matHaloPlata = new THREE.SpriteMaterial({ map: texPlata, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true });
-  const matHaloQueso = new THREE.SpriteMaterial({ map: texQueso, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true });
+  const matHaloPlata = new THREE.SpriteMaterial({ map: texPlata, depthWrite: false, fog: false, transparent: true, opacity: 0.6 });
+  const matHaloQueso = new THREE.SpriteMaterial({ map: texQueso, depthWrite: false, fog: false, transparent: true, opacity: 0.65 });
   const especiales = (geo: THREE.BufferGeometry, color: number, halo: THREE.SpriteMaterial) =>
     Array.from({ length: 3 }, () => {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(geo, mats.brillo(color)));
       const s = new THREE.Sprite(halo);
-      s.scale.set(2.6, 2.6, 1);
+      s.scale.set(2.0, 2.0, 1);
       g.add(s);
       g.visible = false;
       grupo.add(g);
@@ -96,7 +97,7 @@ export function crearRecogibles(mats: Materiales, geos: THREE.BufferGeometry[]):
           pos.set(x, y, z);
           rot.setFromAxisAngle(eje, t * 2.5 + r.id);
           jarras.setMatrixAt(n, m.compose(pos, rot, esc));
-          escHalo.set(2.1, 2.1, 1);
+          escHalo.set(1.6, 1.6, 1);
           pos.z -= 0.4;
           halos.setMatrixAt(n, m.compose(pos, quieto, escHalo));
           n++;

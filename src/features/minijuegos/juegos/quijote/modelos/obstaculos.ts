@@ -1,17 +1,18 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-import { anguloAspas, medidasMolino, MOLINO, type Obstaculo, type TipoObstaculo } from '../modelo';
+import { anguloAspas, medidasMolino, type Obstaculo, type TipoObstaculo } from '../modelo';
 import { crearMolino, geometriasMolino, type Molino } from './molino';
-import { PALETA, type Materiales } from './paleta';
+import { caja, fundirPintadas, PALETA, pintar, ponerContorno, type Materiales } from './paleta';
 
 /**
- * Los obstaculos del camino. Cada uno es un Object3D que la escena saca de un
- * pool y coloca; si se mueve (ovejas que cruzan, odres que se balancean, aspas
- * que giran) lo hace en `animar`. Ocupan lo mismo que su caja de choque en
- * OBSTACULOS (modelo.ts): lo que se ve es lo que choca. Origen: el suelo, en
- * el centro del carril (los molinos, al borde del camino). Las piezas que no
- * se mueven van FUNDIDAS en una sola geometria: una llamada de dibujo.
+ * Los obstaculos del camino, en colores vivos y con contorno. Cada uno es un
+ * Object3D que la escena saca de un pool y coloca; si se mueve (ovejas que
+ * cruzan, odres que se balancean, aspas que giran) lo hace en `animar`.
+ * Ocupan lo mismo que su caja de choque en OBSTACULOS (modelo.ts): lo que se
+ * ve es lo que choca. Origen: el suelo, en el centro del carril (los molinos,
+ * al borde del camino). Las piezas que no se mueven van FUNDIDAS en una sola
+ * geometria con el color en cada vertice: una llamada de dibujo (y otra para
+ * su contorno).
  */
 
 export type PiezaObstaculo = {
@@ -22,24 +23,27 @@ export type PiezaObstaculo = {
   reiniciar(o: Obstaculo): void;
 };
 
-function caja(x: number, y: number, z: number, px: number, py: number, pz: number) {
-  const g = new THREE.BoxGeometry(x, y, z);
-  g.translate(px, py, pz);
-  return g;
-}
+const C = {
+  poste: PALETA.madera,
+  tabla: PALETA.maderaClara,
+  cartel: 0xf2c14e,
+  rojo: 0xc93a2c,
+  rueda: 0x5a3a1c,
+  paja: 0xf0c64a,
+  lana: 0xf7f3ea,
+  hocico: 0x3a2e2a,
+  odre: 0x8a2f4f,
+  cuerda: 0xcaa27a,
+};
 
-/** Para fundir geometrias hace falta que ninguna tenga indices (algunas ya vienen asi). */
-const sinIndices = (g: THREE.BufferGeometry) => (g.index ? g.toNonIndexed() : g);
-const fundir = (partes: THREE.BufferGeometry[]) => mergeGeometries(partes.map(sinIndices), false)!;
-
-/** Una oveja de lado (cruzando el camino), con el origen en el suelo. */
+/** Una oveja de lado (cruzando el camino): lana blanca, cara y patas oscuras. */
 function geoOveja() {
   const cuerpo = new THREE.DodecahedronGeometry(0.42, 0);
   cuerpo.scale(1.35, 0.95, 1);
   cuerpo.translate(0, 0.62, 0);
   const cabeza = caja(0.24, 0.26, 0.24, 0.6, 0.72, 0);
-  const patas = [-0.3, 0.3].flatMap((x) => [-0.18, 0.18].map((z) => caja(0.08, 0.36, 0.08, x, 0.18, z)));
-  return fundir([cuerpo, cabeza, ...patas]);
+  const patas = [-0.3, 0.3].flatMap((x) => [-0.18, 0.18].map((z) => pintar(caja(0.08, 0.36, 0.08, x, 0.18, z), C.hocico)));
+  return fundirPintadas([pintar(cuerpo, C.lana), pintar(cabeza, C.hocico), ...patas]);
 }
 
 /** Un odre: el pellejo de vino colgando de su cuerda, con el pivote (y = 0) arriba. */
@@ -49,27 +53,24 @@ function geoOdre() {
   pellejo.translate(0, -1.6, 0);
   const cuello = new THREE.CylinderGeometry(0.06, 0.12, 0.3, 5);
   cuello.translate(0, -0.95, 0);
-  const cuerda = caja(0.04, 0.85, 0.04, 0, -0.42, 0);
-  return fundir([pellejo, cuello, cuerda]);
+  return fundirPintadas([pintar(pellejo, C.odre), pintar(cuello, C.odre), pintar(caja(0.04, 0.85, 0.04, 0, -0.42, 0), C.cuerda)]);
 }
 
 export class FabricaObstaculos {
   private readonly g: Record<string, THREE.BufferGeometry>;
   private readonly molinos: Record<1 | 2, ReturnType<typeof geometriasMolino>>;
-  private readonly negro: THREE.Material;
-  private readonly claro: THREE.Material;
+  private readonly pintado: THREE.Material;
 
   constructor(
     private readonly mats: Materiales,
     geos: THREE.BufferGeometry[],
   ) {
-    this.negro = mats.mate(PALETA.silueta);
-    this.claro = mats.mate(PALETA.siluetaClara);
+    this.pintado = mats.pintado();
     const rueda = (x: number, z: number) => {
       const r = new THREE.CylinderGeometry(0.55, 0.55, 0.12, 10);
       r.rotateZ(Math.PI / 2);
       r.translate(x, 0.55, z);
-      return r;
+      return pintar(r, C.rueda);
     };
     const paja = new THREE.DodecahedronGeometry(1.15, 0);
     paja.scale(0.85, 0.75, 1.3);
@@ -78,33 +79,37 @@ export class FabricaObstaculos {
     pajar.scale(1.0, 2.8, 1.55);
     this.g = {
       // Valla baja de madera: dos postes y dos travesanos, hasta 0,9 m.
-      valla: fundir([
-        caja(0.14, 0.9, 0.14, -0.95, 0.45, 0),
-        caja(0.14, 0.9, 0.14, 0.95, 0.45, 0),
-        caja(2.0, 0.12, 0.08, 0, 0.42, 0),
-        caja(2.0, 0.12, 0.08, 0, 0.8, 0),
+      valla: fundirPintadas([
+        pintar(caja(0.16, 0.9, 0.16, -0.95, 0.45, 0), C.poste),
+        pintar(caja(0.16, 0.9, 0.16, 0.95, 0.45, 0), C.poste),
+        pintar(caja(2.0, 0.14, 0.1, 0, 0.42, 0), C.tabla),
+        pintar(caja(2.0, 0.14, 0.1, 0, 0.8, 0), C.tabla),
       ]),
       // Cartel de posada colgado de un arco: de 1,25 m hacia arriba.
-      cartel: fundir([
-        caja(0.14, 2.4, 0.14, -1.1, 1.2, 0),
-        caja(0.14, 2.4, 0.14, 1.1, 1.2, 0),
-        caja(2.36, 0.16, 0.16, 0, 2.32, 0),
-        caja(1.8, 0.75, 0.08, 0, 1.68, 0),
+      cartel: fundirPintadas([
+        pintar(caja(0.16, 2.4, 0.16, -1.1, 1.2, 0), C.poste),
+        pintar(caja(0.16, 2.4, 0.16, 1.1, 1.2, 0), C.poste),
+        pintar(caja(2.36, 0.18, 0.18, 0, 2.32, 0), C.poste),
+        pintar(caja(1.8, 0.75, 0.1, 0, 1.68, 0), C.cartel),
       ]),
-      // Carreta cargada de paja, o un pajar: tapan el carril.
-      carreta: fundir([
-        caja(1.9, 0.75, 3.0, 0, 1.05, 0),
+      // Carreta roja cargada de paja, o un pajar: tapan el carril.
+      carreta: fundirPintadas([
+        pintar(caja(1.9, 0.75, 3.0, 0, 1.05, 0), C.rojo),
         rueda(-1.0, -0.8),
         rueda(1.0, -0.8),
         rueda(-1.0, 0.9),
         rueda(1.0, 0.9),
-        caja(0.12, 0.12, 1.6, 0, 0.75, -2.2),
-        paja,
+        pintar(caja(0.12, 0.12, 1.6, 0, 0.75, -2.2), C.poste),
+        pintar(paja, C.paja),
       ]),
-      pajar,
+      pajar: fundirPintadas([pintar(pajar, C.paja)]),
       oveja: geoOveja(),
       // El palo del que cuelgan los odres, por encima de todo (no se choca con el).
-      horca: fundir([caja(0.12, 3.6, 0.12, -1.15, 1.8, 0), caja(0.12, 3.6, 0.12, 1.15, 1.8, 0), caja(2.42, 0.14, 0.14, 0, 3.55, 0)]),
+      horca: fundirPintadas([
+        pintar(caja(0.14, 3.6, 0.14, -1.15, 1.8, 0), C.poste),
+        pintar(caja(0.14, 3.6, 0.14, 1.15, 1.8, 0), C.poste),
+        pintar(caja(2.42, 0.16, 0.16, 0, 3.55, 0), C.poste),
+      ]),
       odre: geoOdre(),
     };
     geos.push(...Object.values(this.g));
@@ -116,11 +121,18 @@ export class FabricaObstaculos {
   }
 
   crear(tipo: TipoObstaculo): PiezaObstaculo {
+    const pieza = this.crearSin(tipo);
+    // Los molinos traen el suyo (mas grueso, que son enormes).
+    if (tipo !== 'molino') ponerContorno(pieza.objeto, this.mats);
+    return pieza;
+  }
+
+  private crearSin(tipo: TipoObstaculo): PiezaObstaculo {
     switch (tipo) {
       case 'bajo':
-        return this.fija(new THREE.Mesh(this.g.valla, this.negro));
+        return this.fija(new THREE.Mesh(this.g.valla, this.pintado));
       case 'alto':
-        return this.fija(new THREE.Mesh(this.g.cartel, this.negro));
+        return this.fija(new THREE.Mesh(this.g.cartel, this.pintado));
       case 'bloque':
         return this.bloque();
       case 'ovejas':
@@ -143,8 +155,8 @@ export class FabricaObstaculos {
 
   private bloque(): PiezaObstaculo {
     const grupo = new THREE.Group();
-    const carreta = new THREE.Mesh(this.g.carreta, this.negro);
-    const pajar = new THREE.Mesh(this.g.pajar, this.claro);
+    const carreta = new THREE.Mesh(this.g.carreta, this.pintado);
+    const pajar = new THREE.Mesh(this.g.pajar, this.pintado);
     grupo.add(carreta, pajar);
     return {
       objeto: grupo,
@@ -161,7 +173,7 @@ export class FabricaObstaculos {
   private rebano(): PiezaObstaculo {
     const grupo = new THREE.Group();
     const ovejas = [-0.75, 0, 0.75].map((x, k) => {
-      const m = new THREE.Mesh(this.g.oveja, this.claro);
+      const m = new THREE.Mesh(this.g.oveja, this.pintado);
       m.position.set(x, 0, (k - 1) * 0.45);
       grupo.add(m);
       return m;
@@ -183,9 +195,9 @@ export class FabricaObstaculos {
   /** Dos odres colgando de una horca sobre el carril, balanceandose. */
   private odre(): PiezaObstaculo {
     const grupo = new THREE.Group();
-    grupo.add(new THREE.Mesh(this.g.horca, this.negro));
+    grupo.add(new THREE.Mesh(this.g.horca, this.pintado));
     const odres = [-0.35, 0.35].map((x) => {
-      const m = new THREE.Mesh(this.g.odre, this.claro);
+      const m = new THREE.Mesh(this.g.odre, this.pintado);
       m.position.set(x, 3.5, 0);
       grupo.add(m);
       return m;

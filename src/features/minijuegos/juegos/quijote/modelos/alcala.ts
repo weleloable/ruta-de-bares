@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import { ALCALA, entradasAlcala } from '../recorrido';
-import { PALETA, type Materiales } from './paleta';
+import { PALETA, pintar, ponerContorno, type Materiales } from './paleta';
 
 /**
- * Alcala de Henares en silueta, cuando el camino entra en ella (recorrido.ts):
+ * Alcala de Henares a pleno sol, cuando el camino entra en ella (recorrido.ts):
  *  - el arco de entrada con el cartel "Bienvenido a Alcalá";
  *  - la Calle Mayor: soportales a los dos lados (columnas y, encima, las
  *    fachadas, de alturas distintas), con INSTANCING;
@@ -58,6 +58,7 @@ export class Alcala {
   private readonly columnas: THREE.InstancedMesh;
   private readonly muros: THREE.InstancedMesh;
   private readonly fondos: THREE.InstancedMesh;
+  private readonly tejados: THREE.InstancedMesh;
   private readonly tex: THREE.CanvasTexture;
   private readonly matCartel: THREE.MeshBasicMaterial;
   private readonly m = new THREE.Matrix4();
@@ -68,8 +69,7 @@ export class Alcala {
   private readonly alturas: number[];
 
   constructor(mats: Materiales, geos: THREE.BufferGeometry[]) {
-    const negro = mats.mate(PALETA.silueta);
-    const claro = mats.mate(PALETA.siluetaClara);
+    const piedra = mats.toon(PALETA.piedra);
 
     // Arco de entrada: dos pilares fuera del camino y el dintel muy por encima de cualquier salto.
     const geoArco = fundir([
@@ -84,7 +84,8 @@ export class Alcala {
     this.matCartel = new THREE.MeshBasicMaterial({ map: this.tex });
     const cartel = new THREE.Mesh(geoCartel, this.matCartel);
     cartel.position.set(0, 6.4, 0.75);
-    this.arco.add(new THREE.Mesh(geoArco, negro), cartel);
+    this.arco.add(new THREE.Mesh(geoArco, piedra), cartel);
+    ponerContorno(this.arco, mats, 0.07);
 
     // La Universidad: cuerpo largo, el centro mas alto con su remate y pinaculos. Mira al camino (+x).
     const geoUni = fundir([
@@ -104,45 +105,48 @@ export class Alcala {
       }),
     ]);
     geos.push(geoUni);
-    this.universidad = new THREE.Mesh(geoUni, claro);
+    this.universidad = new THREE.Mesh(geoUni, mats.toon(0xdcb36c));
+    ponerContorno(this.universidad, mats, 0.08);
     this.grupo.add(this.universidad);
 
     // La Plaza de Cervantes: gradas, pedestal y la estatua con la pluma en alto.
+    const BRONCE = 0x6f5a36;
     const geoEstatua = fundir([
-      caja(5, 0.5, 5, 0, 0.25, 0),
-      caja(3.6, 0.5, 3.6, 0, 0.75, 0),
-      caja(2.0, 3.4, 2.0, 0, 2.7, 0),
+      pintar(caja(5, 0.5, 5, 0, 0.25, 0), PALETA.piedra),
+      pintar(caja(3.6, 0.5, 3.6, 0, 0.75, 0), PALETA.piedra),
+      pintar(caja(2.0, 3.4, 2.0, 0, 2.7, 0), PALETA.ocre),
       (() => {
         const c = new THREE.CylinderGeometry(0.42, 0.62, 2.6, 7);
         c.translate(0, 5.7, 0);
-        return c;
+        return pintar(c, BRONCE);
       })(),
       (() => {
         const c = new THREE.IcosahedronGeometry(0.34, 0);
         c.translate(0, 7.25, 0);
-        return c;
+        return pintar(c, BRONCE);
       })(),
       (() => {
         const c = new THREE.BoxGeometry(0.16, 1.3, 0.16);
         c.translate(0, 0.6, 0);
         c.rotateZ(0.5);
         c.translate(-0.45, 6.4, 0);
-        return c;
+        return pintar(c, BRONCE);
       })(),
     ]);
     const geoFarola = fundir([caja(0.18, 4.2, 0.18, 0, 2.1, 0), caja(0.5, 0.6, 0.5, 0, 4.4, 0)]);
     geos.push(geoEstatua, geoFarola);
-    this.plaza.add(new THREE.Mesh(geoEstatua, negro));
+    this.plaza.add(new THREE.Mesh(geoEstatua, mats.pintado()));
     for (const [x, z] of [
       [-3.5, -6],
       [-3.5, 6],
       [4, -9],
       [4, 9],
     ] as const) {
-      const f = new THREE.Mesh(geoFarola, negro);
+      const f = new THREE.Mesh(geoFarola, mats.toon(0x2f4a3a));
       f.position.set(x, 0, z);
       this.plaza.add(f);
     }
+    ponerContorno(this.plaza, mats, 0.06);
 
     // Los soportales: una columna por vano y, encima, el muro de la fachada; detras, el fondo oscuro.
     const geoColumna = fundir([
@@ -156,17 +160,22 @@ export class Alcala {
     const geoMuro = new THREE.BoxGeometry(1, 1, 1);
     geoMuro.translate(0, 0.5, 0);
     geos.push(geoColumna, geoMuro);
-    this.columnas = new THREE.InstancedMesh(geoColumna, negro, MAX_VANOS);
-    this.muros = new THREE.InstancedMesh(geoMuro, negro, MAX_VANOS);
-    this.fondos = new THREE.InstancedMesh(geoMuro, claro, MAX_VANOS);
-    for (const im of [this.columnas, this.muros, this.fondos]) {
+    this.columnas = new THREE.InstancedMesh(geoColumna, piedra, MAX_VANOS);
+    // Las fachadas, encaladas con algun tono ocre (el color va por instancia) y su tejado de teja.
+    this.muros = new THREE.InstancedMesh(geoMuro, mats.toon(0xffffff), MAX_VANOS);
+    this.fondos = new THREE.InstancedMesh(geoMuro, mats.toon(PALETA.sombra), MAX_VANOS);
+    this.tejados = new THREE.InstancedMesh(geoMuro, mats.toon(PALETA.teja), MAX_VANOS);
+    const tonos = [PALETA.cal, PALETA.cal, PALETA.ocre, 0xf3dcb4, PALETA.cal, 0xead2a4];
+    const color = new THREE.Color();
+    for (let k = 0; k < MAX_VANOS; k++) this.muros.setColorAt(k, color.set(tonos[Math.floor(k / 2) % tonos.length]!));
+    for (const im of [this.columnas, this.muros, this.fondos, this.tejados]) {
       im.frustumCulled = false;
       im.count = 0;
     }
     let s = 3;
     this.alturas = Array.from({ length: MAX_VANOS }, () => 3.4 + 2.5 + ((s = (s * 9301 + 49297) % 233280) / 233280) * 4.5);
 
-    this.grupo.add(this.arco, this.plaza, this.columnas, this.muros, this.fondos);
+    this.grupo.add(this.arco, this.plaza, this.columnas, this.muros, this.fondos, this.tejados);
     this.grupo.visible = false;
   }
 
@@ -208,10 +217,14 @@ export class Alcala {
         this.pos.set(lado * (SOPORTAL_X + 3.2), 0, zz);
         this.esc.set(0.4, 3.6, VANO);
         this.fondos.setMatrixAt(n, this.m.compose(this.pos, this.rot, this.esc));
+        // El tejado, un poco volado sobre la fachada.
+        this.pos.set(lado * (SOPORTAL_X + 1.6), alto, zz);
+        this.esc.set(4.2, 0.45, VANO);
+        this.tejados.setMatrixAt(n, this.m.compose(this.pos, this.rot, this.esc));
         n++;
       }
     }
-    for (const im of [this.columnas, this.muros, this.fondos]) {
+    for (const im of [this.columnas, this.muros, this.fondos, this.tejados]) {
       im.count = n;
       im.instanceMatrix.needsUpdate = true;
     }

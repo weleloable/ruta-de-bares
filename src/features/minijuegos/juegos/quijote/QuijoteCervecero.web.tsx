@@ -66,6 +66,17 @@ const UMBRAL_SOLTAR = 12;
 const TOQUE_MAX_MS = 300;
 /** Segundos que se ve "¡GIGANTE DERRIBADO!". */
 const CARTEL_GIGANTE = 1.6;
+/** Lo que dura en pantalla un "+250" (ms). */
+const DURA_PUNTOS = 900;
+
+/** Un "+25" o "+250" que salta donde estaba lo derribado. */
+type Puntos = { id: number; x: number; y: number; texto: string; grande: boolean; desde: number };
+
+/** Las animaciones CSS del juego (las lineas de velocidad y los "+250"), una sola vez. */
+const ESTILOS = `
+@keyframes quijote-lineas { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.08) rotate(4deg); } }
+@keyframes quijote-puntos { 0% { transform: translate(-50%, 0) scale(.6); opacity: 0; } 15% { transform: translate(-50%, -10px) scale(1.15); opacity: 1; } 100% { transform: translate(-50%, -70px) scale(1); opacity: 0; } }
+`;
 
 type Fase = 'inicio' | 'jugando' | 'fin';
 type Dedo = { id: number; x: number; y: number; x0: number; y0: number; desde: number; usado: boolean };
@@ -112,9 +123,10 @@ const TECLAS: Record<string, Accion> = {
 function motivosDe(e: Estado): Motivo[] {
   const m: Motivo[] = [];
   for (const ev of e.eventos) {
-    if (ev === 'molino-cerca') m.push('molino');
-    // La Embestida y los gigantes ya tienen su cartel: sin bocadillo.
-    else if (ev === 'choque' || ev === 'escudo' || ev === 'yelmo' || ev === 'queso') m.push(ev);
+    if (ev === 'molino-cerca' && !e.eventos.includes('embestida')) m.push('molino');
+    // Al lanzar la Embestida, una frase (una sola: el molino que aparece no dice otra). El
+    // gigante derribado ya tiene su cartel: sin bocadillo.
+    else if (ev === 'embestida' || ev === 'choque' || ev === 'escudo' || ev === 'yelmo' || ev === 'queso') m.push(ev);
   }
   return m;
 }
@@ -132,6 +144,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const [verFps, setVerFps] = useState(false);
   const [conSonido, setConSonido] = useState(sonidoGuardado);
   const [conBrillos, setConBrillos] = useState(brillosGuardados);
+  const [puntos, setPuntos] = useState<Puntos[]>([]);
   const sonido = useRef(new SonidoQuijote());
   const brillosRef = useRef(conBrillos);
   brillosRef.current = conBrillos;
@@ -222,6 +235,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     let dichoInicio = false;
     let enCiudad = false;
     let densidadMax: number = DENSIDAD_MAX;
+    let siguientePunto = 0;
     let lento = 0;
     let raf = 0;
     let fin: ReturnType<typeof setTimeout> | null = null;
@@ -264,6 +278,15 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
           feedback.acierto();
         }
         if (ev.includes('fin')) fin = setTimeout(() => terminar(est), 1200);
+
+        // Lo derribado: su "+25" o "+250" salta donde estaba.
+        if (est.derribos.length > 0) {
+          const nuevos = est.derribos.flatMap((d) => {
+            const p = pintor.proyectar(d.s, d.x, 2.6, est.dist, canvas.clientWidth, canvas.clientHeight);
+            return p ? [{ id: ++siguientePunto, x: p.x, y: p.y, texto: `+${d.puntos}`, grande: d.puntos >= 100, desde: ahora }] : [];
+          });
+          if (nuevos.length > 0) setPuntos((lista) => [...lista.filter((q) => ahora - q.desde < DURA_PUNTOS), ...nuevos].slice(-8));
+        }
 
         const motivos = motivosDe(est);
         // Al entrar en Alcala (una vez por tramo).
@@ -312,6 +335,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
       }
       raf = requestAnimationFrame(bucle);
     };
+    setPuntos([]);
     raf = requestAnimationFrame(bucle);
     return () => {
       cancelAnimationFrame(raf);
@@ -392,6 +416,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
 
   return (
     <div style={e.raiz} onContextMenu={(ev) => ev.preventDefault()}>
+      <style>{ESTILOS}</style>
       <canvas ref={lienzo} style={e.lienzo} />
 
       {fase === 'jugando' ? (
@@ -435,6 +460,19 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
               }}
             />
           </div>
+
+          {/* Embistiendo: borde dorado y lineas de velocidad hacia el centro. */}
+          {hud.embistiendo ? (
+            <>
+              <div style={e.lineas} />
+              <div style={e.bordeDorado} />
+            </>
+          ) : null}
+          {puntos.map((q) => (
+            <div key={q.id} style={{ ...e.puntosFlotan, ...(q.grande ? e.puntosGrandes : null), left: q.x, top: q.y }}>
+              {q.texto}
+            </div>
+          ))}
 
           {hud.bocadillo ? <div style={e.bocadillo}>{hud.bocadillo}</div> : null}
           {hud.gigante ? <div style={e.gigante}>¡GIGANTE DERRIBADO!</div> : null}
@@ -540,14 +578,15 @@ const sinGestos: CSSProperties = {
   WebkitTapHighlightColor: 'transparent',
 };
 
-const sombra = '0 2px 6px rgba(0,0,0,.6)';
+// De dia el fondo es claro: el marcador lleva una sombra marcada para leerse sobre el cielo.
+const sombra = '0 2px 0 rgba(60,30,10,.85), 0 0 6px rgba(0,0,0,.45)';
 
 const e: Record<string, CSSProperties> = {
   raiz: { ...sinGestos, position: 'fixed', inset: 0, background: '#1a0f14', overflow: 'hidden', fontFamily: 'system-ui, sans-serif', zIndex: 10 },
   lienzo: { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' },
   zonaGestos: { ...sinGestos, position: 'absolute', inset: 0 },
   marcador: { position: 'absolute', top: 'max(12px, env(safe-area-inset-top))', left: 16, pointerEvents: 'none' },
-  puntos: { color: CREMA, fontSize: 30, fontWeight: 900, lineHeight: 1, textShadow: sombra },
+  puntos: { color: '#FFFFFF', fontSize: 30, fontWeight: 900, lineHeight: 1, textShadow: sombra },
   metros: { color: AMBAR, fontSize: 14, fontWeight: 800, marginTop: 2, textShadow: sombra },
   derecha: { position: 'absolute', top: 'max(12px, env(safe-area-inset-top))', right: 12, display: 'flex', alignItems: 'center', gap: 10 },
   vidas: { display: 'flex', alignItems: 'center', gap: 4, pointerEvents: 'none' },
@@ -571,7 +610,8 @@ const e: Record<string, CSSProperties> = {
     height: 8,
     borderRadius: 4,
     overflow: 'hidden',
-    background: 'rgba(255,243,220,.22)',
+    background: 'rgba(40,20,10,.35)',
+    border: '1px solid rgba(255,255,255,.5)',
     pointerEvents: 'none',
   },
   barraLlena: { height: '100%', borderRadius: 4, background: ORO, transition: 'width .15s linear' },
@@ -606,6 +646,32 @@ const e: Record<string, CSSProperties> = {
     textShadow: '0 3px 0 #5a2a00, 0 0 18px rgba(255,181,46,.8)',
     pointerEvents: 'none',
   },
+  lineas: {
+    position: 'absolute',
+    inset: '-10%',
+    pointerEvents: 'none',
+    // Rayos desde un poco por encima del centro, transparentes en medio: sensacion de velocidad.
+    background: 'repeating-conic-gradient(from 0deg at 50% 42%, rgba(255,255,255,0) 0deg 5deg, rgba(255,255,255,.55) 5deg 6deg)',
+    WebkitMaskImage: 'radial-gradient(circle at 50% 42%, transparent 28%, black 70%)',
+    maskImage: 'radial-gradient(circle at 50% 42%, transparent 28%, black 70%)',
+    animation: 'quijote-lineas .12s linear infinite alternate',
+  },
+  bordeDorado: {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+    boxShadow: `inset 0 0 70px 18px rgba(255,191,46,.55)`,
+  },
+  puntosFlotan: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    color: CREMA,
+    fontSize: 22,
+    fontWeight: 900,
+    textShadow: '0 2px 0 #7a3d00, 0 0 8px rgba(0,0,0,.4)',
+    animation: `quijote-puntos ${DURA_PUNTOS}ms ease-out forwards`,
+  },
+  puntosGrandes: { color: ORO, fontSize: 34 },
   embestida: {
     ...sinGestos,
     position: 'absolute',

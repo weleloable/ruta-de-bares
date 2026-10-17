@@ -62,7 +62,12 @@ export const CONFIG = {
   /** Probabilidad de jarras en zigzag en el hueco entre dos patrones. */
   jarrasZigzag: 0.15,
   /** Embestida: lo que dura, cuanto acelera y los puntos por lo que derriba. */
-  embestida: { duracion: 3, acelera: 1.3, puntosObstaculo: 25, puntosMolino: 250 },
+  /**
+   * Embestida: lo que dura, cuanto acelera y los puntos por lo que derriba. Al
+   * lanzarla aparece un gigante (un molino) a `gigante` segundos de camino: asi
+   * cada Embestida termina derribando uno.
+   */
+  embestida: { duracion: 4.5, acelera: 1.3, puntosObstaculo: 25, puntosMolino: 250, gigante: 1.6 },
   /** Probabilidad, por patron, de que salga un yelmo o un queso (y desde que metros). */
   yelmo: { desde: 300, prob: 0.05 },
   queso: { desde: 500, prob: 0.03 },
@@ -170,6 +175,8 @@ export type Estado = {
   terminado: boolean;
   /** Lo que ha pasado en el ultimo `avanzar` (para sonido, vibracion, camara, bocadillos). */
   eventos: Evento[];
+  /** Lo derribado en el ultimo `avanzar`, con donde estaba y lo que ha dado (para el "+250"). */
+  derribos: { s: number; x: number; puntos: number }[];
 };
 
 export const xDeCarril = (c: number) => (c - 1) * CONFIG.anchoCarril;
@@ -199,6 +206,7 @@ export function crearEstado(): Estado {
     molinos: 0,
     terminado: false,
     eventos: [],
+    derribos: [],
   };
 }
 
@@ -267,6 +275,18 @@ export function aplicarAccion(e: Estado, a: Accion): Estado {
       if (embestidaLista(e)) {
         e.carga = 0;
         e.embestidaHasta = e.t + CONFIG.embestida.duracion;
+        // ¡Gigantes a la vista! Un molino un poco mas adelante, para derribarlo.
+        const lado: -1 | 1 = e.carril === 2 ? -1 : e.carril === 0 ? 1 : e.t % 2 < 1 ? -1 : 1;
+        e.obstaculos.push({
+          id: e.siguienteId++,
+          s: e.dist + velocidadEn(e.dist) * CONFIG.embestida.acelera * CONFIG.embestida.gigante,
+          carril: (lado < 0 ? 0 : 2) as Carril,
+          tipo: 'molino',
+          golpeado: false,
+          variante: 0,
+          molino: { lado, alcance: 2, fase: 0 },
+        });
+        e.eventos.push('molino-cerca');
         e.eventos.push('embestida');
       }
       break;
@@ -540,6 +560,7 @@ function derriba(e: Estado, o: Obstaculo): boolean {
 /** Un paso de `dt` segundos. Muta y devuelve el estado (el bucle no crea basura por fotograma). */
 export function avanzar(e: Estado, dt: number, azar: () => number): Estado {
   e.eventos = [];
+  e.derribos = [];
   if (e.terminado || dt <= 0) return e;
   e.t += dt;
 
@@ -593,9 +614,11 @@ export function avanzar(e: Estado, dt: number, azar: () => number): Estado {
         e.molinos += 1;
         e.bonus += CONFIG.embestida.puntosMolino;
         e.eventos.push('gigante');
+        e.derribos.push({ s: o.s, x: o.molino!.lado * MOLINO.hx * 0.6, puntos: CONFIG.embestida.puntosMolino });
       } else {
         e.bonus += CONFIG.embestida.puntosObstaculo;
         e.eventos.push('derribo');
+        e.derribos.push({ s: o.s, x: xDeCarril(o.carril), puntos: CONFIG.embestida.puntosObstaculo });
       }
     }
     return e;
