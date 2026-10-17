@@ -11,7 +11,7 @@ import { PALETA, type Materiales } from './paleta';
  */
 export type Jinete = {
   grupo: THREE.Group;
-  animar(dt: number, s: { velocidad: number; enAire: boolean; agachado: boolean }): void;
+  animar(dt: number, s: { velocidad: number; enAire: boolean; agachado: boolean; embistiendo: boolean; escudo: boolean }): void;
 };
 
 /** Una caja con el pivote arriba (para patas y brazos que giran desde la cadera o el hombro). */
@@ -105,7 +105,12 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
   const piernaD = colgante(0.12, 0.7, oscuro, geos);
   piernaD.position.set(0.36, 0.1, 0);
   piernaD.rotation.z = -0.12;
-  jinete.add(torso, cabeza, yelmo, piernaI, piernaD);
+  // El yelmo de Mambrino (una bacia de barbero, plateada) cuando lo lleva: para un golpe.
+  const bacia = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2.4), mats.brillo(0xe6ecf2));
+  geos.push(bacia.geometry);
+  bacia.position.set(0, 1.06, -0.02);
+  bacia.visible = false;
+  jinete.add(torso, cabeza, yelmo, bacia, piernaI, piernaD);
 
   // Brazo izquierdo en alto con la jarra (dorada: se ve desde lejos).
   const brazoI = colgante(0.1, 0.62, oscuro, geos);
@@ -136,12 +141,20 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
   jinete.add(brazoD, lanza);
 
   let fase = 0;
+  let embiste = 0;
   let aplastado = 1;
 
   return {
     grupo,
     geometrias: geos,
-    animar(dt, { velocidad, enAire, agachado }) {
+    animar(dt, { velocidad, enAire, agachado, embistiendo, escudo }) {
+      yelmo.visible = !escudo;
+      bacia.visible = escudo;
+      // Embistiendo: lanza en ristre (horizontal y al frente) y el jinete echado hacia delante.
+      embiste += ((embistiendo ? 1 : 0) - embiste) * (1 - Math.exp(-12 * dt));
+      lanza.rotation.x = -Math.PI / 2 + 0.3 - embiste * 0.32;
+      lanza.position.set(0.32, 0.35 - embiste * 0.2, -0.9 - embiste * 0.5);
+      brazoD.rotation.x = 0.9 + embiste * 0.6;
       // Unas 0.55 zancadas por metro: a mas velocidad, galope mas rapido.
       fase += velocidad * dt * 0.55;
       for (const p of patas) {
@@ -156,7 +169,7 @@ export function crearQuijote(mats: Materiales): Jinete & { geometrias: THREE.Buf
       // Agachado: se tumba sobre el cuello y el caballo baja la cabeza.
       aplastado += ((agachado ? 0.6 : 1) - aplastado) * (1 - Math.exp(-18 * dt));
       cuerpo.scale.y = aplastado;
-      jinete.rotation.x = (1 - aplastado) * -2;
+      jinete.rotation.x = (1 - aplastado) * -2 - embiste * 0.35;
       brazoI.rotation.z = -(Math.PI - 0.35) + Math.sin(fase * 2) * 0.05;
     },
   };

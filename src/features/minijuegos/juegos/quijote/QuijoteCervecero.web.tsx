@@ -5,18 +5,31 @@ import { feedback } from '../../feedback';
 import { pasoDeTiempo } from '../../reloj';
 import type { PropsJuego } from '../../tipos';
 import { direccionDeGesto } from '../conga/giros';
+import { avanzarBocadillos, crearBocadillos, TIEMPOS, type Motivo } from './bocadillos';
 import { Escena3D, hayWebGL } from './escena3d';
-import { aplicarAccion, avanzar, CONFIG, crearEstado, ID_QUIJOTE, metros, type Accion, type Estado } from './modelo';
+import {
+  aplicarAccion,
+  avanzar,
+  CONFIG,
+  crearEstado,
+  embestidaLista,
+  embistiendo,
+  ID_QUIJOTE,
+  metros,
+  puntuacion,
+  type Accion,
+  type Estado,
+} from './modelo';
 
 /**
  * Don Quijote Cervecero (solo web): endless runner en 3D, en VERTICAL y con una
- * mano. Deslizar a los lados cambia de carril, arriba salta y abajo agacha. En
- * PC, flechas o WASD.
+ * mano. Un toque a un lado (o deslizar) cambia de carril, deslizar arriba
+ * salta y abajo agacha; con 10 jarras se llena la barra y el boton de abajo
+ * lanza la Embestida. En PC, flechas o WASD y espacio.
  *
- * Fases 1 y 2: camino, gestos, choques, vidas, velocidad creciente y el atardecer
- * con Quijote, Rocinante y los molinos (escena3d.ts y modelos/). Todo es
- * DOM y canvas (como ¿Conduces tu?): el marcador y los botones van en HTML por
- * encima del canvas, nunca en 3D.
+ * Todo es DOM y canvas (como ¿Conduces tu?): el marcador, los bocadillos y los
+ * botones van en HTML por encima del canvas, nunca en 3D. La escena esta en
+ * escena3d.ts y modelos/; la logica, en modelo.ts.
  */
 
 const DT_MAX = 0.05;
@@ -27,9 +40,36 @@ const UMBRAL = 20;
 const UMBRAL_SOLTAR = 12;
 /** Un toque (sin arrastrar y corto) en una mitad de la pantalla mueve un carril hacia ese lado. */
 const TOQUE_MAX_MS = 300;
+/** Segundos que se ve "¡GIGANTE DERRIBADO!". */
+const CARTEL_GIGANTE = 1.6;
 
 type Fase = 'inicio' | 'jugando' | 'fin';
 type Dedo = { id: number; x: number; y: number; x0: number; y0: number; desde: number; usado: boolean };
+type Hud = {
+  puntos: number;
+  metros: number;
+  vidas: number;
+  carga: number;
+  lista: boolean;
+  embistiendo: boolean;
+  escudo: boolean;
+  fps: number;
+  bocadillo: string | null;
+  gigante: boolean;
+};
+
+const HUD_INICIAL: Hud = {
+  puntos: 0,
+  metros: 0,
+  vidas: CONFIG.vidas,
+  carga: 0,
+  lista: false,
+  embistiendo: false,
+  escudo: false,
+  fps: 0,
+  bocadillo: null,
+  gigante: false,
+};
 
 const TECLAS: Record<string, Accion> = {
   ArrowLeft: 'izquierda',
@@ -40,7 +80,20 @@ const TECLAS: Record<string, Accion> = {
   KeyW: 'arriba',
   ArrowDown: 'abajo',
   KeyS: 'abajo',
+  Space: 'embestida',
+  Enter: 'embestida',
 };
+
+/** Lo que ha pasado en el fotograma, en motivos para los bocadillos. */
+function motivosDe(e: Estado): Motivo[] {
+  const m: Motivo[] = [];
+  for (const ev of e.eventos) {
+    if (ev === 'molino-cerca') m.push('molino');
+    else if (ev === 'embestida' || ev === 'gigante' || ev === 'choque' || ev === 'escudo' || ev === 'yelmo' || ev === 'queso') m.push(ev);
+    else if (ev === 'jarra' && e.jarras % TIEMPOS.jarrasCada === 0) m.push('jarras');
+  }
+  return m;
+}
 
 export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const lienzo = useRef<HTMLCanvasElement>(null);
@@ -51,7 +104,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const [pausa, setPausa] = useState(false);
   const pausaRef = useRef(false);
   const [partidaId, setPartidaId] = useState(0);
-  const [hud, setHud] = useState<{ metros: number; vidas: number; fps: number }>({ metros: 0, vidas: CONFIG.vidas, fps: 0 });
+  const [hud, setHud] = useState<Hud>(HUD_INICIAL);
   const [verFps, setVerFps] = useState(false);
   /** Gestos pendientes: se aplican al principio del siguiente fotograma, en orden (no se pierde ninguno). */
   const cola = useRef<Accion[]>([]);
@@ -107,7 +160,11 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
 
   const terminar = useCallback((est: Estado) => {
     salirDePantallaCompleta();
-    alAcabar.current({ juego: ID_QUIJOTE, puntuacion: metros(est), detalles: { metros: metros(est) } });
+    alAcabar.current({
+      juego: ID_QUIJOTE,
+      puntuacion: puntuacion(est),
+      detalles: { metros: metros(est), jarras: est.jarras, molinos: est.molinos },
+    });
   }, []);
 
   // El bucle de la partida.
@@ -118,6 +175,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     escena.current ??= new Escena3D(canvas);
     const pintor = escena.current;
     const est = crearEstado();
+    const bocas = crearBocadillos(Math.random);
     cola.current = [];
     let ultimo = performance.now();
     let ultimoHud = 0;
@@ -125,6 +183,8 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     let fotogramas = 0;
     let desdeFps = ultimo;
     let fps = 0;
+    let giganteHasta = -1;
+    let dichoInicio = false;
     let raf = 0;
     let fin: ReturnType<typeof setTimeout> | null = null;
 
@@ -133,13 +193,35 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
       ultimo = ahora;
       if (!pausaRef.current) {
         for (const a of cola.current) aplicarAccion(est, a);
-        cola.current = [];
+        // Lo que ha pasado al aplicar los gestos (la Embestida) se suma a lo del paso.
+        const deGestos = est.eventos;
         avanzar(est, dt, Math.random);
-        if (est.eventos.includes('choque')) {
+        if (deGestos.includes('embestida')) est.eventos.push('embestida');
+        cola.current = [];
+
+        const ev = est.eventos;
+        if (ev.includes('choque')) {
           temblor = 0.6;
           feedback.fallo();
         }
-        if (est.eventos.includes('fin')) fin = setTimeout(() => terminar(est), 1200);
+        if (ev.includes('escudo')) {
+          temblor = 0.35;
+          feedback.acierto();
+        }
+        if (ev.includes('embestida')) feedback.acierto();
+        if (ev.includes('gigante')) {
+          temblor = 0.9;
+          giganteHasta = est.t + CARTEL_GIGANTE;
+          feedback.record();
+        }
+        if (ev.includes('fin')) fin = setTimeout(() => terminar(est), 1200);
+
+        const motivos = motivosDe(est);
+        if (!dichoInicio && est.t > 0.6) {
+          motivos.push('inicio');
+          dichoInicio = true;
+        }
+        avanzarBocadillos(bocas, est.t, motivos, Math.random);
       } else {
         cola.current = [];
       }
@@ -156,7 +238,18 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
       }
       if (ahora - ultimoHud > 100) {
         ultimoHud = ahora;
-        setHud({ metros: metros(est), vidas: est.vidas, fps });
+        setHud({
+          puntos: puntuacion(est),
+          metros: metros(est),
+          vidas: est.vidas,
+          carga: est.carga,
+          lista: embestidaLista(est),
+          embistiendo: embistiendo(est),
+          escudo: est.escudo,
+          fps,
+          bocadillo: bocas.texto,
+          gigante: est.t < giganteHasta,
+        });
       }
       raf = requestAnimationFrame(bucle);
     };
@@ -171,7 +264,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     entrarEnVertical();
     feedback.toque();
     pausar(false);
-    setHud({ metros: 0, vidas: CONFIG.vidas, fps: 0 });
+    setHud(HUD_INICIAL);
     setPartidaId((n) => n + 1);
     setFase('jugando');
   };
@@ -214,6 +307,13 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     dedo.current = null;
   };
 
+  const embestir = (ev: PEvent<HTMLButtonElement>) => {
+    // Que el toque no llegue tambien a la zona de gestos (seria un cambio de carril).
+    ev.stopPropagation();
+    ev.preventDefault();
+    cola.current.push('embestida');
+  };
+
   return (
     <div style={e.raiz} onContextMenu={(ev) => ev.preventDefault()}>
       <canvas ref={lienzo} style={e.lienzo} />
@@ -227,12 +327,16 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
             onPointerUp={dedoArriba}
             onPointerCancel={() => (dedo.current = null)}
           />
+
           <div style={e.marcador}>
-            <div style={e.metros}>{hud.metros} m</div>
-            {verFps ? <div style={e.fps}>{hud.fps} fps</div> : null}
+            <div style={e.puntos}>{hud.puntos.toLocaleString('es-ES')}</div>
+            <div style={e.metros}>
+              {hud.metros} m{verFps ? ` · ${hud.fps} fps` : ''}
+            </div>
           </div>
           <div style={e.derecha}>
-            <div style={e.vidas} aria-label={`Vidas: ${hud.vidas} de ${CONFIG.vidas}`}>
+            <div style={e.vidas} aria-label={`Vidas: ${hud.vidas} de ${CONFIG.vidas}${hud.escudo ? ', con el yelmo puesto' : ''}`}>
+              {hud.escudo ? <Ionicons name="shield" size={22} color={PLATA} /> : null}
               {Array.from({ length: CONFIG.vidas }, (_, k) => (
                 <Ionicons key={k} name={k < hud.vidas ? 'heart' : 'heart-outline'} size={24} color={k < hud.vidas ? ROJO : CREMA} />
               ))}
@@ -241,6 +345,26 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
               <Ionicons name="pause" size={22} color={CREMA} />
             </button>
           </div>
+
+          {/* La barra de Embestida: una jarra por casilla. */}
+          <div style={e.barra} aria-label={`Embestida: ${hud.carga} de ${CONFIG.jarrasEmbestida} jarras`}>
+            {Array.from({ length: CONFIG.jarrasEmbestida }, (_, k) => (
+              <div key={k} style={{ ...e.casillaBarra, ...(k < hud.carga || hud.embistiendo ? e.casillaLlena : null) }} />
+            ))}
+          </div>
+
+          {hud.bocadillo ? <div style={e.bocadillo}>{hud.bocadillo}</div> : null}
+          {hud.gigante ? <div style={e.gigante}>¡GIGANTE DERRIBADO!</div> : null}
+
+          <button
+            type="button"
+            aria-label="Embestida"
+            disabled={!hud.lista}
+            style={{ ...e.embestida, ...(hud.lista ? e.embestidaLista : null), ...(hud.embistiendo ? e.embestidaActiva : null) }}
+            onPointerDown={embestir}
+          >
+            {hud.embistiendo ? '¡A LA CARGA!' : '¡EMBESTIDA!'}
+          </button>
         </>
       ) : null}
 
@@ -263,7 +387,10 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
           <div style={e.texto}>
             Toca a un lado de la pantalla (o desliza) para cambiar de carril. Desliza arriba para saltar y abajo para agacharte.
           </div>
-          <div style={e.nota}>Fase 2 de pruebas: aún sin jarras ni Embestida. En el ordenador, flechas o WASD.</div>
+          <div style={e.texto}>
+            Con 10 jarras se llena la barra: pulsa <b>¡EMBESTIDA!</b> y derriba lo que encuentres, gigantes incluidos.
+          </div>
+          <div style={e.nota}>En pruebas · en el ordenador, flechas o WASD y espacio.</div>
           {!webgl ? <div style={e.nota}>Este navegador no puede pintar en 3D: prueba con Chrome o Safari actualizados.</div> : null}
           <button type="button" style={{ ...e.boton, ...(webgl ? null : e.apagado) }} disabled={!webgl} onClick={arrancar}>
             ¡A galopar!
@@ -308,8 +435,10 @@ function salirDePantallaCompleta() {
 }
 
 const AMBAR = '#E8A32C';
+const ORO = '#FFB52E';
 const CREMA = '#FFF3DC';
 const ROJO = '#E0483C';
+const PLATA = '#E6ECF2';
 const MADERA = '#3b2414';
 
 // Sin gestos del navegador sobre el juego: ni recargar al deslizar abajo, ni scroll, ni zoom.
@@ -322,15 +451,17 @@ const sinGestos: CSSProperties = {
   WebkitTapHighlightColor: 'transparent',
 };
 
+const sombra = '0 2px 6px rgba(0,0,0,.6)';
+
 const e: Record<string, CSSProperties> = {
   raiz: { ...sinGestos, position: 'fixed', inset: 0, background: '#1a0f14', overflow: 'hidden', fontFamily: 'system-ui, sans-serif', zIndex: 10 },
   lienzo: { position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' },
   zonaGestos: { ...sinGestos, position: 'absolute', inset: 0 },
   marcador: { position: 'absolute', top: 'max(12px, env(safe-area-inset-top))', left: 16, pointerEvents: 'none' },
-  metros: { color: CREMA, fontSize: 30, fontWeight: 900, textShadow: '0 2px 6px rgba(0,0,0,.6)' },
-  fps: { color: AMBAR, fontSize: 13, fontWeight: 700 },
+  puntos: { color: CREMA, fontSize: 30, fontWeight: 900, lineHeight: 1, textShadow: sombra },
+  metros: { color: AMBAR, fontSize: 14, fontWeight: 800, marginTop: 2, textShadow: sombra },
   derecha: { position: 'absolute', top: 'max(12px, env(safe-area-inset-top))', right: 12, display: 'flex', alignItems: 'center', gap: 10 },
-  vidas: { display: 'flex', gap: 4, pointerEvents: 'none' },
+  vidas: { display: 'flex', alignItems: 'center', gap: 4, pointerEvents: 'none' },
   icono: {
     ...sinGestos,
     width: 40,
@@ -343,6 +474,65 @@ const e: Record<string, CSSProperties> = {
     justifyContent: 'center',
     cursor: 'pointer',
   },
+  barra: {
+    position: 'absolute',
+    top: 'calc(max(12px, env(safe-area-inset-top)) + 54px)',
+    left: 16,
+    right: 16,
+    display: 'flex',
+    gap: 4,
+    pointerEvents: 'none',
+  },
+  casillaBarra: { flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,243,220,.22)' },
+  casillaLlena: { background: ORO, boxShadow: `0 0 8px ${ORO}` },
+  bocadillo: {
+    position: 'absolute',
+    left: '50%',
+    bottom: '38%',
+    transform: 'translateX(-50%)',
+    maxWidth: '78%',
+    padding: '8px 14px',
+    borderRadius: 14,
+    background: CREMA,
+    color: MADERA,
+    fontSize: 16,
+    fontWeight: 800,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    boxShadow: '0 4px 14px rgba(0,0,0,.35)',
+    pointerEvents: 'none',
+  },
+  gigante: {
+    position: 'absolute',
+    top: '28%',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    color: ORO,
+    fontSize: 34,
+    fontWeight: 900,
+    letterSpacing: 1,
+    textShadow: '0 3px 0 #5a2a00, 0 0 18px rgba(255,181,46,.8)',
+    pointerEvents: 'none',
+  },
+  embestida: {
+    ...sinGestos,
+    position: 'absolute',
+    left: '50%',
+    bottom: 'calc(max(18px, env(safe-area-inset-bottom)) + 8px)',
+    transform: 'translateX(-50%)',
+    minWidth: 220,
+    padding: '16px 28px',
+    borderRadius: 999,
+    border: `2px solid rgba(255,243,220,.35)`,
+    background: 'rgba(0,0,0,.35)',
+    color: 'rgba(255,243,220,.45)',
+    fontSize: 20,
+    fontWeight: 900,
+    letterSpacing: 1,
+  },
+  embestidaLista: { background: ORO, color: MADERA, border: `2px solid ${CREMA}`, boxShadow: `0 0 22px ${ORO}`, cursor: 'pointer' },
+  embestidaActiva: { background: ROJO, color: CREMA, border: `2px solid ${CREMA}`, boxShadow: `0 0 22px ${ROJO}` },
   velo: {
     position: 'absolute',
     inset: 0,
