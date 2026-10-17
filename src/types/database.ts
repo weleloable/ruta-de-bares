@@ -789,6 +789,16 @@ export type Database = {
       push_preferencias_guardar: { Args: { p_paradas: boolean; p_sorteo: boolean; p_cana: boolean }; Returns: undefined };
       /** Aviso de moderacion pendiente, solo admins (0066). */
       push_preferencias_admin_guardar: { Args: { p_admin: boolean }; Returns: undefined };
+      /** Silenciar los anuncios de la organizacion en el movil (0074). */
+      push_preferencias_anuncios_guardar: { Args: { p_anuncios: boolean }; Returns: undefined };
+      /** Anuncios de los admins a una ruta (0074): enviar y retirar solo admins; vigentes, quien este en la ruta. */
+      anuncio_enviar: {
+        Args: { p_route: string; p_texto: string; p_duracion: number; p_solo_admins: boolean; p_avisar_movil: boolean };
+        Returns: string;
+      };
+      anuncio_retirar: { Args: { p_id: string }; Returns: undefined };
+      anuncios_vigentes: { Args: { p_route: string }; Returns: unknown };
+      anuncios_enviados: { Args: { p_route: string }; Returns: unknown };
       /** Ya vi esta version de la politica (0063). */
       politica_marcar_vista: { Args: { p_version: string }; Returns: undefined };
       /** Auditoria de una ruta: anulados, ajustes y cambios de casa (0059). */

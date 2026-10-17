@@ -33,6 +33,8 @@ self.iconoDeAviso = function iconoDeAviso(datos) {
       if (empieza('📳')) return 'toque';
       if (empieza('🍺')) return 'pregunta';
       return 'mensaje';
+    case 'anuncio':
+      return 'anuncio';
     case 'admin':
       // Lo que hizo otro admin lleva a Moderacion; lo pendiente, a Alertas.
       return url.indexOf('/admin/moderacion') === 0 ? 'info' : 'alerta';

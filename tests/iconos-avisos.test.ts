@@ -52,6 +52,7 @@ const CASOS: [string, string, string, string, string][] = [
   ['admin', '🚩 Denuncia nueva', '/admin/alertas', 'alerta', '🚩 Denuncia nueva'],
   ['admin', '📷 Foto de perfil por aprobar', '/admin/alertas', 'alerta', '📷 Foto de perfil por aprobar'],
   ['admin-9', '🚪 Expulsión de una ruta', '/admin/moderacion', 'info', '🚪 Expulsión de una ruta'],
+  ['anuncio-12', '📣 Ruta de prueba', '/ruta', 'anuncio', "'📣 '"],
 ];
 
 describe('que icono lleva cada aviso', () => {
@@ -72,12 +73,12 @@ describe('que icono lleva cada aviso', () => {
     assert.equal(icono({} as Datos), null);
   });
 
-  it('los cinco tipos del servidor tienen regla', () => {
+  it('los seis tipos del servidor tienen regla', () => {
     // La 0064 lo declara en la tabla y la 0066 lo rehace con `add constraint`.
     const tipos = /check \(tipo in \(([^)]*)\)\)/g;
     const vistos = new Set<string>();
     for (const m of sql.matchAll(tipos)) for (const t of m[1].matchAll(/'(\w+)'/g)) vistos.add(t[1]);
-    for (const t of ['parada', 'ultimo_bar', 'sorteo', 'cana', 'admin']) {
+    for (const t of ['parada', 'ultimo_bar', 'sorteo', 'cana', 'admin', 'anuncio']) {
       assert.ok(vistos.has(t), `el SQL ya no tiene el tipo ${t}`);
       assert.notEqual(icono({ tag: t, titulo: '', url: '' }), null, t);
     }

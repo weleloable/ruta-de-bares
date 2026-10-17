@@ -35,7 +35,7 @@ declare
     'match_connections', 'match_connection_members', 'match_messages', 'match_votes', 'match_blocks',
     'match_reports', 'match_report_messages', 'match_moderation_log',
     'account_suspensions', 'cana_bans', 'route_bans', 'match_fotos_liberadas', 'avatar_requests',
-    'user_messages', 'user_notices',
+    'user_messages', 'user_notices', 'anuncios',
     'stamps', 'point_movements', 'consumiciones', 'encuentros', 'casas_resultados', 'casas_resultado_vistos',
     'house_changes', 'sorteos', 'sorteo_excluidos', 'minigame_scores', 'conduces_scores', 'maestro_beers',
     'push_cola'

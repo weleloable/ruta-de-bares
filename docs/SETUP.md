@@ -440,6 +440,21 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    `minigame_submit_nota()` de la 0071, que ya **no se vuelve a pegar**. Se puede pegar dos veces. Si la app
    nueva llega antes, el juego se juega igual y guarda el record en el movil;
    al guardar en la ruta avisa de que falta una migracion.
+69. [`supabase/migrations/0074_anuncios.sql`](../supabase/migrations/0074_anuncios.sql)
+   y **Run**, despues de la 0073 y **ANTES de desplegar la app**. Anuncios de los
+   admins a la gente de una ruta: tabla `anuncios` (sin permisos para la app) y
+   las funciones `anuncio_enviar`, `anuncios_vigentes`, `anuncios_enviados` y
+   `anuncio_retirar`, mas el tipo de aviso `anuncio` en la cola del movil y la
+   preferencia `push_preferencias.anuncios`. Rehace `avisos_encolar()` y
+   `push_preferencias_leer()` de la 0066, que ya **no se vuelve a pegar**. Esta
+   si se puede pegar dos veces. Si la app nueva llega antes, la pestana Ruta no
+   enseña ningun anuncio y, en la pantalla de admins, enviar avisa de que falta
+   la migracion. Comprobacion: como admin, Mi perfil > "Anuncio a la ruta", manda
+   uno de 5 minutos; desde otra cuenta de la ruta tiene que salir arriba del mapa
+   y una burbuja roja en el boton de Ruta. Limite conocido: el aviso al movil
+   usa la misma vigencia (15 min) que los demas; uno de 5 minutos puede llegar
+   tarde a un movil que estuvo sin cobertura, y un anuncio retirado no se
+   recoge del movil.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite
@@ -1015,7 +1030,7 @@ npx expo start --web --port 8091
 
 ## 11. Dejar la app limpia: reseteo de los datos de prueba
 
-`scripts/reseteo-pruebas/reseteo.sql` (se pega en el SQL Editor, NO es una migracion) borra de todas las rutas y personas: sellos, puntos, consumiciones, encuentros, resultados y sorteos, notas de los minijuegos y cervezas de Maestro Cervecero, mensajes a la organizacion y avisos de moderacion, chats, conexiones, "me gusta" y bloqueos de La Caña, denuncias, registro de moderacion, suspensiones, vetos (de ruta y de La Caña, todos se levantan), fotos de perfil pendientes y avisos al movil sin enviar. NO toca cuentas, perfiles, rutas, paradas, invitaciones, miembros, el catalogo, la casa de cada persona, reglas de puntos, retos ni la clave de los vetos: la ruta que quieras conservar sigue como esta.
+`scripts/reseteo-pruebas/reseteo.sql` (se pega en el SQL Editor, NO es una migracion) borra de todas las rutas y personas: sellos, puntos, consumiciones, encuentros, resultados y sorteos, notas de los minijuegos y cervezas de Maestro Cervecero, mensajes a la organizacion, anuncios de los admins y avisos de moderacion, chats, conexiones, "me gusta" y bloqueos de La Caña, denuncias, registro de moderacion, suspensiones, vetos (de ruta y de La Caña, todos se levantan), fotos de perfil pendientes y avisos al movil sin enviar. NO toca cuentas, perfiles, rutas, paradas, invitaciones, miembros, el catalogo, la casa de cada persona, reglas de puntos, retos ni la clave de los vetos: la ruta que quieras conservar sigue como esta.
 
 1. Pegarlo tal cual y ejecutar: es un SIMULACRO, cuenta lo que borraria y no toca nada.
 2. Cambiar `'NO'` por `'SI'` y poner la fecha de hoy (UTC) en las dos lineas marcadas `<<<`. Guarda antes una copia completa en el esquema `reseteo_AAAAMMDD_HHMMSS`, y si algo falla no se borra nada.
