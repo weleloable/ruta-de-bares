@@ -132,15 +132,14 @@ const JUEGOS_DE_SIEMPRE: readonly JuegoDef[] = [
   },
   {
     // Endless runner en 3D, en vertical (logica pura en juegos/quijote/modelo.ts). Ranking
-    // por ruta desde la 0071: metros + jarras + gigantes derribados. De momento solo lo
-    // ven los admins (enPruebas).
+    // por ruta desde la 0071: metros + jarras + gigantes derribados. Abierto a todo el mundo
+    // (antes `enPruebas`, solo admins; ese mecanismo sigue en visibilidad.ts para otros juegos).
     id: ID_QUIJOTE,
     titulo: 'Don Quijote Cervecero',
     descripcion: 'Galopa por La Mancha, esquiva y embiste a los gigantes.',
     icono: 'flag',
     Componente: QuijoteCervecero,
     pantallaCompleta: true,
-    enPruebas: true,
     Detalle: DetalleQuijote,
     ranking: true,
     enviar: async (rutaId, r) => {
