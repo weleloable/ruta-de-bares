@@ -165,6 +165,8 @@ describe('0073: los juegos de antes siguen igual', () => {
     ['conga-cervecera', 15000, false],
     ['tapon-al-vuelo', 1250, false],
     [ID_PAREJAS, 600, true],
+    // El Quijote (0071): la 0073 parte de su funcion y de sus checks; si los pisara, esto fallaria.
+    ['quijote-cervecero', 10000000, false],
   ];
 
   it('cada uno con su tope de siempre', async () => {
@@ -197,6 +199,25 @@ describe('0073: los juegos de antes siguen igual', () => {
       assert.deepEqual(tapon.map((x) => x.user_id), [uid(2), uid(1)]);
       const parejas = (await db.query<{ user_id: string }>('select * from public.minigame_ranking($1, $2)', [RUTA, ID_PAREJAS])).rows;
       assert.deepEqual(parejas.map((x) => x.user_id), [uid(3), uid(1), uid(2)]);
+    });
+  });
+
+  it('el Quijote sigue guardando con su techo y sus notas altas (numeric(12, 2) intacto)', async () => {
+    await conBase(async (db, a) => {
+      await a.como(uid(1));
+      const r = await enviar(db, 'quijote-cervecero', 9_999_999);
+      assert.equal(Number(r.rows[0]?.r.best), 9_999_999);
+      await a.falla(() => enviar(db, 'quijote-cervecero', 10_000_001), 'INVALID_SCORE');
+      await a.falla(() => enviar(db, 'quijote-cervecero', 123.5), 'INVALID_SCORE');
+      // Y entra en el ranking, de mayor a menor, junto a Barman.
+      await notas(db, a, 'quijote-cervecero', [[2, 500], [3, 8000]]);
+      await a.como(uid(1));
+      const rk = (await db.query<{ user_id: string }>('select * from public.minigame_ranking($1, $2)', [RUTA, 'quijote-cervecero'])).rows;
+      assert.equal(rk[0]?.user_id, uid(1));
+      const col = await a.comoPostgres(() =>
+        db.query<{ p: number }>(`select numeric_precision as p from information_schema.columns where table_name = 'minigame_scores' and column_name = 'best_score'`),
+      );
+      assert.equal(col.rows[0]?.p, 12);
     });
   });
 
