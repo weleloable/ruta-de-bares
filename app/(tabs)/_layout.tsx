@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarraSuperior } from '../../src/components/BarraSuperior';
 import { BotonSellos } from '../../src/components/BotonSellos';
-import { useSinLeer } from '../../src/features/anuncios/almacenDemo';
+import { useSinLeer } from '../../src/features/anuncios/almacen';
+import { SondeoAnuncios } from '../../src/features/anuncios/SondeoAnuncios';
 import { DescubrimientoCasa } from '../../src/features/casas/DescubrimientoCasa';
 import { AvisoPolitica } from '../../src/features/legal/AvisoPolitica';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
@@ -29,6 +30,8 @@ export default function TabsLayout() {
     <AvisoPolitica />
     {/* "¿Te avisamos?": una vez, ya en una ruta y sin los otros dos delante. */}
     <InvitacionAvisos />
+    {/* Mantiene al dia los anuncios de la ruta: la burbuja de Ruta se enciende desde cualquier pestana. */}
+    <SondeoAnuncios rutaId={activeRoute?.id} />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.stamp,

@@ -97,6 +97,7 @@ begin
     (24, 'mensajes', 'match_connections', 'true'),
     (25, 'mensajes', 'match_votes', 'true'),
     (26, 'mensajes', 'match_blocks', 'true'),
+    (27, 'mensajes', 'anuncios', 'true'),
     (30, 'moderacion', 'match_report_messages', 'true'),
     (31, 'moderacion', 'match_moderation_log', 'true'),
     (32, 'moderacion', 'match_reports', 'true'),

@@ -152,6 +152,7 @@ supabase/
   migrations/0071_*.sql     ranking de Don Quijote Cervecero (techo 10.000.000) y `best_score` a numeric(12, 2)
   migrations/0072_*.sql     La Penul por ruta: `routes.la_penul_visible` (apagado por defecto; los admins la ven siempre)
   migrations/0073_*.sql     Barman Express en el ranking por ruta y el podio de casas (tope 5197 = PUNTUACION_MAXIMA, entero, mas es mejor); parte de la 0071
+  migrations/0074_*.sql     anuncios de los admins a una ruta (`anuncios`, `anuncio_enviar`...): 200 caracteres, 5/15/60 min, toda la ruta o solo admins, aviso al movil opcional
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
@@ -162,7 +163,7 @@ tests/                    tests que no encajan en un feature (p.ej. migration.te
 
 Tablas: `profiles`, `routes`, `route_bars`, `catalog_bars`, `stamps`, `route_invites`,
 `route_members`, `avatar_requests`, `cana_bans`, `user_messages`, `match_fotos_liberadas`,
-`admin_rutas_terminadas_vistas`, `minigame_scores`, `maestro_beers`, `match_route_activations`, `conduces_scores`, `user_houses`, `point_rules`, `point_movements`, `casas_marcador`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
+`admin_rutas_terminadas_vistas`, `anuncios`, `minigame_scores`, `maestro_beers`, `match_route_activations`, `conduces_scores`, `user_houses`, `point_rules`, `point_movements`, `casas_marcador`. Todas con RLS. (`invites`, de 0001, la borra la 0004.)
 
 ## Comandos
 
@@ -281,6 +282,32 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **Anuncios de los admins a la ruta** (0074, `src/features/anuncios/`, `app/admin/anuncio.tsx`).
+  Un admin manda hasta 200 caracteres a la gente de UNA ruta, con duracion de 5, 15 o 60 min
+  y destinatarios "toda la ruta" o "solo admins". Se ven en una tira arriba de la pestana Ruta
+  (`TablonAnuncios`, DENTRO del bloque que mide `medirSuperior`: el mapa se encuadra con su alto)
+  y con una burbuja numerica roja en el boton de Ruta, igual que la de Caña. Solo lectura. Quien
+  puede mandar lo decide `anuncio_enviar` (`is_admin()`), no el boton escondido; tope de 6 por
+  hora, admin y ruta, y retirar NO devuelve el cupo. **El servidor manda cuanto QUEDA, no una
+  hora** (`restan_s`, `anuncioDeFila`): el reloj del movil puede ir adelantado y un anuncio de
+  5 minutos se veria 10 o ninguno. `anuncios_vigentes` usa `statement_timestamp()` y
+  `anuncio_enviar` `clock_timestamp()`, no `now()` (hora de la transaccion: dos anuncios de una
+  misma transaccion empatarian y la lectura daria tiempo de mas). No hay cron: caducar es
+  `expira_at > ahora` al leer, y la app apaga la tira con un reloj de 15 s. "Entendido" se guarda
+  solo en el dispositivo (`almacen.ts`, AsyncStorage): es solo para la burbuja. El sondeo
+  (`SondeoAnuncios`, 20 s) vive en el layout de las pestanas y NO usa `useSondeo`, que se para al
+  cambiar de pantalla y la burbuja tiene que encenderse desde cualquier pestana. El aviso al movil
+  es el tipo `anuncio` de `push_cola` (titulo "📣 <ruta>", cuerpo el texto, abre `/ruta`); se
+  silencia en Mi perfil (`push_preferencias.anuncios`, por defecto activado). Llega a la gente de
+  la ruta con dispositivo y a TODOS los admins (menos a quien lo manda); con "solo admins", solo
+  a ellos. **Limites asumidos**: un anuncio ya enviado al movil no se puede recoger; la Edge
+  Function usa TTL de 15 min para todo, asi que uno de 5 min puede llegar tarde a un movil sin
+  cobertura; `export_my_data()` no incluye los anuncios que escribio un admin (reescribir esa
+  funcion entera por un dato de organizacion no compensa el riesgo, ver 0019), aunque los
+  avisos recibidos si salen en `avisos_en_el_movil.enviados`. El autor solo lo ven los admins.
+  La politica lo cuenta (`legal/politica.ts`) sin subir `VERSION_POLITICA`: el aviso lleva texto
+  de la organizacion, no datos de nadie.
 
 - **Quien ve que juego en el menu lo decide UNA funcion, `juegosDelMenu`
   (`minijuegos/visibilidad.ts`)**: los juegos `enPruebas` (el Quijote) solo para

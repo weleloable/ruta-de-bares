@@ -22,9 +22,14 @@ describe('Mi perfil: casilla de moderacion pendiente', () => {
   });
 
   it('se guarda por su propia funcion, y las demas por la de siempre', () => {
-    assert.match(codigo, /if \(clave === 'admin'\) await guardarAvisoAdmin\(valor\);\s*else await guardarPreferenciasAvisos\(nuevas\);/);
+    assert.match(
+      codigo,
+      /if \(clave === 'admin'\) await guardarAvisoAdmin\(valor\);\s*else if \(clave === 'anuncios'\) await guardarAvisoAnuncios\(valor\);\s*else await guardarPreferenciasAvisos\(nuevas\);/,
+    );
     const api = sinComentarios(leer('src/features/push/api.ts'));
     assert.match(api, /rpc\('push_preferencias_admin_guardar', \{ p_admin: activado \}\)/);
+    // Los anuncios (0074) tambien van por la suya: la de siempre no la conoce.
+    assert.match(api, /rpc\('push_preferencias_anuncios_guardar', \{ p_anuncios: activado \}\)/);
     // La de siempre sigue con tres argumentos: la app en cache la llama asi.
     assert.match(api, /rpc\('push_preferencias_guardar', \{ p_paradas: p\.paradas, p_sorteo: p\.sorteo, p_cana: p\.cana \}\)/);
   });

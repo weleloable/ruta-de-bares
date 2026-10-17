@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  anuncioDeFila,
   DURACIONES_MIN,
   DURACION_POR_DEFECTO,
   duracionValida,
@@ -11,6 +12,7 @@ import {
   MAX_CARACTERES,
   minutosRestantes,
   textoDuracion,
+  traducirErrorAnuncios,
   validarTexto,
   vigente,
 } from './reglas.ts';
@@ -80,4 +82,35 @@ test('el texto: 200 como mucho, sin espacios de mas, y no vacio', () => {
   assert.equal(validarTexto('a'.repeat(201)).ok, false);
   assert.equal(validarTexto(`${'a'.repeat(200)}    `).ok, true);
   assert.equal(limpiarTexto('x\t\ty'), 'x y');
+});
+
+test('de la fila del servidor: caduca cuando el servidor dice, con el reloj de aqui (da igual que vaya adelantado)', () => {
+  const fila = { id: 'x', texto: 'Hola', solo_admins: true, duracion_min: 15, hace_s: 120, restan_s: 780 };
+  // El movil va una hora ADELANTADO: lo unico que importa es cuando llego la respuesta.
+  const recibido = 1_000_000_000_000 + 60 * MIN;
+  const an = anuncioDeFila(fila, recibido);
+  assert.deepEqual([an.id, an.texto, an.soloAdmins, an.duracionMin, an.retirado], ['x', 'Hola', true, 15, false]);
+  assert.equal(vigente(an, recibido + 780_000 - 1), true);
+  assert.equal(vigente(an, recibido + 780_000), false);
+  assert.equal(minutosRestantes(an, recibido), 13);
+  assert.equal(hace(an, recibido), 'hace 2 min');
+});
+
+test('de la fila: los de 5 y 60 minutos cuentan con su duracion, no con la de 15', () => {
+  const recibido = 5_000_000;
+  const corto = anuncioDeFila({ id: 'a', texto: 't', solo_admins: false, duracion_min: 5, hace_s: 0, restan_s: 300 }, recibido);
+  const largo = anuncioDeFila({ id: 'b', texto: 't', solo_admins: false, duracion_min: 60, hace_s: 0, restan_s: 3600 }, recibido);
+  assert.equal(vigente(corto, recibido + 5 * MIN - 1), true);
+  assert.equal(vigente(corto, recibido + 5 * MIN), false);
+  assert.equal(vigente(largo, recibido + 59 * MIN), true);
+  assert.equal(vigente(largo, recibido + 60 * MIN), false);
+});
+
+test('errores del servidor, en cristiano', () => {
+  assert.match(traducirErrorAnuncios('RATE_LIMIT'), /máximo 6/);
+  assert.match(traducirErrorAnuncios('TEXT_INVALID'), /200/);
+  assert.match(traducirErrorAnuncios('DURATION_INVALID'), /5 minutos/);
+  assert.match(traducirErrorAnuncios('FORBIDDEN'), /admins/);
+  assert.match(traducirErrorAnuncios('PGRST202 Could not find the function'), /0074/);
+  assert.equal(traducirErrorAnuncios(''), 'No se pudo completar.');
 });

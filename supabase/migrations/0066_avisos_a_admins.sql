@@ -1,8 +1,11 @@
 -- Ruta de Bares - 0066: avisos en el movil a quien administra cuando hay algo por moderar.
 -- Pegar entero en SQL Editor (Supabase > SQL Editor > New query > Run), DESPUES
 -- de la 0065.
--- Idempotente: se puede re-ejecutar sin romper nada (`if not exists`, funciones
--- con `or replace`, disparadores quitados antes de ponerlos).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * avisos_encolar() la rehace la 0074 (conoce el tipo `anuncio`)
+--   * push_preferencias_leer() la rehace la 0074 (devuelve `anuncios`)
 -- Ojo al reves: rehace avisos_encolar() y push_preferencias_leer() de la 0064,
 -- que ya no se vuelve a pegar.
 --

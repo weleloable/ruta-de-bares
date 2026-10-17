@@ -157,13 +157,15 @@ export function politica({ responsable, correo, diasConservacion }: DatosPolitic
             subtitulo: 'Además, si activas los avisos en el móvil',
             puntos: [
               'Solo te llegan si los activas tú. Te avisamos 10 minutos antes de cada parada, si te falta un ' +
-                'bar para entrar en el sorteo, de quién lo gana y de las conexiones y mensajes de La Caña. Cada ' +
-                'tipo se puede quitar en Mi perfil.',
+                'bar para entrar en el sorteo, de quién lo gana, de las conexiones y mensajes de La Caña y de los anuncios que la ' +
+                'organización mande a tu ruta. Cada tipo se puede quitar en Mi perfil.',
               'Para poder avisarte guardamos la dirección que nos da tu navegador para ese dispositivo (no es tu ' +
                 'número ni tu correo) y qué tipos de aviso quieres. Si quitas los avisos, se borra.',
               'El aviso lo entrega el servicio de notificaciones de tu navegador (Google, Apple o Mozilla, según ' +
                 'el móvil) y va cifrado: ese servicio no puede leer lo que dice.',
               'Los avisos de La Caña dicen quién te escribe, nunca lo que te ha escrito.',
+              'Los anuncios de la organización llevan el texto que ha escrito quien administra la ruta, igual para ' +
+                'toda la gente a la que van dirigidos; no llevan datos tuyos.',
               'Guardamos cada aviso enviado una semana, para no repetirlo, y luego se borra solo.',
             ],
           },

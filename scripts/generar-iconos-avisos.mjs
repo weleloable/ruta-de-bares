@@ -42,6 +42,8 @@ const GLIFOS = {
   pregunta: '<path d="M11 11h26a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H22l-7.5 6.5V31H11a3 3 0 0 1-3-3V14a3 3 0 0 1 3-3z"/><path d="M20.5 17.5a3.5 3.5 0 1 1 5 3.2c-1 .5-1.5 1.2-1.5 2.3"/><circle class="lleno" cx="24" cy="26.6" r="1.5"/>',
   alerta: '<path d="M24 7l13 5v10c0 9-5.8 15.4-13 18.5C16.8 37.4 11 31 11 22V12z"/><path d="M24 16v9"/><circle class="lleno" cx="24" cy="30" r="1.7"/>',
   info: '<path d="M24 7l13 5v10c0 9-5.8 15.4-13 18.5C16.8 37.4 11 31 11 22V12z"/><path d="M19 23.5l3.6 3.6L29.5 20"/>',
+  // Megafono: un anuncio de la organizacion a la ruta (0074).
+  anuncio: '<path d="M10 19h7l16-8v26l-16-8h-7z"/><path d="M17 29l3 9h4l-2.5-9"/><path d="M38 18a8 8 0 0 1 0 12"/>',
 };
 
 /** De que familia (y color) es cada icono. Mismo reparto que la maqueta aprobada. */
@@ -50,6 +52,7 @@ export const FAMILIA = {
   falta: 'sorteo', gana: 'sorteo', sorteo: 'sorteo',
   conexion: 'cana', mensaje: 'cana', toque: 'cana', pregunta: 'cana',
   alerta: 'admin', info: 'admin',
+  anuncio: 'ruta',
 };
 
 function trazar(glifo, color, grosor) {

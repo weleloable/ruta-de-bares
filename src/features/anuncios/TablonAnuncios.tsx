@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, space, typography } from '../../lib/theme';
 import { useAuth } from '../auth/AuthProvider';
-import { marcarLeido, useLeidos, useVigentes } from './almacenDemo';
+import { marcarLeido, useLeidos, useVigentes } from './almacen';
 import { hace, minutosRestantes } from './reglas';
 
 /**

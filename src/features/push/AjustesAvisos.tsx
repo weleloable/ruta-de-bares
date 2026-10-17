@@ -4,7 +4,7 @@ import { StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import { Banner, Button, Card } from '../../components/ui';
 import { space, typography } from '../../lib/theme';
 import { Casilla } from '../match/piezas';
-import { guardarAvisoAdmin, guardarPreferenciasAvisos, leerPreferenciasAvisos, type PreferenciasAvisos } from './api';
+import { guardarAvisoAdmin, guardarAvisoAnuncios, guardarPreferenciasAvisos, leerPreferenciasAvisos, type PreferenciasAvisos } from './api';
 import { textoEstado, type EstadoAvisos } from './estado';
 import { activarAvisos, desactivarAvisos, estadoAvisos } from './push';
 
@@ -34,6 +34,7 @@ export function AjustesAvisos({ estiloTitulo }: { estiloTitulo?: StyleProp<TextS
     try {
       // `admin` va por su propia funcion (0066): la de siempre no lo conoce.
       if (clave === 'admin') await guardarAvisoAdmin(valor);
+      else if (clave === 'anuncios') await guardarAvisoAnuncios(valor);
       else await guardarPreferenciasAvisos(nuevas);
     } catch (e) {
       setPrefs(prefs);
@@ -76,6 +77,14 @@ export function AjustesAvisos({ estiloTitulo }: { estiloTitulo?: StyleProp<TextS
           <Casilla marcada={prefs.paradas} texto="10 min antes de cada parada" onCambiar={(m) => void cambiarPref('paradas', m)} />
           <Casilla marcada={prefs.sorteo} texto="El sorteo (y si te falta un bar)" onCambiar={(m) => void cambiarPref('sorteo', m)} />
           <Casilla marcada={prefs.cana} texto="La Caña: conexiones y mensajes" onCambiar={(m) => void cambiarPref('cana', m)} />
+          {/* Sin la 0074 el servidor no manda `anuncios` y la casilla no sale. */}
+          {prefs.anuncios !== undefined ? (
+            <Casilla
+              marcada={prefs.anuncios}
+              texto="Anuncios de la organización a tu ruta"
+              onCambiar={(m) => void cambiarPref('anuncios', m)}
+            />
+          ) : null}
           {/* Solo para admins: el servidor solo manda `admin` a quien lo es. */}
           {prefs.admin !== undefined ? (
             <Casilla
