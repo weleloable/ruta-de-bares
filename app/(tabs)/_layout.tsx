@@ -4,16 +4,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarraSuperior } from '../../src/components/BarraSuperior';
 import { BotonSellos } from '../../src/components/BotonSellos';
+import { useSinLeer } from '../../src/features/anuncios/almacenDemo';
 import { DescubrimientoCasa } from '../../src/features/casas/DescubrimientoCasa';
 import { AvisoPolitica } from '../../src/features/legal/AvisoPolitica';
 import { useAvisosCana } from '../../src/features/match/AvisosCana';
 import { InvitacionAvisos } from '../../src/features/push/InvitacionAvisos';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
+import { useAuth } from '../../src/features/auth/AuthProvider';
 import { colors } from '../../src/lib/theme';
 
 export default function TabsLayout() {
   const { avisos } = useAvisosCana();
   const { activeRoute } = useActiveRoute();
+  const { isAdmin } = useAuth();
+  const anunciosSinLeer = useSinLeer(activeRoute?.id, isAdmin);
   const insets = useSafeAreaInsets();
   const margenInferior = Math.max(insets.bottom, 8);
 
@@ -63,6 +67,9 @@ export default function TabsLayout() {
         options={{
           title: 'Ruta',
           tabBarIcon: ({ color, size }) => <Ionicons name="map" color={color} size={size} />,
+          // Igual que la burbuja de Caña: cuantos anuncios de la organizacion llevas sin leer.
+          tabBarBadge: anunciosSinLeer > 0 ? anunciosSinLeer : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.stamp, color: colors.white, fontSize: 11, fontWeight: '800' },
         }}
       />
       <Tabs.Screen

@@ -12,6 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { RutaMapa, type RutaMapaHandle } from '../../src/components/RutaMapa';
 import { Banner, EmptyState, Loading } from '../../src/components/ui';
+import { TablonAnuncios } from '../../src/features/anuncios/TablonAnuncios';
 import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { direccionVisible } from '../../src/features/routes/catalogo';
 import { EnlacesRuta } from '../../src/features/routes/EnlacesRuta';
@@ -136,6 +137,8 @@ export default function RutaScreen() {
                 los enlaces de Instagram y Social, que estaban al pie de Sellos. */}
             <EnlacesRuta />
           </View>
+
+          <TablonAnuncios ruta={activeRoute.id} />
 
           {error ? (
             <View style={styles.avisoError}>
