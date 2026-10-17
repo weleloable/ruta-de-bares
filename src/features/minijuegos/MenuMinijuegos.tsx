@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Banner, Button, Card, EmptyState, Screen } from '../../components/ui';
 import { useBloqueoRecarga } from '../../lib/bloqueoRecarga';
 import { colors, radius, space, typography } from '../../lib/theme';
+import { useAuth } from '../auth/AuthProvider';
 import { feedback } from './feedback';
 import { JUEGOS } from './juegos';
 import { ListaCervezas } from './ListaCervezas';
@@ -27,6 +28,9 @@ type Vista = 'juego' | 'ranking' | 'cervezas';
  * el record de este dispositivo.
  */
 export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; nombreRuta?: string }) {
+  const { isAdmin } = useAuth();
+  // Los juegos "en pruebas" solo los ven los admins.
+  const juegos = JUEGOS.filter((j) => !j.enPruebas || isAdmin);
   const [records, setRecords] = useState<Records>({});
   const [activo, setActivo] = useState<JuegoDef | null>(null);
   const [vista, setVista] = useState<Vista>('juego');
@@ -161,10 +165,10 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
       <Text style={typography.muted}>
         {nombreRuta ? `Partidas cortas para el rato entre bar y bar. Ruta: ${nombreRuta}.` : 'Partidas cortas para el rato entre bar y bar.'}
       </Text>
-      {JUEGOS.length === 0 ? (
+      {juegos.length === 0 ? (
         <EmptyState title="Muy pronto" body="Estamos sirviendo los primeros juegos." />
       ) : (
-        JUEGOS.map((juego) => (
+        juegos.map((juego) => (
           <View key={juego.id} style={styles.juego}>
             <Pressable
               accessibilityRole="button"
@@ -178,6 +182,7 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
                 </View>
                 <View style={styles.textos}>
                   <Text style={typography.cardTitle}>{juego.titulo}</Text>
+                  {juego.enPruebas ? <Text style={styles.enPruebas}>En pruebas · solo admins</Text> : null}
                   <Text style={typography.muted}>{juego.descripcion}</Text>
                   {records[juego.id] !== undefined ? (
                     <Text style={styles.record}>Récord: {formatearNota(juego.id, records[juego.id])}</Text>
@@ -222,4 +227,5 @@ const styles = StyleSheet.create({
   },
   textos: { flex: 1, gap: 2 },
   record: { fontSize: 13, fontWeight: '700', color: colors.beerDark },
+  enPruebas: { fontSize: 12, fontWeight: '800', color: colors.stamp, textTransform: 'uppercase', letterSpacing: 0.6 },
 });

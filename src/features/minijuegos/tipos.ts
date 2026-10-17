@@ -40,7 +40,7 @@ export type JuegoDef = {
   titulo: string;
   /** Una linea: se lee de pasada en un bar. */
   descripcion: string;
-  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'help-circle' | 'locate';
+  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'help-circle' | 'locate' | 'flag';
   Componente: ComponentType<PropsJuego>;
   /**
    * Se juega a pantalla completa, sin la cabecera del menu ni las pestanas
@@ -74,4 +74,9 @@ export type JuegoDef = {
   RankingPropio?: ComponentType<{ rutaId: string }>;
   /** Tiene lista de cervezas de la ruta. */
   cervezas?: boolean;
+  /**
+   * Todavia en desarrollo: solo lo ven los admins, con la etiqueta "En pruebas",
+   * para probarlo en el movil de verdad sin que lo vea nadie mas.
+   */
+  enPruebas?: boolean;
 };
