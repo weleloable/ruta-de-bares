@@ -13,7 +13,8 @@ import { aplicarAccion, avanzar, CONFIG, crearEstado, ID_QUIJOTE, metros, type A
  * mano. Deslizar a los lados cambia de carril, arriba salta y abajo agacha. En
  * PC, flechas o WASD.
  *
- * Fase 1: camino, cubos, gestos, choques, vidas y velocidad creciente. Todo es
+ * Fases 1 y 2: camino, gestos, choques, vidas, velocidad creciente y el atardecer
+ * con Quijote, Rocinante y los molinos (escena3d.ts y modelos/). Todo es
  * DOM y canvas (como ¿Conduces tu?): el marcador y los botones van en HTML por
  * encima del canvas, nunca en 3D.
  */
@@ -252,7 +253,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
         <div style={e.velo}>
           <div style={e.titulo}>Don Quijote Cervecero</div>
           <div style={e.texto}>Desliza a los lados para cambiar de carril, arriba para saltar y abajo para agacharte.</div>
-          <div style={e.nota}>Fase 1 de pruebas: cubos en vez de Quijote. En el ordenador, flechas o WASD.</div>
+          <div style={e.nota}>Fase 2 de pruebas: aún sin jarras ni Embestida. En el ordenador, flechas o WASD.</div>
           {!webgl ? <div style={e.nota}>Este navegador no puede pintar en 3D: prueba con Chrome o Safari actualizados.</div> : null}
           <button type="button" style={{ ...e.boton, ...(webgl ? null : e.apagado) }} disabled={!webgl} onClick={arrancar}>
             ¡A galopar!

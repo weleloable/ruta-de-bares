@@ -17,8 +17,8 @@ export const CONFIG = {
   anchoCarril: 2.4,
 
   /** Velocidad (m/s): empieza en la inicial y se acerca a la maxima con los metros. */
-  velocidadInicial: 11,
-  velocidadMaxima: 28,
+  velocidadInicial: 15,
+  velocidadMaxima: 30,
   /** Metros en los que recorre ~63 % del camino de la inicial a la maxima. */
   metrosAceleracion: 1800,
 
