@@ -1018,6 +1018,17 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   del cliente). Se deja para no romper la app en cache; cuando ya no quede
   nadie con la version vieja, una migracion le quita el `grant`.
 
+- **Tráiler y demos de uso se GRABAN, no se editan** (`scripts/videos/`, ver su
+  README): la web exportada contra un Supabase LOCAL (Docker, proyecto en
+  `~/.ruta-de-bares-videos/sb`, fuera del repo) con gente de mentira y avatares
+  ilustrados, manejada por Chrome con subtítulos y un dedo que marca cada toque.
+  Tiene su propio `package.json` (playwright-core y ffmpeg-static) para no
+  tocar las dependencias de la app; los MP4 salen a `videos/`, que está en
+  `.gitignore`. La semilla pasa por las funciones reales de Postgres, así que
+  una migración que cambie una regla rompe la semilla antes que la demo. Si
+  cambia un texto o un botón que sale en un video, su guion falla con
+  `No veo en la app: <texto>`: hay que regrabar (`node scripts/videos/grabar.mjs <id>`).
+
 - **Los botones de MANTENER pulsado no son un Pressable en web**
   (`src/features/minijuegos/BotonMantener.web.tsx`; nativo, `BotonMantener.tsx`
   con `cancelable={false}`). React Native tiene UN solo "dueno" del toque: en La

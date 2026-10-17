@@ -1,0 +1,16 @@
+{
+  "name": "ruta-de-bares-videos",
+  "private": true,
+  "type": "module",
+  "description": "Graba el trailer y las demos de la app contra un Supabase local. Ver README.md.",
+  "scripts": {
+    "test": "node --test \"*.test.mjs\""
+  },
+  "dependencies": {
+    "ffmpeg-static": "5.2.0",
+    "playwright-core": "1.56.1"
+  },
+  "allowScripts": {
+    "ffmpeg-static@5.2.0": true
+  }
+}

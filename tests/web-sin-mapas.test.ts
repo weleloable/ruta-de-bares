@@ -245,7 +245,9 @@ export function entraEnElEscaneo(ruta: string): boolean {
 function listar(dir: string): string[] {
   return readdirSync(join(raiz, dir), { withFileTypes: true }).flatMap((entrada) => {
     const ruta = `${dir}/${entrada.name}`;
-    if (entrada.isDirectory()) return listar(ruta);
+    // Dependencias de una herramienta con su propio package.json (scripts/videos/):
+    // codigo de terceros que Metro nunca empaqueta.
+    if (entrada.isDirectory()) return entrada.name === 'node_modules' ? [] : listar(ruta);
     return entraEnElEscaneo(ruta) ? [ruta] : [];
   });
 }
@@ -294,6 +296,12 @@ describe('bundle web sin react-native-maps', () => {
     const archivos = archivosDelProyecto();
     assert.ok(archivos.length > 10, `se esperaban archivos, hay ${archivos.length}`);
     assert.deepEqual(violaciones(archivos, (ruta) => existsSync(join(raiz, ruta))), []);
+  });
+
+  // scripts/videos/ instala playwright-core en su propio node_modules: escanearlo
+  // daba violaciones de codigo de terceros que nunca llega al bundle.
+  it('no entra en ningun node_modules, tampoco anidado', () => {
+    assert.deepEqual(archivosDelProyecto().filter((a) => a.ruta.split('/').includes('node_modules')), []);
   });
 
   // Aparte del anterior para que un fallo no tape al otro.

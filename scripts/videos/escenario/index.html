@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Escenario</title>
+<!--
+  El escenario de los videos: 540x960 CSS a 2x = 1080x1920 (vertical, lo que
+  se ve bien en WhatsApp, Instagram y TikTok). Arriba la cabecera y el
+  subtitulo del paso; en medio el movil con la app de verdad en un iframe
+  (mismo origen: Playwright lo maneja y la geolocalizacion se le concede);
+  encima, el dedo que marca cada toque. Las tarjetas a pantalla completa son
+  la portada, los cortes y el cierre. Lo maneja grabar.mjs con window.escena.
+-->
+<style>
+  :root {
+    --papel: #F6EFE2; --papel2: #EDE2CE; --tarjeta: #FFFDF8; --tinta: #241A12; --tinta2: #6B5B4B;
+    --cerveza: #C67A1E; --cerveza2: #9A5A11; --sello: #A82C24; --borde: #D9C9AE; --espuma: #F3E1C6;
+  }
+  * { box-sizing: border-box; }
+  /* zoom 2 con la ventana a 1080x1920 y escala 1: el screencast entrega los
+     pixeles de la ventana (con deviceScaleFactor 2 daba 540x960 reescalado),
+     y el iframe sigue viendo 390 px de ancho pero se pinta a doble resolucion. */
+  html { zoom: 2; }
+  html, body { margin: 0; width: 540px; height: 960px; overflow: hidden; background: var(--papel); font-family: "Segoe UI", system-ui, sans-serif; color: var(--tinta); }
+  body::before { content: ""; position: absolute; inset: 0; background:
+      radial-gradient(circle at 15% 8%, rgba(198,122,30,.18), transparent 40%),
+      radial-gradient(circle at 90% 95%, rgba(168,44,36,.14), transparent 45%); }
+  .serif { font-family: Georgia, "Times New Roman", serif; }
+
+  #cabecera { position: absolute; top: 18px; left: 24px; right: 24px; height: 40px; display: flex; align-items: center; gap: 10px; }
+  #cabecera img { width: 38px; height: 38px; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+  #cabecera .marca { font-family: Georgia, serif; font-size: 19px; font-weight: 700; }
+  #cabecera .chip { margin-left: auto; background: var(--sello); color: #fff; font-weight: 700; font-size: 14px; padding: 6px 14px; border-radius: 999px; letter-spacing: .3px; }
+
+  #subtitulo { position: absolute; top: 70px; left: 24px; right: 24px; height: 118px; display: flex; align-items: center; gap: 14px; }
+  #subtitulo .num { flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--cerveza); color: #fff; display: grid; place-items: center; font: 800 22px Georgia, serif; box-shadow: 0 0 0 4px var(--espuma); }
+  #subtitulo .texto { font-size: 23px; line-height: 1.22; font-weight: 650; }
+  #subtitulo .texto b { color: var(--sello); }
+  #subtitulo.entra .num, #subtitulo.entra .texto { animation: entra .45s cubic-bezier(.2,.8,.2,1) both; }
+  #subtitulo.entra .texto { animation-delay: .06s; }
+  @keyframes entra { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  #tarjeta .lista .n { font-style: normal; }
+  body.trailer #subtitulo .texto { font-size: 31px; text-align: center; width: 100%; font-family: Georgia, serif; }
+  #movil { position: absolute; left: 50%; top: 196px; transform: translateX(-50%); width: 375px; height: 736px; border-radius: 40px; background: #1d1611; padding: 10px; box-shadow: 0 18px 40px rgba(36,26,18,.35), 0 0 0 2px #3a2d23 inset; }
+  #pantalla { position: relative; width: 355px; height: 716px; border-radius: 31px; overflow: hidden; background: var(--tarjeta); }
+  /* Franja de abajo con la raya de inicio, como un movil sin botones: las esquinas redondas no se comen la barra de pestanas. */
+  #pantalla::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 120px; height: 5px; margin-left: -60px; border-radius: 3px; background: #241A12; opacity: .8; }
+  /* La app ve un movil de 390x769 (escala 0.91): mismo ancho que un movil normal. 769*0.9103 = 700, y 16 px de franja. */
+  #app { position: absolute; left: 0; top: 0; width: 390px; height: 769px; border: 0; transform: scale(0.9103); transform-origin: 0 0; background: var(--papel); }
+
+  #progreso { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; justify-content: center; gap: 7px; }
+  #progreso i { width: 8px; height: 8px; border-radius: 50%; background: var(--borde); transition: all .3s; }
+  #progreso i.hecho { background: var(--cerveza); }
+  #progreso i.ahora { background: var(--sello); width: 22px; border-radius: 6px; }
+
+  #dedo { position: absolute; left: 0; top: 0; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255,255,255,.55); border: 3px solid var(--sello); box-shadow: 0 4px 14px rgba(0,0,0,.25); pointer-events: none; opacity: 0; transition: left .55s cubic-bezier(.4,0,.2,1), top .55s cubic-bezier(.4,0,.2,1), opacity .25s, transform .12s; z-index: 50; }
+  #dedo.visible { opacity: 1; }
+  #dedo.pulsa { transform: scale(.78); background: rgba(168,44,36,.35); }
+  .onda { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; border: 3px solid var(--sello); pointer-events: none; animation: onda .6s ease-out forwards; z-index: 49; }
+  @keyframes onda { from { transform: scale(.6); opacity: .9; } to { transform: scale(2.2); opacity: 0; } }
+
+  #foco { position: absolute; border: 3px solid var(--cerveza); border-radius: 14px; box-shadow: 0 0 0 9999px rgba(36,26,18,.28); pointer-events: none; opacity: 0; transition: all .45s cubic-bezier(.4,0,.2,1); z-index: 40; }
+  #foco.visible { opacity: 1; }
+
+  #tarjeta { position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px; background: var(--papel); opacity: 0; pointer-events: none; transition: opacity .5s; }
+  #tarjeta::before { content: ""; position: absolute; inset: 0; background:
+      radial-gradient(circle at 50% 30%, rgba(198,122,30,.25), transparent 55%),
+      radial-gradient(circle at 50% 100%, rgba(168,44,36,.18), transparent 50%); }
+  #tarjeta.visible { opacity: 1; }
+  #tarjeta > * { position: relative; }
+  #tarjeta img { width: 170px; height: 170px; border-radius: 50%; box-shadow: 0 10px 30px rgba(36,26,18,.3); margin-bottom: 26px; }
+  #tarjeta .sobre { font-size: 15px; letter-spacing: 3px; text-transform: uppercase; color: var(--cerveza2); font-weight: 700; margin-bottom: 10px; }
+  #tarjeta h1 { font-family: Georgia, serif; font-size: 50px; line-height: 1.05; margin: 0 0 18px; }
+  #tarjeta p { font-size: 22px; line-height: 1.35; color: var(--tinta2); margin: 0; max-width: 430px; }
+  #tarjeta .lista { margin-top: 26px; text-align: left; display: grid; gap: 12px; font-size: 21px; }
+  #tarjeta .lista div { display: flex; gap: 12px; align-items: center; }
+  #tarjeta .lista .n { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--cerveza); color: #fff; display: grid; place-items: center; font: 800 17px Georgia, serif; }
+  #tarjeta .pie { position: absolute; bottom: 46px; font-size: 16px; color: var(--tinta2); }
+  #tarjeta.visible .anim { animation: entra .7s cubic-bezier(.2,.8,.2,1) both; }
+  #tarjeta.visible .anim:nth-child(2) { animation-delay: .1s; } #tarjeta.visible .anim:nth-child(3) { animation-delay: .2s; }
+  #tarjeta.visible .anim:nth-child(4) { animation-delay: .3s; } #tarjeta.visible .anim:nth-child(5) { animation-delay: .45s; }
+  #tarjeta.grande h1 { font-size: 64px; }
+  #tarjeta.oscura { background: var(--tinta); color: var(--papel); }
+  #tarjeta.oscura p { color: #E9D8A6; } #tarjeta.oscura .sobre { color: var(--cerveza); }
+</style>
+</head>
+<body>
+  <div id="cabecera"><img src="logo.png" alt=""><span class="marca">Ruta de Bares</span><span class="chip" id="seccion"></span></div>
+  <div id="subtitulo"><div class="num" id="num" style="display:none"></div><div class="texto" id="texto"></div></div>
+  <div id="movil"><div id="pantalla"><iframe id="app" allow="geolocation; accelerometer; gyroscope"></iframe></div></div>
+  <div id="progreso"></div>
+  <div id="foco"></div>
+  <div id="dedo"></div>
+  <div id="tarjeta"></div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  window.escena = {
+    seccion(texto) { $('seccion').textContent = texto; $('seccion').style.display = texto ? '' : 'none'; },
+    pasos(total) { $('progreso').innerHTML = Array.from({ length: total }, () => '<i></i>').join(''); },
+    paso(n, html) {
+      const s = $('subtitulo');
+      s.classList.remove('entra'); void s.offsetWidth; s.classList.add('entra');
+      $('num').textContent = n; $('num').style.display = n ? '' : 'none';
+      $('texto').innerHTML = html;
+      [...$('progreso').children].forEach((i, k) => { i.className = k + 1 < n ? 'hecho' : k + 1 === n ? 'ahora' : ''; });
+    },
+    abrir(url) { $('app').src = url; },
+    dedo(x, y) { const d = $('dedo'); d.classList.add('visible'); d.style.left = x + 'px'; d.style.top = y + 'px'; },
+    pulsar(on) {
+      const d = $('dedo'); d.classList.toggle('pulsa', on);
+      if (on) { const o = document.createElement('div'); o.className = 'onda'; o.style.left = d.style.left; o.style.top = d.style.top; document.body.appendChild(o); setTimeout(() => o.remove(), 700); }
+    },
+    /* El movil se inclina en pantalla como lo inclinaria la persona (La Caña Perfecta). */
+    inclinar(grados) {
+      const m = $('movil');
+      m.style.transition = 'transform .45s cubic-bezier(.4,0,.2,1)';
+      m.style.transform = grados ? `translateX(-50%) translateY(40px) rotate(${grados}deg) scale(.6)` : 'translateX(-50%)';
+    },
+    sinDedo() { $('dedo').classList.remove('visible'); },
+    foco(c) {
+      const f = $('foco');
+      if (!c) { f.classList.remove('visible'); return; }
+      const m = 6; Object.assign(f.style, { left: c.x - m + 'px', top: c.y - m + 'px', width: c.width + 2 * m + 'px', height: c.height + 2 * m + 'px' });
+      f.classList.add('visible');
+    },
+    tarjeta(t) {
+      const el = $('tarjeta');
+      if (!t) { el.classList.remove('visible'); return; }
+      el.className = t.clase || '';
+      el.innerHTML = [
+        t.logo === false ? '' : '<img class="anim" src="logo.png" alt="">',
+        t.sobre ? `<div class="sobre anim">${t.sobre}</div>` : '',
+        t.titulo ? `<h1 class="anim">${t.titulo}</h1>` : '',
+        t.texto ? `<p class="anim">${t.texto}</p>` : '',
+        t.lista ? `<div class="lista anim">${t.lista.map((x, i) => `<div><i class="n">${i + 1}</i><span>${x}</span></div>`).join('')}</div>` : '',
+        t.pie ? `<div class="pie">${t.pie}</div>` : '',
+      ].join('');
+      void el.offsetWidth; el.classList.add('visible');
+    },
+  };
+</script>
+</body>
+</html>
