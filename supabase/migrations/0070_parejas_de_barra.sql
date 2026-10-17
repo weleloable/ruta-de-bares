@@ -1,7 +1,11 @@
 -- Ruta de Bares - 0070: Parejas de Barra, el primer minijuego en el que MENOS es mejor.
 -- Pegar entero en Supabase > SQL Editor > New query > Run, DESPUES de la 0069.
--- Idempotente: se puede re-ejecutar sin romper nada (solo rehace funciones y el
--- check de best_score, sin tocar datos).
+-- **NO SE PUEDE RE-EJECUTAR.** Se aplica UNA VEZ, en orden, y no se vuelve.
+-- Define funciones que una migracion POSTERIOR rehizo: volver a pegarla las
+-- devuelve a esta version, en silencio y sin avisar. Aqui quedan obsoletas:
+--   * minigame_submit_nota() la rehace la 0072
+-- (Hasta la 0072 si lo era. Pegarla ahora, ademas, dejaria fuera a
+-- 'barman-express' de los checks de game y de best_score.)
 -- Ojo al reves: rehace minigame_submit_nota() y minigame_ranking() de la 0069, y
 -- casas_podios() y admin_estadisticas_actividad() de la 0061, que ya no se
 -- pueden volver a pegar despues.

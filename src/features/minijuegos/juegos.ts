@@ -6,6 +6,9 @@ import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
+import { BarmanExpress } from './juegos/barman/BarmanExpress';
+import { DetalleBarman } from './juegos/barman/DetalleBarman';
+import { ID_BARMAN } from './juegos/barman/modelo';
 import { ID_LA_PENUL, TITULO_LA_PENUL } from './juegos/la-penul/guion';
 import { LaPenul } from './juegos/la-penul/LaPenul';
 import { DetalleParejas } from './juegos/parejas/DetalleParejas';
@@ -121,6 +124,22 @@ const JUEGOS_DE_SIEMPRE: readonly JuegoDef[] = [
             : 'ese tiempo no es posible en una partida de verdad.',
         );
       }
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
+  },
+  {
+    // Eres el camarero (logica pura en juegos/barman/modelo.ts): 20 pedidos, la carta crece con
+    // la noche. Ranking por ruta y podio de casas desde la 0072 (tope PUNTUACION_MAXIMA, entero,
+    // mas es mejor). Vertical y a pantalla completa: dentro del menu no cabia.
+    id: ID_BARMAN,
+    titulo: 'Barman Express',
+    descripcion: 'Eres el camarero: sirve 20 pedidos antes de que se les acabe la paciencia.',
+    icono: 'wine',
+    Componente: BarmanExpress,
+    pantallaCompleta: true,
+    Detalle: DetalleBarman,
+    ranking: true,
+    enviar: async (rutaId, r) => {
       await enviarNota(rutaId, r.juego, r.puntuacion);
     },
   },

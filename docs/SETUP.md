@@ -423,6 +423,14 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    admins la ven siempre. No toca funciones ni policies. Se puede pegar dos veces.
    Si la app nueva llega antes, el editor no puede guardar el interruptor (la
    columna no existe) y la gente normal no la ve; los admins si.
+67. [`supabase/migrations/0072_barman_express.sql`](../supabase/migrations/0072_barman_express.sql)
+   y **Run**, despues de la 0071 y **ANTES de desplegar la app**. Mete Barman
+   Express en el ranking por ruta y en el podio de las casas: los checks de
+   `minigame_scores` aceptan `barman-express` (entero, de 0 a 5197) y
+   `minigame_submit_nota` lleva su tope. Rehace `minigame_submit_nota()` de la
+   0070, que ya **no se vuelve a pegar**. Se puede pegar dos veces. Si la app
+   nueva llega antes, el juego se juega igual y guarda el record en el movil;
+   al guardar en la ruta avisa de que falta una migracion.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

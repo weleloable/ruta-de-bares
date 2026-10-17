@@ -38,9 +38,15 @@
  *      alturas, sin scroll ni botones fuera o tapados en ninguna pantalla (ver
  *      `recorrerPenul`).
  *
+ *  10. Barman Express: una partida ENTERA de 20 pedidos con el tactil emulado, con
+ *      algun fallo a proposito, en las tres alturas y a 360 px de ancho. Sin
+ *      scroll; los 12 ingredientes enteros, a la vista y sin nada encima
+ *      (elementsFromPoint); un toque de 20 ms entra; y la nota de la tarjeta de
+ *      fin es la que marco el juego (ver `recorrerBarman`).
+ *
  * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_QUIZ=1` deja solo el quiz;
  * `SOLO_TAPON=1`, solo Tapon al Vuelo; `SOLO_PAREJAS=1`, solo Parejas de Barra;
- * `SOLO_PENUL=1`, solo La Penul. `CAPTURAS=<carpeta>` guarda capturas de
+ * `SOLO_PENUL=1`, solo La Penul; `SOLO_BARMAN=1`, solo Barman Express. `CAPTURAS=<carpeta>` guarda capturas de
  * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -59,18 +65,22 @@ import { tmpdir } from 'node:os';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// La carta de Barman Express, del modelo (node carga .ts sin tipos): el jugador de prueba la sigue.
+import { INGREDIENTES, NOMBRE_BEBIDA, RECETAS } from '../src/features/minijuegos/juegos/barman/modelo.ts';
+
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PANTALLA = join(raiz, 'app', '(auth)', 'verificar-juego.tsx');
 
 /** Que juegos se recorren (ver SOLO_* en la cabecera). */
-const { SOLO_CANA, SOLO_QUIZ, SOLO_TAPON, SOLO_PAREJAS, SOLO_PENUL } = process.env;
+const { SOLO_CANA, SOLO_QUIZ, SOLO_TAPON, SOLO_PAREJAS, SOLO_PENUL, SOLO_BARMAN } = process.env;
 const HACER = {
-  maestro: !(SOLO_CANA || SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
-  cana: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
-  tapon: !(SOLO_QUIZ || SOLO_PAREJAS || SOLO_PENUL),
-  quiz: !(SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
-  parejas: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PENUL),
-  penul: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS),
+  maestro: !(SOLO_CANA || SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
+  cana: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
+  tapon: !(SOLO_QUIZ || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
+  quiz: !(SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
+  parejas: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PENUL || SOLO_BARMAN),
+  penul: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_BARMAN),
+  barman: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
 };
 
 /** Alturas de ventana (con barra y pestanas incluidas) y ancho de movil a probar. */
@@ -1005,6 +1015,150 @@ async function recorrerParejas(chrome, perfil, url, tamano) {
   }
 }
 
+/** Barman Express: lo que hay en pantalla (comanda, pedido, fin) y cada ingrediente medido. */
+const leerBarman = `(() => {
+  const fichas = [...document.querySelectorAll('[data-testid^="barman-bebida-"]')].map((c) => c.getAttribute('aria-label') || '');
+  const ings = [...document.querySelectorAll('[data-testid^="barman-ing-"]')].map((b) => {
+    const r = b.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const encima = document.elementsFromPoint(x, y)[0];
+    return {
+      id: b.dataset.testid.slice(11), x, y, ancho: Math.round(r.width), alto: Math.round(r.height),
+      dentro: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 0.5 && r.right <= innerWidth + 0.5,
+      libre: !!encima && b.contains(encima),
+    };
+  });
+  let sc = 0;
+  for (const e of document.querySelectorAll('body *')) {
+    if (e.scrollHeight > e.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) sc = Math.max(sc, e.scrollHeight - e.clientHeight);
+  }
+  return {
+    fichas, ings,
+    pedido: (document.querySelector('[data-testid="barman-pedido"]') || {}).innerText || '',
+    redondos: [...document.querySelectorAll('[aria-label="Salir del juego"], [aria-label="Ver la carta"]')].map((b) => {
+      const r = b.getBoundingClientRect();
+      return [Math.round(r.width), Math.round(r.height)];
+    }),
+    preparando: !!document.querySelector('[data-testid="barman-preparando"]'),
+    aviso: (document.querySelector('[data-testid="barman-aviso"]') || {}).innerText || null,
+    cierre: !!document.querySelector('[data-testid="barman-cierre"]'),
+    notaFinal: (document.querySelector('[data-testid="barman-nota-final"]') || {}).innerText || null,
+    scroll: Math.max(sc, document.scrollingElement.scrollHeight - innerHeight),
+  };
+})()`;
+
+/**
+ * Barman Express: una partida ENTERA, con el dedo (tactil emulado), leyendo la
+ * comanda como la leeria una persona (el aria-label de cada bebida dice cual es
+ * y por que paso va) y tocando los ingredientes de la receta. Se equivoca a
+ * proposito: en los pedidos 2 y 8 con algo ya en el vaso (va a la basura) y en el
+ * 5 con el vaso vacio (fallo, pero no se tira nada). Y comprueba dos arreglos:
+ * el "+N con propina" desaparece aunque se toque enseguida (se quedaba pegado), y
+ * con una bebida a medias, tocar otra de la comanda no hace nada.
+ */
+async function recorrerBarman(chrome, perfil, url, tamano) {
+  const porNombre = Object.fromEntries(Object.entries(NOMBRE_BEBIDA).map(([b, n]) => [n, b]));
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  const tocar = async (x, y, ms = 30) => {
+    await c.dedos('touchStart', [{ x, y, id: 1 }]);
+    await esperar(ms);
+    await c.dedos('touchEnd', []);
+  };
+  try {
+    await c.navegar({ movil: true });
+    await c.clic('Jugar a Barman Express', 80);
+    if (!(await c.hasta('Abrir la barra', { limite: 20000 }))) throw new Error('no sale la pantalla de inicio');
+    await c.clic('Abrir la barra');
+    await esperar(400);
+    const medidas = [];
+    let e = await c.ev(leerBarman);
+    medidas.push({ cuando: 'inicio', ...e });
+    await c.foto('barman-inicio');
+
+    // Un toque de 20 ms tiene que entrar (el primer paso de la primera bebida).
+    const primera = porNombre[e.fichas[0].split(',')[0]];
+    const ing0 = e.ings.find((i) => i.id === RECETAS[primera][0]);
+    await tocar(ing0.x, ing0.y, 20);
+    await esperar(150);
+    e = await c.ev(leerBarman);
+    const toqueCorto = /paso 1 de/.test(e.fichas[0]) || e.preparando || /2\/20/.test(e.pedido);
+
+    const fallados = new Set();
+    let tiradas = 0;
+    let avisoSeVa = null;
+    let comandaBloqueada = null;
+    let pedidoAnterior = 0;
+    for (let n = 0; n < 400; n++) {
+      e = await c.ev(leerBarman);
+      if (e.cierre) break;
+      const k = Number((/Pedido (\d+)/.exec(e.pedido) || [])[1] || 0);
+      // Recien servido el 5: el "+N" esta a la vista. Se toca enseguida (el toque que
+      // antes cancelaba su temporizador) y, pasado su tiempo, tiene que haberse ido.
+      if (k === 6 && pedidoAnterior === 5 && avisoSeVa === null && e.aviso && /^\+/.test(e.aviso)) {
+        const f0 = e.fichas.map((f) => porNombre[f.split(',')[0]])[0];
+        const b0 = e.ings.find((i) => i.id === RECETAS[f0][0]);
+        await tocar(b0.x, b0.y);
+        await esperar(1300);
+        const despues = await c.ev(leerBarman);
+        avisoSeVa = !despues.aviso || !/^\+/.test(despues.aviso);
+        pedidoAnterior = k;
+        continue;
+      }
+      pedidoAnterior = k;
+      if ((k === 10 || k === 17) && !medidas.some((m) => m.cuando === `pedido ${k}`)) {
+        medidas.push({ cuando: `pedido ${k}`, ...e });
+        await c.foto(`barman-pedido-${k}`);
+      }
+      const fichas = e.fichas.map((f) => ({ b: porNombre[f.split(',')[0]], servida: /servida/.test(f), paso: Number((/paso (\d+) de/.exec(f) || [])[1] || 0), prep: /preparando/.test(f) }));
+      const objetivo = fichas.find((f) => f.prep) || fichas.find((f) => !f.servida);
+      if (!objetivo) { await esperar(60); continue; }
+      let ing = RECETAS[objetivo.b][objetivo.paso];
+      // Llena a la espera (la caña que podria ser clara): el siguiente toque es de otra pendiente.
+      if (ing === undefined) {
+        const otra = fichas.find((f) => f !== objetivo && !f.servida);
+        ing = RECETAS[otra.b][0];
+      }
+      // Con una bebida a medias y otra en la comanda: tocar la otra no tiene que hacer nada.
+      if (comandaBloqueada === null && objetivo.paso === 1 && fichas.length > 1) {
+        const otra = fichas.findIndex((f) => f !== objetivo && !f.servida);
+        if (otra !== -1) {
+          const centro = await c.ev(`(() => { const r = document.querySelector('[data-testid="barman-bebida-${otra}"]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+          await tocar(centro[0], centro[1]);
+          await esperar(150);
+          const tras = await c.ev(leerBarman);
+          comandaBloqueada = tras.fichas.some((f) => /preparando, paso 1 de/.test(f) && f.startsWith(NOMBRE_BEBIDA[objetivo.b]));
+          continue;
+        }
+      }
+      // Fallos a proposito: con algo en el vaso en los pedidos 2 y 8 (a la basura), y
+      // con el vaso vacio en el 5 (fallo que no tira nada).
+      if ((k === 2 || k === 8) && !fallados.has(k) && objetivo.paso === 1) {
+        fallados.add(k);
+        ing = INGREDIENTES.find((x) => x !== ing && !RECETAS[objetivo.b].includes(x));
+        tiradas++;
+      } else if (k === 5 && !fallados.has(k) && objetivo.paso === 0) {
+        fallados.add(k);
+        ing = INGREDIENTES.find((x) => !RECETAS[objetivo.b].includes(x));
+      }
+      const boton = e.ings.find((i) => i.id === ing);
+      await tocar(boton.x, boton.y);
+      await esperar(40);
+    }
+    const final = await c.ev(leerBarman);
+    medidas.push({ cuando: 'cierre', ...final });
+    await c.foto('barman-cierre');
+    if (!(await c.hasta('Fin de la partida|Nuevo récord', { limite: 15000 }))) throw new Error('no sale la tarjeta de fin');
+    await esperar(400);
+    const texto = await c.texto();
+    await c.foto('barman-tarjeta');
+    const tarjeta = (/(FIN DE LA PARTIDA|NUEVO RÉCORD!?)\s*\n+\s*(\d+)/i.exec(texto) || [])[2] || null;
+    return { medidas, toqueCorto, tiradas, notaFinal: final.notaFinal, tarjeta, texto, avisoSeVa, comandaBloqueada };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
 async function main() {
   const chrome = buscarChrome();
   if (!chrome) {
@@ -1188,6 +1342,39 @@ async function main() {
           if (!ok) fallos += 1;
         }
         for (const m of malas) console.log(`       ${m}`);
+      }
+    }
+
+    if (HACER.barman) {
+      const solo = process.argv[2] ? Number(process.argv[2]) : null;
+      for (const tamano of TAMANOS_PAREJAS.filter((t) => solo === null || t.alto === solo)) {
+        console.log(`\n${tamano.nombre} (${tamano.ancho}x${tamano.alto}): Barman Express, una partida entera de 20 pedidos...`);
+        let r;
+        try {
+          r = await recorrerBarman(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
+        } catch (e) {
+          console.log(`FALLA  no se pudo jugar a Barman Express: ${e.message}`);
+          fallos += 1;
+          continue;
+        }
+        const jugando = r.medidas.filter((m) => m.cuando !== 'cierre');
+        const servidos = (/(\d+) de 20 pedidos servidos/.exec(r.texto) || [])[1];
+        console.log(JSON.stringify({ boton: `${jugando[0].ings[0]?.ancho}x${jugando[0].ings[0]?.alto}`, scroll: jugando.map((m) => m.scroll), nota: r.notaFinal, tarjeta: r.tarjeta, servidos, tiradas: r.tiradas }));
+        for (const [nombre, ok] of [
+          ['barman: sin scroll al empezar, a mitad y al final', r.medidas.every((m) => m.scroll <= 0)],
+          ['barman: los 12 ingredientes, enteros dentro de la pantalla', jugando.every((m) => m.ings.length === 12 && m.ings.every((i) => i.dentro))],
+          ['barman: ningun ingrediente tapado por otra cosa', jugando.every((m) => m.ings.every((i) => i.libre))],
+          ['barman: botones comodos para el dedo (>= 44 px), tambien Salir y la Carta', jugando[0].ings.every((i) => i.ancho >= 44 && i.alto >= 44) && jugando[0].redondos.length === 2 && jugando[0].redondos.every(([w, h]) => w >= 44 && h >= 44)],
+          ['barman: un toque de 20 ms entra', r.toqueCorto],
+          ['barman: la partida llega al final y el jugador de prueba sirve casi todo (>= 15 de 20)', !!r.notaFinal && Number(servidos) >= 15],
+          ['barman: la nota de la tarjeta es la que marco el juego (la que se envia)', !!r.tarjeta && r.tarjeta === r.notaFinal],
+          ['barman: la tarjeta cuenta las bebidas tiradas (2: el fallo con el vaso vacio no tira nada)', new RegExp(`${r.tiradas} bebidas a la basura`).test(r.texto)],
+          ['barman: el "+N con propina" se va aunque se toque enseguida (se quedaba pegado)', r.avisoSeVa === true],
+          ['barman: con una bebida a medias, tocar otra de la comanda no hace nada', r.comandaBloqueada === true],
+        ]) {
+          console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+          if (!ok) fallos += 1;
+        }
       }
     }
 
