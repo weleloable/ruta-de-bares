@@ -421,8 +421,25 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    Cervecero en el ranking por ruta (la nota son metros + jarras + gigantes, entera,
    con un techo de seguridad de 10.000.000) y ensancha `best_score` a
    `numeric(12, 2)` para que quepa. Rehace `minigame_submit_nota()` de la 0070, que
-   ya **no se vuelve a pegar**. Se puede pegar dos veces. Si la app nueva llega
-   antes, el juego se juega igual, pero guardar en la ruta da INVALID_GAME.
+   ya **no se vuelve a pegar**. Se podia pegar dos veces hasta aplicar la 0073. Si
+   la app nueva llega antes, el juego se juega igual, pero guardar en la ruta da
+   INVALID_GAME.
+67. [`supabase/migrations/0072_la_penul_visible.sql`](../supabase/migrations/0072_la_penul_visible.sql)
+   y **Run**, despues de la 0071 y **ANTES de desplegar la app**. Anade
+   `routes.la_penul_visible` (apagado por defecto): el interruptor del editor que
+   ensena La Penul, la historia para adultos, a toda la gente de la ruta. Los
+   admins la ven siempre. No toca funciones ni policies. Se puede pegar dos veces.
+   Si la app nueva llega antes, el editor no puede guardar el interruptor (la
+   columna no existe) y la gente normal no la ve; los admins si.
+68. [`supabase/migrations/0073_barman_express.sql`](../supabase/migrations/0073_barman_express.sql)
+   y **Run**, despues de la 0072 y **ANTES de desplegar la app**. Mete Barman
+   Express en el ranking por ruta y en el podio de las casas: los checks de
+   `minigame_scores` aceptan `barman-express` (entero, de 0 a 5197) y
+   `minigame_submit_nota` lleva su tope. Parte de la 0071 (la del Quijote, con su
+   techo y su `numeric(12, 2)`), asi que no se lo lleva por delante. Rehace
+   `minigame_submit_nota()` de la 0071, que ya **no se vuelve a pegar**. Se puede pegar dos veces. Si la app
+   nueva llega antes, el juego se juega igual y guarda el record en el movil;
+   al guardar en la ruta avisa de que falta una migracion.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

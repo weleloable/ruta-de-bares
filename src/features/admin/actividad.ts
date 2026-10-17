@@ -158,6 +158,7 @@ const JUEGOS: Record<string, string> = {
   'tapon-al-vuelo': 'Tapón al Vuelo',
   'parejas-de-barra': 'Parejas de Barra',
   'quijote-cervecero': 'Don Quijote Cervecero',
+  'barman-express': 'Barman Express',
 };
 
 export function filasJuegos(a: ActividadRuta) {

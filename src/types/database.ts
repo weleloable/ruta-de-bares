@@ -61,6 +61,8 @@ export type RouteRow = {
   /** Sorteo entre quien sella todos los bares, y su premio (0061). */
   sorteo_activo: boolean;
   sorteo_premio: string;
+  /** La Penul (historia para adultos) sale en el menu para todo el mundo de la ruta; los admins la ven siempre (0072). */
+  la_penul_visible: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -612,6 +614,7 @@ export type Database = {
           | 'temporada_id'
           | 'sorteo_activo'
           | 'sorteo_premio'
+          | 'la_penul_visible'
           | 'created_at'
           | 'updated_at'
         >;

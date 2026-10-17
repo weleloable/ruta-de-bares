@@ -75,7 +75,8 @@ app/                      pantallas (Expo Router)
   editor/[routeId]/       lista de bares de una ruta + formulario de bar
 src/
   features/<dominio>/     reglas + llamadas a datos + componentes por dominio
-                           (auth, routes, stamps, invites, profile, pwa, match, admin, notices)
+                           (auth, routes, stamps, invites, profile, pwa, match, admin, notices,
+                           minijuegos: un juego por carpeta en minijuegos/juegos/, p. ej. la-penul/)
   components/             UI compartida (StampSeal, ui.tsx, Desplegable, RutaMapa,
                            SelectorPosicion con variantes .web.tsx)
   lib/                    cliente Supabase, secure-session-store, tema, fechas,
@@ -149,6 +150,8 @@ supabase/
   migrations/0069_*.sql     La Caña Perfecta con 2 decimales (`minigame_scores.best_score` numeric(7,2)) y `admin_meter_en_ruta` (meter a alguien en una ruta)
   migrations/0070_*.sql     Parejas de Barra: el primer juego en el que MENOS es mejor (`minijuego_menos_es_mejor`, tiempo de 4,00 a 600 s)
   migrations/0071_*.sql     ranking de Don Quijote Cervecero (techo 10.000.000) y `best_score` a numeric(12, 2)
+  migrations/0072_*.sql     La Penul por ruta: `routes.la_penul_visible` (apagado por defecto; los admins la ven siempre)
+  migrations/0073_*.sql     Barman Express en el ranking por ruta y el podio de casas (tope 5197 = PUNTUACION_MAXIMA, entero, mas es mejor); parte de la 0071
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
@@ -278,6 +281,83 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   conserva la firma de dos argumentos y lee la misma tabla.
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
+
+- **Quien ve que juego en el menu lo decide UNA funcion, `juegosDelMenu`
+  (`minijuegos/visibilidad.ts`)**: los juegos `enPruebas` (el Quijote) solo para
+  admins, y La Penul (0072) solo si la ruta la enciende, siempre la ULTIMA. El menu
+  recibe `esAdmin` y `penulVisible` de la pestana; no llama a `useAuth` por su cuenta.
+- **Don Quijote Cervecero: UN DESLIZAMIENTO, UNA ACCION** (`juegos/quijote/gestos.ts`,
+  puro y con tests). Antes, cada 20 px que recorria el dedo contaba como un gesto
+  nuevo (un arrastre largo cambiaba dos o tres carriles) y ademas un toque suelto
+  movia un carril segun el lado de la pantalla: dos formas de mover, una de ellas
+  impredecible. Ahora el gesto se dispara en cuanto el dedo recorre el umbral y el
+  resto del arrastre se ignora hasta levantarlo; un toque suelto no hace nada; un
+  golpe rapido que se suelta antes del umbral vale con uno menor. Arriba salta y
+  abajo agacha (eso no es mover de carril). El carril sale como `data-carril` en
+  el contenedor: se comprobo en Chrome con el dedo emulado.
+
+- **Barman Express** (`juegos/barman/`, 0073). Eres el camarero: 20 pedidos
+  CERRADOS (ni tiempo ni vidas), asi la nota tiene techo. La carta CRECE con la
+  noche (`ENTRA` en `modelo.ts`: caña 1, cañón 4, clara 6, tinto 9, chupito 12,
+  vermut 15) y desde el 12 una de cada cinco comandas es una RONDA de 3 chupitos
+  con propina doble ("¡y uno para el camarero!"): base baja, ritmo alto, solo
+  paga si se sirve rapido. La paciencia es pasos x segundos por paso (de 1,9 a
+  0,65 s en linea recta) + 2,5 s. Puntos: 10 por paso, propina por TRAMOS de la
+  paciencia que queda (50/30/15 %) y racha de pedidos sin fallo (+0,25 por
+  pedido, tope x2), todo en enteros. **`PUNTUACION_MAXIMA` (5197) es una cota
+  analitica**, no la mejor partida: cada pedido k vale como mucho su comanda mas
+  larga posible (se ENUMERAN todas) con la propina alta y la racha k; ninguna
+  partida la alcanza. El tope de la 0073 se lee de ahi en el test. Las
+  constantes se eligieron simulando jugadores contra el modelo real
+  (`modelo.test.ts`: perfecto ~2800, bueno ~1800, lento ~600 y pierde clientes);
+  si se tocan, se vuelve a mirar esa tabla. **Toques rapidos**: en web,
+  ingredientes y comanda escuchan `pointerdown` (`ToqueRapido.web.tsx`), como
+  `ZonaCarta.web` de Parejas: un Pressable de RN Web perdia los toques de menos
+  de ~50 ms; `verificar:juego` lo comprueba con un toque de 20 ms. **El
+  ingrediente elige la bebida** (`tocarIngrediente`): si encaja con el siguiente
+  paso de otra pendiente con el mismo principio, se cambia a esa sin castigo;
+  solo es fallo si no encaja con ninguna. La caña es el principio de la clara:
+  con una clara pendiente, la caña hecha NO se entrega hasta el siguiente toque
+  (refresco: era clara; otra cosa: se entrega la caña y el toque sigue). Fallar con el vaso vacio rompe la
+  racha pero no cuenta como bebida tirada; con una a medias, la comanda no deja
+  cambiar de bebida.
+  **Pausa y pista**: al servir un pedido hay 1,1 s de "¡Bien hecho!" (`PAUSA_SERVIDO`):
+  el siguiente cliente llega al acabar y su paciencia arranca entonces, asi que la
+  pausa no cambia puntos ni cota; los toques en la pausa no cuentan. Si pasan 3 s
+  sin tocar con un cliente delante (`DUDA_DESPUES`), se iluminan los ingredientes
+  que valen (`ingredientesValidos`, con test de que ninguno da fallo) y un toque
+  lo apaga. Un cliente que se va enfadado no lleva pausa. Va a
+  PANTALLA COMPLETA en vertical: dentro del menu, a 740 px, al juego le
+  quedaban ~328 px; el reparto lo decide `pantalla.ts` (puro, con tests). Los
+  dibujos los genera `scripts/generar-barman.py` (lienzo de Tapon; clientes de
+  Open Peeps con borde de pegatina, originales y licencia en
+  `assets/barman/clientes/`). El refresco de limon es una LATA (no un limon) y
+  el vermut, un BARRIL tumbado con grifo: los eligio el usuario.
+
+- **La Penul: esconderla es una SORPRESA, no un secreto** (0072,
+  `minijuegos/visibilidad.ts`, `juegos/la-penul/`). Historia interactiva para
+  adultos (en la ruta solo hay mayores de edad). Los admins la ven siempre (con
+  "Solo admins" si esta apagada); el resto, solo si un admin enciende
+  `routes.la_penul_visible` en el editor; cuando sale, va la ULTIMA (va aparte en
+  `juegos.ts`, `JUEGO_LA_PENUL`, y `juegosDelMenu` la manda al final aunque alguien
+  la mueva: un juego nuevo queda penultimo). El menu
+  relee el interruptor al enfocar la pestana y cada minuto. PERO el texto y las
+  imagenes van en la web publicada: quien mire el JavaScript los encuentra con
+  el interruptor apagado. No protege nada y nadie debe tratarlo como protegido.
+  No hay policy nueva: `routes_write` (0001) ya deja escribir solo a admins y
+  `routes_select` (0004) leer a la gente de la ruta (`tests/migration-0072.test.ts`).
+  El guion es DATOS (`guion.ts`) y el motor es puro (`motor.ts`, genero al azar
+  con semilla, `{o|a}` para las concordancias). `guion.test.ts` recorre TODAS las
+  partidas con los dos generos: sin callejones, todo camino termina (volver a la
+  barra cuesta una ronda; tras 3, cierra), cada personaje tiene final bueno y
+  malo, y ninguna opcion marcada `'presiona'` (insistir, agobiar, mentir,
+  emborrachar) llega a un final bueno; ademas, la propuesta de irse la hace
+  siempre la otra persona. Sin nota ni ranking (`resultadoPropio`, nada en SQL).
+  Imagenes: los ORIGINALES y sus licencias en `assets/ultima-ronda/` (CREDITOS.md;
+  los fondos son CC BY 3.0 y se citan en la pantalla de Creditos); lo que pinta
+  la app lo genera `scripts/generar-la-penul.py` en `assets/la-penul/` (fondos
+  recortados a 3:4, bustos con borde crema de pegatina: sin el, la linea negra se
+  pierde en los fondos oscuros). 613 KB en total.
 
 - **El SENTIDO de la nota: en Parejas de Barra gana quien MENOS tarda** (0070,
   `minijuegos/nota.ts`). Es lo primero que se rompe al anadir el siguiente juego:

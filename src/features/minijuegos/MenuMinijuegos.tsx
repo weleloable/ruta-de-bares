@@ -5,7 +5,6 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Banner, Button, Card, EmptyState, Screen } from '../../components/ui';
 import { useBloqueoRecarga } from '../../lib/bloqueoRecarga';
 import { colors, radius, space, typography } from '../../lib/theme';
-import { useAuth } from '../auth/AuthProvider';
 import { feedback } from './feedback';
 import { JUEGOS } from './juegos';
 import { ListaCervezas } from './ListaCervezas';
@@ -14,6 +13,7 @@ import { formatearNota } from './nota';
 import { cargarRecords, registrarPuntuacion } from './records';
 import type { Records } from './recordsReglas';
 import type { JuegoDef, ResultadoJuego } from './tipos';
+import { juegosDelMenu } from './visibilidad';
 
 type Vista = 'juego' | 'ranking' | 'cervezas';
 
@@ -27,10 +27,19 @@ type Vista = 'juego' | 'ranking' | 'cervezas';
  * Sin ella (pruebas en local, sin cuenta) todo sigue funcionando pero solo con
  * el record de este dispositivo.
  */
-export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; nombreRuta?: string }) {
-  const { isAdmin } = useAuth();
-  // Los juegos "en pruebas" solo los ven los admins.
-  const juegos = JUEGOS.filter((j) => !j.enPruebas || isAdmin);
+export function MenuMinijuegos({
+  rutaId,
+  nombreRuta,
+  esAdmin = false,
+  penulVisible = false,
+}: {
+  rutaId: string | null;
+  nombreRuta?: string;
+  /** Quien mira y si la ruta tiene La Penul encendida: deciden si sale (visibilidad.ts). */
+  esAdmin?: boolean;
+  penulVisible?: boolean;
+}) {
+  const lista = juegosDelMenu(JUEGOS, { esAdmin, penulVisible });
   const [records, setRecords] = useState<Records>({});
   const [activo, setActivo] = useState<JuegoDef | null>(null);
   const [vista, setVista] = useState<Vista>('juego');
@@ -165,42 +174,64 @@ export function MenuMinijuegos({ rutaId, nombreRuta }: { rutaId: string | null; 
       <Text style={typography.muted}>
         {nombreRuta ? `Partidas cortas para el rato entre bar y bar. Ruta: ${nombreRuta}.` : 'Partidas cortas para el rato entre bar y bar.'}
       </Text>
-      {juegos.length === 0 ? (
+      {lista.length === 0 ? (
         <EmptyState title="Muy pronto" body="Estamos sirviendo los primeros juegos." />
       ) : (
-        juegos.map((juego) => (
-          <View key={juego.id} style={styles.juego}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Jugar a ${juego.titulo}`}
-              onPress={() => abrir(juego)}
-              style={({ pressed }) => pressed && styles.pulsado}
-            >
-              <Card style={styles.fila}>
-                <View style={styles.icono}>
-                  <Ionicons name={juego.icono} size={30} color={colors.beerDark} />
-                </View>
-                <View style={styles.textos}>
-                  <Text style={typography.cardTitle}>{juego.titulo}</Text>
-                  {juego.enPruebas ? <Text style={styles.enPruebas}>En pruebas · solo admins</Text> : null}
-                  <Text style={typography.muted}>{juego.descripcion}</Text>
-                  {records[juego.id] !== undefined ? (
-                    <Text style={styles.record}>Récord: {formatearNota(juego.id, records[juego.id])}</Text>
-                  ) : null}
-                </View>
-                <Ionicons name="chevron-forward" size={22} color={colors.inkFaint} />
-              </Card>
-            </Pressable>
-            {rutaId && (juego.ranking || juego.RankingPropio || juego.cervezas) ? (
-              <Button
-                title={juego.ranking || juego.RankingPropio ? 'Ranking de la ruta' : 'Cervezas de la ruta'}
-                variant="ghost"
-                icon={juego.ranking || juego.RankingPropio ? 'trophy' : 'list'}
-                onPress={() => abrir(juego, juego.ranking || juego.RankingPropio ? 'ranking' : 'cervezas')}
-              />
-            ) : null}
-          </View>
-        ))
+        lista.map(({ juego, soloAdmins }) => {
+          // Ranking o cervezas de la ruta: un boton a la DERECHA de la tarjeta (1/5 del
+          // ancho, el mismo alto), no una fila entera debajo. Asi cada juego ocupa una
+          // sola altura y caben mas en pantalla.
+          const lateral: { vista: Vista; icono: 'trophy' | 'list'; texto: string; etiqueta: string } | null =
+            rutaId && (juego.ranking || juego.RankingPropio)
+              ? { vista: 'ranking', icono: 'trophy', texto: 'Ranking', etiqueta: `Ranking de la ruta de ${juego.titulo}` }
+              : rutaId && juego.cervezas
+                ? { vista: 'cervezas', icono: 'list', texto: 'Cervezas', etiqueta: 'Cervezas de la ruta' }
+                : null;
+          return (
+            <View key={juego.id} style={styles.juego}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Jugar a ${juego.titulo}`}
+                onPress={() => abrir(juego)}
+                style={({ pressed }) => [styles.principal, pressed && styles.pulsado]}
+              >
+                <Card style={styles.fila}>
+                  <View style={styles.icono}>
+                    <Ionicons name={juego.icono} size={30} color={colors.beerDark} />
+                  </View>
+                  <View style={styles.textos}>
+                    <Text style={typography.cardTitle}>{juego.titulo}</Text>
+                    {juego.enPruebas ? (
+                      // Todavia en desarrollo: solo lo ven los admins.
+                      <Text style={styles.enPruebas}>En pruebas · solo admins</Text>
+                    ) : soloAdmins ? (
+                      // Para que el admin sepa que el resto de la ruta no lo ve todavia (se enciende en el editor).
+                      <Text style={styles.soloAdmins}>Solo admins</Text>
+                    ) : null}
+                    <Text style={typography.muted}>{juego.descripcion}</Text>
+                    {records[juego.id] !== undefined ? (
+                      <Text style={styles.record}>Récord: {formatearNota(juego.id, records[juego.id])}</Text>
+                    ) : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={22} color={colors.inkFaint} />
+                </Card>
+              </Pressable>
+              {lateral ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={lateral.etiqueta}
+                  onPress={() => abrir(juego, lateral.vista)}
+                  style={({ pressed }) => [styles.lateral, pressed && styles.pulsado]}
+                >
+                  <Ionicons name={lateral.icono} size={24} color={colors.beerDark} />
+                  <Text style={styles.lateralTexto} numberOfLines={1} adjustsFontSizeToFit>
+                    {lateral.texto}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })
       )}
     </Screen>
   );
@@ -214,8 +245,36 @@ const styles = StyleSheet.create({
   resultado: { alignItems: 'center' },
   puntos: { fontSize: 64, fontWeight: '800', color: colors.beerDark },
   puntosLargos: { fontSize: 44 },
-  juego: { gap: space.xs },
-  fila: { flexDirection: 'row', alignItems: 'center', minHeight: 88 },
+  // La tarjeta del juego (4/5) y, a su derecha, ranking o cervezas (1/5), con el mismo alto.
+  juego: { flexDirection: 'row', alignItems: 'stretch', gap: space.sm },
+  // minWidth 0: en web un elemento flex no encoge por debajo de su contenido, y el
+  // texto largo empujaba el boton de ranking fuera de la pantalla.
+  principal: { flex: 4, minWidth: 0 },
+  fila: { flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 88 },
+  lateral: {
+    flex: 1,
+    minWidth: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: space.xs,
+  },
+  lateralTexto: { fontSize: 11, fontWeight: '700', color: colors.beerDark },
+  soloAdmins: {
+    alignSelf: 'flex-start',
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.white,
+    backgroundColor: colors.stamp,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.sm,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
   pulsado: { opacity: 0.85 },
   icono: {
     width: 56,
