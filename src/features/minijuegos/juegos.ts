@@ -18,23 +18,11 @@ import { ID_JUEGO as ID_QUIZ } from '../quiz/config';
 import type { JuegoDef } from './tipos';
 
 /**
- * Lista de juegos del menu, en el orden en que se ven. Anadir uno es crear su
- * componente en `juegos/<id>/` y sumarlo aqui: nada mas de la app se entera.
+ * Los juegos de siempre, en el orden en que se ven. Anadir uno es crear su
+ * componente en `juegos/<id>/` y sumarlo AL FINAL DE ESTA LISTA: nada mas de la
+ * app se entera. La Penul no va aqui: va aparte, abajo, y siempre la ultima.
  */
-export const JUEGOS: readonly JuegoDef[] = [
-  {
-    // Historia interactiva para adultos (guion en juegos/la-penul/guion.ts). Sin nota, sin
-    // ranking y sin puntos de casa: se encarga de su propio final. La ven los admins siempre y
-    // el resto solo si la ruta la enciende (0071); cuando sale, va la primera (visibilidad.ts).
-    id: ID_LA_PENUL,
-    titulo: TITULO_LA_PENUL,
-    descripcion: 'Una noche, tres rondas y muchas ganas. Para mayores de edad.',
-    icono: 'flame',
-    Componente: LaPenul,
-    pantallaCompleta: true,
-    resultadoPropio: true,
-    visibilidad: 'la-penul',
-  },
+const JUEGOS_DE_SIEMPRE: readonly JuegoDef[] = [
   {
     id: 'cana-perfecta',
     titulo: 'La Caña Perfecta',
@@ -137,3 +125,26 @@ export const JUEGOS: readonly JuegoDef[] = [
     },
   },
 ];
+
+/**
+ * La Penul, la historia para adultos (0071). Va APARTE y SIEMPRE LA ULTIMA: un
+ * juego nuevo se suma al final de JUEGOS_DE_SIEMPRE y queda penultimo. Aunque
+ * alguien la meta en medio de la lista, juegosDelMenu (visibilidad.ts) la manda
+ * al final igual; tests/la-penul-cableado.test.ts y visibilidad.test.ts lo vigilan.
+ */
+const JUEGO_LA_PENUL: JuegoDef = {
+  // Historia interactiva para adultos (guion en juegos/la-penul/guion.ts). Sin nota, sin
+  // ranking y sin puntos de casa: se encarga de su propio final. La ven los admins siempre y
+  // el resto solo si la ruta la enciende (0071). Va SIEMPRE la ultima (visibilidad.ts).
+  id: ID_LA_PENUL,
+  titulo: TITULO_LA_PENUL,
+  descripcion: 'Una noche, tres rondas y muchas ganas. Para mayores de edad.',
+  icono: 'flame',
+  Componente: LaPenul,
+  pantallaCompleta: true,
+  resultadoPropio: true,
+  visibilidad: 'la-penul',
+};
+
+/** Lo que pinta el menu: los de siempre y, la ultima, La Penul (si se puede ver: visibilidad.ts). */
+export const JUEGOS: readonly JuegoDef[] = [...JUEGOS_DE_SIEMPRE, JUEGO_LA_PENUL];

@@ -33,7 +33,7 @@
  *      que sale en la tarjeta de fin, que es el que se envia (ver `recorrerParejas`).
  *
  *   9. La Penul: quien la ve (una persona normal con el interruptor apagado NO;
- *      encendido, si y la PRIMERA; un admin siempre, la primera y con "Solo
+ *      encendido, si y la ULTIMA; un admin siempre, la ultima y con "Solo
  *      admins" si esta apagado) y una partida hasta un final bueno en las tres
  *      alturas, sin scroll ni botones fuera o tapados en ninguna pantalla (ver
  *      `recorrerPenul`).
@@ -1173,12 +1173,12 @@ async function main() {
           ...p.botones.filter((b) => !b.dentro || !b.libre).map((b) => `${p.nombre}: "${b.label}" ${!b.dentro ? 'fuera de la pantalla' : 'tapado'}`),
         ]);
         console.log(JSON.stringify({ genero: r.genero, pantallas: r.pantallas.length, malas }));
-        const primero = (m) => m[0]?.titulo;
+        const ultimo = (m) => m.at(-1)?.titulo;
         for (const [nombre, ok] of [
           ['penul: persona normal, interruptor apagado: NO sale', !r.vis.normalApagado.some((j) => j.titulo === 'La Penul') && r.vis.normalApagado.length > 0],
-          ['penul: persona normal, interruptor encendido: sale la PRIMERA y sin etiqueta', primero(r.vis.normalEncendido) === 'La Penul' && !r.vis.normalEncendido[0].soloAdmins],
-          ['penul: admin, interruptor apagado: sale la primera con "Solo admins"', primero(r.vis.adminApagado) === 'La Penul' && r.vis.adminApagado[0].soloAdmins],
-          ['penul: admin, interruptor encendido: la primera, sin etiqueta', primero(r.vis.adminEncendido) === 'La Penul' && !r.vis.adminEncendido[0].soloAdmins],
+          ['penul: persona normal, interruptor encendido: sale la ULTIMA y sin etiqueta', ultimo(r.vis.normalEncendido) === 'La Penul' && !r.vis.normalEncendido.at(-1).soloAdmins],
+          ['penul: admin, interruptor apagado: sale la ultima con "Solo admins"', ultimo(r.vis.adminApagado) === 'La Penul' && r.vis.adminApagado.at(-1).soloAdmins],
+          ['penul: admin, interruptor encendido: la ultima, sin etiqueta', ultimo(r.vis.adminEncendido) === 'La Penul' && !r.vis.adminEncendido.at(-1).soloAdmins],
           ['penul: los creditos citan los fondos (CC BY 3.0) y Open Peeps', /CC BY 3\.0/.test(r.creditos) && /Open Peeps/.test(r.creditos)],
           [`penul: ${r.pantallas.length} pantallas sin scroll ni botones fuera o tapados`, malas.length === 0 && r.pantallas.length >= 10],
           ['penul: llega al final bueno, con su titular y "Volver a jugar"', /LOLA Y EL ESTRIBILLO/.test(r.textoFinal) && /Volver a jugar/.test(r.textoFinal)],

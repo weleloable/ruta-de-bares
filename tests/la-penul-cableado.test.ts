@@ -113,3 +113,12 @@ test('un toque que vale cierra el candado', () => {
   const c = leer('src/features/minijuegos/juegos/la-penul/LaPenul.tsx');
   assert.equal((c.match(/abierta\.current = null;/g) ?? []).length, 2);
 });
+
+test('La Penul va aparte y la ULTIMA en juegos.ts (un juego nuevo se suma antes)', () => {
+  const j = leer('src/features/minijuegos/juegos.ts');
+  assert.match(j, /export const JUEGOS: readonly JuegoDef\[\] = \[\.\.\.JUEGOS_DE_SIEMPRE, JUEGO_LA_PENUL\];/);
+  // Dentro de la lista de siempre no esta (iria por medio).
+  const deSiempre = j.slice(j.indexOf('const JUEGOS_DE_SIEMPRE'), j.indexOf('const JUEGO_LA_PENUL'));
+  assert.doesNotMatch(deSiempre, /ID_LA_PENUL|visibilidad: 'la-penul'/);
+  assert.match(j.slice(j.indexOf('const JUEGO_LA_PENUL')), /visibilidad: 'la-penul'/);
+});

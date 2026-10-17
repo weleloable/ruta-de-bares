@@ -16,23 +16,34 @@ test('persona normal con el interruptor APAGADO: no sale', () => {
   assert.deepEqual(ids(r), ['cana-perfecta', 'tapon-al-vuelo', 'parejas-de-barra']);
 });
 
-test('persona normal con el interruptor ENCENDIDO: sale la primera, sin etiqueta', () => {
+test('persona normal con el interruptor ENCENDIDO: sale la ULTIMA, sin etiqueta', () => {
   const r = juegosDelMenu(JUEGOS, { esAdmin: false, penulVisible: true });
-  assert.deepEqual(ids(r), ['la-penul', 'cana-perfecta', 'tapon-al-vuelo', 'parejas-de-barra']);
-  assert.equal(r[0]?.soloAdmins, false);
+  assert.deepEqual(ids(r), ['cana-perfecta', 'tapon-al-vuelo', 'parejas-de-barra', 'la-penul']);
+  assert.equal(r.at(-1)?.soloAdmins, false);
 });
 
-test('admin con el interruptor apagado: sale la primera, con "Solo admins"', () => {
+test('admin con el interruptor apagado: sale la ultima, con "Solo admins"', () => {
   const r = juegosDelMenu(JUEGOS, { esAdmin: true, penulVisible: false });
-  assert.equal(r[0]?.juego.id, 'la-penul');
-  assert.equal(r[0]?.soloAdmins, true);
+  assert.equal(r.at(-1)?.juego.id, 'la-penul');
+  assert.equal(r.at(-1)?.soloAdmins, true);
   assert.equal(r.length, 4);
 });
 
-test('admin con el interruptor encendido: la primera, sin etiqueta (la ve todo el mundo)', () => {
+test('admin con el interruptor encendido: la ultima, sin etiqueta (la ve todo el mundo)', () => {
   const r = juegosDelMenu(JUEGOS, { esAdmin: true, penulVisible: true });
-  assert.equal(r[0]?.juego.id, 'la-penul');
-  assert.equal(r[0]?.soloAdmins, false);
+  assert.equal(r.at(-1)?.juego.id, 'la-penul');
+  assert.equal(r.at(-1)?.soloAdmins, false);
+});
+
+test('un juego nuevo sumado DESPUES de La Penul en la lista queda por delante de ella (penultimo)', () => {
+  const conNuevo = [...JUEGOS, { id: 'juego-nuevo' }];
+  for (const esAdmin of [true, false]) {
+    const r = juegosDelMenu(conNuevo, { esAdmin, penulVisible: true });
+    assert.deepEqual(ids(r).slice(-2), ['juego-nuevo', 'la-penul'], `esAdmin=${esAdmin}`);
+  }
+  // Y metida al principio, igual: la ultima.
+  const alPrincipio = [{ id: 'la-penul', visibilidad: 'la-penul' as const }, { id: 'a' }, { id: 'b' }];
+  assert.deepEqual(ids(juegosDelMenu(alPrincipio, { esAdmin: true, penulVisible: false })), ['a', 'b', 'la-penul']);
 });
 
 test('el resto de juegos no lleva nunca la etiqueta y conserva su orden', () => {

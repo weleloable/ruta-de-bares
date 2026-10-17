@@ -76,7 +76,7 @@ export type JuegoDef = {
   cervezas?: boolean;
   /**
    * Quien lo ve (visibilidad.ts). 'la-penul': los admins siempre; el resto, solo
-   * si la ruta lo tiene encendido (0071). Cuando sale, va el primero. Es una
+   * si la ruta lo tiene encendido (0071). Cuando sale, va el ULTIMO. Es una
    * SORPRESA, no un secreto: el contenido va en la web publicada igualmente.
    */
   visibilidad?: 'la-penul';

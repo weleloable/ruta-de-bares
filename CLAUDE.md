@@ -284,7 +284,9 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   `minijuegos/visibilidad.ts`, `juegos/la-penul/`). Historia interactiva para
   adultos (en la ruta solo hay mayores de edad). Los admins la ven siempre (con
   "Solo admins" si esta apagada); el resto, solo si un admin enciende
-  `routes.la_penul_visible` en el editor; cuando sale, va la primera. El menu
+  `routes.la_penul_visible` en el editor; cuando sale, va la ULTIMA (va aparte en
+  `juegos.ts`, `JUEGO_LA_PENUL`, y `juegosDelMenu` la manda al final aunque alguien
+  la mueva: un juego nuevo queda penultimo). El menu
   relee el interruptor al enfocar la pestana y cada minuto. PERO el texto y las
   imagenes van en la web publicada: quien mire el JavaScript los encuentra con
   el interruptor apagado. No protege nada y nadie debe tratarlo como protegido.

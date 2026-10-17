@@ -5,7 +5,8 @@
  *  - Admins: la ven SIEMPRE. Si el interruptor de la ruta esta apagado, con la
  *    etiqueta "Solo admins" (para que sepan que el resto no la ve).
  *  - El resto: solo con el interruptor de la ruta (`routes.la_penul_visible`) encendido.
- *  - Cuando sale, va la PRIMERA.
+ *  - Cuando sale, va la ULTIMA, este donde este en JUEGOS: un juego nuevo que
+ *    alguien sume despues de ella en la lista queda igualmente por delante.
  *
  * ESCONDERLA ES UNA SORPRESA, NO UN SECRETO. Esto solo decide el menu: el texto
  * y las imagenes del juego van en la web publicada, y quien sepa mirar el
@@ -22,17 +23,17 @@ export function juegosDelMenu<T extends ConVisibilidad>(
   juegos: readonly T[],
   quien: { esAdmin: boolean; penulVisible: boolean },
 ): EnMenu<T>[] {
-  const primeros: EnMenu<T>[] = [];
   const resto: EnMenu<T>[] = [];
+  const ultimos: EnMenu<T>[] = [];
   for (const juego of juegos) {
     if (juego.visibilidad === 'la-penul') {
-      if (quien.esAdmin) primeros.push({ juego, soloAdmins: !quien.penulVisible });
-      else if (quien.penulVisible) primeros.push({ juego, soloAdmins: false });
+      if (quien.esAdmin) ultimos.push({ juego, soloAdmins: !quien.penulVisible });
+      else if (quien.penulVisible) ultimos.push({ juego, soloAdmins: false });
       continue;
     }
     resto.push({ juego, soloAdmins: false });
   }
-  return [...primeros, ...resto];
+  return [...resto, ...ultimos];
 }
 
 /** Cada cuanto se vuelve a mirar el interruptor con el menu abierto (un admin lo enciende a mitad de la noche). */

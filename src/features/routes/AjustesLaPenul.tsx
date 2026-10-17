@@ -8,7 +8,7 @@ import { Casilla } from '../match/piezas';
 /**
  * El interruptor de La Penul en el editor de la ruta (0071). Apagado, solo la
  * ven los admins (con la etiqueta "Solo admins"); encendido, todo el mundo de
- * la ruta, y la primera de la lista. Se guarda al tocar, como La Caña.
+ * la ruta, la ultima de la lista. Se guarda al tocar, como La Caña.
  *
  * Es una sorpresa, no un secreto: el texto del juego va en la web publicada.
  */
@@ -26,7 +26,7 @@ export function AjustesLaPenul({
       <Text style={typography.sectionTitle}>La Penul</Text>
       <Text style={typography.muted}>
         La historia picante del bar, para mayores de edad. Apagado, solo la veis los administradores. Encendido, sale la
-        primera en Juegos para toda la gente de esta ruta.
+        última en Juegos para toda la gente de esta ruta.
       </Text>
       <Casilla
         marcada={ruta.la_penul_visible === true}
