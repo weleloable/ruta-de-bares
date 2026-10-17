@@ -44,9 +44,16 @@
  *      (elementsFromPoint); un toque de 20 ms entra; y la nota de la tarjeta de
  *      fin es la que marco el juego (ver `recorrerBarman`).
  *
+ * 11. Pulso de Camarero: una partida ENTERA (tres rondas, ~2 min) con el acelerometro emulado, en las
+ *      tres alturas y a 360 px de ancho. Sin scroll; la bandeja, la escena, la cabecera y las
+ *      bebidas dentro de la pantalla en todas las ronda; el SIGNO (movil a la derecha, bandeja a la
+ *      derecha); la pausa al pasar a segundo plano (el reloj se para); y el jugador de prueba que
+ *      endereza la bandeja saca MUCHA mas nota que quien no toca el movil, y la nota de la
+ *      tarjeta es la del juego y la que se guarda, con coma y dos decimales (ver `recorrerPulso`).
+ *
  * `SOLO_CANA=1` se salta Maestro Cervecero; `SOLO_QUIZ=1` deja solo el quiz;
  * `SOLO_TAPON=1`, solo Tapon al Vuelo; `SOLO_PAREJAS=1`, solo Parejas de Barra;
- * `SOLO_PENUL=1`, solo La Penul; `SOLO_BARMAN=1`, solo Barman Express. `CAPTURAS=<carpeta>` guarda capturas de
+ * `SOLO_PENUL=1`, solo La Penul; `SOLO_BARMAN=1`, solo Barman Express; `SOLO_PULSO=1`, solo Pulso de Camarero. `CAPTURAS=<carpeta>` guarda capturas de
  * La Cana (inclinada, recta y derramando) para revisar el dibujo a ojo.
  *
  * Tarda ~4 min (un export web y tres recorridos; el reloj del juego va mas
@@ -72,15 +79,16 @@ const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PANTALLA = join(raiz, 'app', '(auth)', 'verificar-juego.tsx');
 
 /** Que juegos se recorren (ver SOLO_* en la cabecera). */
-const { SOLO_CANA, SOLO_QUIZ, SOLO_TAPON, SOLO_PAREJAS, SOLO_PENUL, SOLO_BARMAN } = process.env;
+const { SOLO_CANA, SOLO_QUIZ, SOLO_TAPON, SOLO_PAREJAS, SOLO_PENUL, SOLO_BARMAN, SOLO_PULSO } = process.env;
 const HACER = {
-  maestro: !(SOLO_CANA || SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
-  cana: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
-  tapon: !(SOLO_QUIZ || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
-  quiz: !(SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
-  parejas: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PENUL || SOLO_BARMAN),
-  penul: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_BARMAN),
-  barman: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL),
+  maestro: !(SOLO_CANA || SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN || SOLO_PULSO),
+  cana: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN || SOLO_PULSO),
+  tapon: !(SOLO_QUIZ || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN || SOLO_PULSO),
+  quiz: !(SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN || SOLO_PULSO),
+  parejas: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PENUL || SOLO_BARMAN || SOLO_PULSO),
+  penul: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_BARMAN || SOLO_PULSO),
+  barman: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_PULSO),
+  pulso: !(SOLO_QUIZ || SOLO_TAPON || SOLO_PAREJAS || SOLO_PENUL || SOLO_BARMAN),
 };
 
 /** Alturas de ventana (con barra y pestanas incluidas) y ancho de movil a probar. */
@@ -91,6 +99,8 @@ const TAMANOS = [
 ];
 /** Parejas se prueba ademas en el movil mas estrecho que se espera (360 de ancho). */
 const TAMANOS_PAREJAS = [...TAMANOS, { ancho: 360, alto: 740, nombre: 'movil estrecho' }];
+/** Pulso de Camarero se prueba tambien a 360 px de ancho. */
+const TAMANOS_PULSO = TAMANOS_PAREJAS;
 
 const CODIGO_PANTALLA = `// GENERADO por scripts/verificar-juego-web.mjs. Se borra solo. No commitear.
 import { useLocalSearchParams } from 'expo-router';
@@ -367,6 +377,10 @@ async function abrirChrome(chrome, perfil, url, { ancho, alto }) {
       if (!process.env.FOTOS) return;
       const { result } = await cdp('Page.captureScreenshot', { format: 'png' });
       writeFileSync(join(process.env.FOTOS, `${alto}-${nombre}.png`), Buffer.from(result.data, 'base64'));
+    },
+    /** Un script que corre en cada pagina ANTES que los suyos (para simular un navegador sin https). */
+    async antesDeCargar(source) {
+      await cdp('Page.addScriptToEvaluateOnNewDocument', { source });
     },
     cerrar() {
       ws.close();
@@ -1180,6 +1194,169 @@ async function recorrerBarman(chrome, perfil, url, tamano) {
   }
 }
 
+/** Lo que se lee de Pulso de Camarero en cada momento (ver los testID de PulsoDeCamarero.tsx). */
+const leerPulso = `(() => {
+  const q = (id) => document.querySelector('[data-testid="' + id + '"]');
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left, y: r.top, w: r.width, h: r.height, b: r.bottom, r: r.right };
+  };
+  const band = q('pulso-bandeja');
+  const m = band && /rotate\\((-?[\\d.]+)deg\\)/.exec(band.style.transform || '');
+  const prog = q('pulso-progreso');
+  return {
+    angulo: m ? parseFloat(m[1]) : null,
+    escena: rect(q('pulso-escena')),
+    zona: rect(q('pulso-zona-bandeja')),
+    cabecera: rect(q('pulso-cabecera')),
+    bandeja: rect(band),
+    bebidas: [...document.querySelectorAll('[data-testid^="pulso-bebida-"]')].map((e) => ({ id: e.getAttribute('data-testid').slice(13), label: e.getAttribute('aria-label'), ...rect(e) })),
+    liquido: (q('pulso-liquido') || {}).innerText || '',
+    progreso: prog ? prog.getBoundingClientRect().width : null,
+    cuenta: (q('pulso-cuenta') || {}).innerText || '',
+    nota: (q('pulso-nota') || {}).innerText || '',
+    resumen: !!q('pulso-resumen'),
+    intro: !!q('pulso-intro'),
+    velo: !!q('pulso-velo'),
+    obstaculos: document.querySelectorAll('[data-testid="pulso-obstaculo"]').length,
+    roces: document.querySelectorAll('[data-testid="pulso-roce"]').length,
+    alto: innerHeight,
+    ancho: innerWidth,
+    scroll: Math.max(document.documentElement.scrollHeight - innerHeight, document.body.scrollHeight - innerHeight),
+    texto: document.body.innerText,
+  };
+})()`;
+
+/**
+ * Una partida ENTERA de Pulso de Camarero con el movil emulado. `controlar`: el jugador de prueba
+ * lee la inclinacion de la bandeja y gira el movil para enderezarla (un control integral, con el
+ * retardo de ir y venir por DevTools); sin el, el movil se queda recto (no toca nada). Devuelve
+ * lo medido por el camino.
+ */
+async function jugarPulso(c, { controlar }) {
+  let movil = 0;
+  const m = { muestras: 0, scrollMax: 0, bebidasFuera: 0, bandejaFuera: 0, zonaFuera: 0, anguloMax: 0, obstaculosMax: 0, rocesMax: 0, cuentas: new Set(), resumenes: 0, ultimaNota: '', pausa: null, signo: null };
+  const ini = Date.now();
+  let ultimaMedida = 0;
+  let e = await c.ev(leerPulso);
+  while (Date.now() - ini < 300000) {
+    e = await c.ev(leerPulso);
+    if (/FIN DE LA PARTIDA|NUEVO RÉCORD/i.test(e.texto)) break;
+    if (e.nota) m.ultimaNota = e.nota;
+    if (e.cuenta) m.cuentas.add(e.cuenta);
+    if (e.resumen) m.resumenes += 1;
+    if (e.angulo !== null) m.anguloMax = Math.max(m.anguloMax, Math.abs(e.angulo));
+    m.obstaculosMax = Math.max(m.obstaculosMax, e.obstaculos);
+    m.rocesMax = Math.max(m.rocesMax, e.roces);
+    // Cada ~700 ms se mide la geometria (es lo caro): nada fuera de la ventana y sin scroll.
+    if (e.zona && Date.now() - ultimaMedida > 700) {
+      ultimaMedida = Date.now();
+      m.muestras += 1;
+      m.scrollMax = Math.max(m.scrollMax, e.scroll);
+      const dentro = (r) => r && r.x >= -1 && r.y >= -1 && r.r <= e.ancho + 1 && r.b <= e.alto + 1;
+      if (!dentro(e.zona) || !dentro(e.escena) || !dentro(e.cabecera)) m.zonaFuera += 1;
+      if (!dentro(e.bandeja)) m.bandejaFuera += 1;
+      m.bebidasFuera += e.bebidas.filter((b) => !dentro(b)).length;
+    }
+    if (controlar && e.angulo !== null && e.cuenta === '' && !e.velo) {
+      movil = Math.max(-45, Math.min(45, movil - 0.35 * e.angulo));
+      await c.inclinarMovil(movil);
+    }
+    await esperar(controlar ? 12 : 120);
+  }
+  return { m, e };
+}
+
+/** Pulso de Camarero: una partida entera en un tamano, con el movil emulado, y las medidas de pantalla. */
+async function recorrerPulso(chrome, perfil, url, tamano, { controlar = true, probarPausa = true } = {}) {
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  try {
+    await c.navegar({ movil: true });
+    await c.clic('Jugar a APARTA!!!', 80);
+    if (!(await c.hasta('Empezar', { limite: 20000 }))) throw new Error('no sale la pantalla de inicio');
+    await c.foto('pulso-inicio');
+    await c.clic('Empezar');
+    // La cuenta atras: aun no hay empuje, asi que la bandeja solo sigue al movil. El SIGNO: movil a la derecha, bandeja a la derecha.
+    if (!(await c.hasta('RONDA 1 DE 3', { limite: 10000 }))) throw new Error('no empieza la cuenta atras');
+    await c.foto('pulso-cuenta');
+    const signo = {};
+    for (const [nombre, grados] of [['derecha', 20], ['izquierda', -20], ['recto', 0]]) {
+      await c.inclinarMovil(grados);
+      await esperar(700);
+      signo[nombre] = (await c.ev(leerPulso)).angulo;
+    }
+    let pausa = null;
+    if (probarPausa) {
+      // La pausa: la pagina pasa a segundo plano a mitad de ronda y el reloj (la barra de progreso) NO avanza.
+      await esperar(4500);
+      const antes = (await c.ev(leerPulso)).progreso;
+      await c.ev(`(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); })()`);
+      await esperar(300);
+      const alVolver = await c.ev(leerPulso);
+      const p0 = alVolver.progreso;
+      await esperar(3000);
+      const p1 = (await c.ev(leerPulso)).progreso;
+      pausa = { antes, p0, p1, velo: alVolver.velo };
+      await c.ev(`(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }); Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')); })()`);
+      await c.clic('Seguir').catch(() => {});
+    }
+    await c.inclinarMovil(0);
+    const { m, e } = await jugarPulso(c, { controlar });
+    m.pausa = pausa;
+    await c.foto('pulso-fin');
+    if (!(await c.hasta('FIN DE LA PARTIDA|NUEVO RÉCORD', { limite: 15000 }))) throw new Error('no sale la tarjeta de fin');
+    await esperar(400);
+    const texto = await c.texto();
+    await c.foto('pulso-tarjeta');
+    const tarjeta = (/(FIN DE LA PARTIDA|NUEVO RÉCORD!?)\s*\n+\s*(\d+,\d\d)/i.exec(texto) || [])[2] || null;
+    const guardado = await c.ev(`(() => { try { return (JSON.parse(localStorage.getItem('minijuegos.records.v1') || '{}') || {})['pulso-de-camarero'] ?? null; } catch (x) { return null; } })()`);
+    return { signo, m: { ...m, cuentas: [...m.cuentas] }, notaJuego: m.ultimaNota, tarjeta, guardado, texto };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
+/**
+ * APARTA!!! en un navegador SIN https (probar en el movil contra el ordenador por la IP): sin
+ * `isSecureContext` Chrome no da el sensor. La intro lo avisa, el deslizador sale con su
+ * explicacion y arrastrarlo inclina la bandeja a cada lado. Es lo que paso en el primer movil de verdad.
+ */
+async function recorrerPulsoSinHttps(chrome, perfil, url, tamano) {
+  const c = await abrirChrome(chrome, perfil, url, tamano);
+  try {
+    await c.antesDeCargar("Object.defineProperty(window, 'isSecureContext', { configurable: true, get: () => false });");
+    await c.navegar({ movil: true });
+    await c.clic('Jugar a APARTA!!!', 80);
+    if (!(await c.hasta('Empezar', { limite: 20000 }))) throw new Error('no sale la pantalla de inicio');
+    const avisoIntro = /sin https/i.test(await c.texto());
+    await c.foto('pulso-http-intro');
+    await c.clic('Empezar');
+    if (!(await c.hasta('RONDA 1 DE 3', { limite: 10000 }))) throw new Error('no empieza la cuenta atras');
+    await esperar(400);
+    const e0 = await c.ev(leerPulso);
+    const sel = await c.ev(`(() => { const e = document.querySelector('[data-testid="pulso-selector"]'); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top + r.height / 2, r.width]; })()`);
+    if (!sel) return { avisoIntro, deslizador: false, texto: e0.texto };
+    const [x0, y, w] = sel;
+    const arrastrar = async (fraccion) => {
+      await c.dedos('touchStart', [{ x: x0 + w * fraccion, y, id: 1 }]);
+      await esperar(700);
+      const a = (await c.ev(leerPulso)).angulo;
+      await c.dedos('touchEnd', []);
+      return a;
+    };
+    const derecha = await arrastrar(0.97);
+    const izquierda = await arrastrar(0.03);
+    const centro = await arrastrar(0.5);
+    await c.foto('pulso-http-deslizador');
+    return { avisoIntro, deslizador: true, explica: /sin sensor/i.test(e0.texto), derecha, izquierda, centro };
+  } finally {
+    c.cerrar();
+    await esperar(1500);
+  }
+}
+
 async function main() {
   const chrome = buscarChrome();
   if (!chrome) {
@@ -1429,6 +1606,90 @@ async function main() {
         ]) {
           console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
           if (!ok) fallos += 1;
+        }
+      }
+    }
+
+    if (HACER.pulso) {
+      const solo = process.argv[2] ? Number(process.argv[2]) : null;
+      for (const tamano of TAMANOS_PULSO.filter((t) => solo === null || t.alto === solo)) {
+        console.log(`\n${tamano.nombre} (${tamano.ancho}x${tamano.alto}): Pulso de Camarero, una partida entera (~2 min)...`);
+        let r;
+        try {
+          r = await recorrerPulso(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano, { controlar: true, probarPausa: tamano.alto === 808 });
+        } catch (e) {
+          console.log(`FALLA  no se pudo jugar a Pulso de Camarero: ${e.message}`);
+          fallos += 1;
+          continue;
+        }
+        const nota = r.tarjeta === null ? null : Number(r.tarjeta.replace(',', '.'));
+        console.log(JSON.stringify({ signo: r.signo, scrollMax: r.m.scrollMax, anguloMax: r.m.anguloMax, obstaculos: r.m.obstaculosMax, roces: r.m.rocesMax, muestras: r.m.muestras, notaJuego: r.notaJuego, tarjeta: r.tarjeta, guardado: r.guardado, cuentas: r.m.cuentas, pausa: r.m.pausa }));
+        const comprobaciones = [
+          ['pulso: sin scroll en toda la partida', r.m.scrollMax <= 0],
+          ['pulso: cabecera, bar y zona de la bandeja dentro de la pantalla siempre', r.m.muestras > 20 && r.m.zonaFuera === 0],
+          ['pulso: la bandeja, aun inclinada al maximo, no se sale de la pantalla', r.m.bandejaFuera === 0],
+          ['pulso: todas las bebidas dentro de la pantalla en las tres rondas', r.m.bebidasFuera === 0],
+          ['pulso: la cuenta atras 3-2-1 se ve', ['3', '2', '1'].every((n) => r.m.cuentas.includes(n))],
+          ['pulso: entre rondas sale el resumen del liquido (dos veces)', r.m.resumenes > 0],
+          ['pulso: se ven obstaculos venir y algun cliente que roza', r.m.obstaculosMax >= 1 && r.m.rocesMax >= 1],
+          ['pulso: el SIGNO: movil a la derecha, bandeja a la derecha; a la izquierda, a la izquierda; recto, recta', r.signo.derecha > 12 && r.signo.derecha < 28 && r.signo.izquierda < -12 && r.signo.izquierda > -28 && Math.abs(r.signo.recto) < 3],
+          ['pulso: la nota de la tarjeta lleva coma y dos decimales', /^\d{1,3},\d\d$/.test(r.tarjeta ?? '')],
+          ['pulso: la nota de la tarjeta es la que marco el juego', !!r.tarjeta && r.tarjeta === r.notaJuego],
+          ['pulso: y es la que se guarda como record (con sus decimales, sin truncar)', nota !== null && r.guardado === nota],
+          ['pulso: la tarjeta cuenta el liquido por ronda y las bebidas tiradas', /Líquido salvado: \d+,\d %/.test(r.texto) && /(No has tirado ninguna bebida|Has tirado \d+)/.test(r.texto)],
+          ['pulso: el jugador de prueba que endereza la bandeja saca buena nota (>= 40)', nota !== null && nota >= 40],
+        ];
+        if (r.m.pausa) {
+          comprobaciones.push(
+            ['pulso: al pasar a segundo plano sale la pausa', r.m.pausa.velo === true],
+            ['pulso: y el reloj de la ronda se para (la barra de progreso no avanza en 3 s)', Math.abs(r.m.pausa.p1 - r.m.pausa.p0) < 0.5],
+            ['pulso: y antes de la pausa el reloj corria', r.m.pausa.antes > 1],
+          );
+        }
+        for (const [nombre, ok] of comprobaciones) {
+          console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+          if (!ok) fallos += 1;
+        }
+        if (tamano.alto === 740) {
+          let h;
+          try {
+            h = await recorrerPulsoSinHttps(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano);
+          } catch (e) {
+            console.log(`FALLA  no se pudo probar APARTA!!! sin https: ${e.message}`);
+            fallos += 1;
+            h = null;
+          }
+          if (h) {
+            console.log(JSON.stringify(h));
+            for (const [nombre, ok] of [
+              ['pulso sin https: la intro avisa de que no hay sensor y se jugara con un deslizador', h.avisoIntro],
+              ['pulso sin https: el deslizador sale, con su explicacion', h.deslizador && h.explica],
+              ['pulso sin https: arrastrarlo a la derecha inclina la bandeja a la derecha, a la izquierda a la izquierda y al centro, recta', h.deslizador && h.derecha > 15 && h.izquierda < -15 && Math.abs(h.centro) < 5],
+            ]) {
+              console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+              if (!ok) fallos += 1;
+            }
+          }
+        }
+        if (tamano.alto === 808) {
+          // Quien no toca el movil: mucha menos nota que quien lo endereza.
+          let sin;
+          try {
+            sin = await recorrerPulso(chrome, mkdtempSync(join(tmpdir(), 'rb-chrome-')), `http://127.0.0.1:${port}/verificar-juego`, tamano, { controlar: false, probarPausa: false });
+          } catch (e) {
+            console.log(`FALLA  no se pudo jugar a Pulso sin tocar el movil: ${e.message}`);
+            fallos += 1;
+            continue;
+          }
+          const sinNota = sin.tarjeta === null ? null : Number(sin.tarjeta.replace(',', '.'));
+          console.log(JSON.stringify({ sinTocar: sinNota, tocando: nota }));
+          for (const [nombre, ok] of [
+            ['pulso: sin tocar el movil la nota es baja (< 25)', sinNota !== null && sinNota < 25],
+            ['pulso: enderezar la bandeja da MUCHA mas nota que no tocar el movil (+30 puntos)', sinNota !== null && nota !== null && nota - sinNota >= 30],
+          ]) {
+            console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);
+            if (!ok) fallos += 1;
+          }
         }
       }
     }

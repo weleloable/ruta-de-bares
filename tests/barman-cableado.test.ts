@@ -65,7 +65,8 @@ test('el juego pesa poco (lo que carga la app: los dibujos generados, no los ori
 test('en el menu: ranking, pantalla completa, y PENULTIMO (La Penul siempre la ultima)', () => {
   const j = leer('src/features/minijuegos/juegos.ts');
   const deSiempre = j.slice(j.indexOf('const JUEGOS_DE_SIEMPRE'), j.indexOf('const JUEGO_LA_PENUL'));
-  const def = deSiempre.slice(deSiempre.indexOf('id: ID_BARMAN'));
+  // Barman iba el ultimo de los de siempre; ahora le sigue APARTA!!! (un juego nuevo se suma al final).
+  const def = deSiempre.slice(deSiempre.indexOf('id: ID_BARMAN'), deSiempre.indexOf('id: ID_PULSO'));
   assert.match(def, /pantallaCompleta: true/);
   assert.match(def, /ranking: true/);
   assert.match(def, /Detalle: DetalleBarman/);

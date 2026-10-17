@@ -437,9 +437,21 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    `minigame_scores` aceptan `barman-express` (entero, de 0 a 5197) y
    `minigame_submit_nota` lleva su tope. Parte de la 0071 (la del Quijote, con su
    techo y su `numeric(12, 2)`), asi que no se lo lleva por delante. Rehace
-   `minigame_submit_nota()` de la 0071, que ya **no se vuelve a pegar**. Se puede pegar dos veces. Si la app
+   `minigame_submit_nota()` de la 0071, que ya **no se vuelve a pegar**. Esta tampoco: la rehace la 0075. Si la app
    nueva llega antes, el juego se juega igual y guarda el record en el movil;
    al guardar en la ruta avisa de que falta una migracion.
+70. [`supabase/migrations/0075_pulso_de_camarero.sql`](../supabase/migrations/0075_pulso_de_camarero.sql)
+   y **Run**, despues de la 0074 y **ANTES de desplegar la app**. Mete APARTA!!!
+   (antes Pulso de Camarero) en el ranking por ruta y en el podio de las casas: los checks de
+   `minigame_scores` aceptan `pulso-de-camarero` (de 0 a 100, **con dos
+   decimales**) y `minigame_submit_nota` lleva su tope y lo REDONDEA a 2 decimales,
+   como la caña. Parte de la 0073 (Barman Express), asi que no se lleva por
+   delante ni su tope ni el techo del Quijote. Rehace `minigame_submit_nota()` de
+   la 0073, que ya **no se vuelve a pegar**. Esta si se puede pegar dos veces. Si
+   la app nueva llega antes, el juego se juega igual y guarda el record en el
+   movil; al guardar en la ruta avisa de que falta una migracion. Comprobacion:
+   jugar una partida en una ruta y ver que el ranking de Pulso de Camarero sale
+   con coma y dos decimales (68,43), de mayor a menor.
 69. [`supabase/migrations/0074_anuncios.sql`](../supabase/migrations/0074_anuncios.sql)
    y **Run**, despues de la 0073 y **ANTES de desplegar la app**. Anuncios de los
    admins a la gente de una ruta: tabla `anuncios` (sin permisos para la app) y
