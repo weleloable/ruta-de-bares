@@ -444,6 +444,12 @@ export default function PerfilScreen() {
               textStyle={styles.textoAccionBarra}
               onPress={() => router.push('/admin/usuarios')}
             />
+            <Button
+              title="Anuncio a la ruta"
+              variant="secondary"
+              textStyle={styles.textoAccionBarra}
+              onPress={() => router.push('/admin/anuncio')}
+            />
           </Card>
         ) : null}
 
