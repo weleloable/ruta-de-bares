@@ -1024,6 +1024,7 @@ const leerBarman = `(() => {
     const encima = document.elementsFromPoint(x, y)[0];
     return {
       id: b.dataset.testid.slice(11), x, y, ancho: Math.round(r.width), alto: Math.round(r.height),
+      pista: /es el siguiente/.test(b.getAttribute('aria-label') || ''),
       dentro: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 0.5 && r.right <= innerWidth + 0.5,
       libre: !!encima && b.contains(encima),
     };
@@ -1041,6 +1042,7 @@ const leerBarman = `(() => {
     }),
     preparando: !!document.querySelector('[data-testid="barman-preparando"]'),
     aviso: (document.querySelector('[data-testid="barman-aviso"]') || {}).innerText || null,
+    bienHecho: !!document.querySelector('[data-testid="barman-bien-hecho"]'),
     cierre: !!document.querySelector('[data-testid="barman-cierre"]'),
     notaFinal: (document.querySelector('[data-testid="barman-nota-final"]') || {}).innerText || null,
     scroll: Math.max(sc, document.scrollingElement.scrollHeight - innerHeight),
@@ -1075,36 +1077,44 @@ async function recorrerBarman(chrome, perfil, url, tamano) {
     medidas.push({ cuando: 'inicio', ...e });
     await c.foto('barman-inicio');
 
-    // Un toque de 20 ms tiene que entrar (el primer paso de la primera bebida).
+    // La duda: sin tocar nada, a los ~3 s se ilumina el ingrediente que toca (solo ese);
+    // al tocar, se apaga.
     const primera = porNombre[e.fichas[0].split(',')[0]];
     const ing0 = e.ings.find((i) => i.id === RECETAS[primera][0]);
+    await esperar(3300);
+    const duda = await c.ev(leerBarman);
+    const pistaInicial = duda.ings.filter((i) => i.pista).map((i) => i.id);
+    await c.foto('barman-pista');
+    // Un toque de 20 ms tiene que entrar (el primer paso de la primera bebida).
     await tocar(ing0.x, ing0.y, 20);
     await esperar(150);
     e = await c.ev(leerBarman);
+    const pistaApagada = e.ings.every((i) => !i.pista);
     const toqueCorto = /paso 1 de/.test(e.fichas[0]) || e.preparando || /2\/20/.test(e.pedido);
 
     const fallados = new Set();
     let tiradas = 0;
     let avisoSeVa = null;
     let comandaBloqueada = null;
-    let pedidoAnterior = 0;
-    for (let n = 0; n < 400; n++) {
+    let bienHechoVisto = false;
+    let pausaIgnora = null;
+    for (let n = 0; n < 1500; n++) {
       e = await c.ev(leerBarman);
       if (e.cierre) break;
       const k = Number((/Pedido (\d+)/.exec(e.pedido) || [])[1] || 0);
-      // Recien servido el 5: el "+N" esta a la vista. Se toca enseguida (el toque que
-      // antes cancelaba su temporizador) y, pasado su tiempo, tiene que haberse ido.
-      if (k === 6 && pedidoAnterior === 5 && avisoSeVa === null && e.aviso && /^\+/.test(e.aviso)) {
-        const f0 = e.fichas.map((f) => porNombre[f.split(',')[0]])[0];
-        const b0 = e.ings.find((i) => i.id === RECETAS[f0][0]);
-        await tocar(b0.x, b0.y);
-        await esperar(1300);
-        const despues = await c.ev(leerBarman);
-        avisoSeVa = !despues.aviso || !/^\+/.test(despues.aviso);
-        pedidoAnterior = k;
+      // La pausa de "¡Bien hecho!": el siguiente aun no ha llegado. Un toque ahora no cuenta.
+      if (e.bienHecho) {
+        bienHechoVisto = true;
+        if (pausaIgnora === null) {
+          const b = e.ings.find((i) => i.id === 'vaso');
+          await tocar(b.x, b.y);
+          await esperar(60);
+          const tras = await c.ev(leerBarman);
+          pausaIgnora = tras.bienHecho ? tras.fichas.every((f) => !/paso [1-9]/.test(f)) : null;
+        }
+        await esperar(80);
         continue;
       }
-      pedidoAnterior = k;
       if ((k === 10 || k === 17) && !medidas.some((m) => m.cuando === `pedido ${k}`)) {
         medidas.push({ cuando: `pedido ${k}`, ...e });
         await c.foto(`barman-pedido-${k}`);
@@ -1112,6 +1122,17 @@ async function recorrerBarman(chrome, perfil, url, tamano) {
       const fichas = e.fichas.map((f) => ({ b: porNombre[f.split(',')[0]], servida: /servida/.test(f), paso: Number((/paso (\d+) de/.exec(f) || [])[1] || 0), prep: /preparando/.test(f) }));
       const objetivo = fichas.find((f) => f.prep) || fichas.find((f) => !f.servida);
       if (!objetivo) { await esperar(60); continue; }
+      // Recien tirada una bebida: el "¡A la basura!" esta a la vista. Se sigue tocando
+      // enseguida (un toque normal, que antes cancelaba su temporizador) y, pasado su
+      // tiempo, el aviso tiene que haberse ido solo (se quedaba pegado).
+      if (avisoSeVa === null && e.aviso && /basura/.test(e.aviso) && objetivo.paso === 0) {
+        const b0 = e.ings.find((i) => i.id === RECETAS[objetivo.b][0]);
+        await tocar(b0.x, b0.y);
+        await esperar(1300);
+        const despues = await c.ev(leerBarman);
+        avisoSeVa = !despues.aviso || !/basura/.test(despues.aviso);
+        continue;
+      }
       let ing = RECETAS[objetivo.b][objetivo.paso];
       // Llena a la espera (la caña que podria ser clara): el siguiente toque es de otra pendiente.
       if (ing === undefined) {
@@ -1152,7 +1173,7 @@ async function recorrerBarman(chrome, perfil, url, tamano) {
     const texto = await c.texto();
     await c.foto('barman-tarjeta');
     const tarjeta = (/(FIN DE LA PARTIDA|NUEVO RÉCORD!?)\s*\n+\s*(\d+)/i.exec(texto) || [])[2] || null;
-    return { medidas, toqueCorto, tiradas, notaFinal: final.notaFinal, tarjeta, texto, avisoSeVa, comandaBloqueada };
+    return { medidas, toqueCorto, tiradas, notaFinal: final.notaFinal, tarjeta, texto, avisoSeVa, comandaBloqueada, pistaInicial, pistaApagada, bienHechoVisto, pausaIgnora, esperada: [RECETAS[primera][0]] };
   } finally {
     c.cerrar();
     await esperar(1500);
@@ -1369,7 +1390,11 @@ async function main() {
           ['barman: la partida llega al final y el jugador de prueba sirve casi todo (>= 15 de 20)', !!r.notaFinal && Number(servidos) >= 15],
           ['barman: la nota de la tarjeta es la que marco el juego (la que se envia)', !!r.tarjeta && r.tarjeta === r.notaFinal],
           ['barman: la tarjeta cuenta las bebidas tiradas (2: el fallo con el vaso vacio no tira nada)', new RegExp(`${r.tiradas} bebidas a la basura`).test(r.texto)],
-          ['barman: el "+N con propina" se va aunque se toque enseguida (se quedaba pegado)', r.avisoSeVa === true],
+          ['barman: el aviso "¡A la basura!" se va aunque se toque enseguida (se quedaba pegado)', r.avisoSeVa === true],
+          ['barman: con duda (3 s sin tocar) se ilumina el ingrediente que toca, y solo ese', JSON.stringify(r.pistaInicial) === JSON.stringify(r.esperada)],
+          ['barman: al tocar, la pista se apaga', r.pistaApagada === true],
+          ['barman: al servir un pedido sale "¡Bien hecho!"', r.bienHechoVisto === true],
+          ['barman: durante esa pausa, un toque no cuenta', r.pausaIgnora === true],
           ['barman: con una bebida a medias, tocar otra de la comanda no hace nada', r.comandaBloqueada === true],
         ]) {
           console.log(`${ok ? 'ok   ' : 'FALLA'}  ${nombre}`);

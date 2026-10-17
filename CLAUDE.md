@@ -305,7 +305,13 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
   con una clara pendiente, la caña hecha NO se entrega hasta el siguiente toque
   (refresco: era clara; otra cosa: se entrega la caña y el toque sigue). Fallar con el vaso vacio rompe la
   racha pero no cuenta como bebida tirada; con una a medias, la comanda no deja
-  cambiar de bebida. Va a
+  cambiar de bebida.
+  **Pausa y pista**: al servir un pedido hay 1,1 s de "¡Bien hecho!" (`PAUSA_SERVIDO`):
+  el siguiente cliente llega al acabar y su paciencia arranca entonces, asi que la
+  pausa no cambia puntos ni cota; los toques en la pausa no cuentan. Si pasan 3 s
+  sin tocar con un cliente delante (`DUDA_DESPUES`), se iluminan los ingredientes
+  que valen (`ingredientesValidos`, con test de que ninguno da fallo) y un toque
+  lo apaga. Un cliente que se va enfadado no lleva pausa. Va a
   PANTALLA COMPLETA en vertical: dentro del menu, a 740 px, al juego le
   quedaban ~328 px; el reparto lo decide `pantalla.ts` (puro, con tests). Los
   dibujos los genera `scripts/generar-barman.py` (lienzo de Tapon; clientes de

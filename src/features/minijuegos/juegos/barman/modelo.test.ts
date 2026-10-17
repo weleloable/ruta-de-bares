@@ -16,11 +16,17 @@ import {
   ENTRA,
   generarComandas,
   INGREDIENTES,
+  enPausa,
+  hayDuda,
+  ingredientesValidos,
+  DUDA_DESPUES,
+  PAUSA_SERVIDO,
   masResistida,
   multiplicadorActual,
   maxBebidas,
   maximoSinRacha,
   paciencia,
+  pacienciaRestante,
   pacienciaActual,
   PEDIDOS,
   propina,
@@ -394,4 +400,111 @@ test('caña y clara, en los dos ordenes: lo que hay en el vaso decide (sin fallo
   const s3 = tocarTodo(con(['cana', 'clara']), ['vaso', 'grifo', 'naranja']);
   assert.deepEqual(s3.entregadas, [true, false]);
   assert.equal(s3.fallo, true);
+});
+
+const con1 = (bebidas: Bebida[]): Partida =>
+  empezar({ ...crearPartida(9), comandas: [{ bebidas, ronda: false, cliente: 0 }, ...crearPartida(9).comandas.slice(1)], entregadas: bebidas.map(() => false) }, 0);
+
+test('tras servir hay una pausa: el siguiente llega despues y los toques no cuentan', () => {
+  let p = con1(['cana']);
+  p = tocarIngrediente(p, 'vaso', 1);
+  p = tocarIngrediente(p, 'grifo', 2);
+  assert.equal(p.servidos, 1);
+  assert.equal(p.actual, 1);
+  assert.equal(p.llegada, 2 + PAUSA_SERVIDO);
+  assert.equal(enPausa(p, 2.5), true);
+  assert.equal(enPausa(p, 2 + PAUSA_SERVIDO), false);
+  // En la pausa, un toque no hace nada (ni paso, ni fallo).
+  const igual = tocarIngrediente(p, 'vaso', 2.5);
+  assert.equal(igual, p);
+  assert.equal(elegirBebida(p, 0, 2.5), p);
+  // Al llegar, ya cuenta.
+  const q = tocarIngrediente(p, comandaActual(p)?.bebidas[0] ? RECETAS[(comandaActual(p) as { bebidas: Bebida[] }).bebidas[0] as Bebida][0] as Ingrediente : 'vaso', 2 + PAUSA_SERVIDO + 0.01);
+  assert.equal(q.hechos, 1);
+});
+
+test('la pausa no le gasta paciencia al siguiente cliente: llega con la barra llena', () => {
+  let p = con1(['cana']);
+  p = tocarIngrediente(p, 'vaso', 1);
+  p = tocarIngrediente(p, 'grifo', 2);
+  assert.equal(pacienciaRestante(p, 2.5), 1, 'en la pausa, intacta');
+  assert.equal(pacienciaRestante(p, 2 + PAUSA_SERVIDO), 1, 'recien llegado');
+  // Y no se va nadie durante la pausa por mucho que se mire.
+  assert.equal(avanzar(p, 2.9).actual, 1);
+  assert.equal(avanzar(p, 2.9).perdidos, 0);
+});
+
+test('un cliente que se va enfadado NO lleva pausa: el siguiente llega en el acto', () => {
+  const p = empezar(crearPartida(5), 0);
+  const fuera = avanzar(p, pacienciaActual(p));
+  assert.equal(fuera.actual, 1);
+  assert.equal(fuera.llegada, pacienciaActual(p));
+});
+
+test('la pausa no cambia los puntos: misma partida con y sin ella, mismo resultado (la propina sale de la paciencia al servir)', () => {
+  // Un pedido servido al mismo instante relativo a su llegada puntua igual en el pedido 1 y en el 2.
+  let p = con1(['cana']);
+  p = tocarIngrediente(p, 'vaso', 0.5);
+  p = tocarIngrediente(p, 'grifo', 1.0);
+  const puntos1 = p.puntos;
+  const llegada = p.llegada as number;
+  p = tocarIngrediente(p, RECETAS[(comandaActual(p) as { bebidas: Bebida[] }).bebidas[0] as Bebida][0] as Ingrediente, llegada + 0.01);
+  assert.ok(puntos1 > 0);
+  assert.equal(p.puntos, puntos1);
+});
+
+test('la duda: tras DUDA_DESPUES s sin tocar, se ensena que tocar; un toque lo apaga', () => {
+  let p = con1(['cana']);
+  assert.equal(hayDuda(p, DUDA_DESPUES - 0.01), false);
+  assert.equal(hayDuda(p, DUDA_DESPUES), true);
+  assert.deepEqual(ingredientesValidos(p), ['vaso']);
+  p = tocarIngrediente(p, 'vaso', 1);
+  assert.equal(hayDuda(p, 1 + DUDA_DESPUES - 0.01), false, 'se mide desde el ultimo toque');
+  assert.equal(hayDuda(p, 1 + DUDA_DESPUES + 0.001), true);
+  assert.deepEqual(ingredientesValidos(p), ['grifo']);
+  // En la pausa de "bien hecho" no hay duda (aun no ha llegado nadie).
+  p = tocarIngrediente(p, 'grifo', 2);
+  assert.equal(hayDuda(p, 2.5), false);
+  assert.equal(hayDuda(p, 2 + PAUSA_SERVIDO + DUDA_DESPUES - 0.01), false);
+  assert.equal(hayDuda(p, 2 + PAUSA_SERVIDO + DUDA_DESPUES + 0.001), true);
+});
+
+test('la pista: el siguiente paso, y con varias bebidas, las opciones que valen', () => {
+  // Vaso vacio con dos bebidas: la que toca (la primera pendiente).
+  let p = con1(['vermut', 'chupito']);
+  assert.deepEqual(ingredientesValidos(p), ['vaso']);
+  // Tras el vaso: lo que sigue del vermut.
+  p = tocarIngrediente(p, 'vaso', 1);
+  assert.deepEqual(ingredientesValidos(p), ['hielo']);
+  // Con una caña en la mano que podria ser clara: el refresco (clara) y el primero de lo que sigue.
+  let q = con1(['cana', 'clara', 'chupito']);
+  q = tocarIngrediente(q, 'vaso', 1);
+  q = tocarIngrediente(q, 'grifo', 2);
+  const valen = ingredientesValidos(q);
+  assert.ok(valen.includes('refresco-limon'));
+  // Y se puede seguir con cualquiera de ellos sin fallo.
+  for (const ing of valen) {
+    const r = tocarIngrediente(q, ing, 3);
+    assert.equal(r.fallo, false, ing);
+  }
+  // Sin cliente (partida terminada) no hay pista.
+  assert.deepEqual(ingredientesValidos({ ...q, actual: PEDIDOS }), []);
+});
+
+test('la pista siempre es valida: ningun ingrediente que ensena produce un fallo (partidas al azar)', () => {
+  const azar = crearAzar(77);
+  for (let s = 1; s <= 300; s++) {
+    let p = empezar(crearPartida(s), 0);
+    let t = 0;
+    for (let n = 0; n < 400 && !terminada(p); n++) {
+      t = Math.max(t + 0.2, p.llegada ?? 0);
+      const valen = ingredientesValidos(p);
+      if (valen.length === 0) break;
+      const ing = valen[Math.floor(azar() * valen.length)] as Ingrediente;
+      const q = tocarIngrediente(p, ing, t);
+      if (q === p) continue;
+      assert.equal(q.fallo, p.fallo, `semilla ${s}, toque ${n}: la pista ${ing} dio fallo`);
+      p = q;
+    }
+  }
 });

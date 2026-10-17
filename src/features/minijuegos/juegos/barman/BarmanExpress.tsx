@@ -13,6 +13,9 @@ import {
   crearPartida,
   elegirBebida,
   empezar,
+  enPausa,
+  hayDuda,
+  ingredientesValidos,
   ID_BARMAN,
   INGREDIENTES,
   masResistida,
@@ -104,8 +107,8 @@ export function BarmanExpress({ onFinish, onSalir }: PropsJuego) {
     if (e.tipo === 'paso') feedback.toque();
     else if (e.tipo === 'entregada') feedback.acierto();
     else if (e.tipo === 'servido') {
+      // El "¡Bien hecho!" no es un aviso: ocupa el sitio del cliente durante la pausa.
       feedback.acierto();
-      nuevo = { texto: `+${e.puntos}${e.propina > 0 ? ' con propina' : ''}`, tono: 'bien', n: e.n };
     } else if (e.tipo === 'tirada') {
       feedback.fallo();
       nuevo = { texto: '¡A la basura!', tono: 'mal', n: e.n };
@@ -195,7 +198,13 @@ export function BarmanExpress({ onFinish, onSalir }: PropsJuego) {
   const c = comandaActual(partida);
   const enCurso = bebidaEnCurso(partida);
   const bebidaActual = c && enCurso !== null ? (c.bebidas[enCurso] as Bebida) : null;
-  const restante = jugando ? pacienciaRestante(partida, ahora()) : 1;
+  const t = ahora();
+  const restante = jugando ? pacienciaRestante(partida, t) : 1;
+  // Pausa tras servir: "¡Bien hecho!" y el siguiente aun no ha llegado.
+  const pausa = jugando && enPausa(partida, t);
+  const felicitacion = pausa && partida.evento?.tipo === 'servido' ? partida.evento : null;
+  // Duda: unos segundos sin tocar nada -> se iluminan los ingredientes que valen.
+  const pista = jugando && hayDuda(partida, t) ? new Set<Ingrediente>(ingredientesValidos(partida)) : null;
   const colorPaciencia = restante > 0.5 ? colors.green : restante > 0.25 ? colors.beer : colors.stamp;
 
   return (
@@ -247,7 +256,15 @@ export function BarmanExpress({ onFinish, onSalir }: PropsJuego) {
 
             {/* El cliente actual, con su paciencia encima */}
             <View style={{ height: r.alturaCliente, alignItems: 'center', justifyContent: 'flex-end' }}>
-              {c && !terminada(partida) ? (
+              {felicitacion ? (
+                <View style={styles.bienHecho} testID="barman-bien-hecho">
+                  <Text style={styles.bienHechoTexto}>¡Bien hecho!</Text>
+                  <Text style={styles.bienHechoPuntos}>
+                    +{felicitacion.puntos}
+                    {felicitacion.propina > 0 ? ' con propina' : ''}
+                  </Text>
+                </View>
+              ) : c && !terminada(partida) ? (
                 <>
                   <View style={styles.paciencia} accessibilityLabel={`Paciencia: ${Math.round(restante * 100)} %`}>
                     <View style={[styles.pacienciaRelleno, { width: `${Math.round(restante * 100)}%`, backgroundColor: colorPaciencia }]} />
@@ -272,7 +289,7 @@ export function BarmanExpress({ onFinish, onSalir }: PropsJuego) {
             </View>
 
             {/* La comanda: cada bebida con un punto por paso */}
-            <View style={styles.comanda} testID="barman-comanda">
+            <View style={[styles.comanda, pausa && styles.enPausa]} testID="barman-comanda">
               {c?.bebidas.map((b, i) => {
                 const entregada = partida.entregadas[i] === true;
                 const activa = enCurso === i && !entregada;
@@ -347,10 +364,15 @@ export function BarmanExpress({ onFinish, onSalir }: PropsJuego) {
                 <ToqueRapido
                   key={ing}
                   testID={`barman-ing-${ing}`}
-                  accessibilityLabel={NOMBRE_LARGO_INGREDIENTE[ing]}
+                  accessibilityLabel={`${NOMBRE_LARGO_INGREDIENTE[ing]}${pista?.has(ing) ? ', es el siguiente' : ''}`}
                   desactivado={!jugando}
                   onToque={() => tocar(ing)}
-                  style={[styles.ingrediente, { width: r.botonAncho, height: r.botonAlto }]}
+                  style={[
+                    styles.ingrediente,
+                    { width: r.botonAncho, height: r.botonAlto },
+                    pausa && styles.enPausa,
+                    pista?.has(ing) && styles.ingredientePista,
+                  ]}
                 >
                   <Image source={INGREDIENTE[ing]} style={{ width: r.icono, height: r.icono }} contentFit="contain" />
                   <Text style={styles.ingredienteNombre} numberOfLines={1}>
@@ -502,6 +524,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 1,
   },
+  // La pista: el borde se enciende y el boton se resalta (un toque lo apaga todo).
+  ingredientePista: { borderColor: '#ffd27a', borderWidth: 4, backgroundColor: '#fff1c9' },
+  enPausa: { opacity: 0.55 },
+  bienHecho: { alignItems: 'center', justifyContent: 'center', gap: 4, paddingBottom: space.md },
+  bienHechoTexto: {
+    fontFamily: fonts.title,
+    fontSize: 34,
+    fontWeight: '900',
+    color: colors.paper,
+    textShadowColor: colors.green,
+    textShadowOffset: { width: 3, height: 3 },
+    textShadowRadius: 0,
+  },
+  bienHechoPuntos: { fontSize: 22, fontWeight: '900', color: '#ffd27a' },
   ingredienteNombre: { fontSize: 10, fontWeight: '700', color: colors.ink },
   capa: {
     position: 'absolute',

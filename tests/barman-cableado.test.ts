@@ -100,3 +100,13 @@ test('con una bebida a medias, las demas de la comanda no se pueden tocar', () =
   const c = leer('src/features/minijuegos/juegos/barman/BarmanExpress.tsx');
   assert.match(c, /desactivado=\{entregada \|\| \(partida\.hechos > 0 && !activa\)\}/);
 });
+
+test('la pista (duda) y la pausa de "¡Bien hecho!" estan cableadas a la pantalla', () => {
+  const c = leer('src/features/minijuegos/juegos/barman/BarmanExpress.tsx');
+  assert.match(c, /hayDuda\(partida, t\)/);
+  assert.match(c, /ingredientesValidos\(partida\)/);
+  assert.match(c, /pista\?\.has\(ing\) && styles\.ingredientePista/);
+  assert.match(c, /es el siguiente/);
+  assert.match(c, /¡Bien hecho!/);
+  assert.match(c, /enPausa\(partida, t\)/);
+});

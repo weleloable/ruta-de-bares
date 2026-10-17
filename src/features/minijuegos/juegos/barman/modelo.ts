@@ -15,6 +15,15 @@
 export const ID_BARMAN = 'barman-express';
 export const PEDIDOS = 20;
 
+/**
+ * Tras servir un pedido hay una pausa breve ("¡Bien hecho!") antes de que llegue
+ * el siguiente cliente. El reloj de su paciencia arranca al llegar, no antes, asi
+ * que la pausa no le cuesta nada a nadie ni cambia los puntos ni la cota.
+ */
+export const PAUSA_SERVIDO = 1.1;
+/** Si pasan tantos segundos sin tocar nada con un cliente delante, se ensena que tocar. */
+export const DUDA_DESPUES = 3;
+
 // ---------------------------------------------------------------------------
 // La carta (cerrada: no se cambia sin preguntar)
 // ---------------------------------------------------------------------------
@@ -293,6 +302,8 @@ export type Partida = {
   fallos: Record<Bebida, number>;
   /** Lo ultimo que ha pasado, para que la pantalla lo celebre o lo lamente. `n` sube siempre. */
   evento: Evento | null;
+  /** Ultima vez que se toco algo (o llego el cliente): de aqui se mide la duda. */
+  actividad: number | null;
 };
 
 const SIN_TIRADAS: Record<Bebida, number> = { cana: 0, canon: 0, clara: 0, tinto: 0, vermut: 0, chupito: 0 };
@@ -315,6 +326,7 @@ export function crearPartida(semilla: number): Partida {
     tiradas: { ...SIN_TIRADAS },
     fallos: { ...SIN_TIRADAS },
     evento: null,
+    actividad: null,
   };
 }
 
@@ -324,7 +336,12 @@ export function terminada(p: Partida): boolean {
 
 /** El reloj arranca cuando llega el primer cliente (al pulsar empezar). */
 export function empezar(p: Partida, ahora: number): Partida {
-  return p.llegada === null ? { ...p, llegada: ahora } : p;
+  return p.llegada === null ? { ...p, llegada: ahora, actividad: ahora } : p;
+}
+
+/** Hay una pausa entre clientes: el siguiente aun no ha llegado y los toques no cuentan. */
+export function enPausa(p: Partida, ahora: number): boolean {
+  return p.llegada !== null && !terminada(p) && ahora < p.llegada;
 }
 
 export function comandaActual(p: Partida): Comanda | null {
@@ -352,12 +369,14 @@ function evento(p: Partida, e: SinNumero): Evento {
 }
 
 /** Pasa al siguiente cliente, que llega en ese mismo instante. */
-function siguiente(p: Partida, ahora: number): Partida {
+function siguiente(p: Partida, ahora: number, pausa = 0): Partida {
   const actual = p.actual + 1;
+  const llega = ahora + pausa;
   return {
     ...p,
     actual,
-    llegada: actual < PEDIDOS ? ahora : p.llegada,
+    llegada: actual < PEDIDOS ? llega : p.llegada,
+    actividad: actual < PEDIDOS ? llega : p.actividad,
     entregadas: p.comandas[actual]?.bebidas.map(() => false) ?? [],
     elegida: null,
     hechos: 0,
@@ -388,10 +407,10 @@ export function avanzar(p: Partida, ahora: number): Partida {
  */
 export function elegirBebida(antes: Partida, i: number, ahora: number): Partida {
   const p = avanzar(antes, ahora);
-  if (terminada(p) || p.llegada === null || p !== antes) return p;
+  if (terminada(p) || p.llegada === null || p !== antes || ahora < p.llegada) return p;
   if (p.hechos > 0) return p;
   if (i < 0 || i >= p.entregadas.length || p.entregadas[i] || p.elegida === i) return p;
-  return { ...p, elegida: i, hechos: 0 };
+  return { ...p, elegida: i, hechos: 0, actividad: ahora };
 }
 
 /** La que se prepara: la elegida o, si no se ha elegido, la primera pendiente. */
@@ -430,6 +449,7 @@ function entregar(p: Partida, i: number, ahora: number): Partida {
       evento: evento(p, { tipo: 'servido', puntos, propina: prop, racha }),
     },
     ahora,
+    PAUSA_SERVIDO,
   );
 }
 
@@ -450,10 +470,11 @@ function entregar(p: Partida, i: number, ahora: number): Partida {
  * (Las tres trampas las cazo el critico: el vasito culpaba a la caña, y la caña y
  * la clara se pisaban en los dos ordenes.)
  */
-export function tocarIngrediente(antes: Partida, ing: Ingrediente, ahora: number): Partida {
+function aplicarToque(antes: Partida, ing: Ingrediente, ahora: number): Partida {
   const p = avanzar(antes, ahora);
   // Si en este toque se ha ido un cliente, el toque era para el que se fue: no cuenta.
-  if (p !== antes || terminada(p) || p.llegada === null) return p;
+  // Y en la pausa de "¡Bien hecho!" (el siguiente aun no ha llegado) tampoco.
+  if (p !== antes || terminada(p) || p.llegada === null || ahora < p.llegada) return p;
   const c = comandaActual(p) as Comanda;
   let i = bebidaEnCurso(p);
   if (i === null) return p;
@@ -469,7 +490,7 @@ export function tocarIngrediente(antes: Partida, ing: Ingrediente, ahora: number
       // 2) Lo que hay en el vaso ya ES una bebida pendiente entera (una caña): se
       //    entrega esa y el toque va a la siguiente.
       const yaHecha = c.bebidas.findIndex((b, j) => pendiente(j) && RECETAS[b].length === hecho.length && empiezaPor(RECETAS[b], hecho));
-      if (yaHecha !== -1) return tocarIngrediente(entregar(p, yaHecha, ahora), ing, ahora);
+      if (yaHecha !== -1) return aplicarToque(entregar(p, yaHecha, ahora), ing, ahora);
     }
   }
   const bebida = c.bebidas[i] as Bebida;
@@ -506,6 +527,46 @@ export function tocarIngrediente(antes: Partida, ing: Ingrediente, ahora: number
   const alarga = c.bebidas.some((b, j) => j !== i && pendiente(j) && RECETAS[b].length > receta.length && empiezaPor(RECETAS[b], receta));
   if (alarga) return { ...p, elegida: i, hechos, evento: evento(p, { tipo: 'paso', bebida }) };
   return entregar({ ...p, elegida: i, hechos }, i, ahora);
+}
+
+/** Un toque en un ingrediente (ver aplicarToque). Anota cuando fue, para medir la duda. */
+export function tocarIngrediente(antes: Partida, ing: Ingrediente, ahora: number): Partida {
+  const q = aplicarToque(antes, ing, ahora);
+  if (q === antes) return q;
+  // Si el toque sirvio el pedido, la actividad es la llegada del siguiente (tras la pausa).
+  return { ...q, actividad: Math.max(ahora, q.llegada ?? ahora) };
+}
+
+/**
+ * Los ingredientes que valen como SIGUIENTE paso ahora mismo (para la pista cuando
+ * alguien duda): el siguiente de la bebida que se prepara; con una caña en la mano
+ * que podria ser una clara, el refresco o el primero de otra pendiente; con el
+ * vaso vacio, el primero de la bebida que toca. Vacio si no hay nada que tocar
+ * (pausa, sin cliente).
+ */
+export function ingredientesValidos(p: Partida): Ingrediente[] {
+  const c = comandaActual(p);
+  const i = bebidaEnCurso(p);
+  if (!c || i === null || terminada(p) || p.llegada === null) return [];
+  const receta = RECETAS[c.bebidas[i] as Bebida];
+  const out = new Set<Ingrediente>();
+  const siguientePaso = receta[p.hechos];
+  if (siguientePaso !== undefined) out.add(siguientePaso);
+  // Con algo ya en el vaso: tambien lo que alarga lo hecho (la clara) y lo que seguiria si se entrega.
+  c.bebidas.forEach((b, j) => {
+    if (j === i || p.entregadas[j]) return;
+    const r = RECETAS[b];
+    const hecho = receta.slice(0, p.hechos);
+    if (p.hechos > 0 && empiezaPor(r, hecho) && r[p.hechos] !== undefined) out.add(r[p.hechos] as Ingrediente);
+    if (siguientePaso === undefined) out.add(r[0] as Ingrediente);
+  });
+  return [...out];
+}
+
+/** Alguien duda: lleva `DUDA_DESPUES` segundos sin tocar nada con el cliente delante. */
+export function hayDuda(p: Partida, ahora: number): boolean {
+  if (terminada(p) || p.llegada === null || p.actividad === null || ahora < p.llegada) return false;
+  return ahora - Math.max(p.actividad, p.llegada) >= DUDA_DESPUES;
 }
 
 /**
