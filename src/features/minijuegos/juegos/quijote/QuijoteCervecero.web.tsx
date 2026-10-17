@@ -7,6 +7,8 @@ import type { PropsJuego } from '../../tipos';
 import { direccionDeGesto } from '../conga/giros';
 import { avanzarBocadillos, crearBocadillos, type Motivo } from './bocadillos';
 import { Escena3D, hayWebGL } from './escena3d';
+import { enAlcala } from './recorrido';
+import { guardarSonido, SonidoQuijote, sonidoGuardado } from './sonido';
 import {
   aplicarAccion,
   avanzar,
@@ -35,6 +37,28 @@ import {
 const DT_MAX = 0.05;
 /** Tope de densidad de pixeles: mas de 2 no se nota en el movil y cuesta mucho. */
 const DENSIDAD_MAX = 2;
+/**
+ * Si el movil no llega (menos de estos fps dos segundos seguidos), se baja la
+ * densidad de pixeles un escalon, hasta 1: se ve algo menos fino, pero fluido.
+ */
+const FPS_MINIMOS = 45;
+const DENSIDAD_MINIMA = 1;
+
+const CLAVE_BRILLOS = 'minijuegos.quijote.brillos.v1';
+function brillosGuardados(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_BRILLOS) !== '0';
+  } catch {
+    return true;
+  }
+}
+function guardarBrillos(si: boolean) {
+  try {
+    localStorage.setItem(CLAVE_BRILLOS, si ? '1' : '0');
+  } catch {
+    // Sin almacen: se juega igual, solo que no se recuerda.
+  }
+}
 /** Pixeles de arrastre para que cuente como gesto; al soltar, basta con algo menos (un golpe rapido). */
 const UMBRAL = 20;
 const UMBRAL_SOLTAR = 12;
@@ -89,7 +113,8 @@ function motivosDe(e: Estado): Motivo[] {
   const m: Motivo[] = [];
   for (const ev of e.eventos) {
     if (ev === 'molino-cerca') m.push('molino');
-    else if (ev === 'embestida' || ev === 'gigante' || ev === 'choque' || ev === 'escudo' || ev === 'yelmo' || ev === 'queso') m.push(ev);
+    // La Embestida y los gigantes ya tienen su cartel: sin bocadillo.
+    else if (ev === 'choque' || ev === 'escudo' || ev === 'yelmo' || ev === 'queso') m.push(ev);
   }
   return m;
 }
@@ -105,6 +130,11 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const [partidaId, setPartidaId] = useState(0);
   const [hud, setHud] = useState<Hud>(HUD_INICIAL);
   const [verFps, setVerFps] = useState(false);
+  const [conSonido, setConSonido] = useState(sonidoGuardado);
+  const [conBrillos, setConBrillos] = useState(brillosGuardados);
+  const sonido = useRef(new SonidoQuijote());
+  const brillosRef = useRef(conBrillos);
+  brillosRef.current = conBrillos;
   /** Gestos pendientes: se aplican al principio del siguiente fotograma, en orden (no se pierde ninguno). */
   const cola = useRef<Accion[]>([]);
   const dedo = useRef<Dedo | null>(null);
@@ -114,6 +144,8 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const pausar = useCallback((si: boolean) => {
     pausaRef.current = si;
     setPausa(si);
+    if (si) sonido.current.silencio();
+    else if (sonido.current.activo) sonido.current.encender();
   }, []);
 
   // Pausa sola si la app pasa a segundo plano o pierde el foco.
@@ -147,17 +179,19 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     return () => window.removeEventListener('keydown', abajo);
   }, [fase, pausar]);
 
-  // Al salir del juego: sin escena 3D y la pantalla como estaba.
-  useEffect(
-    () => () => {
+  // Al salir del juego: sin sonido, sin escena 3D y la pantalla como estaba.
+  useEffect(() => {
+    const s = sonido.current;
+    return () => {
+      s.apagar();
       escena.current?.liberar();
       escena.current = null;
       salirDePantallaCompleta();
-    },
-    [],
-  );
+    };
+  }, []);
 
   const terminar = useCallback((est: Estado) => {
+    sonido.current.silencio();
     salirDePantallaCompleta();
     alAcabar.current({
       juego: ID_QUIJOTE,
@@ -173,7 +207,9 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     if (!canvas) return;
     escena.current ??= new Escena3D(canvas);
     const pintor = escena.current;
+    pintor.brillos(brillosRef.current);
     const est = crearEstado();
+    const son = sonido.current;
     const bocas = crearBocadillos(Math.random);
     cola.current = [];
     let ultimo = performance.now();
@@ -184,6 +220,9 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     let fps = 0;
     let giganteHasta = -1;
     let dichoInicio = false;
+    let enCiudad = false;
+    let densidadMax: number = DENSIDAD_MAX;
+    let lento = 0;
     let raf = 0;
     let fin: ReturnType<typeof setTimeout> | null = null;
 
@@ -191,31 +230,46 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
       const dt = pausaRef.current ? 0 : pasoDeTiempo(ahora, ultimo, DT_MAX);
       ultimo = ahora;
       if (!pausaRef.current) {
+        // Lo que pasa al aplicar los gestos (la Embestida) se suma a lo del paso. Se empieza
+        // de cero: si no, los eventos del fotograma anterior se arrastrarian para siempre
+        // (asi fue el fallo de la Embestida que vibraba y hablaba sin parar).
+        est.eventos = [];
         for (const a of cola.current) aplicarAccion(est, a);
-        // Lo que ha pasado al aplicar los gestos (la Embestida) se suma a lo del paso.
         const deGestos = est.eventos;
         avanzar(est, dt, Math.random);
         if (deGestos.includes('embestida')) est.eventos.push('embestida');
         cola.current = [];
 
         const ev = est.eventos;
+        if (ev.includes('jarra')) son.jarra();
+        if (ev.includes('salto')) son.salto();
+        if (ev.includes('choque')) son.choque();
+        if (ev.includes('escudo')) son.escudo();
+        if (ev.includes('queso')) son.vida();
+        if (ev.includes('embestida')) son.embestida();
+        if (ev.includes('gigante')) son.gigante();
+        son.galope(dt, est.terminado ? 0 : est.velocidad, est.y <= 0);
         if (ev.includes('choque')) {
           temblor = 0.6;
           feedback.fallo();
         }
         if (ev.includes('escudo')) {
           temblor = 0.35;
-          feedback.acierto();
+          feedback.toque();
         }
-        if (ev.includes('embestida')) feedback.acierto();
         if (ev.includes('gigante')) {
           temblor = 0.9;
           giganteHasta = est.t + CARTEL_GIGANTE;
-          feedback.record();
+          // Una sola vibracion corta, aunque caigan varios a la vez.
+          feedback.acierto();
         }
         if (ev.includes('fin')) fin = setTimeout(() => terminar(est), 1200);
 
         const motivos = motivosDe(est);
+        // Al entrar en Alcala (una vez por tramo).
+        const ahoraEnCiudad = enAlcala(est.dist) !== null;
+        if (ahoraEnCiudad && !enCiudad) motivos.push('alcala');
+        enCiudad = ahoraEnCiudad;
         if (!dichoInicio && est.t > 0.6) {
           motivos.push('inicio');
           dichoInicio = true;
@@ -226,7 +280,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
       }
       temblor *= Math.exp(-7 * dt);
 
-      const densidad = Math.min(window.devicePixelRatio || 1, DENSIDAD_MAX);
+      const densidad = Math.min(window.devicePixelRatio || 1, densidadMax);
       pintor.dibujar(est, canvas.clientWidth, canvas.clientHeight, densidad, temblor, dt);
 
       fotogramas++;
@@ -234,6 +288,12 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
         fps = Math.round((fotogramas * 1000) / (ahora - desdeFps));
         fotogramas = 0;
         desdeFps = ahora;
+        // Dos segundos seguidos por debajo: un escalon menos de resolucion (sin contar las pausas).
+        lento = !pausaRef.current && fps < FPS_MINIMOS ? lento + 1 : 0;
+        if (lento >= 2 && densidadMax > DENSIDAD_MINIMA) {
+          densidadMax = Math.max(DENSIDAD_MINIMA, Math.min(densidadMax, window.devicePixelRatio || 1) - 0.25);
+          lento = 0;
+        }
       }
       if (ahora - ultimoHud > 100) {
         ultimoHud = ahora;
@@ -261,6 +321,8 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
 
   const arrancar = () => {
     entrarEnVertical();
+    // El audio solo puede arrancar dentro de un toque: este.
+    if (conSonido) sonido.current.encender();
     feedback.toque();
     pausar(false);
     setHud(HUD_INICIAL);
@@ -268,7 +330,22 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     setFase('jugando');
   };
 
+  const alternarSonido = () => {
+    const si = !conSonido;
+    setConSonido(si);
+    guardarSonido(si);
+    if (si) sonido.current.encender();
+    else sonido.current.apagar();
+  };
+
+  const alternarBrillos = (si: boolean) => {
+    setConBrillos(si);
+    guardarBrillos(si);
+    escena.current?.brillos(si);
+  };
+
   const salir = () => {
+    sonido.current.apagar();
     salirDePantallaCompleta();
     onSalir?.();
   };
@@ -340,6 +417,9 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
                 <Ionicons key={k} name={k < hud.vidas ? 'heart' : 'heart-outline'} size={24} color={k < hud.vidas ? ROJO : CREMA} />
               ))}
             </div>
+            <button type="button" aria-label={conSonido ? 'Quitar sonido' : 'Poner sonido'} style={e.icono} onClick={alternarSonido}>
+              <Ionicons name={conSonido ? 'volume-high' : 'volume-mute'} size={20} color={CREMA} />
+            </button>
             <button type="button" aria-label="Pausa" style={e.icono} onClick={() => pausar(true)}>
               <Ionicons name="pause" size={22} color={CREMA} />
             </button>
@@ -398,6 +478,12 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
           <button type="button" style={{ ...e.boton, ...(webgl ? null : e.apagado) }} disabled={!webgl} onClick={arrancar}>
             ¡A galopar!
           </button>
+          <label style={e.casilla}>
+            <input type="checkbox" checked={conSonido} onChange={alternarSonido} /> Sonido
+          </label>
+          <label style={e.casilla}>
+            <input type="checkbox" checked={conBrillos} onChange={(ev) => alternarBrillos(ev.target.checked)} /> Brillos (quítalos si va a tirones)
+          </label>
           <label style={e.casilla}>
             <input type="checkbox" checked={verFps} onChange={(ev) => setVerFps(ev.target.checked)} /> Ver fotogramas por segundo
           </label>

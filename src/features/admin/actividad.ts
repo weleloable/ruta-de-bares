@@ -157,6 +157,7 @@ const JUEGOS: Record<string, string> = {
   'quien-quiere-ser-cervecero': '¿Quién quiere ser cervecero?',
   'tapon-al-vuelo': 'Tapón al Vuelo',
   'parejas-de-barra': 'Parejas de Barra',
+  'quijote-cervecero': 'Don Quijote Cervecero',
 };
 
 export function filasJuegos(a: ActividadRuta) {

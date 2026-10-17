@@ -413,9 +413,16 @@ En tu proyecto de Supabase, **SQL Editor > New query**. Pega y ejecuta
    decimales). Anade `minijuego_menos_es_mejor()` y rehace `minigame_submit_nota()`
    y `minigame_ranking()` de la 0069 y `casas_podios()` y
    `admin_estadisticas_actividad()` de la 0061, que ya **no se vuelven a pegar**.
-   Los demas juegos no cambian. Se puede pegar dos veces. Si la app nueva llega
-   antes, Parejas se juega igual, pero guardar en la ruta da INVALID_GAME y el
-   record se queda en el movil.
+   Los demas juegos no cambian. Se podia pegar dos veces hasta aplicar la 0071.
+   Si la app nueva llega antes, Parejas se juega igual, pero guardar en la ruta da
+   INVALID_GAME y el record se queda en el movil.
+66. [`supabase/migrations/0071_ranking_quijote.sql`](../supabase/migrations/0071_ranking_quijote.sql)
+   y **Run**, despues de la 0070 y **ANTES de desplegar la app**. Mete Don Quijote
+   Cervecero en el ranking por ruta (la nota son metros + jarras + gigantes, entera,
+   con un techo de seguridad de 10.000.000) y ensancha `best_score` a
+   `numeric(12, 2)` para que quepa. Rehace `minigame_submit_nota()` de la 0070, que
+   ya **no se vuelve a pegar**. Se puede pegar dos veces. Si la app nueva llega
+   antes, el juego se juega igual, pero guardar en la ruta da INVALID_GAME.
 55. [`supabase/migrations/0055_ranking_quiz.sql`](../supabase/migrations/0055_ranking_quiz.sql)
    y **Run**, despues de la 0054 y **ANTES de desplegar la app**. Mete
    ¿Quién quiere ser cervecero? en el ranking por ruta: `minigame_scores` admite

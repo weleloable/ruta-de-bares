@@ -9,6 +9,7 @@ import { recetaDesdeResultado } from './juegos/maestro/publicar';
 import { DetalleParejas } from './juegos/parejas/DetalleParejas';
 import { ID_PAREJAS, notaValida, TIEMPO_MAXIMO } from './juegos/parejas/modelo';
 import { ParejasDeBarra } from './juegos/parejas/ParejasDeBarra';
+import { DetalleQuijote } from './juegos/quijote/DetalleQuijote';
 import { ID_QUIJOTE } from './juegos/quijote/modelo';
 import { QuijoteCervecero } from './juegos/quijote/QuijoteCervecero';
 import { DetalleTapon } from './juegos/tapon/DetalleTapon';
@@ -124,9 +125,9 @@ export const JUEGOS: readonly JuegoDef[] = [
     },
   },
   {
-    // Endless runner en 3D, en vertical (logica pura en juegos/quijote/modelo.ts). En
-    // desarrollo por fases: de momento solo lo ven los admins, y sin ranking (llegara
-    // con su migracion, como los demas).
+    // Endless runner en 3D, en vertical (logica pura en juegos/quijote/modelo.ts). Ranking
+    // por ruta desde la 0071: metros + jarras + gigantes derribados. De momento solo lo
+    // ven los admins (enPruebas).
     id: ID_QUIJOTE,
     titulo: 'Don Quijote Cervecero',
     descripcion: 'Galopa por La Mancha, esquiva y embiste a los gigantes.',
@@ -134,5 +135,10 @@ export const JUEGOS: readonly JuegoDef[] = [
     Componente: QuijoteCervecero,
     pantallaCompleta: true,
     enPruebas: true,
+    Detalle: DetalleQuijote,
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
   },
 ];

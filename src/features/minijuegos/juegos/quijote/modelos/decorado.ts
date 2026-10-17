@@ -52,7 +52,7 @@ export function crearMontes(mats: Materiales, azar: () => number, geos: THREE.Bu
   };
 }
 
-export type Arboles = { malla: THREE.InstancedMesh; colocar(dist: number): void };
+export type Arboles = { malla: THREE.InstancedMesh; colocar(dist: number, ocultar?: (s: number) => boolean): void };
 
 const PERIODO_ARBOLES = 320;
 
@@ -82,11 +82,13 @@ export function crearArboles(mats: Materiales, azar: () => number, geos: THREE.B
 
   return {
     malla,
-    colocar(dist) {
+    colocar(dist, ocultar) {
       sitios.forEach((a, k) => {
-        pos.set(a.x, 0, zReciclada(a.s, dist, PERIODO_ARBOLES));
+        const z = zReciclada(a.s, dist, PERIODO_ARBOLES);
+        pos.set(a.x, 0, z);
         rot.setFromAxisAngle(eje, a.giro);
-        esc.setScalar(a.escala);
+        // Donde no toca (dentro de Alcala), el arbol se encoge hasta desaparecer.
+        esc.setScalar(ocultar?.(dist - z) ? 0 : a.escala);
         malla.setMatrixAt(k, m.compose(pos, rot, esc));
       });
       malla.instanceMatrix.needsUpdate = true;

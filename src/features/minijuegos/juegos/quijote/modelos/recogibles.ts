@@ -19,6 +19,8 @@ const QUESO = 0xffd54a;
 export type Recogibles = {
   grupo: THREE.Group;
   colocar(lista: readonly Recogible[], dist: number, t: number): void;
+  /** Sin brillos: sin halos (lo que hace de "bloom"). */
+  brillos(si: boolean): void;
 };
 
 /** Para fundir geometrias hace falta que ninguna tenga indices (algunas ya vienen asi). */
@@ -112,6 +114,10 @@ export function crearRecogibles(mats: Materiales, geos: THREE.BufferGeometry[]):
       halos.instanceMatrix.needsUpdate = true;
       for (let k = ny; k < yelmos.length; k++) yelmos[k]!.visible = false;
       for (let k = nq; k < quesos.length; k++) quesos[k]!.visible = false;
+    },
+    brillos(si) {
+      halos.visible = si;
+      for (const g of [...yelmos, ...quesos]) g.children[1]!.visible = si;
     },
     liberar() {
       [texOro, texPlata, texQueso].forEach((tx) => tx.dispose());

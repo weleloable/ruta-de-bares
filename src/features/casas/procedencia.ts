@@ -19,6 +19,7 @@ const JUEGOS: Record<string, string> = {
   'quien-quiere-ser-cervecero': '¿Quién quiere ser cervecero?',
   'tapon-al-vuelo': 'Tapón al Vuelo',
   'parejas-de-barra': 'Parejas de Barra',
+  'quijote-cervecero': 'Don Quijote Cervecero',
 };
 
 const SIMPLES: Record<string, [singular: string, plural: string]> = {

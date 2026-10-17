@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import { CONFIG, embistiendo, MOLINO, xDeCarril, type Estado, type Obstaculo, type TipoObstaculo } from './modelo';
+import { Alcala } from './modelos/alcala';
 import { crearCielo, type Cielo } from './modelos/cielo';
 import { crearArboles, crearMontes, zReciclada, type Arboles, type Montes } from './modelos/decorado';
 import { crearMolino, geometriasMolino, type Molino } from './modelos/molino';
@@ -9,6 +10,7 @@ import { Materiales, PALETA } from './modelos/paleta';
 import { Particulas } from './modelos/particulas';
 import { crearQuijote, type Jinete } from './modelos/quijote';
 import { crearRecogibles, type Recogibles } from './modelos/recogibles';
+import { enAlcala, nocheEn } from './recorrido';
 
 /**
  * Don Quijote Cervecero en 3D (three.js, solo web). Solo pinta: la logica es
@@ -52,6 +54,9 @@ export class Escena3D {
   private readonly recogibles: Recogibles & { liberar(): void };
   private readonly particulas = new Particulas();
   private polvo = 0;
+  private readonly alcala: Alcala;
+  private readonly luzCielo: THREE.HemisphereLight;
+  private readonly luzSol: THREE.DirectionalLight;
   private embestidaVista = 0;
   private readonly tam = new THREE.Vector2();
   private densidad = 0;
@@ -61,10 +66,11 @@ export class Escena3D {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.escena.fog = new THREE.Fog(PALETA.niebla, 28, 240);
     // Luz: cielo calido desde arriba y el sol de cara (desde el fondo del camino).
-    this.escena.add(new THREE.HemisphereLight(0xffb48a, 0x2a1418, 1.15));
-    const sol = new THREE.DirectionalLight(0xffc27a, 1.4);
-    sol.position.set(0, 12, -100);
-    this.escena.add(sol);
+    // (Los colores y la fuerza cambian con la hora del dia: ver `dibujar`.)
+    this.luzCielo = new THREE.HemisphereLight(0xffb48a, 0x2a1418, 1.15);
+    this.luzSol = new THREE.DirectionalLight(0xffc27a, 1.4);
+    this.luzSol.position.set(0, 12, -100);
+    this.escena.add(this.luzCielo, this.luzSol);
 
     // Azar fijo para el paisaje: el mismo en todas las partidas.
     let semilla = 11;
@@ -150,6 +156,10 @@ export class Escena3D {
       molino: pool('molino'),
     };
 
+    // Alcala de Henares, para cuando el camino entre en ella.
+    this.alcala = new Alcala(this.mats, this.geometrias);
+    this.escena.add(this.alcala.grupo);
+
     // Jarras, yelmo y queso, y las particulas (polvo y espuma).
     this.recogibles = crearRecogibles(this.mats, this.geometrias);
     this.escena.add(this.recogibles.grupo, this.particulas.puntos);
@@ -214,9 +224,22 @@ export class Escena3D {
     this.mojones.forEach((m, k) => {
       m.position.z = zReciclada(Math.floor(k / 2) * tramoMojon, e.dist, this.mojones.length * (tramoMojon / 2), 10);
     });
-    this.arboles.colocar(e.dist);
+    // La hora del dia: cielo, niebla y luces.
+    const luz = this.cielo.ponerHora(nocheEn(e.dist));
+    (this.escena.fog as THREE.Fog).color.copy(luz.niebla);
+    this.luzCielo.color.copy(luz.cieloLuz);
+    this.luzCielo.intensity = luz.cieloFuerza;
+    this.luzSol.color.copy(luz.sol);
+    this.luzSol.intensity = luz.solFuerza;
+
+    // Alcala, y el paisaje de La Mancha se aparta mientras se esta en ella.
+    this.alcala.colocar(e.dist, CONFIG.vista.delante + 40);
+    const enCiudad = (s: number) => enAlcala(s) !== null || enAlcala(s + 30) !== null;
+    this.arboles.colocar(e.dist, enCiudad);
     for (const { molino, s, x } of this.molinos) {
-      molino.grupo.position.set(x, 0, zReciclada(s, e.dist, MOLINOS.periodo, 40));
+      const z = zReciclada(s, e.dist, MOLINOS.periodo, 40);
+      molino.grupo.position.set(x, 0, z);
+      molino.grupo.visible = !enCiudad(e.dist - z);
       molino.girar(dt);
     }
 
@@ -264,8 +287,15 @@ export class Escena3D {
     this.renderer.render(this.escena, this.camara);
   }
 
+  /** Brillos (los halos que hacen de "bloom"): se pueden apagar si el movil va justo. */
+  brillos(si: boolean) {
+    this.cielo.brillos(si);
+    this.recogibles.brillos(si);
+  }
+
   liberar() {
     this.cielo.liberar();
+    this.alcala.liberar();
     this.recogibles.liberar();
     this.particulas.liberar();
     this.geometrias.forEach((g) => g.dispose());

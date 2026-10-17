@@ -148,6 +148,7 @@ supabase/
   migrations/0068_*.sql     pantalla de Usuarios (admins): correo de cada cuenta, sellar a mano (`stamps.sellado_por`) y borrar cuentas (`admin_cuentas_borradas`)
   migrations/0069_*.sql     La Caña Perfecta con 2 decimales (`minigame_scores.best_score` numeric(7,2)) y `admin_meter_en_ruta` (meter a alguien en una ruta)
   migrations/0070_*.sql     Parejas de Barra: el primer juego en el que MENOS es mejor (`minijuego_menos_es_mejor`, tiempo de 4,00 a 600 s)
+  migrations/0071_*.sql     ranking de Don Quijote Cervecero (techo 10.000.000) y `best_score` a numeric(12, 2)
   functions/enviar-avisos/  Edge Function (Deno) que envia la cola por Web Push
   migrations/0055_*.sql     ¿Quién quiere ser cervecero? en el ranking por ruta (tope 25 = premio de la ultima pregunta)
   migrations/0056_*.sql     Tapon al Vuelo en el ranking por ruta (tope 1250 = PUNTUACION_MAXIMA de tapon/modelo.ts)
