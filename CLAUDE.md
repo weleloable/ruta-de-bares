@@ -279,6 +279,16 @@ EAS. Ya no hay Edge Functions que desplegar. Paso a paso en
 
 ## Decisiones raras / workarounds (ir anotando aqui las nuevas)
 
+- **Don Quijote Cervecero: UN DESLIZAMIENTO, UNA ACCION** (`juegos/quijote/gestos.ts`,
+  puro y con tests). Antes, cada 20 px que recorria el dedo contaba como un gesto
+  nuevo (un arrastre largo cambiaba dos o tres carriles) y ademas un toque suelto
+  movia un carril segun el lado de la pantalla: dos formas de mover, una de ellas
+  impredecible. Ahora el gesto se dispara en cuanto el dedo recorre el umbral y el
+  resto del arrastre se ignora hasta levantarlo; un toque suelto no hace nada; un
+  golpe rapido que se suelta antes del umbral vale con uno menor. Arriba salta y
+  abajo agacha (eso no es mover de carril). El carril sale como `data-carril` en
+  el contenedor: se comprobo en Chrome con el dedo emulado.
+
 - **El SENTIDO de la nota: en Parejas de Barra gana quien MENOS tarda** (0070,
   `minijuegos/nota.ts`). Es lo primero que se rompe al anadir el siguiente juego:
   todo lo anterior daba por hecho que mas es mejor, y un sitio que compare notas

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { feedback } from '../../feedback';
 import { pasoDeTiempo } from '../../reloj';
 import type { PropsJuego } from '../../tipos';
-import { direccionDeGesto } from '../conga/giros';
 import { avanzarBocadillos, crearBocadillos, type Motivo } from './bocadillos';
 import { Escena3D, hayWebGL } from './escena3d';
 import { enAlcala } from './recorrido';
@@ -22,11 +21,13 @@ import {
   type Accion,
   type Estado,
 } from './modelo';
+import { empezarGesto, moverGesto, soltarGesto, type Gesto } from './gestos';
 
 /**
  * Don Quijote Cervecero (solo web): endless runner en 3D, en VERTICAL y con una
- * mano. Un toque a un lado (o deslizar) cambia de carril, deslizar arriba
- * salta y abajo agacha; con 10 jarras se llena la barra y el boton de abajo
+ * mano. UN DESLIZAMIENTO, UNA ACCION (gestos.ts): deslizar a un lado cambia un
+ * carril, arriba salta y abajo agacha; un toque suelto no hace nada. Con 10
+ * jarras se llena la barra y el boton de abajo
  * lanza la Embestida. En PC, flechas o WASD y espacio.
  *
  * Todo es DOM y canvas (como ¿Conduces tu?): el marcador, los bocadillos y los
@@ -59,11 +60,6 @@ function guardarBrillos(si: boolean) {
     // Sin almacen: se juega igual, solo que no se recuerda.
   }
 }
-/** Pixeles de arrastre para que cuente como gesto; al soltar, basta con algo menos (un golpe rapido). */
-const UMBRAL = 20;
-const UMBRAL_SOLTAR = 12;
-/** Un toque (sin arrastrar y corto) en una mitad de la pantalla mueve un carril hacia ese lado. */
-const TOQUE_MAX_MS = 300;
 /** Segundos que se ve "¡GIGANTE DERRIBADO!". */
 const CARTEL_GIGANTE = 1.6;
 /** Lo que dura en pantalla un "+250" (ms). */
@@ -79,7 +75,7 @@ const ESTILOS = `
 `;
 
 type Fase = 'inicio' | 'jugando' | 'fin';
-type Dedo = { id: number; x: number; y: number; x0: number; y0: number; desde: number; usado: boolean };
+type Dedo = { id: number; gesto: Gesto };
 type Hud = {
   puntos: number;
   metros: number;
@@ -91,9 +87,12 @@ type Hud = {
   fps: number;
   bocadillo: string | null;
   gigante: boolean;
+  /** Carril en que va (0 izquierda, 1 centro, 2 derecha). Sale como data-carril para poder comprobar los gestos en Chrome. */
+  carril: number;
 };
 
 const HUD_INICIAL: Hud = {
+  carril: 1,
   puntos: 0,
   metros: 0,
   vidas: CONFIG.vidas,
@@ -154,12 +153,26 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const alAcabar = useRef(onFinish);
   alAcabar.current = onFinish;
 
+  /**
+   * Suelta el dedo y vacia los gestos pendientes. Si la partida acaba (o se pausa)
+   * con el dedo apoyado, el div de gestos desaparece y su pointerup no llega: sin
+   * esto, `dedo.current` se quedaba agarrado y en la partida siguiente los
+   * deslizamientos no respondian hasta recargar; y un gesto hecho en pausa se
+   * ejecutaba al reanudar.
+   */
+  const soltarDedo = useCallback(() => {
+    dedo.current = null;
+    cola.current = [];
+  }, []);
+
   const pausar = useCallback((si: boolean) => {
     pausaRef.current = si;
     setPausa(si);
-    if (si) sonido.current.silencio();
-    else if (sonido.current.activo) sonido.current.encender();
-  }, []);
+    if (si) {
+      soltarDedo();
+      sonido.current.silencio();
+    } else if (sonido.current.activo) sonido.current.encender();
+  }, [soltarDedo]);
 
   // Pausa sola si la app pasa a segundo plano o pierde el foco.
   useEffect(() => {
@@ -331,6 +344,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
           fps,
           bocadillo: bocas.texto,
           gigante: est.t < giganteHasta,
+          carril: est.carril,
         });
       }
       raf = requestAnimationFrame(bucle);
@@ -349,6 +363,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     if (conSonido) sonido.current.encender();
     feedback.toque();
     pausar(false);
+    soltarDedo();
     setHud(HUD_INICIAL);
     setPartidaId((n) => n + 1);
     setFase('jugando');
@@ -374,36 +389,24 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
     onSalir?.();
   };
 
-  // --- Gestos: cada vez que el dedo recorre el umbral cuenta uno y se vuelve a medir desde ahi ---
+  // --- Gestos: UN deslizamiento, UNA accion (gestos.ts). Un toque suelto no hace nada. ---
   const dedoAbajo = (ev: PEvent<HTMLDivElement>) => {
     if (dedo.current) return;
     ev.currentTarget.setPointerCapture(ev.pointerId);
-    dedo.current = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY, desde: performance.now(), usado: false };
+    dedo.current = { id: ev.pointerId, gesto: empezarGesto(ev.clientX, ev.clientY) };
   };
   const dedoMover = (ev: PEvent<HTMLDivElement>) => {
     const d = dedo.current;
     if (!d || d.id !== ev.pointerId) return;
-    const dir = direccionDeGesto(ev.clientX - d.x, ev.clientY - d.y, UMBRAL);
-    if (!dir) return;
-    cola.current.push(dir);
-    d.x = ev.clientX;
-    d.y = ev.clientY;
-    d.usado = true;
+    const dir = moverGesto(d.gesto, ev.clientX, ev.clientY);
+    if (dir) cola.current.push(dir);
   };
   const dedoArriba = (ev: PEvent<HTMLDivElement>) => {
     const d = dedo.current;
     if (!d || d.id !== ev.pointerId) return;
-    if (!d.usado) {
-      // Un golpe muy rapido puede soltar antes de llegar al umbral: al soltar vale con menos.
-      const dir = direccionDeGesto(ev.clientX - d.x, ev.clientY - d.y, UMBRAL_SOLTAR);
-      if (dir) {
-        cola.current.push(dir);
-      } else if (performance.now() - d.desde < TOQUE_MAX_MS && Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < UMBRAL_SOLTAR) {
-        // Un toque suelto: un carril hacia el lado de la pantalla que se ha tocado.
-        const caja = ev.currentTarget.getBoundingClientRect();
-        cola.current.push(ev.clientX < caja.left + caja.width / 2 ? 'izquierda' : 'derecha');
-      }
-    }
+    // Un golpe muy rapido puede soltar antes de llegar al umbral: al soltar vale con menos.
+    const dir = soltarGesto(d.gesto, ev.clientX, ev.clientY);
+    if (dir) cola.current.push(dir);
     dedo.current = null;
   };
 
@@ -415,7 +418,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   };
 
   return (
-    <div style={e.raiz} onContextMenu={(ev) => ev.preventDefault()}>
+    <div style={e.raiz} data-testid="quijote" data-carril={hud.carril} onContextMenu={(ev) => ev.preventDefault()}>
       <style>{ESTILOS}</style>
       <canvas ref={lienzo} style={e.lienzo} />
 
@@ -506,7 +509,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
         <div style={e.velo}>
           <div style={e.titulo}>Don Quijote Cervecero</div>
           <div style={e.texto}>
-            Toca a un lado de la pantalla (o desliza) para cambiar de carril. Desliza arriba para saltar y abajo para agacharte.
+            Desliza a un lado para cambiar de carril (un deslizamiento, un carril). Desliza arriba para saltar y abajo para agacharte.
           </div>
           <div style={e.texto}>
             Las jarras llenan la barra de arriba. Cuando esté llena, pulsa <b>¡EMBESTIDA!</b> y derriba lo que encuentres, gigantes incluidos.
