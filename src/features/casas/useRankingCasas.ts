@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { crearAgrupador } from '../../lib/dispersion';
 import { supabase } from '../../lib/supabase';
 import { useSondeo } from '../../lib/useSondeo';
 import { esCasa } from './casas';
@@ -7,6 +8,13 @@ import type { FilaServidor } from './ranking';
 
 /** Por si el tiempo real se cae (sin red un rato, Realtime apagado): se pregunta igual. */
 const SONDEO_MS = 30_000;
+
+/**
+ * Cuando Realtime avisa, no se pide el ranking en el acto: en una apertura de bar cada sello avisa a
+ * ~150 moviles y todos pedirian `casas_ranking` (caro) a la vez, sello tras sello. Se espera un
+ * tiempo al azar y los avisos que lleguen mientras tanto cuentan como uno.
+ */
+const ESPERA_REALTIME_MAX_MS = 5_000;
 
 /**
  * El ranking de las casas en una ruta, en directo: se suscribe con Realtime al
@@ -41,15 +49,17 @@ export function useRankingCasas(rutaId: string | null) {
     setError(null);
     if (!rutaId) return;
     void cargar();
+    const agrupador = crearAgrupador(() => void cargar(), ESPERA_REALTIME_MAX_MS);
     const canal = supabase
       .channel(`casas-marcador-${rutaId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'casas_marcador', filter: `route_id=eq.${rutaId}` },
-        () => void cargar(),
+        () => agrupador.pedir(),
       )
       .subscribe();
     return () => {
+      agrupador.cancelar();
       void supabase.removeChannel(canal);
     };
   }, [rutaId, cargar]);
