@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
+import { esperaAleatoria } from '../../lib/dispersion';
 import { refrescarAnuncios } from './almacen';
 
 const CADA_MS = 20_000;
@@ -15,15 +16,20 @@ export function SondeoAnuncios({ rutaId }: { rutaId: string | undefined }) {
   useEffect(() => {
     void refrescarAnuncios(rutaId);
     if (!rutaId) return undefined;
-    const id = setInterval(() => {
-      if (AppState.currentState === 'active') void refrescarAnuncios(rutaId);
-    }, CADA_MS);
+    // Desfase al azar del reloj: 150 moviles abiertos a la vez no preguntan siempre en el mismo segundo.
+    let id: ReturnType<typeof setInterval> | null = null;
+    const arranque = setTimeout(() => {
+      id = setInterval(() => {
+        if (AppState.currentState === 'active') void refrescarAnuncios(rutaId);
+      }, CADA_MS);
+    }, esperaAleatoria(CADA_MS / 3));
     // Al volver a primer plano (pestana del navegador, app del segundo plano) se pregunta en el acto.
     const sub = AppState.addEventListener('change', (e) => {
       if (e === 'active') void refrescarAnuncios(rutaId);
     });
     return () => {
-      clearInterval(id);
+      clearTimeout(arranque);
+      if (id !== null) clearInterval(id);
       sub.remove();
     };
   }, [rutaId]);
