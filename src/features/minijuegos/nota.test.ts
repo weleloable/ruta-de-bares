@@ -69,6 +69,15 @@ describe('esMejorNota: el sentido de la nota', () => {
     }
   });
 
+  it('Barman Express: ENTEROS y MAS es mejor (no esta en ninguna de las dos listas)', () => {
+    assert.equal(JUEGOS_CON_DECIMALES.has('barman-express'), false);
+    assert.equal(JUEGOS_MENOS_ES_MEJOR.has('barman-express'), false);
+    assert.equal(formatearNota('barman-express', 1830), '1830');
+    assert.equal(redondearNota('barman-express', 1830.6), 1831);
+    assert.equal(esMejorNota('barman-express', 2000, 1830), true);
+    assert.equal(esMejorNota('barman-express', 1500, 1830), false);
+  });
+
   it('sin nota anterior, cualquiera es mejor (tambien en los de tiempo)', () => {
     assert.equal(esMejorNota('parejas-de-barra', 599, undefined), true);
     assert.equal(esMejorNota('cana-perfecta', 0, undefined), true);

@@ -11,9 +11,10 @@ export function traducirErrorMinijuegos(mensaje: string): string {
   if (/INVALID_NAME/.test(mensaje)) return 'El nombre debe tener entre 1 y 30 caracteres.';
   if (/INVALID_LEVEL/.test(mensaje)) return 'Ese nivel de cañas no existe en esta ruta.';
   // Un juego que el servidor no conoce: la app es mas nueva que la base (la conga llega con
-  // la 0039, el quiz con la 0055 y Tapon al Vuelo con la 0056).
+  // la 0039, el quiz con la 0055, Tapon al Vuelo con la 0056, Parejas de Barra con la 0070
+  // el Quijote con la 0071 y Barman Express con la 0073). Al anadir un juego con ranking, sumar aqui su migracion.
   if (/INVALID_GAME/.test(mensaje)) {
-    return 'Este juego aún no tiene ranking en Supabase: falta aplicar una migración (la 0039, 0055 o 0056, ver docs/SETUP.md).';
+    return 'Este juego aún no tiene ranking en Supabase: falta aplicar una migración (la 0039, 0055, 0056, 0070, 0071 o 0073, ver docs/SETUP.md).';
   }
   if (/APP_UPDATE_REQUIRED/.test(mensaje)) return 'Hay una versión nueva de la app. Recarga la página para guardar tu nota.';
   if (/INVALID_(SCORE|RECIPE)/.test(mensaje)) return 'No se pudo guardar esta partida.';

@@ -111,6 +111,7 @@ export async function updateRoute(
       | 'temporada_id'
       | 'sorteo_activo'
       | 'sorteo_premio'
+      | 'la_penul_visible'
     >
   >,
 ): Promise<RouteRow> {
@@ -122,6 +123,17 @@ export async function updateRoute(
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * Si la ruta tiene La Penul encendida (0072). Se vuelve a mirar con el menu de
+ * juegos abierto: si un admin lo enciende a mitad de la noche, aparece sin
+ * cerrar la app. Ante un fallo, null: se queda lo que ya se sabia.
+ */
+export async function leerPenulVisible(routeId: string): Promise<boolean | null> {
+  const { data, error } = await supabase.from('routes').select('la_penul_visible').eq('id', routeId).maybeSingle();
+  if (error || !data) return null;
+  return data.la_penul_visible === true;
 }
 
 export async function deleteRoute(routeId: string): Promise<void> {

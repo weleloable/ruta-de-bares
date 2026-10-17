@@ -6,6 +6,11 @@ import { CongaCervecera } from './juegos/conga/CongaCervecera';
 import { DetalleConga } from './juegos/conga/DetalleConga';
 import { MaestroCervecero } from './juegos/maestro/MaestroCervecero';
 import { recetaDesdeResultado } from './juegos/maestro/publicar';
+import { BarmanExpress } from './juegos/barman/BarmanExpress';
+import { DetalleBarman } from './juegos/barman/DetalleBarman';
+import { ID_BARMAN } from './juegos/barman/modelo';
+import { ID_LA_PENUL, TITULO_LA_PENUL } from './juegos/la-penul/guion';
+import { LaPenul } from './juegos/la-penul/LaPenul';
 import { DetalleParejas } from './juegos/parejas/DetalleParejas';
 import { ID_PAREJAS, notaValida, TIEMPO_MAXIMO } from './juegos/parejas/modelo';
 import { ParejasDeBarra } from './juegos/parejas/ParejasDeBarra';
@@ -19,10 +24,11 @@ import { ID_JUEGO as ID_QUIZ } from '../quiz/config';
 import type { JuegoDef } from './tipos';
 
 /**
- * Lista de juegos del menu, en el orden en que se ven. Anadir uno es crear su
- * componente en `juegos/<id>/` y sumarlo aqui: nada mas de la app se entera.
+ * Los juegos de siempre, en el orden en que se ven. Anadir uno es crear su
+ * componente en `juegos/<id>/` y sumarlo AL FINAL DE ESTA LISTA: nada mas de la
+ * app se entera. La Penul no va aqui: va aparte, abajo, y siempre la ultima.
  */
-export const JUEGOS: readonly JuegoDef[] = [
+const JUEGOS_DE_SIEMPRE: readonly JuegoDef[] = [
   {
     id: 'cana-perfecta',
     titulo: 'La Caña Perfecta',
@@ -141,4 +147,43 @@ export const JUEGOS: readonly JuegoDef[] = [
       await enviarNota(rutaId, r.juego, r.puntuacion);
     },
   },
+  {
+    // Eres el camarero (logica pura en juegos/barman/modelo.ts): 20 pedidos, la carta crece con
+    // la noche. Ranking por ruta y podio de casas desde la 0073 (tope PUNTUACION_MAXIMA, entero,
+    // mas es mejor). Vertical y a pantalla completa: dentro del menu no cabia.
+    id: ID_BARMAN,
+    titulo: 'Barman Express',
+    descripcion: 'Eres el camarero: sirve 20 pedidos antes de que se les acabe la paciencia.',
+    icono: 'wine',
+    Componente: BarmanExpress,
+    pantallaCompleta: true,
+    Detalle: DetalleBarman,
+    ranking: true,
+    enviar: async (rutaId, r) => {
+      await enviarNota(rutaId, r.juego, r.puntuacion);
+    },
+  },
 ];
+
+/**
+ * La Penul, la historia para adultos (0072). Va APARTE y SIEMPRE LA ULTIMA: un
+ * juego nuevo se suma al final de JUEGOS_DE_SIEMPRE y queda penultimo. Aunque
+ * alguien la meta en medio de la lista, juegosDelMenu (visibilidad.ts) la manda
+ * al final igual; tests/la-penul-cableado.test.ts y visibilidad.test.ts lo vigilan.
+ */
+const JUEGO_LA_PENUL: JuegoDef = {
+  // Historia interactiva para adultos (guion en juegos/la-penul/guion.ts). Sin nota, sin
+  // ranking y sin puntos de casa: se encarga de su propio final. La ven los admins siempre y
+  // el resto solo si la ruta la enciende (0072). Va SIEMPRE la ultima (visibilidad.ts).
+  id: ID_LA_PENUL,
+  titulo: TITULO_LA_PENUL,
+  descripcion: 'Una noche, tres rondas y muchas ganas. Para mayores de edad.',
+  icono: 'flame',
+  Componente: LaPenul,
+  pantallaCompleta: true,
+  resultadoPropio: true,
+  visibilidad: 'la-penul',
+};
+
+/** Lo que pinta el menu: los de siempre y, la ultima, La Penul (si se puede ver: visibilidad.ts). */
+export const JUEGOS: readonly JuegoDef[] = [...JUEGOS_DE_SIEMPRE, JUEGO_LA_PENUL];

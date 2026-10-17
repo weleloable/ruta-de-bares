@@ -40,7 +40,7 @@ export type JuegoDef = {
   titulo: string;
   /** Una linea: se lee de pasada en un bar. */
   descripcion: string;
-  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'help-circle' | 'locate' | 'flag';
+  icono: 'beer' | 'flask' | 'musical-notes' | 'eye' | 'timer' | 'car' | 'help-circle' | 'locate' | 'flag' | 'flame' | 'wine';
   Componente: ComponentType<PropsJuego>;
   /**
    * Se juega a pantalla completa, sin la cabecera del menu ni las pestanas
@@ -79,4 +79,10 @@ export type JuegoDef = {
    * para probarlo en el movil de verdad sin que lo vea nadie mas.
    */
   enPruebas?: boolean;
+  /**
+   * Quien lo ve (visibilidad.ts). 'la-penul': los admins siempre; el resto, solo
+   * si la ruta lo tiene encendido (0072). Cuando sale, va el ULTIMO. Es una
+   * SORPRESA, no un secreto: el contenido va en la web publicada igualmente.
+   */
+  visibilidad?: 'la-penul';
 };
