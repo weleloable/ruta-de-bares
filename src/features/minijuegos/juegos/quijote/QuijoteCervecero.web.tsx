@@ -514,7 +514,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
           <div style={e.texto}>
             Las jarras llenan la barra de arriba. Cuando esté llena, pulsa <b>¡EMBESTIDA!</b> y derriba lo que encuentres, gigantes incluidos.
           </div>
-          <div style={e.nota}>En pruebas · en el ordenador, flechas o WASD y espacio.</div>
+          <div style={e.nota}>En el ordenador, flechas o WASD y espacio.</div>
           {!webgl ? <div style={e.nota}>Este navegador no puede pintar en 3D: prueba con Chrome o Safari actualizados.</div> : null}
           <button type="button" style={{ ...e.boton, ...(webgl ? null : e.apagado) }} disabled={!webgl} onClick={arrancar}>
             ¡A galopar!
