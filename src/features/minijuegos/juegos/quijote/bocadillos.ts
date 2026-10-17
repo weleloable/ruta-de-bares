@@ -7,7 +7,7 @@
  * hasta haber dicho las demas de su lista.
  */
 
-export type Motivo = 'inicio' | 'molino' | 'embestida' | 'gigante' | 'choque' | 'escudo' | 'yelmo' | 'queso' | 'jarras' | 'suelta';
+export type Motivo = 'inicio' | 'molino' | 'embestida' | 'gigante' | 'choque' | 'escudo' | 'yelmo' | 'queso' | 'suelta';
 
 export const FRASES: Record<Motivo, readonly string[]> = {
   inicio: ['En un lugar de La Mancha…', '¡Arre, Rocinante!', 'La aventura nos espera, Sancho.'],
@@ -18,21 +18,25 @@ export const FRASES: Record<Motivo, readonly string[]> = {
   escudo: ['¡Bendito yelmo!', 'El yelmo de Mambrino me salva.'],
   yelmo: ['¡El yelmo de Mambrino!', 'No es bacía, Sancho: es yelmo.'],
   queso: ['Queso manchego: medicina de caballeros.', '¡Esto resucita a un muerto!'],
-  jarras: ['Otra jarra, que la aventura da sed.', 'Dichosa edad y dichosa cerveza.', 'Con pan y cerveza, todo se endereza.'],
   suelta: [
     'La libertad, Sancho, es de los más preciosos dones.',
     'Cada uno es hijo de sus obras.',
     'Donde una puerta se cierra, otra se abre.',
     '¿Quién quiere ser cervecero?',
     'Vuelve a la ruta, Sancho, que hay sellos.',
+    'Otra jarra, que la aventura da sed.',
+    'Con pan y cerveza, todo se endereza.',
   ],
 };
 
-/** Segundos que se ve un bocadillo, el respiro minimo entre dos y cada cuanto sale uno suelto. */
-export const TIEMPOS = { dura: 2.4, respiro: 3.5, sueltaMin: 18, sueltaMax: 32, jarrasCada: 15 };
+/**
+ * Segundos que se ve un bocadillo, el respiro minimo entre dos y cada cuanto sale
+ * uno suelto. Pocos a proposito: si habla todo el rato, molesta y no se lee.
+ */
+export const TIEMPOS = { dura: 2.4, respiro: 15, sueltaMin: 45, sueltaMax: 75 };
 
 /** Lo que importa mas gana si dos llegan a la vez. */
-const PRIORIDAD: readonly Motivo[] = ['gigante', 'embestida', 'escudo', 'choque', 'yelmo', 'queso', 'molino', 'jarras', 'inicio', 'suelta'];
+const PRIORIDAD: readonly Motivo[] = ['gigante', 'embestida', 'escudo', 'choque', 'yelmo', 'queso', 'molino', 'inicio', 'suelta'];
 
 export type Bocadillos = {
   /** El que se ve ahora (o null) y hasta cuando. */

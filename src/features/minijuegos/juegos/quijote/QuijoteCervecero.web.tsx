@@ -5,7 +5,7 @@ import { feedback } from '../../feedback';
 import { pasoDeTiempo } from '../../reloj';
 import type { PropsJuego } from '../../tipos';
 import { direccionDeGesto } from '../conga/giros';
-import { avanzarBocadillos, crearBocadillos, TIEMPOS, type Motivo } from './bocadillos';
+import { avanzarBocadillos, crearBocadillos, type Motivo } from './bocadillos';
 import { Escena3D, hayWebGL } from './escena3d';
 import {
   aplicarAccion,
@@ -90,7 +90,6 @@ function motivosDe(e: Estado): Motivo[] {
   for (const ev of e.eventos) {
     if (ev === 'molino-cerca') m.push('molino');
     else if (ev === 'embestida' || ev === 'gigante' || ev === 'choque' || ev === 'escudo' || ev === 'yelmo' || ev === 'queso') m.push(ev);
-    else if (ev === 'jarra' && e.jarras % TIEMPOS.jarrasCada === 0) m.push('jarras');
   }
   return m;
 }
@@ -346,11 +345,15 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
             </button>
           </div>
 
-          {/* La barra de Embestida: una jarra por casilla. */}
+          {/* La barra de Embestida: se llena con las jarras. */}
           <div style={e.barra} aria-label={`Embestida: ${hud.carga} de ${CONFIG.jarrasEmbestida} jarras`}>
-            {Array.from({ length: CONFIG.jarrasEmbestida }, (_, k) => (
-              <div key={k} style={{ ...e.casillaBarra, ...(k < hud.carga || hud.embistiendo ? e.casillaLlena : null) }} />
-            ))}
+            <div
+              style={{
+                ...e.barraLlena,
+                width: `${hud.embistiendo ? 100 : (hud.carga / CONFIG.jarrasEmbestida) * 100}%`,
+                ...(hud.lista || hud.embistiendo ? e.barraBrilla : null),
+              }}
+            />
           </div>
 
           {hud.bocadillo ? <div style={e.bocadillo}>{hud.bocadillo}</div> : null}
@@ -388,7 +391,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
             Toca a un lado de la pantalla (o desliza) para cambiar de carril. Desliza arriba para saltar y abajo para agacharte.
           </div>
           <div style={e.texto}>
-            Con 10 jarras se llena la barra: pulsa <b>¡EMBESTIDA!</b> y derriba lo que encuentres, gigantes incluidos.
+            Las jarras llenan la barra de arriba. Cuando esté llena, pulsa <b>¡EMBESTIDA!</b> y derriba lo que encuentres, gigantes incluidos.
           </div>
           <div style={e.nota}>En pruebas · en el ordenador, flechas o WASD y espacio.</div>
           {!webgl ? <div style={e.nota}>Este navegador no puede pintar en 3D: prueba con Chrome o Safari actualizados.</div> : null}
@@ -479,12 +482,14 @@ const e: Record<string, CSSProperties> = {
     top: 'calc(max(12px, env(safe-area-inset-top)) + 54px)',
     left: 16,
     right: 16,
-    display: 'flex',
-    gap: 4,
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    background: 'rgba(255,243,220,.22)',
     pointerEvents: 'none',
   },
-  casillaBarra: { flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,243,220,.22)' },
-  casillaLlena: { background: ORO, boxShadow: `0 0 8px ${ORO}` },
+  barraLlena: { height: '100%', borderRadius: 4, background: ORO, transition: 'width .15s linear' },
+  barraBrilla: { boxShadow: `0 0 10px ${ORO}` },
   bocadillo: {
     position: 'absolute',
     left: '50%',

@@ -205,15 +205,16 @@ describe('quijote: patrones y camino', () => {
 });
 
 describe('quijote: jarras, yelmo y queso', () => {
-  it('una jarra da 10 puntos y carga la Embestida; diez la llenan', () => {
+  it('una jarra da 10 puntos y carga la Embestida; con las que pide, se llena', () => {
     const e = crearEstado();
     e.generadoHasta = Number.POSITIVE_INFINITY;
-    e.recogibles = Array.from({ length: 10 }, (_, k) => ({ id: k, s: 5 + k * 3, carril: 1 as const, altura: 1, tipo: 'jarra' as const }));
-    correr(e, 3);
-    assert.equal(e.jarras, 10);
-    assert.equal(e.carga, CONFIG.jarrasEmbestida);
+    const n = CONFIG.jarrasEmbestida;
+    e.recogibles = Array.from({ length: n }, (_, k) => ({ id: k, s: 5 + k * 3, carril: 1 as const, altura: 1, tipo: 'jarra' as const }));
+    correr(e, (n * 3 + 10) / CONFIG.velocidadInicial);
+    assert.equal(e.jarras, n);
+    assert.equal(e.carga, n);
     assert.ok(embestidaLista(e));
-    assert.equal(puntuacion(e), Math.floor(e.dist) + 100);
+    assert.equal(puntuacion(e), Math.floor(e.dist) + n * CONFIG.puntosJarra);
   });
 
   it('en otro carril no se coge; todas las jarras generadas se pueden alcanzar', () => {

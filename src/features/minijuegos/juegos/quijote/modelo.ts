@@ -53,9 +53,14 @@ export const CONFIG = {
   /** Metros sin obstaculos al empezar. */
   salidaLibre: 60,
 
-  /** Jarras: puntos de cada una y cuantas llenan la barra de Embestida. */
+  /** Jarras: puntos de cada una y cuantas llenan la barra de Embestida (que sea algo raro). */
   puntosJarra: 10,
-  jarrasEmbestida: 10,
+  jarrasEmbestida: 30,
+  /** Probabilidad, por patron, de una fila de jarras por un carril libre y de un arco sobre una valla. */
+  jarrasFila: 0.4,
+  jarrasArco: 0.25,
+  /** Probabilidad de jarras en zigzag en el hueco entre dos patrones. */
+  jarrasZigzag: 0.15,
   /** Embestida: lo que dura, cuanto acelera y los puntos por lo que derriba. */
   embestida: { duracion: 3, acelera: 1.3, puntosObstaculo: 25, puntosMolino: 250 },
   /** Probabilidad, por patron, de que salga un yelmo o un queso (y desde que metros). */
@@ -462,11 +467,11 @@ function colocarPatron(e: Estado, p: Patron, s0: number, azar: () => number): nu
 
   // Jarras: en fila por un carril libre, o en arco sobre una valla (a la altura del salto).
   const r = azar();
-  if (libres.size > 0 && r < 0.6) {
+  if (libres.size > 0 && r < CONFIG.jarrasFila) {
     const lista = [...libres];
     const c = lista[Math.floor(azar() * lista.length)]!;
     for (let s = s0 - 8; s <= fin + 2; s += 3.2) ponerRecogible(e, s, c, 'jarra');
-  } else if (vallas.length > 0 && r < 0.9) {
+  } else if (vallas.length > 0 && r < CONFIG.jarrasFila + CONFIG.jarrasArco) {
     const valla = vallas[Math.floor(azar() * vallas.length)]!;
     const medio = (velocidadSalto() / gravedad()) * v; // metros hasta lo mas alto del salto
     for (let k = -2; k <= 2; k++) {
@@ -505,7 +510,7 @@ export function asegurarCamino(e: Estado, azar: () => number): Estado {
   while (e.generadoHasta < e.dist + CONFIG.vista.delante) {
     const fin = colocarPatron(e, elegirPatron(e.generadoHasta, azar), e.generadoHasta, azar);
     const siguiente = fin + huecoEn(fin) * velocidadEn(fin);
-    if (azar() < 0.3 && siguiente - fin > 18) zigzag(e, fin, siguiente, azar);
+    if (azar() < CONFIG.jarrasZigzag && siguiente - fin > 18) zigzag(e, fin, siguiente, azar);
     e.generadoHasta = siguiente;
   }
   const atras = e.dist - CONFIG.vista.detras;
