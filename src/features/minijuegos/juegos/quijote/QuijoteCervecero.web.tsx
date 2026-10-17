@@ -23,11 +23,13 @@ const DT_MAX = 0.05;
 /** Tope de densidad de pixeles: mas de 2 no se nota en el movil y cuesta mucho. */
 const DENSIDAD_MAX = 2;
 /** Pixeles de arrastre para que cuente como gesto; al soltar, basta con algo menos (un golpe rapido). */
-const UMBRAL = 26;
-const UMBRAL_SOLTAR = 16;
+const UMBRAL = 20;
+const UMBRAL_SOLTAR = 12;
+/** Un toque (sin arrastrar y corto) en una mitad de la pantalla mueve un carril hacia ese lado. */
+const TOQUE_MAX_MS = 300;
 
 type Fase = 'inicio' | 'jugando' | 'fin';
-type Dedo = { id: number; x: number; y: number; usado: boolean };
+type Dedo = { id: number; x: number; y: number; x0: number; y0: number; desde: number; usado: boolean };
 
 const TECLAS: Record<string, Accion> = {
   ArrowLeft: 'izquierda',
@@ -183,7 +185,7 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const dedoAbajo = (ev: PEvent<HTMLDivElement>) => {
     if (dedo.current) return;
     ev.currentTarget.setPointerCapture(ev.pointerId);
-    dedo.current = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, usado: false };
+    dedo.current = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY, desde: performance.now(), usado: false };
   };
   const dedoMover = (ev: PEvent<HTMLDivElement>) => {
     const d = dedo.current;
@@ -198,10 +200,16 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
   const dedoArriba = (ev: PEvent<HTMLDivElement>) => {
     const d = dedo.current;
     if (!d || d.id !== ev.pointerId) return;
-    // Un golpe muy rapido puede soltar antes de llegar al umbral: al soltar vale con menos.
     if (!d.usado) {
+      // Un golpe muy rapido puede soltar antes de llegar al umbral: al soltar vale con menos.
       const dir = direccionDeGesto(ev.clientX - d.x, ev.clientY - d.y, UMBRAL_SOLTAR);
-      if (dir) cola.current.push(dir);
+      if (dir) {
+        cola.current.push(dir);
+      } else if (performance.now() - d.desde < TOQUE_MAX_MS && Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < UMBRAL_SOLTAR) {
+        // Un toque suelto: un carril hacia el lado de la pantalla que se ha tocado.
+        const caja = ev.currentTarget.getBoundingClientRect();
+        cola.current.push(ev.clientX < caja.left + caja.width / 2 ? 'izquierda' : 'derecha');
+      }
     }
     dedo.current = null;
   };
@@ -252,7 +260,9 @@ export function QuijoteCervecero({ onFinish, onSalir }: PropsJuego) {
       {fase === 'inicio' ? (
         <div style={e.velo}>
           <div style={e.titulo}>Don Quijote Cervecero</div>
-          <div style={e.texto}>Desliza a los lados para cambiar de carril, arriba para saltar y abajo para agacharte.</div>
+          <div style={e.texto}>
+            Toca a un lado de la pantalla (o desliza) para cambiar de carril. Desliza arriba para saltar y abajo para agacharte.
+          </div>
           <div style={e.nota}>Fase 2 de pruebas: aún sin jarras ni Embestida. En el ordenador, flechas o WASD.</div>
           {!webgl ? <div style={e.nota}>Este navegador no puede pintar en 3D: prueba con Chrome o Safari actualizados.</div> : null}
           <button type="button" style={{ ...e.boton, ...(webgl ? null : e.apagado) }} disabled={!webgl} onClick={arrancar}>

@@ -98,7 +98,8 @@ describe('quijote: obstaculos', () => {
   const a = (dist: number) => dist + 3;
 
   it('lo bajo se salta; si no, choca', () => {
-    const salta = conObstaculo({ s: a(0), carril: 1, tipo: 'bajo' });
+    // Saltando con tiempo (a 6 m, a la velocidad de salida): pegado a la valla ya no da.
+    const salta = conObstaculo({ s: 6, carril: 1, tipo: 'bajo' });
     aplicarAccion(salta, 'arriba');
     correr(salta, 0.6);
     assert.equal(salta.vidas, CONFIG.vidas);

@@ -17,10 +17,10 @@ export const CONFIG = {
   anchoCarril: 2.4,
 
   /** Velocidad (m/s): empieza en la inicial y se acerca a la maxima con los metros. */
-  velocidadInicial: 15,
-  velocidadMaxima: 30,
-  /** Metros en los que recorre ~63 % del camino de la inicial a la maxima. */
-  metrosAceleracion: 1800,
+  velocidadInicial: 18,
+  velocidadMaxima: 38,
+  /** Metros en los que recorre ~63 % del camino de la inicial a la maxima (a los 500 m ya va a ~28). */
+  metrosAceleracion: 700,
 
   /** Lo que tarda en pasar de un carril al de al lado. */
   tiempoCambioCarril: 0.14,
@@ -45,7 +45,7 @@ export const CONFIG = {
   huecoInicial: 1.7,
   huecoMinimo: 0.95,
   /** Metros en los que el hueco va del inicial al minimo. */
-  metrosDificultad: 2500,
+  metrosDificultad: 1500,
   /** Metros sin obstaculos al empezar. */
   salidaLibre: 60,
 } as const;
