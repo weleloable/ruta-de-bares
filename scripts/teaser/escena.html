@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Teaser Ruta de Bares</title>
+<!--
+  La escena del teaser. No se reproduce sola: render.mjs llama a
+  window.pintar(t) con cada instante y hace una captura. Todo lo que se ve es
+  funcion de t (nada de animaciones CSS ni Date.now), asi que un fotograma se
+  puede repintar igual cuantas veces haga falta.
+
+  Abrir a mano para mirar un instante: escena.html?t=7.5 (sin planos de la app
+  si no se ha renderizado antes; salen como huecos).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Playfair+Display:ital,wght@0,700;0,900;1,600&family=Inter:wght@600;800&display=block" rel="stylesheet">
+<style>
+  :root {
+    --tinta: #241A12;
+    --papel: #F6EFE2;
+    --crema: #FBF4E6;
+    --cerveza: #E3962F;
+    --cerveza-osc: #9A5A11;
+    --sello: #B8322A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0b0604; }
+  #lienzo { position: absolute; inset: 0; }
+  .capa { position: absolute; inset: 0; pointer-events: none; }
+  #todo { position: absolute; inset: 0; will-change: transform; }
+
+  .rotulo {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-family: Anton, Impact, sans-serif; color: var(--crema);
+    text-transform: uppercase; line-height: .92; letter-spacing: 2px;
+    text-shadow: 0 10px 40px rgba(0,0,0,.55);
+  }
+  .rotulo .acento { color: var(--cerveza); }
+  .serif { font-family: 'Playfair Display', Georgia, serif; }
+
+  /* La credencial de papel de las 10 ediciones */
+  #credencial {
+    position: absolute; left: 140px; top: 700px; width: 800px; height: 640px;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,250,235,.7), rgba(255,250,235,0) 60%),
+      repeating-linear-gradient(0deg, rgba(120,85,45,.05) 0 2px, rgba(0,0,0,0) 2px 46px),
+      #eadcbf;
+    border-radius: 14px; box-shadow: 0 40px 90px rgba(0,0,0,.6), inset 0 0 120px rgba(120,80,30,.35);
+    transform-origin: 50% 50%;
+  }
+  #credencial .cabecera {
+    position: absolute; top: 40px; left: 0; right: 0; text-align: center;
+    font-family: 'Playfair Display', Georgia, serif; font-weight: 900; font-size: 44px;
+    color: #4a2f17; letter-spacing: 4px;
+  }
+  #credencial .sub {
+    position: absolute; top: 100px; left: 0; right: 0; text-align: center;
+    font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 600;
+    font-size: 28px; color: #7a5a3a;
+  }
+  .hueco {
+    position: absolute; width: 200px; height: 200px; border-radius: 50%;
+    border: 4px dashed rgba(110,75,40,.45);
+  }
+  .hueco canvas { position: absolute; inset: -14px; width: 228px; height: 228px; }
+
+  /* El movil */
+  #movil {
+    position: absolute; left: 50%; top: 560px; width: 690px; height: 1530px;
+    margin-left: -345px; border-radius: 92px; background: #0e0906;
+    box-shadow: 0 0 0 3px #3b2a1c, 0 60px 140px rgba(0,0,0,.75), 0 0 120px rgba(227,150,47,.18);
+    transform-origin: 50% 40%;
+  }
+  #pantalla {
+    position: absolute; left: 22px; top: 22px; right: 22px; bottom: 22px;
+    border-radius: 72px; overflow: hidden; background: var(--papel);
+  }
+  #pantalla img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(1.08) contrast(1.04); }
+  #reflejo {
+    position: absolute; inset: 0; border-radius: 72px;
+    background: linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 60%);
+    mix-blend-mode: screen;
+  }
+  #isla { position: absolute; top: 40px; left: 50%; width: 170px; height: 44px; margin-left: -85px; border-radius: 22px; background: #0e0906; }
+
+  #sellado { position: absolute; left: 600px; top: 760px; width: 380px; height: 380px; }
+  #fecha { position: absolute; left: 640px; top: 520px; width: 340px; height: 340px; }
+
+  /* Cierre */
+  #logo {
+    position: absolute; left: 50%; top: 300px; width: 500px; height: 500px; margin-left: -250px;
+    border-radius: 50%; overflow: hidden;
+    box-shadow: 0 0 0 10px rgba(227,150,47,.25), 0 30px 90px rgba(0,0,0,.7), 0 0 160px rgba(227,150,47,.35);
+  }
+  /* el aro del logo ocupa ~90% de la imagen: asi el aro queda justo en el borde */
+  #logo img { position: absolute; left: -6%; top: -6%; width: 112%; height: 112%; }
+  #onda { position: absolute; left: 540px; top: 550px; width: 10px; height: 10px; border-radius: 50%; border: 6px solid var(--cerveza); }
+  .etiqueta {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-family: Inter, sans-serif; font-weight: 800; letter-spacing: 10px; font-size: 30px; color: var(--cerveza);
+  }
+  #flash { position: absolute; inset: 0; background: #fff6e3; }
+</style>
+</head>
+<body>
+<canvas id="lienzo" width="1080" height="1920"></canvas>
+<div id="todo">
+  <div class="capa" id="c-diez">
+    <div class="rotulo" id="diez-num" style="top:520px;font-size:620px;"></div>
+    <div class="rotulo" id="diez-txt" style="top:1150px;font-size:150px;letter-spacing:18px;"></div>
+  </div>
+  <div class="capa" id="c-papel">
+    <div class="rotulo" id="papel-1" style="top:300px;font-size:170px;"></div>
+    <div class="rotulo" id="papel-2" style="top:470px;font-size:170px;"></div>
+    <div id="credencial">
+      <div class="cabecera">CREDENCIAL</div>
+      <div class="sub">Ruta de Bares · Alcalá</div>
+    </div>
+  </div>
+  <div class="capa" id="c-cambio"></div>
+  <div class="capa" id="c-movil">
+    <div class="rotulo" id="palabra" style="top:250px;font-size:260px;"></div>
+    <div id="movil"><div id="pantalla"><img id="fotograma" alt=""><div id="reflejo"></div></div><div id="isla"></div></div>
+    <canvas id="sellado" width="380" height="380"></canvas>
+  </div>
+  <div class="capa" id="c-rafaga"><div class="rotulo" id="rafaga" style="top:0;"></div></div>
+  <div class="capa" id="c-cierre">
+    <div id="onda"></div>
+    <div id="logo"><img id="logo-img" src="../../assets/marca/logo-10.png" alt=""></div>
+    <canvas id="fecha" width="340" height="340"></canvas>
+    <div class="etiqueta" id="cierre-et" style="top:850px;">RUTA DE BARES</div>
+    <div class="rotulo" id="cierre-t1" style="top:930px;font-size:150px;"></div>
+    <div class="rotulo acento" id="cierre-t2" style="top:1080px;font-size:176px;color:var(--cerveza);"></div>
+    <div class="rotulo serif" id="cierre-lema" style="top:1300px;font-size:58px;font-style:italic;font-weight:600;text-transform:none;letter-spacing:0;line-height:1.15;"></div>
+    <div class="etiqueta" id="cierre-user" style="top:1480px;font-size:34px;letter-spacing:3px;color:var(--crema);"></div>
+  </div>
+</div>
+<div id="flash" class="capa"></div>
+<script type="module">
+// ---------------------------------------------------------------- utilidades
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lin = (t, a, b) => clamp((t - a) / (b - a));
+const sale = (x) => 1 - (1 - x) ** 3;                         // ease-out cubica
+const saleExpo = (x) => (x >= 1 ? 1 : 1 - 2 ** (-10 * x));
+const rebote = (x) => { const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; }; // ease-out-back
+const mezcla = (a, b, x) => a + (b - a) * x;
+
+function azar(semilla) {
+  let a = semilla >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const params = new URLSearchParams(location.search);
+const G = window.__GUION ?? (await import('./guion.mjs'));
+const ESCENAS = G.ESCENAS;
+const cache = params.get('cache') ?? './cache';
+const manifiesto = window.__MANIFIESTO ?? {};
+const porId = Object.fromEntries(ESCENAS.map((e) => [e.id, e]));
+const golpes = G.golpesSonoros();
+
+const cargar = (src) => new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => mal(new Error('No carga ' + src)); i.src = src; });
+
+// ---------------------------------------------------------------- recursos
+const lienzo = $('lienzo');
+const ctx = lienzo.getContext('2d');
+
+// grano: 8 baldosas de ruido con semilla, una por fotograma en rotacion
+const granos = [];
+{
+  const r = azar(7);
+  for (let k = 0; k < 8; k++) {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d'); const d = g.createImageData(256, 256);
+    for (let i = 0; i < d.data.length; i += 4) { const v = r() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+    g.putImageData(d, 0, 0); granos.push(c);
+  }
+}
+
+// burbujas del fondo: posicion, tamano y velocidad fijos con semilla
+const burbujas = [];
+{
+  const r = azar(11);
+  for (let i = 0; i < 90; i++) burbujas.push({ x: r() * 1080, y0: r() * 2200, v: 60 + r() * 220, rad: 2 + r() ** 2 * 11, fase: r() * 6.28 });
+}
+
+// los sellos de la credencial: logos de bares reales en tinta roja
+const LOGOS = ['quinto-tapon', 'el-hidalgo', 'la-oveja-negra'];
+const huecos = [];
+const POS_HUECOS = [[70, 170], [300, 170], [530, 170]];
+const VACIOS = [[70, 410], [300, 410], [530, 410]];
+async function prepararSellos() {
+  for (let i = 0; i < LOGOS.length; i++) {
+    const img = await cargar(`../semilla-catalogo/logos/${LOGOS[i]}.png`);
+    const div = document.createElement('div'); div.className = 'hueco';
+    div.style.left = POS_HUECOS[i][0] + 'px'; div.style.top = POS_HUECOS[i][1] + 'px';
+    const c = document.createElement('canvas'); c.width = c.height = 228;
+    pintarSello(c.getContext('2d'), img, 228, i);
+    div.appendChild(c); $('credencial').appendChild(div); huecos.push(c);
+  }
+  // la fila de abajo, sin sellar: lo que queda de ruta
+  for (const [x, y] of VACIOS) {
+    const div = document.createElement('div'); div.className = 'hueco';
+    div.style.left = x + 'px'; div.style.top = y + 'px';
+    $('credencial').appendChild(div);
+  }
+}
+/** Un sello entintado: aro doble, el logo pasado a tinta y textura de goma. */
+function pintarSello(g, img, n, semilla) {
+  const r = azar(100 + semilla);
+  const c = n / 2;
+  g.save();
+  g.strokeStyle = '#a3241d'; g.lineWidth = 7; g.beginPath(); g.arc(c, c, c - 8, 0, 7); g.stroke();
+  g.lineWidth = 3; g.beginPath(); g.arc(c, c, c - 20, 0, 7); g.stroke();
+  // logo a tinta: alfa = oscuridad del pixel
+  const t = document.createElement('canvas'); t.width = t.height = 150;
+  const tg = t.getContext('2d'); tg.drawImage(img, 0, 0, 150, 150);
+  const d = tg.getImageData(0, 0, 150, 150);
+  for (let i = 0; i < d.data.length; i += 4) {
+    const l = (d.data[i] * 0.3 + d.data[i + 1] * 0.59 + d.data[i + 2] * 0.11) / 255;
+    const a = (d.data[i + 3] / 255) * clamp((1 - l) * 1.6);
+    d.data[i] = 163; d.data[i + 1] = 36; d.data[i + 2] = 29; d.data[i + 3] = a * 255;
+  }
+  tg.putImageData(d, 0, 0);
+  g.drawImage(t, c - 75, c - 75);
+  // la goma no marca igual en todo el sello: se le quitan motas
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 260; i++) { g.globalAlpha = r() * 0.6; g.beginPath(); g.arc(r() * n, r() * n, r() * 3.5, 0, 7); g.fill(); }
+  g.restore();
+}
+/** El gran SELLADO que cae sobre el movil. */
+function pintarSellado() {
+  const g = $('sellado').getContext('2d');
+  const r = azar(5);
+  const c = 190;
+  g.save(); g.translate(c, c); g.rotate(-0.22);
+  g.strokeStyle = g.fillStyle = '#c0362c';
+  g.lineWidth = 12; g.beginPath(); g.arc(0, 0, 170, 0, 7); g.stroke();
+  g.lineWidth = 5; g.beginPath(); g.arc(0, 0, 145, 0, 7); g.stroke();
+  g.font = '92px Anton'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('SELLADO', 0, 6);
+  g.font = '26px Inter'; g.fillText('★ RUTA DE BARES ★', 0, -78); g.fillText('★ ★ ★', 0, 88);
+  g.restore();
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 700; i++) { g.globalAlpha = r() * 0.7; g.beginPath(); g.arc(r() * 380, r() * 380, r() * 3, 0, 7); g.fill(); }
+}
+
+/** El dia de la ruta, entintado como un sello de la credencial. */
+function pintarFecha(fecha) {
+  const g = $('fecha').getContext('2d');
+  const r = azar(9);
+  g.save(); g.translate(170, 170); g.rotate(0.18);
+  // fondo de papel: sobre el logo y el fondo oscuro, la tinta roja sola no se leeria
+  g.fillStyle = '#F6EFE2'; g.beginPath(); g.arc(0, 0, 160, 0, 7); g.fill();
+  g.strokeStyle = g.fillStyle = '#b8322a';
+  g.lineWidth = 10; g.beginPath(); g.arc(0, 0, 148, 0, 7); g.stroke();
+  g.lineWidth = 4; g.beginPath(); g.arc(0, 0, 126, 0, 7); g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const [dia, num, mes] = fecha.lineas;
+  // medidas para que las tres lineas quepan dentro del aro de dentro (r = 126)
+  g.font = '32px Anton'; g.fillText(dia, 0, -80);
+  g.font = '128px Anton'; g.fillText(num, 0, 6);
+  g.font = '32px Anton'; g.fillText(mes, 0, 84);
+  g.restore();
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 500; i++) { g.globalAlpha = r() * 0.55; g.beginPath(); g.arc(r() * 340, r() * 340, r() * 2.6, 0, 7); g.fill(); }
+}
+
+// ---------------------------------------------------------------- fondo
+function fondo(t, e) {
+  const intro = e.tipo === 'negro' ? lin(t, 0, 0.5) * 0.4 : 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#0b0604'; ctx.fillRect(0, 0, 1080, 1920);
+  // dos luces ambar que se mueven despacio (la luz de un bar de noche)
+  const luces = [[540 + 260 * Math.sin(t * 0.7), 700 + 200 * Math.cos(t * 0.5), 900, 0.55], [540 - 300 * Math.sin(t * 0.45 + 1), 1400 + 180 * Math.sin(t * 0.8), 800, 0.35]];
+  const cierre = e.tipo === 'cierre' ? 1.25 : 1;
+  for (const [x, y, rad, a] of luces) {
+    const gr = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(198,122,30,${a * intro * cierre})`);
+    gr.addColorStop(0.45, `rgba(120,62,16,${a * 0.45 * intro * cierre})`);
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, 1080, 1920);
+  }
+  // burbujas
+  for (const b of burbujas) {
+    const y = ((b.y0 - t * b.v) % 2200 + 2200) % 2200 - 140;
+    const x = b.x + Math.sin(t * 2 + b.fase) * 10;
+    ctx.globalAlpha = 0.28 * intro;
+    ctx.strokeStyle = '#f3c77a'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x, y, b.rad, 0, 7); ctx.stroke();
+    ctx.globalAlpha = 0.35 * intro; ctx.fillStyle = '#fff1d2';
+    ctx.beginPath(); ctx.arc(x - b.rad * 0.35, y - b.rad * 0.35, b.rad * 0.25, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function grano(f) {
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.globalAlpha = 0.09;
+  const p = ctx.createPattern(granos[f % granos.length], 'repeat');
+  ctx.fillStyle = p; ctx.fillRect(0, 0, 1080, 1920);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  // viñeta
+  const v = ctx.createRadialGradient(540, 960, 500, 540, 960, 1250);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.7)');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, 1080, 1920);
+}
+
+// ---------------------------------------------------------------- liquido del cierre
+function cerveza(t, desde) {
+  const sube = sale(lin(t, desde, desde + 1.0));
+  const nivel = mezcla(1960, 1580, sube);
+  ctx.save();
+  const onda = (x) => nivel + Math.sin(x / 90 + t * 3) * 12 + Math.sin(x / 37 - t * 5) * 5;
+  // cuerpo
+  ctx.beginPath(); ctx.moveTo(0, 1920);
+  for (let x = 0; x <= 1080; x += 12) ctx.lineTo(x, onda(x) + 40);
+  ctx.lineTo(1080, 1920); ctx.closePath();
+  const gr = ctx.createLinearGradient(0, nivel, 0, 1920);
+  gr.addColorStop(0, '#E8A23C'); gr.addColorStop(1, '#8a4a0c');
+  ctx.fillStyle = gr; ctx.fill();
+  // espuma
+  ctx.beginPath(); ctx.moveTo(0, onda(0) + 48);
+  for (let x = 0; x <= 1080; x += 12) ctx.lineTo(x, onda(x));
+  for (let x = 1080; x >= 0; x -= 12) ctx.lineTo(x, onda(x) + 48 + Math.sin(x / 23 + t * 2) * 6);
+  ctx.closePath(); ctx.fillStyle = '#FBF1DC'; ctx.fill();
+  // burbujas dentro
+  const r = azar(3);
+  ctx.fillStyle = 'rgba(255,235,190,.55)';
+  for (let i = 0; i < 60; i++) {
+    const x = r() * 1080, v = 80 + r() * 160, y0 = r() * 400;
+    const y = 1920 - ((y0 + t * v) % 400);
+    if (y > onda(x) + 60) { ctx.beginPath(); ctx.arc(x, y, 2 + r() * 4, 0, 7); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- texto
+function setTexto(el, html) { if (el.__h !== html) { el.innerHTML = html; el.__h = html; } }
+/** "*acento*" se pinta en ambar. */
+const marcar = (s) => s.replace(/\*(.+?)\*/g, '<span class="acento">$1</span>');
+/** Las letras entran una a una desde abajo. */
+function letras(el, texto, t, t0, paso = 0.025, dur = 0.22) {
+  const ch = [...texto];
+  setTexto(el, ch.map((c, i) => `<span data-i="${i}" style="display:inline-block;white-space:pre">${c}</span>`).join(''));
+  el.querySelectorAll('span').forEach((s, i) => {
+    const x = lin(t, t0 + i * paso, t0 + i * paso + dur);
+    s.style.opacity = clamp(x * 3);
+    s.style.transform = `translateY(${(1 - sale(x)) * 120}px) scale(${mezcla(1.4, 1, sale(x))})`;
+  });
+}
+function entra(el, t, t0, dur = 0.2, dy = 80) {
+  const x = lin(t, t0, t0 + dur);
+  el.style.opacity = clamp(x * 2);
+  el.style.transform = `translateY(${(1 - sale(x)) * dy}px)`;
+}
+
+// ---------------------------------------------------------------- temblor
+function temblor(t) {
+  let a = 0;
+  for (const g of golpes) {
+    if (t < g.t || t > g.t + 0.4) continue;
+    const fuerza = g.tipo === 'impacto' ? 26 : g.tipo === 'sello' ? 18 : g.tipo === 'palabra' ? 12 : 0;
+    a += fuerza * Math.exp(-(t - g.t) * 12);
+  }
+  return [Math.sin(t * 91) * a, Math.cos(t * 77) * a];
+}
+
+// ---------------------------------------------------------------- pintar
+const imgFotograma = $('fotograma');
+let fotogramaActual = '';
+
+window.pintar = async function pintar(t, f = Math.round(t * G.FPS)) {
+  const e = G.escenaEn(t);
+  const dt = t - e.inicio;
+  for (const id of ['c-diez', 'c-papel', 'c-cambio', 'c-movil', 'c-rafaga', 'c-cierre']) $(id).style.display = 'none';
+  fondo(t, e);
+
+  if (e.tipo === 'diez') {
+    $('c-diez').style.display = 'block';
+    setTexto($('diez-num'), e.texto[0]);
+    const x = lin(t, e.inicio, e.inicio + 0.18);
+    const n = $('diez-num');
+    n.style.opacity = clamp(x * 2);
+    n.style.transform = `scale(${mezcla(2.2, 1, saleExpo(x)) + dt * 0.06})`;
+    n.style.filter = `blur(${(1 - x) * 14}px)`;
+    n.style.backgroundImage = 'linear-gradient(180deg,#FFF0C8 0%,#F2AE45 50%,#B8701A 100%)';
+    n.style.webkitBackgroundClip = 'text'; n.style.color = 'transparent';
+    // text-shadow no se ve con el texto transparente: el brillo va con drop-shadow
+    n.style.filter += ` drop-shadow(0 0 ${40 + 30 * x}px rgba(227,150,47,.55))`;
+    letras($('diez-txt'), e.texto[1], t, e.inicio + 0.25, 0.03);
+  }
+
+  if (e.tipo === 'papel') {
+    $('c-papel').style.display = 'block';
+    letras($('papel-1'), 'DE SELLOS', t, e.inicio, 0.02);
+    setTexto($('papel-2'), '<span class="acento">EN PAPEL</span>');
+    entra($('papel-2'), t, e.inicio + 0.2);
+    const c = $('credencial');
+    const x = sale(lin(t, e.inicio, e.inicio + 0.3));
+    c.style.transform = `translateY(${(1 - x) * 500}px) rotate(${mezcla(14, -4, x) + dt * 1.5}deg)`;
+    huecos.forEach((h, i) => {
+      const ts = e.sellos[i];
+      const y = lin(t, ts - 0.08, ts);
+      h.style.opacity = t < ts - 0.08 ? 0 : 0.95;
+      h.style.transform = `scale(${mezcla(2.6, 1, y)}) rotate(${(i - 1) * 12}deg)`;
+    });
+  }
+
+  if (e.tipo === 'cambio') {
+    // tres golpes de texto, el ultimo enorme y en ambar
+    const c = $('c-cambio'); c.style.display = 'block';
+    const lineas = e.texto;
+    setTexto(c, lineas.map((l, i) => `<div class="rotulo${i === 2 ? ' acento' : ''}" data-l="${i}" style="top:${[560, 760, 960][i]}px;font-size:${[170, 210, 330][i]}px;${i === 2 ? 'color:var(--cerveza)' : ''}"></div>`).join(''));
+    c.querySelectorAll('[data-l]').forEach((el, i) => {
+      const t0 = e.inicio + i * 0.25;
+      setTexto(el, lineas[i]);
+      const x = lin(t, t0, t0 + 0.12);
+      el.style.opacity = t < t0 ? 0 : 1;
+      el.style.transform = `scale(${mezcla(1.6, 1, saleExpo(x))})`;
+    });
+    // al final del compas todo se va hacia la camara: entra la app
+    const fuera = lin(t, e.fin - 0.18, e.fin);
+    c.style.transform = `scale(${1 + fuera ** 2 * 3})`;
+    c.style.opacity = 1 - fuera;
+  }
+
+  if (e.tipo === 'movil') {
+    $('c-movil').style.display = 'block';
+    const plano = G.PLANOS[e.plano];
+    const lista = manifiesto[e.plano] ?? [];
+    if (lista.length) {
+      const i = clamp(Math.floor(dt * G.FPS), 0, lista.length - 1);
+      const src = `${cache}/${e.plano}/${lista[i]}`;
+      if (src !== fotogramaActual) { imgFotograma.src = src; fotogramaActual = src; await imgFotograma.decode().catch(() => {}); }
+    }
+    const x = lin(t, e.inicio, e.inicio + 0.16);
+    const s = mezcla(1.35, 1, saleExpo(x)) + dt * 0.05;
+    const giro = e.giro ?? 1;
+    $('movil').style.transform = `perspective(2400px) translateY(${(1 - saleExpo(x)) * 160}px) rotateZ(${giro * mezcla(9, 4, dt)}deg) rotateY(${giro * -mezcla(18, 10, dt)}deg) rotateX(${mezcla(10, 6, dt)}deg) scale(${s})`;
+    $('reflejo').style.backgroundPosition = `${-400 + dt * 900}px 0`;
+    $('reflejo').style.transform = `translateX(${mezcla(-500, 600, dt)}px)`;
+    // la palabra: entra de golpe y crece despacio
+    const p = $('palabra');
+    setTexto(p, e.palabra.replace(/\.$/, '<span class="acento">.</span>'));
+    const xp = lin(t, e.inicio + 0.03, e.inicio + 0.15);
+    p.style.opacity = clamp(xp * 2);
+    p.style.transform = `scale(${mezcla(1.5, 1, saleExpo(xp)) + dt * 0.08}) translateX(${giro * dt * -20}px)`;
+    // el SELLADO
+    const sel = $('sellado');
+    if (e.sello && t >= e.sello - 0.06) {
+      const y = lin(t, e.sello - 0.06, e.sello);
+      sel.style.display = 'block';
+      sel.style.opacity = 0.95;
+      sel.style.transform = `scale(${mezcla(2.8, 1, y)}) rotate(${mezcla(-30, 0, y)}deg)`;
+    } else sel.style.display = 'none';
+  }
+
+  if (e.tipo === 'rafaga') {
+    const c = $('c-rafaga'); c.style.display = 'block';
+    const n = e.palabras.length;
+    const i = clamp(Math.floor((dt / (e.fin - e.inicio)) * n), 0, n - 1);
+    const t0 = e.inicio + (i * (e.fin - e.inicio)) / n;
+    const r = $('rafaga');
+    const claro = i % 2 === 0;
+    c.style.background = claro ? '#C67A1E' : 'transparent';
+    r.style.color = claro ? '#1a110a' : 'var(--crema)';
+    r.style.textShadow = claro ? 'none' : '';
+    r.style.fontSize = claro ? '280px' : '380px';
+    r.style.top = claro ? '700px' : '660px';
+    setTexto(r, e.palabras[i]);
+    const x = lin(t, t0, t0 + 0.1);
+    r.style.transform = `scale(${mezcla(1.7, 1, saleExpo(x)) + (t - t0) * 0.15})`;
+  }
+
+  if (e.tipo === 'cierre') {
+    $('c-cierre').style.display = 'block';
+    cerveza(t, e.inicio + 0.2);
+    const x = lin(t, e.inicio, e.inicio + 0.45);
+    $('logo').style.transform = `scale(${t < e.inicio ? 0 : rebote(x) * (1 + Math.sin(t * 2.4) * 0.008)}) rotate(${(1 - sale(x)) * -40}deg)`;
+    const o = lin(t, e.inicio, e.inicio + 0.7);
+    const on = $('onda');
+    on.style.opacity = (1 - o) * 0.9;
+    // se anima el TAMAÑO y no scale(): con scale el borde engorda con el aro
+    const d = 500 + sale(o) * 1500;
+    on.style.width = on.style.height = d + 'px';
+    on.style.transform = 'translate(-50%,-50%)';
+    on.style.borderWidth = `${mezcla(14, 2, o)}px`;
+    entra($('cierre-et'), t, e.inicio + 0.35, 0.3, 30);
+    letras($('cierre-t1'), e.titular[0], t, e.inicio + 0.5, 0.03);
+    letras($('cierre-t2'), e.titular[1], t, e.inicio + 0.85, 0.035);
+    setTexto($('cierre-lema'), e.lema.join('<br>'));
+    entra($('cierre-lema'), t, e.inicio + 1.4, 0.35, 40);
+    setTexto($('cierre-user'), '<svg width="34" height="34" viewBox="0 0 24 24" style="vertical-align:-6px;margin-right:12px" fill="none" stroke="#FBF4E6" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#FBF4E6"/></svg>' + e.usuario);
+    entra($('cierre-user'), t, e.inicio + 1.8, 0.35, 30);
+    const fe = $('fecha');
+    if (e.fecha && t >= e.fecha.t - 0.06) {
+      const y = lin(t, e.fecha.t - 0.06, e.fecha.t);
+      fe.style.display = 'block';
+      fe.style.transform = `scale(${mezcla(2.6, 1, y) * (1 + Math.sin(t * 2.4 + 1) * 0.006)}) rotate(${mezcla(25, 0, y)}deg)`;
+      fe.style.filter = 'drop-shadow(0 18px 30px rgba(0,0,0,.55))';
+    } else fe.style.display = 'none';
+    // el brillo que recorre PROXIMAMENTE DISPONIBLE una vez colocado
+    const br = lin(t, e.inicio + 2.4, e.inicio + 3.2);
+    for (const id of ['cierre-t1', 'cierre-t2']) $(id).style.filter = br > 0 && br < 1 ? `brightness(${1 + Math.sin(br * Math.PI) * 0.35})` : 'none';
+  }
+
+  grano(f);
+  const [sx, sy] = temblor(t);
+  $('todo').style.transform = `translate(${sx}px, ${sy}px)`;
+
+  // destello blanco en los cortes duros
+  let fl = 0;
+  for (const g of golpes) if ((g.tipo === 'corte' || g.tipo === 'impacto') && t >= g.t) fl = Math.max(fl, 0.85 * Math.exp(-(t - g.t) * 22));
+  if (t >= 4 && t < 4.2) fl = Math.max(fl, Math.exp(-(t - 4) * 18));
+  // fundido de salida y de entrada
+  $('flash').style.opacity = fl;
+  $('flash').style.background = '#fff6e3';
+  const negro = Math.max(1 - lin(t, 0, 0.35), lin(t, G.DURACION - 0.35, G.DURACION));
+  if (negro > fl) { $('flash').style.background = '#000'; $('flash').style.opacity = negro; }
+  return true;
+};
+
+window.listo = (async () => {
+  await document.fonts.ready;
+  await Promise.all(['100px Anton', 'italic 600 40px "Playfair Display"', '800 30px Inter'].map((f) => document.fonts.load(f)));
+  const faltan = ['100px Anton', 'italic 600 40px "Playfair Display"'].filter((f) => !document.fonts.check(f));
+  await prepararSellos();
+  pintarSellado();
+  const fecha = ESCENAS.at(-1).fecha;
+  if (fecha) pintarFecha(fecha);
+  await cargar($('logo-img').src);
+  return { faltan };
+})();
+
+if (params.has('t')) { await window.listo; await window.pintar(Number(params.get('t'))); }
+</script>
+</body>
+</html>

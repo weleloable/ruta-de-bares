@@ -1,0 +1,16 @@
+{
+  "name": "ruta-de-bares-teaser",
+  "private": true,
+  "type": "module",
+  "description": "Teaser de ~20 s para redes: motion graphics + planos de la app. Ver README.md.",
+  "scripts": {
+    "test": "node --test \"*.test.mjs\""
+  },
+  "dependencies": {
+    "ffmpeg-static": "5.2.0",
+    "playwright-core": "1.56.1"
+  },
+  "allowScripts": {
+    "ffmpeg-static@5.2.0": true
+  }
+}
