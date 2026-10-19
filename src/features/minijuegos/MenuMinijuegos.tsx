@@ -174,6 +174,12 @@ export function MenuMinijuegos({
       <Text style={typography.muted}>
         {nombreRuta ? `Partidas cortas para el rato entre bar y bar. Ruta: ${nombreRuta}.` : 'Partidas cortas para el rato entre bar y bar.'}
       </Text>
+      {/* Sin ruta se juega igual, pero sin ranking ni puntos de casa: que se sepa antes de jugar. */}
+      {rutaId ? null : (
+        <Banner tone="info">
+          Modo libre: no estás en ninguna ruta. Tus récords se guardan en este móvil y no cuentan para ningún ranking.
+        </Banner>
+      )}
       {lista.length === 0 ? (
         <EmptyState title="Muy pronto" body="Estamos sirviendo los primeros juegos." />
       ) : (

@@ -120,8 +120,8 @@ export default function TabsLayout() {
         name="minijuegos"
         options={{
           title: 'Juegos',
-          // Los minijuegos son de cada ruta: sin estar dentro de una, no hay boton.
-          href: activeRoute ? undefined : null,
+          // Siempre a la vista: dentro de una ruta, con su ranking; fuera, en "modo libre"
+          // (los records se quedan en el movil y no cuentan para nada).
           tabBarIcon: ({ color, size }) => <Ionicons name="game-controller" color={color} size={size} />,
         }}
       />

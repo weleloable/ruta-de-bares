@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 
-import { EmptyState, Loading, Screen } from '../../src/components/ui';
+import { Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/features/auth/AuthProvider';
 import { MenuMinijuegos } from '../../src/features/minijuegos/MenuMinijuegos';
 import { SONDEO_PENUL_MS } from '../../src/features/minijuegos/visibilidad';
@@ -9,8 +9,8 @@ import { useActiveRoute } from '../../src/features/routes/ActiveRouteProvider';
 import { leerPenulVisible } from '../../src/features/routes/api';
 import { useSondeo } from '../../src/lib/useSondeo';
 
-// Los minijuegos son de cada ruta: sin estar dentro de una, no hay nada que ver
-// (la pestana tampoco sale abajo; esto cubre entrar por una URL directa).
+// Dentro de una ruta, sus juegos con ranking; fuera de ninguna, los mismos en "modo libre"
+// (el record se queda en el movil y no cuenta para nada).
 export default function MinijuegosScreen() {
   const { activeRoute, loading } = useActiveRoute();
   const { isAdmin } = useAuth();
@@ -46,15 +46,8 @@ export default function MinijuegosScreen() {
   );
 
   if (loading) return <Loading />;
-  if (!activeRoute) {
-    return (
-      <Screen>
-        <EmptyState
-          title="Los juegos son de cada ruta"
-          body="Entra en una ruta con una invitación para jugar con quienes están dentro."
-        />
-      </Screen>
-    );
-  }
+  // Sin ruta, "modo libre": los mismos juegos, con el record en el movil y sin ranking
+  // (el menu lo avisa). La Penul no sale: se enciende ruta a ruta.
+  if (!activeRoute) return <MenuMinijuegos rutaId={null} esAdmin={isAdmin} penulVisible={false} />;
   return <MenuMinijuegos rutaId={activeRoute.id} nombreRuta={activeRoute.name} esAdmin={isAdmin} penulVisible={penulVisible} />;
 }
